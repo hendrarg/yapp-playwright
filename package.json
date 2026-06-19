@@ -1,0 +1,19 @@
+{
+  "name": "yapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@types/node": "^25.9.3",
+    "dotenv": "^17.4.2",
+    "mailosaur": "^11.1.1"
+  }
+}
