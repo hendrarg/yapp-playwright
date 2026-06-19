@@ -34,6 +34,10 @@ export default defineConfig({
 
     /* Run headed or headless based on env vars PW_HEADLESS / PLAYWRIGHT_HEADLESS. */
     headless,
+    viewport: null,
+    launchOptions: {
+      args: ['--start-maximized'],
+    },
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
