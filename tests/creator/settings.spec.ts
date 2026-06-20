@@ -1,11 +1,6 @@
-import { creatorAuthTest as test, expect } from '../test-base';
-import { creatorsBaseURL } from '../../config/env';
+import { creatorAuthTest as test } from '../test-base';
 
-
-test('injected "at" token loads the settings page without redirecting to auth', async ({ page }) => {
-  await page.goto(new URL('settings', creatorsBaseURL).toString());
-  await page.waitForLoadState('networkidle');
-
-  await expect(page).toHaveURL(/\/settings/);
-  expect(page.url()).not.toContain('/auth');
+test('injected "at" token loads the settings page without redirecting to auth', async ({ settingsPage }) => {
+  await settingsPage.goto();
+  await settingsPage.expectLoaded();
 });

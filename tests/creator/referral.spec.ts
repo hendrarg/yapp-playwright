@@ -1,11 +1,6 @@
-import { creatorAuthTest as test, expect } from '../test-base';
-import { creatorsBaseURL } from '../../config/env';
+import { creatorAuthTest as test } from '../test-base';
 
-
-test('injected "at" token loads the referral page without redirecting to auth', async ({ page }) => {
-  await page.goto(new URL('referral', creatorsBaseURL).toString());
-  await page.waitForLoadState('networkidle');
-
-  await expect(page).toHaveURL(/\/referral/);
-  expect(page.url()).not.toContain('/auth');
+test('injected "at" token loads the referral page without redirecting to auth', async ({ referralPage }) => {
+  await referralPage.goto();
+  await referralPage.expectLoaded();
 });

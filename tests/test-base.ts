@@ -1,15 +1,17 @@
+import type { PageFixtures } from '../src/fixtures/page.fixtures';
 import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
 import { loginWithToken } from '../src/helpers/auth/token-login';
+import { pageFixtures } from '../src/fixtures/page.fixtures';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
 const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN;
 
-export const test = base.extend({
-  page: async ({ page }, use) => {
-    await use(page);
-  },
+type MyFixtures = PageFixtures;
+
+export const test = base.extend<MyFixtures>({
+  ...pageFixtures,
 });
 
 export const authTest = test.extend({

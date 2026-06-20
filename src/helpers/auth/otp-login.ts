@@ -26,3 +26,9 @@ export async function signInWithEmailOtp(page: Page, baseURL: string) {
 
   return { email: inbox.email };
 }
+
+/** Logs out by navigating to /logout and waiting for redirect. */
+export async function logout(page: Page, baseURL: string) {
+  await page.goto(new URL('logout', baseURL).toString());
+  await page.waitForURL(/auth/, { timeout: 15000 });
+}

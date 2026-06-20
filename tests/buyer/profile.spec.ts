@@ -1,11 +1,6 @@
-import { authTest as test, expect } from '../test-base';
-import { baseURL } from '../../config/env';
+import { authTest as test } from '../test-base';
 
-
-test('injected "at" token loads the profile page without redirecting to auth', async ({ page }) => {
-  await page.goto(new URL('profile', baseURL).toString());
-  await page.waitForLoadState('networkidle');
-
-  await expect(page).toHaveURL(/\/profile/);
-  expect(page.url()).not.toContain('/auth');
+test('injected "at" token loads the profile page without redirecting to auth', async ({ buyerProfilePage }) => {
+  await buyerProfilePage.goto();
+  await buyerProfilePage.expectLoaded();
 });
