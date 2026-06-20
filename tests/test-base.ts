@@ -20,6 +20,10 @@ export const authTest = test.extend({
     await loginWithToken(context, accessToken!, baseURL);
     await use(context);
   },
+  page: async ({ page }, use) => {
+    await page.goto(baseURL);
+    await use(page);
+  },
 });
 
 export const creatorAuthTest = test.extend({
@@ -28,10 +32,10 @@ export const creatorAuthTest = test.extend({
     await loginWithToken(context, accessToken!, creatorsBaseURL);
     await use(context);
   },
-});
-
-test.beforeEach(async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
+  page: async ({ page }, use) => {
+    await page.goto(creatorsBaseURL);
+    await use(page);
+  },
 });
 
 test.afterEach(async ({ page }) => {

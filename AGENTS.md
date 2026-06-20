@@ -83,7 +83,7 @@ Loads `.env` at project root via `dotenv` in `playwright.config.ts`.
 
 ## Conventions
 
-- Viewport: 1920×1080 (set in `beforeEach`)
+- Viewport: full screen (`viewport: null` + `--start-maximized`)
 - Runs **headed** by default (`headless: false` unless `PW_HEADLESS=true`)
 - `forbidOnly: !!process.env.CI` — `test.only` fails on CI
 - Retries: 2 on CI, 0 locally
