@@ -2,7 +2,7 @@
 
 Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on two subdomains.
 
-## Commands
+## OSS Commands
 
 | Command | Purpose |
 |---------|---------|
@@ -11,6 +11,15 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
 | `npx playwright test --ui` | UI mode |
 | `npx tsc --noEmit` | Type-check only |
+
+## TUI Commands (type `/` in OpenCode TUI)
+
+| Command | Usage |
+|---------|-------|
+| `/test` | Run all tests |
+| `/typecheck` | TypeScript type-check |
+| `/test-file <path>` | Single test file (e.g. `/test-file tests/buyer/explore.spec.ts`) |
+| `/test-ui` | Open Playwright UI mode |
 
 ## Architecture
 
@@ -80,6 +89,27 @@ Loads `.env` at project root via `dotenv` in `playwright.config.ts`.
 - Retries: 2 on CI, 0 locally
 - Page is closed in `afterEach` (logs `pass browser close`)
 - Never commit `.env` (gitignored)
+
+## Rules
+
+Rules loaded from `.opencode/rules/` via `opencode.json`:
+
+| File | Purpose |
+|------|---------|
+| `code-style.md` | TypeScript, POM, imports, naming conventions |
+| `testing.md` | Fixture selection, test structure, tagging reference |
+
+All tests must include tags from: `@T<id>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`.
+
+## Skills
+
+Project-local skills in `.opencode/skills/` loaded automatically by the `skill` tool:
+
+| Skill | Purpose |
+|-------|---------|
+| `add-page-object` | Scaffold a page object + register in fixtures |
+| `add-test-spec` | Create a test spec following POM conventions |
+| `fix-tsc-errors` | Run `tsc --noEmit` and fix type errors |
 
 ## CI
 
