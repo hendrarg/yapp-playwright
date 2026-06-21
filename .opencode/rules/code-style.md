@@ -13,6 +13,32 @@
 - Methods named as actions (`search()`, `selectFilter()`, `submitForm()`)
 - Assertion methods prefixed `expect*()` (`expectLoaded()`, `expectItemVisible()`)
 - Use `safeClick`/`safeFill`/`safeCheck` from `@utils/playwright.utils` for flakiness-prone interactions
+- **Reuse over rewrite**: Before adding a new locator/method, check existing page objects, helpers, and utils for identical or similar patterns. If the same locator appears in ≥2 pages, extract to `src/pages/shared/locators.ts`. If the same step sequence appears in ≥2 tests, extract to a helper.
+
+## Selector Priority
+When creating locators, use `smartLocator` from `@utils/heal-utils` with fallback chain. Always provide multiple selector strategies ordered by stability:
+
+| Priority | Strategy | Stability |
+|----------|----------|-----------|
+| 1 | `testId` — `data-testid` attribute | 🌟 Most stable |
+| 2 | `role` — `getByRole()` semantic selector | Semantic, rarely changes |
+| 3 | `text` — `getByText()` visible text | Visible text |
+| 4 | `label` — `getByLabel()` form labels | Form elements |
+| 5 | `placeholder` — `getByPlaceholder()` | Input hints |
+| 6 | `selector` — CSS/XPath (avoid if possible) | 💀 Fragile |
+
+```typescript
+// ✅ Good — full fallback chain
+readonly nameInput = smartLocator(this.page, {
+  testId: 'name-input',
+  role: 'textbox',
+  label: 'Name',
+  placeholder: 'Enter name',
+});
+
+// ❌ Avoid — single fragile locator
+readonly nameInput = this.page.locator('.form-input-name');
+```
 
 ## File Naming
 - Page objects: PascalCase (`ExplorePage.ts`, `CartPage.ts`)

@@ -20,6 +20,8 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 | `/typecheck` | TypeScript type-check |
 | `/test-file <path>` | Single test file (e.g. `/test-file tests/buyer/explore.spec.ts`) |
 | `/test-ui` | Open Playwright UI mode |
+| `/flaky <spec>` | Re-run a flaky test 3x with trace (e.g. `/flaky tests/buyer/explore.spec.ts`) |
+| `/flaky-analyze` | Show trace from last failed flaky test |
 
 ## Architecture
 
@@ -34,7 +36,9 @@ src/
     auth/               ← token-login.ts, otp-login.ts
     otp/                ← Mailosaur client
   utils/
-    playwright.utils.ts ← safeClick/safeFill/safeCheck
+    playwright.utils.ts ← safeClick/safeFill/safeCheck, navigateAndWait, waitForLoaded
+    flaky-utils.ts      ← flakyClick/flakyFill, retryUntil, flakyExpectText, flakyGoto
+    heal-utils.ts       ← smartLocator/SmartHealable, smartClick/smartFill, buildSmartStrategies, Healable
 config/env.ts           ← reads env vars (requireEnv pattern)
 ```
 
@@ -65,7 +69,10 @@ OTP login (Mailosaur) has 90s timeout. The `continue` button retry handles reCAP
 - 15 creator: `affiliatePage`, `analyticsPage`, `campaignsPage`, `creatorFeedsPage`, `membershipPage`, `messagesPage`, `ordersPage`, `productsPage`, `creatorProfilePage`, `promotionsPage`, `referralPage`, `sessionsPage`, `settingsPage`, `streamingPage`, `walletPage`
 - 1 auth: `loginPage`
 
-Each has `goto()` and `expectLoaded()`. Add locators and methods as needed. Use `safeClick`/`safeFill`/`safeCheck` from `@utils/playwright.utils` for flakiness-prone interactions.
+Each has `goto()` and `expectLoaded()`. Add locators and methods as needed. Use:
+- `safeClick`/`safeFill`/`safeCheck` from `@utils/playwright.utils` for standard interactions
+- `flakyClick`/`flakyFill`/`flakyExpectText`/`flakyGoto` from `@utils/flaky-utils` for flaky elements
+- `waitForLoaded`/`navigateAndWait` from `@utils/playwright.utils` for loading states
 
 ## Env vars
 
@@ -110,6 +117,8 @@ Project-local skills in `.opencode/skills/` loaded automatically by the `skill` 
 | `add-page-object` | Scaffold a page object + register in fixtures |
 | `add-test-spec` | Create a test spec following POM conventions |
 | `fix-tsc-errors` | Run `tsc --noEmit` and fix type errors |
+| `resolve-flaky-tests` | Systematic flaky element resolution — diagnose, apply fix, log pattern |
+| `iterative-e2e-testing` | Round-based iterative test development (E2E → FV → API) |
 
 ## CI
 
