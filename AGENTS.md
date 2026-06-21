@@ -22,14 +22,15 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 | `/test-ui` | Open Playwright UI mode |
 | `/flaky <spec>` | Re-run a flaky test 3x with trace (e.g. `/flaky tests/buyer/explore.spec.ts`) |
 | `/flaky-analyze` | Show trace from last failed flaky test |
+| `/tc <id>` | Generate automation test from TC file (e.g. `/tc AT-B-E2E-001`) |
 
 ## Architecture
 
 ```
 test-cases/             ← test case documents (.md) — source of truth
-  buyer/
-  creator/
-  auth/
+  buyer/                ← AT-B-*.md
+  creator/              ← AT-C-*.md
+  auth/                 ← AT-A-*.md
 tests/test-base.ts      ← fixture entry: test, authTest, creatorAuthTest
 src/
   test-data/            ← test data (static + factory pattern)
@@ -116,11 +117,11 @@ All tests must include tags from: `@T<id>`, `@<feature>`, `@buyer|@creator`, `@s
 ## Test Cases → Automation Flow
 
 ```
-test-cases/{domain}/{TC-ID}-{description}.md
+test-cases/{domain}/{TC-ID}.md
     ↓ baca
 add-test-spec skill
     ↓ generate
-tests/{domain}/{TC-ID}-{description}.spec.ts
+tests/{domain}/{TC-ID}.spec.ts
     ↓ import data dari
 src/test-data/{domain}/{feature}.data.ts
 ```
@@ -128,6 +129,18 @@ src/test-data/{domain}/{feature}.data.ts
 Setiap automation test bersumber dari dokumen `.md` di `test-cases/`.
 Dokumen `.md` berisi: Steps, Expected, Test Data, Tags.
 AI membaca `.md` lalu mengimplementasikan Playwright spec-nya.
+
+## TC ID Format
+
+`AT-{Domain}-{Type}-{Number}`
+
+| Kode | Domain | Folder |
+|------|--------|--------|
+| `AT-B-*` | Buyer | `test-cases/buyer/` |
+| `AT-C-*` | Creator | `test-cases/creator/` |
+| `AT-A-*` | Auth | `test-cases/auth/` |
+
+Gunakan `/tc <id>` untuk generate + run automation dari TC file.
 
 ## Skills
 

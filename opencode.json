@@ -10,6 +10,7 @@
     "test-file": { "description": "Run a single test file (usage: /test-file <path>)", "template": "npx playwright test ${input}" },
     "test-ui": { "description": "Open Playwright UI mode", "template": "npx playwright test --ui" },
     "flaky": { "description": "Re-run last flaky test 3x with trace (usage: /flaky <spec>)", "template": "npx playwright test --repeat-each=3 --trace=on ${input}" },
-    "flaky-analyze": { "description": "Show flaky test patterns from last run (usage: /flaky-analyze)", "template": "npx playwright show-trace test-results/.last-failed/trace.zip" }
+    "flaky-analyze": { "description": "Show flaky test patterns from last run (usage: /flaky-analyze)", "template": "npx playwright show-trace test-results/.last-failed/trace.zip" },
+    "tc": { "description": "Generate automation test from TC file. Usage: /tc AT-B-E2E-001", "template": "echo Processing ${input}..." }
   }
 }

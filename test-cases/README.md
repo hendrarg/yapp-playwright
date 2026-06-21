@@ -14,14 +14,16 @@ test-cases/
 
 ## Cara tulis test case
 
-Buat file `.md` dengan nama `{TC-ID}-{description}.md`.
+Buat file `.md` di folder domain yang sesuai.
 
-Contoh: `AT-E2E-001-explore.md`
+Nama file: `{AT}-{Domain}-{Type}-{Number}.md`
+
+Contoh: `AT-B-E2E-001.md`
 
 ## Format template
 
 ```markdown
-# AT-XXX-001: Judul Test Case
+# AT-B-E2E-001: Judul Test Case
 
 **Feature:** @explore | @cart | @products | dll
 **Role:** @buyer | @creator
@@ -47,8 +49,20 @@ Contoh: `AT-E2E-001-explore.md`
 
 ## TC ID Pattern
 
-| ID | Type | Description |
-|----|------|-------------|
-| AT-E2E-* | End-to-End | Full browser test via Playwright page objects |
-| AT-FV-* | Functional Verification | Flow-specific test (lighter, helpers-based) |
-| AT-API-* | API | API-only test via `request` fixture |
+Format: `AT-{Domain}-{Type}-{Number}`
+
+| Kode | Arti |
+|------|------|
+| AT | Automation Test |
+| Domain: B (Buyer), C (Creator), A (Auth) |
+| Type: E2E, FV, API |
+| Number: 3 digit nomor urut |
+
+Contoh:
+
+| File | Lokasi | Arti |
+|------|--------|------|
+| `AT-B-E2E-001.md` | `test-cases/buyer/` | Buyer E2E test #1 |
+| `AT-C-E2E-001.md` | `test-cases/creator/` | Creator E2E test #1 |
+| `AT-B-FV-001.md` | `test-cases/buyer/` | Buyer FV test #1 |
+| `AT-A-API-001.md` | `test-cases/auth/` | Auth API test #1 |

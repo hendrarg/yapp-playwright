@@ -1,4 +1,4 @@
-# AT-E2E-002: Create Digital Product
+# AT-C-E2E-001: Create Digital Product
 
 **Feature:** @products
 **Role:** @creator

@@ -23,20 +23,24 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 ## Round 1: First E2E test — no reference
 
-1. **Plan**: Read the test case document from `test-cases/{domain}/{TC-ID}.md`
-   - Parse **Steps**, **Expected**, **Test Data**, **Tags** from the `.md`
-   - Identify domain: buyer (`authTest`) or creator (`creatorAuthTest`) or unauth (`test`)
-   - Page(s) involved — create page objects if missing (use `add-page-object` skill)
-   - **Test data**: Check `src/test-data/` for existing data. Create new data file in `src/test-data/{domain}/` with `generate*()` factory + static templates if missing.
-   - **Reuse check**: Before creating new locators, scan existing page objects and `src/pages/shared/locators.ts` (if exists) for matching selectors
+1. **Load `add-test-spec` skill** — this loads the full workflow:
+   ```bash
+   skill add-test-spec
+   ```
+   - Automatically reads the TC `.md` file
+   - Calls `reuse-patterns` to check existing locators/helpers
+   - Calls `add-page-object` if page object missing
+   - Creates test data files if needed
+   - Generates the spec file
+   - Runs `tsc --noEmit` and `npx playwright test`
 
-2. **Create spec**: `tests/{domain}/{test-id}.spec.ts`
-   - Import fixture from `../test-base`
-   - Use `pageObject.goto()` → `pageObject.expectLoaded()` → interactions → assertions
-   - Tag with `@T<id>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression`
+2. **If FAIL → load `resolve-flaky-tests` skill**:
+   ```bash
+   skill resolve-flaky-tests
+   ```
+   - Read error → apply fix pattern → re-run
 
-3. **Run**: `npx playwright test tests/{domain}/{test-id}.spec.ts`
-   - If FAIL: read error → fix locators/logic → re-run → repeat until PASS
+3. **Extract helpers**: Check for repeated patterns between Round 1's test and existing tests. If found, extract to `src/helpers/`.
 
 4. **Mark as reference**: This test is now the *reference* for Round 2.
 
@@ -44,24 +48,15 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 ## Round 2: New E2E test with reference
 
-1. **Read Round 1 test** as reference for patterns (login, navigation, assertions style).
+1. **Load `reuse-patterns` skill** — check Round 1 test + existing code for reusable locators/steps.
 
-2. **Create new spec** following same patterns.
+2. **Create new spec** using `add-test-spec` workflow.
 
-3. **Run** → fix → PASS.
+3. **Run** → if FAIL → `resolve-flaky-tests` → fix → PASS.
 
-4. **Check self-healing**: If a locator fails consistently, update the page object to use `Healable` with fallback strategies from `@utils/heal-utils`.
+4. **Extract helpers**: If step sequences from Round 1 + Round 2 overlap, extract to `src/helpers/{domain}/{action}.ts`.
 
-4. **Extract helpers** from both tests if any shared logic exists:
-   - Common login setup → `src/helpers/auth/token-login.ts` (or augment existing)
-   - Repeated navigation pattern → `src/helpers/navigation.ts`
-   - Repeated upload interaction → `src/helpers/upload.ts`
-   - General: `src/helpers/{domain}/{action}.ts`
-   
-   Helper conventions:
-   - Named export functions
-   - Accept `page: Page` as first param
-   - Return `Promise<void>` unless data is needed
+5. **Check self-healing**: If a locator fails consistently, update the page object to use `smartLocator` from `@utils/heal-utils` with full fallback chain.
 
 ---
 
@@ -71,7 +66,6 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
    - Reference from Round 1
    - Helpers extracted from Round 2
    - Working page objects
-   - **Reuse check**: Scan existing locators and step sequences — extract any new duplication found across the 3 rounds
 
 2. **Run** — should PASS or need minimal fixes.
 
@@ -82,13 +76,13 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 ## Round 4: Batch functional verification (AT-FV-*)
 
 1. **Create multiple FV tests** (`tests/buyer/` or `tests/creator/`).
-   - These are *lighter* — may skip full navigation, focus on specific flows.
-   - Reuse existing helpers and page objects heavily.
-   - Can use `test.beforeEach()` to share setup.
+   - Load `reuse-patterns` first — leverage all existing page objects, helpers, and locators
+   - Use `test.beforeEach()` to share setup
+   - Data from `src/test-data/`
 
 2. **Run all FV tests in batch**: `npx playwright test tests/{domain}/`
    - Expect mostly green.
-   - Fix any regressions caused by batch interactions.
+   - If FAIL → `resolve-flaky-tests` batch.
 
 3. If a pattern repeats across 3+ tests, extract further into helpers.
 
@@ -97,16 +91,8 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 ## Round 5: API tests (AT-API-*)
 
 1. **Create API-only spec** (use `test` fixture, no page objects needed):
-   ```typescript
-   import { test, expect } from '@playwright/test';
-
-   test('GET /api/health returns 200', async ({ request }) => {
-     const res = await request.get(`${process.env.YAPP_BASE_URL}/api/health`);
-     expect(res.ok()).toBeTruthy();
-   });
-   ```
-   - Use `{ request }` fixture for HTTP calls.
-   - Auth via `Authorization` header with test token.
+   - Data still comes from `src/test-data/`
+   - Auth via `Authorization` header with test token
 
 2. **Run all** → PASS.
 
@@ -114,10 +100,14 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 ## Verification
 
-After each round, run:
-- `npx tsc --noEmit` — type-check
-- Targeted `npx playwright test <spec>` — test pass
+After each round:
+```bash
+npx tsc --noEmit
+npx playwright test tests/{domain}
+```
 
-Before committing (if requested), run:
-- `npx playwright test` — full suite
-- `npx tsc --noEmit`
+Before committing (if requested):
+```bash
+npx playwright test
+npx tsc --noEmit
+```
