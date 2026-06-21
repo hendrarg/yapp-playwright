@@ -26,8 +26,13 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 ## Architecture
 
 ```
+test-cases/             ← test case documents (.md) — source of truth
+  buyer/
+  creator/
+  auth/
 tests/test-base.ts      ← fixture entry: test, authTest, creatorAuthTest
 src/
+  test-data/            ← test data (static + factory pattern)
   pages/                ← page objects (auth/, buyer/, creator/)
   fixtures/
     page.fixtures.ts    ← registers all page objects as fixtures
@@ -107,6 +112,22 @@ Rules loaded from `.opencode/rules/` via `opencode.json`:
 | `testing.md` | Fixture selection, test structure, tagging reference |
 
 All tests must include tags from: `@T<id>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`.
+
+## Test Cases → Automation Flow
+
+```
+test-cases/{domain}/{TC-ID}-{description}.md
+    ↓ baca
+add-test-spec skill
+    ↓ generate
+tests/{domain}/{TC-ID}-{description}.spec.ts
+    ↓ import data dari
+src/test-data/{domain}/{feature}.data.ts
+```
+
+Setiap automation test bersumber dari dokumen `.md` di `test-cases/`.
+Dokumen `.md` berisi: Steps, Expected, Test Data, Tags.
+AI membaca `.md` lalu mengimplementasikan Playwright spec-nya.
 
 ## Skills
 

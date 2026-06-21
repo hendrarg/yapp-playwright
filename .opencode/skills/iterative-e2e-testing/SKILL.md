@@ -23,8 +23,9 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 ## Round 1: First E2E test — no reference
 
-1. **Plan**: Read the test case description, identify:
-   - Domain: buyer (`authTest`) or creator (`creatorAuthTest`) or unauth (`test`)
+1. **Plan**: Read the test case document from `test-cases/{domain}/{TC-ID}.md`
+   - Parse **Steps**, **Expected**, **Test Data**, **Tags** from the `.md`
+   - Identify domain: buyer (`authTest`) or creator (`creatorAuthTest`) or unauth (`test`)
    - Page(s) involved — create page objects if missing (use `add-page-object` skill)
    - **Test data**: Check `src/test-data/` for existing data. Create new data file in `src/test-data/{domain}/` with `generate*()` factory + static templates if missing.
    - **Reuse check**: Before creating new locators, scan existing page objects and `src/pages/shared/locators.ts` (if exists) for matching selectors
