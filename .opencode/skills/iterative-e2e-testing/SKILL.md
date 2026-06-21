@@ -26,7 +26,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 1. **Plan**: Read the test case description, identify:
    - Domain: buyer (`authTest`) or creator (`creatorAuthTest`) or unauth (`test`)
    - Page(s) involved — create page objects if missing (use `add-page-object` skill)
-   - Data needed (test user, product, etc.)
+   - **Test data**: Check `src/test-data/` for existing data. Create new data file in `src/test-data/{domain}/` with `generate*()` factory + static templates if missing.
    - **Reuse check**: Before creating new locators, scan existing page objects and `src/pages/shared/locators.ts` (if exists) for matching selectors
 
 2. **Create spec**: `tests/{domain}/{test-id}.spec.ts`

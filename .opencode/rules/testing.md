@@ -1,9 +1,9 @@
 # Testing Guidelines
 
 ## Fixture Selection
-- `test` — unauth pages, OTP login flow
-- `authTest` — buyer pages (injects `at` cookie for `baseURL`)
-- `creatorAuthTest` — creator pages (injects `at` cookie for `creatorsBaseURL`)
+- `authTest` — **DEFAULT for buyer pages**. Injects `at` cookie via `loginWithToken`. No browser login needed.
+- `creatorAuthTest` — **DEFAULT for creator pages**. Injects `at` cookie via `loginWithToken`. No browser login needed.
+- `test` — **Only for auth-specific tests** (OTP login flow, unauth page access). Do NOT use for feature/business-logic tests.
 
 ## Test Structure
 - Every test must use a page object fixture: `pageObject.goto()` + `pageObject.expectLoaded()`
@@ -39,6 +39,22 @@ Tags at `test.describe()` level apply to all child tests.
 npx playwright test --grep @smoke
 npx playwright test --grep-invert @flaky
 npx playwright test --grep "(?=.*@smoke)(?=.*@cart)"
+```
+
+## Test Data
+- Store all test data in `src/test-data/` — never hardcode business values in test specs
+- Use `@test-data/` path alias for imports
+- Use **factory functions** (`generateProduct()`, etc.) for unique data per run
+- Use **static templates** for fixed reference data (expected values, form defaults)
+- When adding a new feature, create corresponding data file in `src/test-data/{domain}/`
+
+```typescript
+// ✅ Good
+import { generateProduct } from '@test-data/creator/product.data';
+const product = generateProduct({ category: 'digital' });
+
+// ❌ Avoid — hardcoded in test
+const product = { name: 'E-Book', price: 29.99 };
 ```
 
 ## Forbidden

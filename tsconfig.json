@@ -15,7 +15,9 @@
       "@fixtures/*": ["src/fixtures/*"],
       "@utils/*": ["src/utils/*"],
       "@helpers/*": ["src/helpers/*"],
-      "@config/*": ["config/*"]
+      "@config/*": ["config/*"],
+      "@test-data/*": ["src/test-data/*"]
+
     }
   },
   "include": ["tests/**/*.ts", "src/**/*.ts", "config/**/*.ts", "playwright.config.ts"]
