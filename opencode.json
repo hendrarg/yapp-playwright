@@ -4,6 +4,13 @@
     "AGENTS.md",
     ".opencode/rules/*.md"
   ],
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "cwd": "."
+    }
+  },
   "command": {
     "test": { "description": "Run all Playwright tests", "template": "npx playwright test" },
     "typecheck": { "description": "TypeScript type-check", "template": "npx tsc --noEmit" },

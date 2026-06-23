@@ -18,14 +18,10 @@ Validasi bahwa Buyer dapat browse Explore feed, berpindah antar tab (For You, Fo
 ## Preconditions
 
 - Buyer logged in
-- Buyer sudah follow minimal 1 creator
-- Terdapat exclusive/gated content yang aktif
-- Terdapat public post dengan image
-- Terdapat minimal cukup post untuk trigger infinite scroll
 
 ## Test Flow
 
-### Step 1 — Open Explore Tab
+### Step 1 — Open explore creator explore/creators
 
 - Buka halaman Explore
 - **Verify:** Feed menampilkan mixed content (public posts dan locked posts dalam satu feed)
@@ -38,7 +34,7 @@ Validasi bahwa Buyer dapat browse Explore feed, berpindah antar tab (For You, Fo
 - **Verify:** Tidak ada duplikat post setelah load
 - **Verify:** Loading indicator muncul saat fetching
 
-### Step 3 — Switch to For You Tab
+### Step 3 — Switch explore/products
 
 - Klik tab "For You"
 - **Verify:** Feed berubah ke konten For You
