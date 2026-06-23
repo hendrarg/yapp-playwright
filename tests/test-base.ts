@@ -2,6 +2,7 @@ import type { PageFixtures } from '../src/fixtures/page.fixtures';
 import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
 import { loginWithToken } from '../src/helpers/auth/token-login';
+import { waitForAuthResponse } from '../src/helpers/auth/validate-token';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
@@ -21,7 +22,9 @@ export const authTest = test.extend({
     await use(context);
   },
   page: async ({ page }, use) => {
+    const authCheck = waitForAuthResponse(page);
     await page.goto(baseURL);
+    await authCheck;
     await use(page);
   },
 });
@@ -33,7 +36,9 @@ export const creatorAuthTest = test.extend({
     await use(context);
   },
   page: async ({ page }, use) => {
+    const authCheck = waitForAuthResponse(page);
     await page.goto(creatorsBaseURL);
+    await authCheck;
     await use(page);
   },
 });
