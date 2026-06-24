@@ -79,6 +79,12 @@ export default defineConfig({
     //   name: 'Google Chrome',
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
+
+    /* API tests — no browser, uses request fixture only. */
+    {
+      name: 'api',
+      testDir: './tests/api',
+    },
   ],
 
   /* Run your local dev server before starting the tests */
