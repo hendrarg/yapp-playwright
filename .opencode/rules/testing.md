@@ -1,14 +1,23 @@
 # Testing Guidelines
 
 ## Fixture Selection
+
+### Browser / E2E tests
 - `authTest` — **DEFAULT for buyer pages**. Injects `at` cookie via `loginWithToken`. No browser login needed.
 - `creatorAuthTest` — **DEFAULT for creator pages**. Injects `at` cookie via `loginWithToken`. No browser login needed.
+- `mockTest` (from `@fixtures/mock.fixtures`) — Use when test needs mocked external services (payment, email, analytics). Supports `test.use({ mockPayments: false })` to toggle per test.
 - `test` — **Only for auth-specific tests** (OTP login flow, unauth page access). Do NOT use for feature/business-logic tests.
+
+### API tests (no browser)
+- `test` (from `@fixtures/api.fixtures`) — Provides `buyerRequest` + `creatorRequest` pre-authenticated `APIRequestContext`. No browser launched.
+  - `buyerRequest` — auto-injects `at` cookie + browser-like headers for buyer baseURL
+  - `creatorRequest` — auto-injects `at` cookie + browser-like headers for creator baseURL
 
 ## Test Structure
 - Every test must use a page object fixture: `pageObject.goto()` + `pageObject.expectLoaded()`
 - Add meaningful interactions beyond navigation when applicable
 - Set `test.setTimeout()` only when needed (e.g. OTP flow = 90000ms)
+- **Exception**: API tests (in `tests/api/`) use `buyerRequest`/`creatorRequest` fixtures — no page object, no browser
 
 ## Tagging Convention
 
@@ -27,7 +36,7 @@ Tags at `test.describe()` level apply to all child tests.
 | Category | Tags | Required |
 |----------|------|----------|
 | Test ID | `@T<number>` | Yes if linked to test case |
-| Feature | `@cart`, `@checkout`, `@auth`, `@membership`, `@products`, `@feeds`, `@profile`, `@messages`, `@wallet`, `@settings`, `@analytics`, `@campaigns`, `@streaming`, `@affiliate`, `@referral`, `@promotions`, `@sessions` | Yes |
+| Feature | `@cart`, `@checkout`, `@auth`, `@membership`, `@products`, `@feeds`, `@profile`, `@messages`, `@wallet`, `@settings`, `@analytics`, `@campaigns`, `@streaming`, `@affiliate`, `@referral`, `@promotions`, `@sessions`, `@network-mock`, `@payment` | Yes |
 | Role | `@buyer`, `@creator` | Yes |
 | Priority | `@smoke`, `@regression`, `@sanity` | Yes |
 | Status | `@flaky`, `@slow` | Optional |

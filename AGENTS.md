@@ -8,6 +8,7 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 |---------|---------|
 | `npm test` | Run all Playwright tests |
 | `npx playwright test --project=chromium` | Single browser |
+| `npx playwright test --project=api` | API tests only (no browser) |
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
 | `npx playwright test --ui` | UI mode |
 | `npx tsc --noEmit` | Type-check only |
@@ -22,6 +23,7 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 | `/test-ui` | Open Playwright UI mode |
 | `/flaky <spec>` | Re-run a flaky test 3x with trace (e.g. `/flaky tests/buyer/explore.spec.ts`) |
 | `/flaky-analyze` | Show trace from last failed flaky test |
+| `/test-api` | Run API tests only (`npx playwright test --project=api`) |
 | `/tc <id>` | Generate automation test from TC file (e.g. `/tc AT-B-E2E-001`) |
 
 ## Architecture
@@ -32,14 +34,20 @@ test-cases/             ← test case documents (.md) — source of truth
   creator/              ← AT-C-*.md
   auth/                 ← AT-A-*.md
 tests/test-base.ts      ← fixture entry: test, authTest, creatorAuthTest
+tests/api/              ← API-only test specs (no browser)
 src/
   test-data/            ← test data (static + factory pattern)
+    mocks/              ← mock response data (payment, email, errors)
   pages/                ← page objects (auth/, buyer/, creator/)
   fixtures/
     page.fixtures.ts    ← registers all page objects as fixtures
     base.fixture.ts     ← combo fixture (for tests that import from @fixtures/)
+    api.fixtures.ts     ← pre-auth API request context (buyerRequest, creatorRequest)
+    mock.fixtures.ts    ← toggleable external service mocks (payment, email, analytics)
   helpers/
     auth/               ← token-login.ts, otp-login.ts
+    api/                ← API seeding helpers (seed.ts), browser-like headers
+    network/            ← network mock helpers (mock.ts)
     otp/                ← Mailosaur client
   utils/
     playwright.utils.ts ← safeClick/safeFill/safeCheck, navigateAndWait, waitForLoaded
@@ -153,6 +161,9 @@ Project-local skills in `.opencode/skills/` loaded automatically by the `skill` 
 | `fix-tsc-errors` | Run `tsc --noEmit` and fix type errors |
 | `resolve-flaky-tests` | Systematic flaky element resolution — diagnose, apply fix, log pattern |
 | `iterative-e2e-testing` | Round-based iterative test development (E2E → FV → API) |
+| `reuse-patterns` | Detect and extract shared locators, steps, and functions across tests |
+| `network-mocking` | Mock external services (payment, email, analytics) in E2E tests |
+| `api-testing` | Pure API testing with request fixture — no browser, fast |
 
 ## CI
 

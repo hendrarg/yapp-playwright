@@ -90,11 +90,21 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 ## Round 5: API tests (AT-API-*)
 
-1. **Create API-only spec** (use `test` fixture, no page objects needed):
-   - Data still comes from `src/test-data/`
-   - Auth via `Authorization` header with test token
+1. **Load `api-testing` skill**:
+   ```bash
+   skill api-testing
+   ```
+   - Uses `buyerRequest`/`creatorRequest` from `@fixtures/api.fixtures`
+   - Auto-injects `at` cookie + browser-like headers (WAF bypass)
+   - No browser launched — tests run in milliseconds
 
-2. **Run all** → PASS.
+2. **Create API-only spec** in `tests/api/`:
+   - Import `test` from `../../src/fixtures/api.fixtures`
+   - Use `buyerRequest` for buyer API, `creatorRequest` for creator API
+   - Data still comes from `src/test-data/`
+   - Tags: `@api`, `@buyer|@creator`, `@smoke|@regression|@sanity`
+
+3. **Run API tests**: `npx playwright test --project=api`
 
 ---
 

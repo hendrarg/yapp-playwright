@@ -48,6 +48,13 @@ readonly nameInput = this.page.locator('.form-input-name');
 
 ## Separation
 - `src/pages/` — UI interaction logic only
-- `src/helpers/` — service logic (API calls, OTP, auth)
+- `src/helpers/` — service logic (API calls, OTP, auth, network mocking, seeding)
+  - `src/helpers/api/` — API seeding helpers
+  - `src/helpers/auth/` — auth helpers (token-login, OTP login)
+  - `src/helpers/network/` — network mock helpers
+  - `src/helpers/otp/` — Mailosaur client
 - `src/utils/` — generic reusable utilities
-- `src/fixtures/` — Playwright fixture wiring
+- `src/fixtures/` — Playwright fixture wiring (page, API, mock)
+- `src/test-data/` — test data (static + factory pattern)
+  - `src/test-data/mocks/` — mock response data (payment, email, errors)
+- `tests/api/` — API-only test specs (no browser)

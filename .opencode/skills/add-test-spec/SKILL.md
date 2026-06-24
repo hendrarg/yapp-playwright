@@ -36,11 +36,13 @@ Input format: `AT-{Domain}-{Type}-{Number}`
 | `AT-B-E2E-001` | buyer | E2E | `test-cases/buyer/AT-B-E2E-001*` |
 | `AT-C-E2E-001` | creator | E2E | `test-cases/creator/AT-C-E2E-001*` |
 | `AT-B-FV-001` | buyer | FV | `test-cases/buyer/AT-B-FV-001*` |
+| `AT-B-API-001` | buyer | API | `test-cases/buyer/AT-B-API-001*` |
+| `AT-C-API-001` | creator | API | `test-cases/creator/AT-C-API-001*` |
 | `AT-A-API-001` | auth | API | `test-cases/auth/AT-A-API-001*` |
 
 1. Extract domain letter from ID:
-   - `B` → buyer → fixture: `authTest`, glob: `test-cases/buyer/`
-   - `C` → creator → fixture: `creatorAuthTest`, glob: `test-cases/creator/`
+   - `B` → buyer → fixture: `authTest` (E2E/FV) or `buyerRequest` (API), glob: `test-cases/buyer/`
+   - `C` → creator → fixture: `creatorAuthTest` (E2E/FV) or `creatorRequest` (API), glob: `test-cases/creator/`
    - `A` → auth → fixture: `test`, glob: `test-cases/auth/`
 
 2. Glob file: `glob test-cases/{domain}/{tcId}*` → read the `.md`
@@ -56,8 +58,10 @@ skill reuse-patterns
 - Extract locators if ≥2 pages use the same element
 
 ## Step 3: Pick fixture + page object
-- **Buyer**: `authTest` + buyer page (e.g. `explorePage`, `cartPage`)
-- **Creator**: `creatorAuthTest` + creator page
+- **Buyer E2E/FV**: `authTest` + buyer page (e.g. `explorePage`, `cartPage`)
+- **Creator E2E/FV**: `creatorAuthTest` + creator page
+- **Buyer API**: `buyerRequest` from `@fixtures/api.fixtures` — load `api-testing` skill
+- **Creator API**: `creatorRequest` from `@fixtures/api.fixtures` — load `api-testing` skill
 - **Auth only**: `test` + `loginPage`
 
 ## Step 4: Create page object (if missing)
@@ -73,12 +77,13 @@ skill add-page-object
 - Update `src/test-data/index.ts`
 
 ## Step 6: Create spec file
-- Path: `tests/{domain}/{tcId}.spec.ts`
-- Import fixture from `../test-base`
+- **E2E/FV**: Path `tests/{domain}/{tcId}.spec.ts`, import fixture from `../test-base`
+- **API**: Path `tests/api/{domain}.{tcId}.spec.ts`, import `test` from `../../src/fixtures/api.fixtures`
 - Import test data using **relative path**: `from '../src/test-data/{domain}/{feature}'`
 - Tags: `@T<number>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
-- Locators: `smartLocator` from `@utils/heal-utils`
-- Interactions: `safeClick`/`safeFill`/`safeCheck` or `flakyClick`/`flakyFill`
+- **E2E only**: Locators: `smartLocator` from `@utils/heal-utils`
+- **E2E only**: Interactions: `safeClick`/`safeFill`/`safeCheck` or `flakyClick`/`flakyFill`
+- **API only**: Use `buyerRequest.get()` / `.post()` / `.patch()` / `.delete()` — no locators
 
 ## Step 7: Run `tsc --noEmit`
 ```bash
@@ -88,7 +93,11 @@ npx tsc --noEmit
 
 ## Step 8: Run test
 ```bash
+# E2E/FV
 npx playwright test tests/{domain}/{tcId}.spec.ts
+
+# API
+npx playwright test --project=api
 ```
 
 ## Step 9: If FAIL → resolve flaky
@@ -118,3 +127,10 @@ Each round completes only when:
 → fixture: `creatorAuthTest`
 → spec: `tests/creator/AT-C-E2E-001.spec.ts`
 → run: `npx playwright test tests/creator/AT-C-E2E-001.spec.ts`
+
+### /tc AT-B-API-001
+→ glob `test-cases/buyer/AT-B-API-001*` → read `.md`
+→ Type is **API** → load `api-testing` skill
+→ fixture: `buyerRequest` from `@fixtures/api.fixtures`
+→ spec: `tests/api/buyer.AT-B-API-001.spec.ts`
+→ run: `npx playwright test --project=api`
