@@ -4,7 +4,7 @@ import { signInWithEmailOtp } from "@helpers/auth/otp-login";
 export class LoginPage {
   constructor(public readonly page: Page) {}
 
-  async loginViaOtp(baseURL: string): Promise<{ email: string }> {
+  async loginViaOtp(baseURL: string): Promise<{ email: string; token: string }> {
     return signInWithEmailOtp(this.page, baseURL);
   }
 

@@ -48,7 +48,7 @@ src/
     auth/               ← token-login.ts, otp-login.ts
     api/                ← API seeding helpers (seed.ts), browser-like headers
     network/            ← network mock helpers (mock.ts)
-    otp/                ← Mailosaur client
+    otp/                ← testmail.app client
   utils/
     playwright.utils.ts ← safeClick/safeFill/safeCheck, navigateAndWait, waitForLoaded
     flaky-utils.ts      ← flakyClick/flakyFill, retryUntil, flakyExpectText, flakyGoto
@@ -74,7 +74,7 @@ Three fixture variants in `tests/test-base.ts`:
 
 Token injection sets cookie on the **apex domain** (e.g. `.yapp.ink`) so one token serves both subdomains. Set `YAPP_TEST_ACCESS_TOKEN` in `.env`.
 
-OTP login (Mailosaur) has 90s timeout. The `continue` button retry handles reCAPTCHA timing.
+OTP login (testmail.app) has 90s timeout. The `continue` button retry handles reCAPTCHA timing.
 
 ## Page objects
 
@@ -97,8 +97,8 @@ Loads `.env` at project root via `dotenv` in `playwright.config.ts`.
 | `YAPP_BASE_URL` | Yes | Buyer app |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app |
 | `YAPP_TEST_ACCESS_TOKEN` | For authTest/creatorAuthTest | Do not commit |
-| `MAILOSAUR_API_KEY` | For OTP tests | Do not commit |
-| `MAILOSAUR_SERVER_ID` | For OTP tests | — |
+| `TESTMAIL_API_KEY` | For OTP tests | Do not commit |
+| `TESTMAIL_NAMESPACE` | For OTP tests | — |
 | `PW_HEADLESS` | No | Defaults to `false` (headed) |
 | `PW_WORKERS` | No | CI defaults to 1 |
 
@@ -110,6 +110,7 @@ Loads `.env` at project root via `dotenv` in `playwright.config.ts`.
 - Retries: 2 on CI, 0 locally
 - Page is closed in `afterEach` (logs `pass browser close`)
 - Never commit `.env` (gitignored)
+- **Never use `--repeat-each` for reCAPTCHA tests** (e.g. `tests/auth/otp-login.spec.ts`). Rapid repeats from the same IP/machine tank the reCAPTCHA v3 score and trigger rate-limiting, causing cascading failures. To verify reliability, re-run the single test with a few minutes of cool-down between runs.
 
 ## Rules
 

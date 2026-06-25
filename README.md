@@ -105,7 +105,7 @@ test("explore page loads without auth redirect", async ({ explorePage }) => {
 
 | Method | Description | Fixture |
 |--------|-------------|---------|
-| OTP Login | Real email OTP via Mailosaur | `test` + `LoginPage` |
+| OTP Login | Real email OTP via testmail.app | `test` + `LoginPage` |
 | Token Injection | Injects `at` cookie from env | `authTest` (buyer), `creatorAuthTest` (creator) |
 
 ## Fixtures
@@ -147,8 +147,8 @@ npx playwright test --ui
 | `YAPP_CREATORS_BASE_URL` | Creator app URL |
 | `YAPP_API_BASE_URL` | API base URL |
 | `YAPP_TEST_ACCESS_TOKEN` | Pre-obtained auth token |
-| `MAILOSAUR_API_KEY` | Mailosaur API key |
-| `MAILOSAUR_SERVER_ID` | Mailosaur server ID |
+| `TESTMAIL_API_KEY` | testmail.app API key |
+| `TESTMAIL_NAMESPACE` | testmail.app namespace |
 | `PW_HEADLESS` | Run headless (`true`/`false`) |
 | `PW_WORKERS` | Parallel worker count |
 

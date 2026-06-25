@@ -52,7 +52,7 @@ readonly nameInput = this.page.locator('.form-input-name');
   - `src/helpers/api/` — API seeding helpers
   - `src/helpers/auth/` — auth helpers (token-login, OTP login)
   - `src/helpers/network/` — network mock helpers
-  - `src/helpers/otp/` — Mailosaur client
+  - `src/helpers/otp/` — testmail.app client
 - `src/utils/` — generic reusable utilities
 - `src/fixtures/` — Playwright fixture wiring (page, API, mock)
 - `src/test-data/` — test data (static + factory pattern)

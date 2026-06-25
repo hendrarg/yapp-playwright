@@ -17,6 +17,6 @@ export const creatorUser = {
 
 /** For OTP login tests only. Prefer token injection for feature tests. */
 export const otpUser = {
-  email: `${process.env.MAILOSAUR_SERVER_ID}@mailosaur.net`,
+  email: `${process.env.TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app`,
   timeout: 90000,
 };

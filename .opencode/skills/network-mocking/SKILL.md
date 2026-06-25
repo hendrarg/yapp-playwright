@@ -5,7 +5,7 @@ description: Mock external services (payment, email, analytics) in E2E tests usi
 
 ## When to use
 Use when you need to:
-- Mock third-party services (Stripe, Mailosaur, analytics) in E2E tests
+- Mock third-party services (Stripe, testmail.app, analytics) in E2E tests
 - Simulate error states (500, network failure, timeout) deterministically
 - Block noisy third-party requests that slow tests
 - Test retry/error-handling UI without real API failures

@@ -9,9 +9,9 @@ function requireEnv(name: string): string {
 export const baseURL = requireEnv('YAPP_BASE_URL');
 export const creatorsBaseURL = requireEnv('YAPP_CREATORS_BASE_URL');
 
-export function mailosaurEnv() {
+export function testmailEnv() {
   return {
-    apiKey: requireEnv('MAILOSAUR_API_KEY'),
-    serverId: requireEnv('MAILOSAUR_SERVER_ID'),
+    apiKey: requireEnv('TESTMAIL_API_KEY'),
+    namespace: requireEnv('TESTMAIL_NAMESPACE'),
   };
 }

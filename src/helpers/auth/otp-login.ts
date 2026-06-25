@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test';
-import { mailosaurConfig, resetInbox, fetchOtpCode } from '../otp/mailosaur';
+import { testmailConfig, markInboxStart, fetchOtpCode } from '../otp/testmail';
+import { extractAccessToken } from './save-token';
 
 /** Signs in through the real OTP UI flow and lands on /explore. */
 export async function signInWithEmailOtp(page: Page, baseURL: string) {
-  const inbox = mailosaurConfig();
-  const sentAt = await resetInbox(inbox);
+  const inbox = testmailConfig();
+  const sentAtMs = markInboxStart();
 
   await page.goto(new URL('auth', baseURL).toString());
   await page.waitForLoadState('networkidle');
@@ -19,12 +20,13 @@ export async function signInWithEmailOtp(page: Page, baseURL: string) {
     await page.waitForURL(/step=input-otp/, { timeout: 20000 });
   }
 
-  const otp = await fetchOtpCode(inbox, sentAt);
+  const otp = await fetchOtpCode(inbox, sentAtMs);
 
   await page.locator('input[data-input-otp="true"]').pressSequentially(otp);
   await page.waitForURL(/\/explore/);
 
-  return { email: inbox.email };
+  const token = await extractAccessToken(page.context());
+  return { email: inbox.email, token };
 }
 
 /** Logs out by navigating to /logout and waiting for redirect. */
