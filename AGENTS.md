@@ -74,6 +74,10 @@ Three fixture variants in `tests/test-base.ts`:
 
 Token injection sets cookie on the **apex domain** (e.g. `.yapp.ink`) so one token serves both subdomains. Set `YAPP_TEST_ACCESS_TOKEN` in `.env`.
 
+**Token auto-refresh:** if `YAPP_TEST_ACCESS_TOKEN` is expired (checked via JWT `exp` decode, no network call), `authTest`/`creatorAuthTest` automatically run the OTP login flow on a temporary page, save the fresh token to `.env`, then inject it. The OTP login runs on the buyer app; the resulting apex-domain cookie is valid for both apps.
+
+**Caveat (parallel workers):** if run with `PW_WORKERS > 1` while the token is expired, multiple workers may trigger OTP login concurrently → wasted testmail.app quota and a race on writing `.env`. Mitigation: run `tests/auth/otp-login.spec.ts` once before parallel suites, or set `PW_WORKERS=1`.
+
 OTP login (testmail.app) has 90s timeout. The `continue` button retry handles reCAPTCHA timing.
 
 ## Page objects
