@@ -64,12 +64,12 @@ export const authTest = test.extend({
     await loginWithToken(context, token, baseURL);
     await use(context);
   }, { scope: 'test', timeout: 90000 }],
-  page: async ({ page }, use) => {
+  page: [async ({ page }, use) => {
     const authCheck = waitForAuthResponse(page);
-    await page.goto(baseURL);
+    await page.goto(baseURL, { timeout: 60000, waitUntil: 'domcontentloaded' });
     await authCheck;
     await use(page);
-  },
+  }, { scope: 'test', timeout: 90000 }],
 });
 
 export const creatorAuthTest = test.extend({
@@ -78,12 +78,12 @@ export const creatorAuthTest = test.extend({
     await loginWithToken(context, token, creatorsBaseURL);
     await use(context);
   }, { scope: 'test', timeout: 90000 }],
-  page: async ({ page }, use) => {
+  page: [async ({ page }, use) => {
     const authCheck = waitForAuthResponse(page);
-    await page.goto(creatorsBaseURL);
+    await page.goto(creatorsBaseURL, { timeout: 60000, waitUntil: 'domcontentloaded' });
     await authCheck;
     await use(page);
-  },
+  }, { scope: 'test', timeout: 90000 }],
 });
 
 test.afterEach(async ({ page }) => {

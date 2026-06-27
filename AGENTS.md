@@ -10,6 +10,7 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 | `npx playwright test --project=chromium` | Single browser |
 | `npx playwright test --project=api` | API tests only (no browser) |
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
+| `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001` | Run single TC inside a feature spec (TC ID tag) |
 | `npx playwright test --ui` | UI mode |
 | `npx tsc --noEmit` | Type-check only |
 
@@ -115,6 +116,8 @@ Loads `.env` at project root via `dotenv` in `playwright.config.ts`.
 - Page is closed in `afterEach` (logs `pass browser close`)
 - Never commit `.env` (gitignored)
 - **Never use `--repeat-each` for reCAPTCHA tests** (e.g. `tests/auth/otp-login.spec.ts`). Rapid repeats from the same IP/machine tank the reCAPTCHA v3 score and trigger rate-limiting, causing cascading failures. To verify reliability, re-run the single test with a few minutes of cool-down between runs.
+- **One spec file per feature, not per TC** — write all TCs for a feature in `tests/{domain}/{feature}.spec.ts` (e.g. all feeds TCs go in `tests/buyer/feeds.spec.ts`). Never create `tests/{domain}/{TC-ID}.spec.ts`.
+- **Run only the generated TC after `/tc <id>`**: `npx playwright test tests/{domain}/{feature}.spec.ts --grep @T<TC-ID>` — do NOT run the whole feature file, only the new TC via its tag (e.g. `--grep @TAT-B-E2E-001`).
 
 ## Rules
 
@@ -125,7 +128,7 @@ Rules loaded from `.opencode/rules/` via `opencode.json`:
 | `code-style.md` | TypeScript, POM, imports, naming conventions |
 | `testing.md` | Fixture selection, test structure, tagging reference |
 
-All tests must include tags from: `@T<id>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`.
+All tests must include tags from: `@T<TC-ID>` (literal full TC ID, e.g. `@TAT-B-E2E-001`), `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`.
 
 ## Test Cases → Automation Flow
 
@@ -133,10 +136,12 @@ All tests must include tags from: `@T<id>`, `@<feature>`, `@buyer|@creator`, `@s
 test-cases/{domain}/{TC-ID}.md
     ↓ baca
 add-test-spec skill
-    ↓ generate
-tests/{domain}/{TC-ID}.spec.ts
+    ↓ generate (append to feature spec)
+tests/{domain}/{feature}.spec.ts
     ↓ import data dari
 src/test-data/{domain}/{feature}.data.ts
+    ↓ run only the new TC
+npx playwright test tests/{domain}/{feature}.spec.ts --grep @T<TC-ID>
 ```
 
 Setiap automation test bersumber dari dokumen `.md` di `test-cases/`.

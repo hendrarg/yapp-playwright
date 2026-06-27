@@ -76,12 +76,14 @@ skill add-page-object
 - If missing, create `src/test-data/{domain}/{feature}.data.ts`
 - Update `src/test-data/index.ts`
 
-## Step 6: Create spec file
-- **E2E/FV**: Path `tests/{domain}/{tcId}.spec.ts`, import fixture from `../test-base`
-- **API**: Path `tests/api/{domain}.{tcId}.spec.ts`, import `test` from `../../src/fixtures/api.fixtures`
-- Import test data using **relative path**: `from '../src/test-data/{domain}/{feature}'`
-- Tags: `@T<number>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
-- **E2E only**: Locators: `smartLocator` from `@utils/heal-utils`
+## Step 6: Append TC to feature spec file
+- **E2E/FV**: Append to existing `tests/{domain}/{feature}.spec.ts` (e.g. `tests/buyer/feeds.spec.ts`). If the feature spec does not exist, create it. **Never** create `tests/{domain}/{TC-ID}.spec.ts`. Import fixture from `../test-base`.
+- **API**: Append to existing `tests/api/{domain}.{feature}.spec.ts` (e.g. `tests/api/buyer.feeds.spec.ts`). If missing, create it. Import `test` from `../../src/fixtures/api.fixtures`.
+- Import test data using path alias: `from '@test-data/{domain}/{feature}.data'`
+- Tags: `@T<TC-ID>` (literal full TC ID, e.g. `@TAT-B-E2E-001`), `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
+- Test title = the TC's descriptive title (NOT the TC ID) — the TC ID goes only in the tag.
+- `test.step(' descriptive step name ')` — use descriptive step names, not "Step N — ...".
+- **E2E only**: Locators via `smartLocator` from `@utils/heal-utils` with fallback chain (testId → role → text → label → placeholder → selector). If the app has no `data-testid`, use `getByRole` + `getByText` as primary.
 - **E2E only**: Interactions: `safeClick`/`safeFill`/`safeCheck` or `flakyClick`/`flakyFill`
 - **API only**: Use `buyerRequest.get()` / `.post()` / `.patch()` / `.delete()` — no locators
 
@@ -91,14 +93,15 @@ npx tsc --noEmit
 ```
 - If type errors → `fix-tsc-errors` skill
 
-## Step 8: Run test
+## Step 8: Run ONLY the new TC (grep by TC-ID tag)
 ```bash
 # E2E/FV
-npx playwright test tests/{domain}/{tcId}.spec.ts
+npx playwright test tests/{domain}/{feature}.spec.ts --grep @T{TC-ID}
 
 # API
-npx playwright test --project=api
+npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @T{TC-ID}
 ```
+**Do NOT run the whole feature spec** — only the new TC via its tag.
 
 ## Step 9: If FAIL → resolve flaky
 ```bash
@@ -112,25 +115,25 @@ skill resolve-flaky-tests
 
 Each round completes only when:
 - `tsc --noEmit` ✅
-- `npx playwright test <spec>` PASS ✅
+- `npx playwright test tests/{domain}/{feature}.spec.ts --grep @T{TC-ID}` PASS ✅
 
 ## Examples
 
 ### /tc AT-B-E2E-001
 → glob `test-cases/buyer/AT-B-E2E-001*` → read `.md`
 → fixture: `authTest`
-→ spec: `tests/buyer/AT-B-E2E-001.spec.ts`
-→ run: `npx playwright test tests/buyer/AT-B-E2E-001.spec.ts`
+→ feature spec: `tests/buyer/feeds.spec.ts` (append, do not create `tests/buyer/AT-B-E2E-001.spec.ts`)
+→ run: `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001`
 
 ### /tc AT-C-E2E-001
 → glob `test-cases/creator/AT-C-E2E-001*` → read `.md`
 → fixture: `creatorAuthTest`
-→ spec: `tests/creator/AT-C-E2E-001.spec.ts`
-→ run: `npx playwright test tests/creator/AT-C-E2E-001.spec.ts`
+→ feature spec: `tests/creator/{feature}.spec.ts`
+→ run: `npx playwright test tests/creator/{feature}.spec.ts --grep @TAT-C-E2E-001`
 
 ### /tc AT-B-API-001
 → glob `test-cases/buyer/AT-B-API-001*` → read `.md`
 → Type is **API** → load `api-testing` skill
 → fixture: `buyerRequest` from `@fixtures/api.fixtures`
-→ spec: `tests/api/buyer.AT-B-API-001.spec.ts`
-→ run: `npx playwright test --project=api`
+→ feature spec: `tests/api/buyer.{feature}.spec.ts`
+→ run: `npx playwright test --project=api tests/api/buyer.{feature}.spec.ts --grep @TAT-B-API-001`

@@ -39,7 +39,7 @@ export function trackAuthToken(page: Page) {
 export function waitForAuthResponse(page: Page) {
   return page.waitForResponse(
     (r) => r.url().includes('/api/v1/accounts') && r.request().method() === 'GET',
-    { timeout: 15000 },
+    { timeout: 45000 },
   ).then((response) => {
     expect(response.status(), `Auth token invalid — /api/v1/accounts returned ${response.status()}`).toBe(200);
   });
