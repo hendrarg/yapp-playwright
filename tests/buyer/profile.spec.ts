@@ -32,9 +32,9 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
 
   await test.step('View Support creator section + tip form interactions', async () => {
     await buyerProfilePage.expectSupportSectionVisible();
-    await buyerProfilePage.expectSendTipesDisabled();
+    await buyerProfilePage.expectSendTipDisabled();
     await buyerProfilePage.selectTipSuggestion(profileLabels.tipSuggestion.idr[1]);
-    await buyerProfilePage.expectSendTipesEnabled();
+    await buyerProfilePage.expectSendTipEnabled();
   });
 
   await test.step('Switch to Links tab and verify link cards', async () => {
@@ -61,5 +61,52 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
     await buyerProfilePage.openFirstPublicImagePost();
     await buyerProfilePage.expectPostDetailOpen();
     await buyerProfilePage.expectPublicImageUnlocked();
+  });
+});
+
+test('Buyer Support Creator — Tip IDR with Custom Amount', {
+  tag: ['@TAT-B-E2E-008', '@profile', '@tip', '@buyer', '@regression'],
+}, async ({ buyerProfilePage, page }) => {
+  test.setTimeout(180000);
+
+  let orderId = '';
+
+  await test.step('Open profile, switch to Support tab and verify tip form', async () => {
+    await buyerProfilePage.goto(creatorProfileHandle);
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.expectAuthenticated();
+    await buyerProfilePage.expectSupportSectionVisible();
+    await buyerProfilePage.expectSendTipDisabled();
+  });
+
+  await test.step('Select IDR currency', async () => {
+    await buyerProfilePage.selectIdrCurrency();
+    await buyerProfilePage.expectSupportSectionVisible();
+  });
+
+  await test.step('Select tip suggestion Rp50.000 and verify Send Tip enabled', async () => {
+    await buyerProfilePage.selectTipSuggestion(profileLabels.tipSuggestion.idr[1]);
+    await buyerProfilePage.expectSendTipEnabled();
+  });
+
+  await test.step('Submit tip, verify tip page form auto-filled', async () => {
+    await buyerProfilePage.submitTip();
+    await buyerProfilePage.expectTipPageLoaded();
+    await buyerProfilePage.expectTipFormAutoFilled();
+  });
+
+  await test.step('Submit from tip page, verify transaction page', async () => {
+    orderId = await buyerProfilePage.submitTipFromTipPage();
+    await buyerProfilePage.expectTransactionPageLoaded('Hendra Rizal Gunawan');
+  });
+
+  await test.step('Post transaction via webhook API', async () => {
+    const { depositWebhook } = await import('@helpers/api/webhook');
+    await depositWebhook(page.request, orderId);
+    await page.waitForTimeout(2500);
+  });
+
+  await test.step('Verify Payment Successful', async () => {
+    await buyerProfilePage.expectPaymentSuccess();
   });
 });

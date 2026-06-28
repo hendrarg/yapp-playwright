@@ -9,7 +9,7 @@ export const profileTabs = {
 
 export const profileLabels = {
   supportHeading: "Support Hendra Rizal Gunawan",
-  sendTipes: "Send Tipes",
+  sendTip: "Send Tip",
   inputTipPlaceholder: "Input tip amount here...",
   idr: "IDR",
   usdt: "USDT",
