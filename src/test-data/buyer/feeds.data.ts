@@ -1,3 +1,5 @@
+import { faker } from "@faker-js/faker";
+
 export const feedsTabs = {
   following: "Following",
   yourPost: "Your Post",
@@ -19,3 +21,7 @@ export type FeedsTab = keyof typeof feedsTabs;
 
 export const scrollRounds = 3;
 export const scrollDelayMs = 1200;
+
+export function generateComment(): string {
+  return `Test ${faker.lorem.sentence(3)} ${faker.string.alphanumeric(6)}`;
+}

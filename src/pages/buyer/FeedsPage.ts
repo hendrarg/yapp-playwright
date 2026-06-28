@@ -211,8 +211,67 @@ export class FeedsPage {
     await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
+  // ── Comment section (post detail page) ──
+  readonly commentInput = this.page.getByRole("textbox", { name: "Write your comment" });
+  readonly postCommentButton = this.page.getByRole("button", { name: "Post", exact: true });
+  readonly commentCountButton = this.page.getByRole("button", { name: /^\d+$/ }).first();
+  readonly feedCommentCountButton = this.feedPosts.first().getByRole("button", { name: /^\d+$/ }).first();
+
+  async getCommentCount(): Promise<number> {
+    const text = (await this.commentCountButton.locator("p").first().textContent()) ?? "0";
+    return parseInt(text.trim(), 10) || 0;
+  }
+
+  async getFeedCommentCount(): Promise<number> {
+    const text = (await this.feedCommentCountButton.locator("p").first().textContent()) ?? "0";
+    return parseInt(text.trim(), 10) || 0;
+  }
+
+  async fillComment(text: string) {
+    await this.commentInput.scrollIntoViewIfNeeded();
+    await expect(this.commentInput).toBeVisible({ timeout: 10000 });
+    await this.commentInput.fill(text);
+  }
+
+  async expectPostButtonEnabled() {
+    await expect(this.postCommentButton).toBeEnabled({ timeout: 5000 });
+  }
+
+  async expectPostButtonDisabled() {
+    await expect(this.postCommentButton).toBeDisabled({ timeout: 5000 });
+  }
+
+  async submitComment(commentText: string) {
+    await safeClick(this.postCommentButton);
+    await waitForLoaded(this.page);
+    await this.page.waitForTimeout(1500);
+    await expect(this.page.getByText(commentText, { exact: false })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectCommentCountIncreased(previousCount: number) {
+    const newCount = await this.getCommentCount();
+    expect(newCount, `comment count should be > ${previousCount}`).toBeGreaterThan(previousCount);
+  }
+
+  async expectFeedCommentCountIncreased(previousCount: number) {
+    // Feed may have stale data after back navigation — retry with delay
+    for (let i = 0; i < 5; i++) {
+      const newCount = await this.getFeedCommentCount();
+      if (newCount > previousCount) return;
+      await this.page.waitForTimeout(1000);
+    }
+    const finalCount = await this.getFeedCommentCount();
+    expect(finalCount, `feed comment count should be > ${previousCount}`).toBeGreaterThan(previousCount);
+  }
+
   async expectPostDetailOpen() {
-    await expect(this.postDetailDialog).toBeVisible({ timeout: 10000 });
+    // Text posts open as full page (/post/{id}), image posts open as dialog
+    const isDialog = await this.postDetailDialog.isVisible({ timeout: 3000 }).catch(() => false);
+    if (isDialog) {
+      await expect(this.postDetailDialog).toBeVisible({ timeout: 10000 });
+    } else {
+      await expect(this.page).toHaveURL(/\/post\//, { timeout: 10000 });
+    }
   }
 
   async expectPublicImageUnlocked() {

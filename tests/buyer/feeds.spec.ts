@@ -1,5 +1,5 @@
 import { authTest as test, expect } from '../test-base';
-import { feedsTabs } from '@test-data/buyer/feeds.data';
+import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 
 test('injected "at" token loads the feeds page without redirecting to auth', {
   tag: ['@feeds', '@buyer', '@smoke'],
@@ -136,5 +136,45 @@ test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
     await buyerFeedsPage.expectUnlikedState();
     await buyerFeedsPage.openFirstPostDetail();
     await buyerFeedsPage.expectUnlikedState();
+  });
+});
+
+test('Buyer Comment on Post — Submit & Verify', {
+  tag: ['@TAT-B-E2E-005', '@feeds', '@comment', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage }) => {
+  test.setTimeout(120000);
+
+  let previousCommentCount = 0;
+  let commentText = '';
+
+  await test.step('Open feeds and verify Following tab', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    previousCommentCount = await buyerFeedsPage.getFeedCommentCount();
+  });
+
+  await test.step('Open post detail and verify comment section', async () => {
+    await buyerFeedsPage.openFirstPostDetail();
+    await buyerFeedsPage.expectPostDetailOpen();
+    await buyerFeedsPage.expectPostButtonDisabled();
+  });
+
+  await test.step('Type comment and verify Post button enabled', async () => {
+    commentText = generateComment();
+    await buyerFeedsPage.fillComment(commentText);
+    await buyerFeedsPage.expectPostButtonEnabled();
+  });
+
+  await test.step('Submit comment, verify it appears in list and count increased', async () => {
+    await buyerFeedsPage.submitComment(commentText);
+    await buyerFeedsPage.expectCommentCountIncreased(previousCommentCount);
+  });
+
+  await test.step('Click back to feeds and verify comment count increased', async () => {
+    await buyerFeedsPage.clickBackFromPostDetail();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectFeedCommentCountIncreased(previousCommentCount);
   });
 });
