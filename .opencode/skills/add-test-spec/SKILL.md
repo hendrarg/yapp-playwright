@@ -95,16 +95,25 @@ npx tsc --noEmit
 
 ## Step 8: Run ONLY the new TC (grep by TC-ID tag)
 ```bash
-# E2E/FV
-npx playwright test tests/{domain}/{feature}.spec.ts --grep @T{TC-ID}
+# E2E/FV (single browser — chromium only)
+npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @T{TC-ID}
 
 # API
 npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @T{TC-ID}
 ```
 **Do NOT run the whole feature spec** — only the new TC via its tag.
 
-## Step 9: If FAIL → resolve flaky
+## Step 9: If FAIL → snapshot first, then resolve flaky
+
+**⚠️ If the test fails 2+ times**, FIRST capture a browser snapshot of the page state to see the actual DOM. Do NOT iterate fixes blindly.
+
 ```bash
+# 1. Navigate to the failing page with auth and inspect the real DOM
+#    Use: playwright_browser_navigate → playwright_browser_snapshot
+
+# 2. Analyze: what are the REAL roles, names, labels, structure?
+
+# 3. Then apply fix
 skill resolve-flaky-tests
 ```
 - Fix → re-run from Step 7 until PASS ✅
@@ -123,13 +132,13 @@ Each round completes only when:
 → glob `test-cases/buyer/AT-B-E2E-001*` → read `.md`
 → fixture: `authTest`
 → feature spec: `tests/buyer/feeds.spec.ts` (append, do not create `tests/buyer/AT-B-E2E-001.spec.ts`)
-→ run: `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001`
+→ run: `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @TAT-B-E2E-001`
 
 ### /tc AT-C-E2E-001
 → glob `test-cases/creator/AT-C-E2E-001*` → read `.md`
 → fixture: `creatorAuthTest`
 → feature spec: `tests/creator/{feature}.spec.ts`
-→ run: `npx playwright test tests/creator/{feature}.spec.ts --grep @TAT-C-E2E-001`
+→ run: `npx playwright test tests/creator/{feature}.spec.ts --project=chromium --grep @TAT-C-E2E-001`
 
 ### /tc AT-B-API-001
 → glob `test-cases/buyer/AT-B-API-001*` → read `.md`

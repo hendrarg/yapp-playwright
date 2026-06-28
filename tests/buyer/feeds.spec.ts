@@ -50,3 +50,46 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
     await buyerFeedsPage.expectPublicImageUnlocked();
   });
 });
+
+test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
+  tag: ['@TAT-B-E2E-003', '@feeds', '@follow', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, buyerProfilePage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await buyerFeedsPage.expectCreatorsSectionVisible();
+  });
+
+  await test.step('Follow creator from Creators You Might Like', async () => {
+    await buyerFeedsPage.followFirstCreator();
+    // Page redirects to / after follow
+  });
+
+  await test.step('Open creator profile from Following tab post', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.openCreatorProfileFromFollowingTab();
+    await buyerProfilePage.expectLoaded();
+  });
+
+  await test.step('Verify Following state on creator profile', async () => {
+    await buyerProfilePage.expectFollowingState();
+  });
+
+  await test.step('Unfollow from creator profile', async () => {
+    await buyerProfilePage.clickUnfollow();
+    await buyerProfilePage.expectFollowState();
+  });
+
+  await test.step('Click back button to return to feeds and verify unfollowed state', async () => {
+    await buyerProfilePage.clickBackButton();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.switchToTab('following');
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await expect(buyerFeedsPage.creatorsSection).toBeVisible({ timeout: 10000 });
+    await expect(buyerFeedsPage.followButtons.first()).toBeVisible({ timeout: 10000 });
+  });
+});

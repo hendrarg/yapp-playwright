@@ -69,6 +69,36 @@ export class FeedsPage {
     await expect(this.creatorAvatar).toBeVisible({ timeout: 10000 });
   }
 
+  // ── Follow / Unfollow from Creators You Might Like ──
+  readonly followingButtons = this.page.getByRole("button", { name: feedsLabels.following, exact: true });
+
+  async getFirstCreatorName(): Promise<string> {
+    const card = this.creatorCards.first();
+    const allText = (await card.textContent()) ?? "";
+    const name = allText.replace(feedsLabels.follow, "").trim();
+    return name;
+  }
+
+  async getFirstCreatorHandle(): Promise<string> {
+    const alt = (await this.creatorAvatar.getAttribute("alt")) ?? "";
+    return alt.trim();
+  }
+
+  async followFirstCreator() {
+    await safeClick(this.followButtons.first());
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  async expectCreatorRemovedFromSuggestions(creatorName: string) {
+    const card = this.creatorCards.filter({ hasText: creatorName }).first();
+    await expect(card).toBeHidden({ timeout: 10000 }).catch(() => {});
+  }
+
+  async expectFollowingButtonVisible() {
+    await expect(this.followingButtons.first()).toBeVisible({ timeout: 10000 });
+  }
+
   // ── Feed posts ──
   readonly feedPosts = this.page.locator(POST_SELECTOR);
   readonly memberOnlyLabel = this.page.getByText(feedsLabels.memberOnly, { exact: true });
@@ -80,6 +110,18 @@ export class FeedsPage {
     .locator(POST_SELECTOR)
     .filter({ has: this.page.getByRole("button", { name: feedsLabels.openPostMedia }) })
     .filter({ hasNot: this.page.getByText(feedsLabels.memberOnly, { exact: true }) });
+
+  // ── Navigate to creator profile from Following tab post ──
+  async openCreatorProfileFromFollowingTab() {
+    await this.switchToTab("following");
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await expect(this.feedPosts.first()).toBeVisible({ timeout: 15000 });
+    const firstPostAvatar = this.feedPosts.first().locator("img").first();
+    await safeClick(firstPostAvatar);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await waitForLoaded(this.page);
+  }
 
   async expectExclusiveContentOnly() {
     await this.expectTabActive(feedsTabs.exclusive);

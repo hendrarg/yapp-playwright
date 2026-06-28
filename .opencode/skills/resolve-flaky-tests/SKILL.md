@@ -13,6 +13,24 @@ Use when a Playwright test fails intermittently with errors like:
 
 ## Diagnostic flow
 
+### ⚠️ Golden Rule: Snapshot before blind-fix
+
+**If a test fails 2+ times** with the same error — take a browser snapshot FIRST to inspect the actual DOM. Do NOT guess locators or apply code fixes blindly.
+
+```
+Test FAIL (2nd+ time)
+  └─ 1. playwright_browser_navigate → navigate to the failing page
+  └─ 2. playwright_browser_snapshot   → capture accessibility tree
+  └─ 3. Analyze: what are the REAL element roles, names, labels?
+  └─ 4. Only THEN apply the fix pattern below
+```
+
+Common DOM surprises caught by snapshot:
+- Button accessible name is `"Following Unfollow"`, not `"Unfollow"`
+- Element is a `<div>` not an `<a>` (no href)
+- Text is nested inside `<span>` children, not directly on the button
+- Element uses `aria-label` instead of visible text
+
 ```
 Test FAIL
   ├─ ❌ TimeoutError (element not found)

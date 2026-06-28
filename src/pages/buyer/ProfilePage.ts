@@ -48,6 +48,56 @@ export class ProfilePage {
     await expect(this.main.getByText("Tester", { exact: true }).first()).toBeVisible({ timeout: 10000 });
   }
 
+  // ── Follow / Unfollow ──
+  readonly followButton = this.page.getByRole("button", { name: "Follow", exact: true });
+  // Button shows "Following" + "Unfollow" when followed (accessible name = "Following Unfollow")
+  readonly followingButton = this.page.getByRole("button", { name: /Following/ });
+  readonly unfollowDialog = this.page.getByRole("dialog");
+  readonly unfollowConfirmButton = this.unfollowDialog.getByRole("button", { name: "Unfollow" });
+  readonly cancelButton = this.unfollowDialog.getByRole("button", { name: "Cancel" });
+
+  async expectFollowingState() {
+    await expect(
+      this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" })
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectFollowState() {
+    await expect(this.followButton).toBeVisible({ timeout: 10000 });
+  }
+
+  async clickUnfollow() {
+    // Hover the following button to reveal the Unfollow text
+    const btn = this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" });
+    await btn.scrollIntoViewIfNeeded();
+    await btn.hover();
+    await this.page.waitForTimeout(1000);
+    // Click the button — hovering reveals "Unfollow" text, click triggers dialog
+    await safeClick(btn);
+    // Check if confirmation dialog appeared
+    const dialogVisible = await this.unfollowDialog.isVisible({ timeout: 5000 }).catch(() => false);
+    if (dialogVisible) {
+      await safeClick(this.unfollowConfirmButton);
+      await waitForLoaded(this.page);
+      await this.page.waitForLoadState("networkidle").catch(() => {});
+    }
+  }
+
+  async confirmUnfollow() {
+    await safeClick(this.unfollowConfirmButton);
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  // ── Navigation ──
+  readonly backButton = this.page.getByRole("button", { name: "Back" });
+
+  async clickBackButton() {
+    await safeClick(this.backButton);
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
   // ── Tabs (within main; sidebar has same names — scope to main) ──
   private tabButton(label: string) {
     return this.main.getByRole("button", { name: label, exact: true });

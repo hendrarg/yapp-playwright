@@ -36,7 +36,7 @@ Validasi bahwa Buyer dapat follow dan unfollow creator dari berbagai entry point
 
 ### Step 3 — Verify Follow State on Creator Profile
 
-- Buka halaman profil creator yang sama
+- Buka halaman profil creator yang sama di feeds posting
 - **Verify:** Menampilkan "Following" Button
 
 ### Step 4 — Button following change to be unfollow
