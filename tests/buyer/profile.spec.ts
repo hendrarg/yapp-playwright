@@ -1,4 +1,4 @@
-import { authTest as test } from '../test-base';
+import { authTest as test, expect } from '../test-base';
 import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.data';
 
 test('injected "at" token loads the profile page without redirecting to auth', {
@@ -108,5 +108,35 @@ test('Buyer Support Creator — Tip IDR with Custom Amount', {
 
   await test.step('Verify Payment Successful', async () => {
     await buyerProfilePage.expectPaymentSuccess();
+  });
+});
+
+test('Buyer View Membership Plans — Browse & Select Tier', {
+  tag: ['@TAT-B-E2E-009', '@profile', '@membership', '@buyer', '@regression'],
+}, async ({ buyerProfilePage }) => {
+  test.setTimeout(120000);
+  const creatorHandle = 'davidalfasunarna';
+
+  await test.step('Open creator profile and verify membership section', async () => {
+    await buyerProfilePage.goto(creatorHandle);
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.expectAuthenticated();
+    // Verify profile loaded: avatar image visible
+    await expect(buyerProfilePage.page.locator('main img').first()).toBeVisible({ timeout: 10000 });
+    await buyerProfilePage.expectMembershipSectionVisible();
+  });
+
+  await test.step('Verify membership tier cards with price and Show More', async () => {
+    await buyerProfilePage.expectMembershipSectionVisible();
+  });
+
+  await test.step('Click Show More and verify membership page', async () => {
+    await buyerProfilePage.clickShowMore();
+    await buyerProfilePage.expectMembershipPageLoaded();
+  });
+
+  await test.step('Select a membership tier and verify detail page', async () => {
+    await buyerProfilePage.clickFirstMembershipTier();
+    await buyerProfilePage.expectTierDetailPageLoaded();
   });
 });

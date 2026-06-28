@@ -144,6 +144,51 @@ export class ProfilePage {
     await expect(this.showMoreButton).toBeVisible({ timeout: 10000 });
   }
 
+  // ── Membership page (/{handle}/membership) ──
+  async clickShowMore() {
+    await safeClick(this.showMoreButton);
+    await this.page.waitForURL(/\/membership\b/, { timeout: 15000 });
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.page.waitForTimeout(1000);
+  }
+
+  readonly membershipPageHeading = this.page.getByRole("heading", { name: "Go beyond the public feed!" });
+  readonly membershipSubscribeButtons = this.page.getByRole("button", { name: "Subscribe" });
+
+  async expectMembershipPageLoaded() {
+    await expect(this.page).toHaveURL(/\/membership\b/, { timeout: 10000 });
+    await expect(this.membershipPageHeading).toBeVisible({ timeout: 10000 });
+    // Wait for tier cards to render
+    await expect(this.membershipSubscribeButtons.first()).toBeVisible({ timeout: 10000 });
+    const subscribeCount = await this.membershipSubscribeButtons.count();
+    expect(subscribeCount, "should have at least 2 tiers with Subscribe buttons").toBeGreaterThanOrEqual(2);
+  }
+
+  async clickFirstMembershipTier() {
+    // Click the tier card: go up 2 levels from Subscribe button to the card container
+    const card = this.membershipSubscribeButtons.first().locator("xpath=../..");
+    await safeClick(card);
+    await this.page.waitForURL(/\/membership\/[a-f0-9-]+/, { timeout: 15000 });
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  // ── Tier detail page (/{handle}/membership/{tierId}) ──
+  readonly tierDetailName = this.page.getByText("Tier Name").locator("..").getByText(/.+/).last();
+  readonly tierDetailBilling = this.page.getByText("Billing").locator("..").getByText(/Rp/);
+  readonly tierDetailCreator = this.page.getByText("Creator").locator("..").locator('[class*="cursor-pointer"]');
+  readonly tierDetailSubscribe = this.page.getByRole("button", { name: "Subscribe" });
+  readonly tierDetailImage = this.page.locator("main img").filter({ has: this.page.locator("..").getByText(/Tier Name|Billing/) }).first();
+
+  async expectTierDetailPageLoaded() {
+    await expect(this.page).toHaveURL(/\/membership\/[a-f0-9-]+/, { timeout: 10000 });
+    await expect(this.tierDetailName).toBeVisible({ timeout: 5000 });
+    await expect(this.tierDetailBilling).toBeVisible({ timeout: 5000 });
+    await expect(this.tierDetailCreator).toBeVisible({ timeout: 5000 });
+    await expect(this.tierDetailSubscribe).toBeVisible({ timeout: 5000 });
+  }
+
   // ── Support section (right column) — tip form ──
   readonly supportSectionHeading = this.main.getByText(profileLabels.supportHeading, { exact: true }).first();
   readonly tipCurrencyGroup = this.main.getByRole("group", { name: "Tip currency" });

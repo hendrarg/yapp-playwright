@@ -37,15 +37,16 @@ Validasi bahwa Buyer dapat melihat membership plans di creator profile, browse t
 ### Step 3 — Click Show More
 
 - Klik tombol Show More
+- **Verify:** direct to page membership : creatorname/membership
 - **Verify:** Semua tier cards ditampilkan
-- **Verify:** Tombol berubah menjadi Show Less atau hilang
+- **Verify:** menampilkan button subcribe/subcribed, description and img
 
 ### Step 4 — Select a Membership Tier
 
 - Klik salah satu membership tier card
 - **Verify:** Navigasi ke halaman detail membership tier
-- **Verify:** Price dan benefits sesuai tier yang dipilih
-- **Verify:** Tombol subscribe/join tersedia
+- **Verify:** menampilkan tiername, billing, creator dan button subscribe/subscibed
+- **Verify:** menampilkan beberapa benefit product atau rewards
 
 ## Expected Result
 
@@ -53,7 +54,7 @@ Membership section tampil dengan benar, Show More berfungsi, tier detail page te
 
 ## Test Data
 
--
+- creator : davidalfasunarna
 
 ## Notes
 
