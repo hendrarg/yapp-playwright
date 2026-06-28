@@ -66,12 +66,12 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
 
 test('Buyer Support Creator — Tip IDR with Custom Amount', {
   tag: ['@TAT-B-E2E-008', '@profile', '@tip', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, page }) => {
+}, async ({ buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
   let orderId = '';
 
-  await test.step('Open profile, switch to Support tab and verify tip form', async () => {
+  await test.step('Open profile and verify tip form', async () => {
     await buyerProfilePage.goto(creatorProfileHandle);
     await buyerProfilePage.expectLoaded();
     await buyerProfilePage.expectAuthenticated();
@@ -91,13 +91,13 @@ test('Buyer Support Creator — Tip IDR with Custom Amount', {
 
   await test.step('Submit tip, verify tip page form auto-filled', async () => {
     await buyerProfilePage.submitTip();
-    await buyerProfilePage.expectTipPageLoaded();
-    await buyerProfilePage.expectTipFormAutoFilled();
+    await tipPage.expectPageLoaded();
+    await tipPage.expectFormAutoFilled();
   });
 
   await test.step('Submit from tip page, verify transaction page', async () => {
-    orderId = await buyerProfilePage.submitTipFromTipPage();
-    await buyerProfilePage.expectTransactionPageLoaded('Hendra Rizal Gunawan');
+    orderId = await tipPage.submit();
+    await transactionPage.expectPageLoaded('Hendra Rizal Gunawan');
   });
 
   await test.step('Post transaction via webhook API', async () => {
@@ -107,13 +107,13 @@ test('Buyer Support Creator — Tip IDR with Custom Amount', {
   });
 
   await test.step('Verify Payment Successful', async () => {
-    await buyerProfilePage.expectPaymentSuccess();
+    await transactionPage.expectPaymentSuccess();
   });
 });
 
 test('Buyer View Membership Plans — Browse & Select Tier', {
   tag: ['@TAT-B-E2E-009', '@profile', '@membership', '@buyer', '@regression'],
-}, async ({ buyerProfilePage }) => {
+}, async ({ buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
   test.setTimeout(120000);
   const creatorHandle = 'davidalfasunarna';
 
@@ -121,7 +121,6 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
     await buyerProfilePage.goto(creatorHandle);
     await buyerProfilePage.expectLoaded();
     await buyerProfilePage.expectAuthenticated();
-    // Verify profile loaded: avatar image visible
     await expect(buyerProfilePage.page.locator('main img').first()).toBeVisible({ timeout: 10000 });
     await buyerProfilePage.expectMembershipSectionVisible();
   });
@@ -131,12 +130,12 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
   });
 
   await test.step('Click Show More and verify membership page', async () => {
-    await buyerProfilePage.clickShowMore();
-    await buyerProfilePage.expectMembershipPageLoaded();
+    await buyerProfilePage.showMoreButton.click();
+    await buyerMembershipPage.expectPageLoaded();
   });
 
   await test.step('Select a membership tier and verify detail page', async () => {
-    await buyerProfilePage.clickFirstMembershipTier();
-    await buyerProfilePage.expectTierDetailPageLoaded();
+    await buyerMembershipPage.clickFirstTier();
+    await tierDetailPage.expectPageLoaded();
   });
 });

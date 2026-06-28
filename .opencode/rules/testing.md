@@ -17,6 +17,14 @@
 - Every test must use a page object fixture: `pageObject.goto()` + `pageObject.expectLoaded()`
 - Add meaningful interactions beyond navigation when applicable
 - Set `test.setTimeout()` only when needed (e.g. OTP flow = 90000ms)
+- **Step naming**: Use descriptive step names ONLY. Do **NOT** prefix with `Step N:`, `Step 1:`, etc. Playwright already numbers steps automatically.
+  ```typescript
+  // ✅ Good
+  test.step('Open feeds and verify Following tab', async () => { ... });
+  
+  // ❌ Forbidden
+  test.step('Step 1: Open feeds and verify Following tab', async () => { ... });
+  ```
 - **Exception**: API tests (in `tests/api/`) use `buyerRequest`/`creatorRequest` fixtures — no page object, no browser
 
 ## Tagging Convention

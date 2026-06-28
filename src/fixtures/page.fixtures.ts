@@ -3,8 +3,12 @@ import { ExplorePage } from "@pages/buyer/ExplorePage";
 import { CartPage } from "@pages/buyer/CartPage";
 import { FeedsPage as BuyerFeedsPage } from "@pages/buyer/FeedsPage";
 import { LibraryPage } from "@pages/buyer/LibraryPage";
+import { MembershipPage as BuyerMembershipPage } from "@pages/buyer/MembershipPage";
 import { MessagePage } from "@pages/buyer/MessagePage";
 import { ProfilePage as BuyerProfilePage } from "@pages/buyer/ProfilePage";
+import { TierDetailPage } from "@pages/buyer/TierDetailPage";
+import { TipPage } from "@pages/buyer/TipPage";
+import { TransactionPage } from "@pages/buyer/TransactionPage";
 import { AffiliatePage } from "@pages/creator/AffiliatePage";
 import { AnalyticsPage } from "@pages/creator/AnalyticsPage";
 import { CampaignsPage } from "@pages/creator/CampaignsPage";
@@ -28,8 +32,12 @@ export type PageFixtures = {
   cartPage: CartPage;
   buyerFeedsPage: BuyerFeedsPage;
   libraryPage: LibraryPage;
+  buyerMembershipPage: BuyerMembershipPage;
   messagePage: MessagePage;
   buyerProfilePage: BuyerProfilePage;
+  tierDetailPage: TierDetailPage;
+  tipPage: TipPage;
+  transactionPage: TransactionPage;
   affiliatePage: AffiliatePage;
   analyticsPage: AnalyticsPage;
   campaignsPage: CampaignsPage;
@@ -74,6 +82,22 @@ export const pageFixtures = {
 
   buyerProfilePage: async ({ page }: any, use: any) => {
     await use(new BuyerProfilePage(page, baseURL));
+  },
+
+  tipPage: async ({ page }: any, use: any) => {
+    await use(new TipPage(page, baseURL));
+  },
+
+  transactionPage: async ({ page }: any, use: any) => {
+    await use(new TransactionPage(page, baseURL));
+  },
+
+  buyerMembershipPage: async ({ page }: any, use: any) => {
+    await use(new BuyerMembershipPage(page, baseURL));
+  },
+
+  tierDetailPage: async ({ page }: any, use: any) => {
+    await use(new TierDetailPage(page, baseURL));
   },
 
   affiliatePage: async ({ page }: any, use: any) => {

@@ -144,51 +144,6 @@ export class ProfilePage {
     await expect(this.showMoreButton).toBeVisible({ timeout: 10000 });
   }
 
-  // ── Membership page (/{handle}/membership) ──
-  async clickShowMore() {
-    await safeClick(this.showMoreButton);
-    await this.page.waitForURL(/\/membership\b/, { timeout: 15000 });
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
-    await this.page.waitForTimeout(1000);
-  }
-
-  readonly membershipPageHeading = this.page.getByRole("heading", { name: "Go beyond the public feed!" });
-  readonly membershipSubscribeButtons = this.page.getByRole("button", { name: "Subscribe" });
-
-  async expectMembershipPageLoaded() {
-    await expect(this.page).toHaveURL(/\/membership\b/, { timeout: 10000 });
-    await expect(this.membershipPageHeading).toBeVisible({ timeout: 10000 });
-    // Wait for tier cards to render
-    await expect(this.membershipSubscribeButtons.first()).toBeVisible({ timeout: 10000 });
-    const subscribeCount = await this.membershipSubscribeButtons.count();
-    expect(subscribeCount, "should have at least 2 tiers with Subscribe buttons").toBeGreaterThanOrEqual(2);
-  }
-
-  async clickFirstMembershipTier() {
-    // Click the tier card: go up 2 levels from Subscribe button to the card container
-    const card = this.membershipSubscribeButtons.first().locator("xpath=../..");
-    await safeClick(card);
-    await this.page.waitForURL(/\/membership\/[a-f0-9-]+/, { timeout: 15000 });
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
-  }
-
-  // ── Tier detail page (/{handle}/membership/{tierId}) ──
-  readonly tierDetailName = this.page.getByText("Tier Name").locator("..").getByText(/.+/).last();
-  readonly tierDetailBilling = this.page.getByText("Billing").locator("..").getByText(/Rp/);
-  readonly tierDetailCreator = this.page.getByText("Creator").locator("..").locator('[class*="cursor-pointer"]');
-  readonly tierDetailSubscribe = this.page.getByRole("button", { name: "Subscribe" });
-  readonly tierDetailImage = this.page.locator("main img").filter({ has: this.page.locator("..").getByText(/Tier Name|Billing/) }).first();
-
-  async expectTierDetailPageLoaded() {
-    await expect(this.page).toHaveURL(/\/membership\/[a-f0-9-]+/, { timeout: 10000 });
-    await expect(this.tierDetailName).toBeVisible({ timeout: 5000 });
-    await expect(this.tierDetailBilling).toBeVisible({ timeout: 5000 });
-    await expect(this.tierDetailCreator).toBeVisible({ timeout: 5000 });
-    await expect(this.tierDetailSubscribe).toBeVisible({ timeout: 5000 });
-  }
-
   // ── Support section (right column) — tip form ──
   readonly supportSectionHeading = this.main.getByText(profileLabels.supportHeading, { exact: true }).first();
   readonly tipCurrencyGroup = this.main.getByRole("group", { name: "Tip currency" });
@@ -231,80 +186,6 @@ export class ProfilePage {
     await this.page.waitForURL(/\/tip/, { timeout: 15000 });
     await waitForLoaded(this.page);
     await this.page.waitForLoadState("networkidle").catch(() => {});
-  }
-
-  // ── Tip page (/{handle}/tip) ──
-  readonly tipPageTitle = this.page.locator("span").filter({ hasText: "Send Tip" }).first();
-  readonly tipAmountInput = this.page.getByRole("textbox", { name: "Input Amount" });
-  readonly tipPaymentMethod = this.page.getByRole("combobox");
-  readonly tipBackButton = this.page.getByRole("button", { name: "Back" });
-  readonly tipNameInput = this.page.getByRole("textbox", { name: "Your Name or Nickname" });
-  readonly tipEmailInput = this.page.getByRole("textbox", { name: "Your Email" });
-  readonly tipCheckboxAnonymous = this.page.getByRole("checkbox").first();
-  // The "Send Tip" button on the tip page (different from support tab)
-  readonly tipPageSendButton = this.page.getByRole("button", { name: "Send Tip" }).last();
-
-  async expectTipPageLoaded() {
-    await expect(this.tipPageTitle).toBeVisible({ timeout: 10000 });
-    await expect(this.tipAmountInput).toBeVisible({ timeout: 10000 });
-    await expect(this.tipPaymentMethod).toBeVisible({ timeout: 10000 });
-    expect((await this.tipAmountInput.inputValue())).toContain("50.000");
-  }
-
-  async expectTipFormAutoFilled() {
-    // Name auto-filled
-    await expect(this.tipNameInput).toBeVisible({ timeout: 10000 });
-    expect((await this.tipNameInput.inputValue()).length).toBeGreaterThan(0);
-    // Email auto-filled
-    await expect(this.tipEmailInput).toBeVisible({ timeout: 5000 });
-    expect((await this.tipEmailInput.inputValue()).length).toBeGreaterThan(0);
-    // Checkbox checked
-    await expect(this.tipCheckboxAnonymous).toBeVisible({ timeout: 5000 }).catch(() => {});
-    // Payment default qris
-    await expect(this.tipPaymentMethod).toBeVisible({ timeout: 5000 });
-  }
-
-  async submitTipFromTipPage(): Promise<string> {
-    await safeClick(this.tipPageSendButton);
-    await this.page.waitForURL(/\/transaction\//, { timeout: 15000 });
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
-    return this.page.url().split("/transaction/")[1];
-  }
-
-  // ── Transaction page (/transaction/{orderId}) ──
-  readonly transactionOrderId = this.page.getByText(/Order ID : /).first();
-  readonly transactionAmount = this.page.getByText("Rp50.506").last();
-  readonly transactionTipTo = this.page.getByRole("textbox").first();
-  readonly transactionCheckStatusButton = this.page.getByRole("button", { name: "Check Status" });
-
-  async expectTransactionPageLoaded(creatorName: string) {
-    await expect(this.page).toHaveURL(/\/transaction\//, { timeout: 10000 });
-    await expect(this.transactionAmount).toBeVisible({ timeout: 5000 });
-    await expect(this.transactionCheckStatusButton).toBeVisible({ timeout: 5000 });
-    await expect(this.transactionOrderId).toBeVisible({ timeout: 5000 });
-    expect((await this.transactionTipTo.inputValue())).toContain(creatorName);
-    await expect(this.page.getByText("Payment Method")).toBeVisible({ timeout: 5000 });
-  }
-
-  async getOrderId(): Promise<string> {
-    const text = (await this.transactionOrderId.textContent()) ?? "";
-    return text.replace("Order ID : ", "").trim();
-  }
-
-  // ── Success page (after webhook) ──
-  readonly successDialog = this.page.getByRole("dialog", { name: "Payment Successful" });
-  readonly successHeading = this.successDialog.getByRole("heading", { name: "Payment Successful!" });
-  readonly successCardCreator = this.successDialog.getByText("Hendra Rizal Gunawan").first();
-  readonly successAmount = this.successDialog.getByText("IDR 50,000");
-  readonly backToProfileButton = this.successDialog.getByRole("button", { name: "Back to Profile" });
-
-  async expectPaymentSuccess() {
-    await expect(this.successDialog).toBeVisible({ timeout: 15000 });
-    await expect(this.successHeading).toBeVisible({ timeout: 5000 });
-    await expect(this.successCardCreator).toBeVisible({ timeout: 5000 });
-    await expect(this.successAmount).toBeVisible({ timeout: 5000 });
-    await expect(this.backToProfileButton).toBeVisible({ timeout: 5000 });
   }
 
   // ── Links tab ── (renders campaign/link cards with images + headings)

@@ -1,5 +1,9 @@
 # Code Style
 
+## Before any edit
+- **Always `Read` the file first** before applying any `Edit`. Never apply edits based on memory or assumption — the user may have made manual changes since you last read the file.
+- If an edit fails with "oldString not found", re-read the file to see the current state, then retry.
+
 ## Imports
 - Use path aliases: `@pages/`, `@fixtures/`, `@utils/`, `@helpers/`, `@config/`
 - Test specs import from `../test-base` (relative), never from `@fixtures/base.fixture` directly
