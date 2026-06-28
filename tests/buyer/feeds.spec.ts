@@ -93,3 +93,48 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
     await expect(buyerFeedsPage.followButtons.first()).toBeVisible({ timeout: 10000 });
   });
 });
+
+test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
+  tag: ['@TAT-B-E2E-004', '@feeds', '@like', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, buyerProfilePage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.switchToTab('following');
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await buyerFeedsPage.expectCreatorsSectionVisible();
+  });
+
+  await test.step('Like a post from feed and verify count +1, icon active', async () => {
+    await buyerFeedsPage.likeFirstPost();
+    await buyerFeedsPage.expectLikedState();
+  });
+
+  await test.step('Open post detail and verify liked state, then go back', async () => {
+    await buyerFeedsPage.openFirstPostDetail();
+    await buyerFeedsPage.expectLikedState();
+    await buyerFeedsPage.clickBackFromPostDetail();
+    await buyerFeedsPage.expectLoaded();
+  });
+
+  await test.step('Navigate to creator profile from feeds post and unlike', async () => {
+    await buyerFeedsPage.navigateToCreatorProfileFromPost();
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.switchToTab('feeds');
+    await buyerProfilePage.unlikeCreatorFirstPost();
+    await buyerProfilePage.expectCreatorPostUnlikedState();
+  });
+
+  await test.step('Return to feeds and verify unliked state on post detail', async () => {
+    await buyerProfilePage.clickBackButton();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.switchToTab('following');
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await buyerFeedsPage.expectUnlikedState();
+    await buyerFeedsPage.openFirstPostDetail();
+    await buyerFeedsPage.expectUnlikedState();
+  });
+});

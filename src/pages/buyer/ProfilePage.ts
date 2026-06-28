@@ -220,7 +220,27 @@ export class ProfilePage {
     return cls.includes(ACTIVE_TAB_CLASS);
   }
 
-  // ── Open public image post (modal) ──
+  // ── Like / Unlike on creator feed posts ──
+  readonly creatorFirstUnlikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Unlike post" });
+  readonly creatorFirstLikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Like post" });
+  readonly creatorFirstLikeCount = this.creatorFeedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+
+  async getCreatorFirstPostLikeCount(): Promise<number> {
+    const text = (await this.creatorFirstLikeCount.textContent()) ?? "0";
+    return parseInt(text.trim(), 10) || 0;
+  }
+
+  async unlikeCreatorFirstPost(): Promise<number> {
+    const countBefore = await this.getCreatorFirstPostLikeCount();
+    await safeClick(this.creatorFirstUnlikeButton);
+    await waitForLoaded(this.page);
+    await this.page.waitForTimeout(500);
+    return countBefore;
+  }
+
+  async expectCreatorPostUnlikedState() {
+    await expect(this.creatorFirstLikeButton).toBeVisible({ timeout: 10000 });
+  }
   readonly memberOnlyLabel = this.main.getByText(profileLabels.memberOnly, { exact: true });
   readonly publicImagePosts = this.main
     .getByRole("button", { name: profileLabels.openPostMedia })

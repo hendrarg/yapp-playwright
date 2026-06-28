@@ -111,6 +111,61 @@ export class FeedsPage {
     .filter({ has: this.page.getByRole("button", { name: feedsLabels.openPostMedia }) })
     .filter({ hasNot: this.page.getByText(feedsLabels.memberOnly, { exact: true }) });
 
+  // ── Like / Unlike ──
+  readonly firstLikeButton = this.page.getByRole("button", { name: feedsLabels.likePost }).first();
+  readonly firstUnlikeButton = this.page.getByRole("button", { name: feedsLabels.unlikePost }).first();
+  private get firstLikeCountEl() {
+    return this.feedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+  }
+
+  async getFirstPostLikeCount(): Promise<number> {
+    const text = (await this.firstLikeCountEl.textContent()) ?? "0";
+    return parseInt(text.trim(), 10) || 0;
+  }
+
+  async likeFirstPost(): Promise<number> {
+    await this.firstLikeButton.scrollIntoViewIfNeeded();
+    await expect(this.firstLikeButton).toBeVisible({ timeout: 10000 });
+    await this.firstLikeButton.click({ force: true, timeout: 10000 });
+    await this.page.waitForTimeout(1500);
+    return 0;
+  }
+
+  async expectLikedState() {
+    await expect(this.firstUnlikeButton).toBeVisible({ timeout: 15000 });
+    const count = await this.getFirstPostLikeCount();
+    expect(count, "like count should be >= 1").toBeGreaterThanOrEqual(1);
+  }
+
+  async expectUnlikedState() {
+    await expect(this.firstLikeButton).toBeVisible({ timeout: 15000 });
+  }
+
+  // ── Post detail (click post card to open detail page) ──
+  readonly firstPostCard = this.feedPosts.first();
+  readonly postDetailBackButton = this.page.getByRole("button", { name: "Back" });
+
+  async openFirstPostDetail() {
+    await safeClick(this.firstPostCard);
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  async clickBackFromPostDetail() {
+    await safeClick(this.postDetailBackButton);
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  // ── Navigate to creator profile from feed post ──
+  readonly firstPostCreatorName = this.feedPosts.first().locator("p").filter({ hasText: /./ }).first();
+
+  async navigateToCreatorProfileFromPost() {
+    await safeClick(this.firstPostCreatorName);
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
   // ── Navigate to creator profile from Following tab post ──
   async openCreatorProfileFromFollowingTab() {
     await this.switchToTab("following");

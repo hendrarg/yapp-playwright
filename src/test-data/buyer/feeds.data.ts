@@ -9,6 +9,8 @@ export const feedsLabels = {
   follow: "Follow",
   following: "Following",
   unfollow: "Unfollow",
+  likePost: "Like post",
+  unlikePost: "Unlike post",
   memberOnly: "Member Only",
   openPostMedia: "Open post media",
 } as const;
