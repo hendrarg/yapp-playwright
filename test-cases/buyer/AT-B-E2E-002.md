@@ -25,18 +25,20 @@ Validasi bahwa Buyer dapat membuka creator profile page, berpindah antar tab (Fe
 
 - Buka halaman creator profile
 - **Verify:** Creator profile page loads successfully
+
+### Step 2 — View Membership Plans Section
 - **Verify:** Feed berada di tab Shops 
 - **Verify:** Creator profile picture, name, dan bio ditampilkan
 - **Verify:** Products dari creator ditampilkan
 - **Verify:** Setiap product menampilkan image, name, price, dan affiliate indicator (if applicable)
 
-### Step 2 — View Membership Plans Section
+### Step 3 — View Membership Plans Section
 
 - **Verify:** Menampilkan max 2 membership plan dan link show more
 - **Verify:** Available membership plans dan benefits ditampilkan
 - **Verify:** Setiap tier menampilkan name, price, benefits/rewards
 
-### Step 3 — View Support Creator
+### Step 4 — View Support Creator
 
 - **Verify:** Menampilkan max 2 membership plan dan link show more
 - **Verify:** Available select input amount IDR OR USDT
@@ -45,24 +47,27 @@ Validasi bahwa Buyer dapat membuka creator profile page, berpindah antar tab (Fe
 - pilih sugestion tips 50000
 - **Verify:** Button send tips enable after input sendtip
 
-### Step 4 — Switch to Links Tab
+### Step 5 — Switch to Links Tab
 
 - Klik tab "Links"
 - **Verify:** Links dari creator ditampilkan
 - **Verify:** Setiap link menampilkan creator, img, dan title
 
-### Step 5 — Switch to Support Tab
+### Step 6 — Switch to Support Tab
 
 - Klik tab "Support"
 - **Verify:** Support sent tip ditapilkan
 - **Verify:** mennampikan creator sent "uang", comment dan juga waktu
 
-### Step 6 — Switch to Feeds Tab
+### Step 7 — Switch to Feeds Tab
 
 - Klik tab "Feeds"
 - **Verify:** Feed terbuka di tab all fieeds
 - **Verify:** Feed posts dari creator ditampilkan
 - **Verify:** Post content, engagement (likes, comments), dan linked products (if any) ditampilkan
+
+### Step 7 — Switch to Feeds eksclusive only
+
 - Klik "Exclusive Only" in feeds
 - Buka creator photo post (public)
 - **Verify:** Photo ditampilkan dengan jelas dan successfully
@@ -70,7 +75,7 @@ Validasi bahwa Buyer dapat membuka creator profile page, berpindah antar tab (Fe
 
 ## Expected Result
 
-All creator profile tabs navigate correctly, content loads per tab, post detail opens successfully, photo post displays clearly, dan membership plans section shows available tiers dengan benefits.
+All creator profile tabs navigate correctly, content loads per tab, post detail opens successfully, photo post displays clearly, dan membership plans section shows available tiers dengSan benefits.
 
 ## Test Data
 - profile : hendrarg

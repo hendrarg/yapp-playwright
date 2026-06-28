@@ -14,10 +14,13 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
 }, async ({ buyerProfilePage }) => {
   test.setTimeout(90000);
 
-  await test.step('Open creator profile and verify header + Shops tab + products', async () => {
+  await test.step('Open creator profile', async () => {
     await buyerProfilePage.goto(creatorProfileHandle);
     await buyerProfilePage.expectLoaded();
     await buyerProfilePage.expectAuthenticated();
+  });
+
+  await test.step('View Shops tab content', async () => {
     await buyerProfilePage.expectProfileHeaderVisible();
     await buyerProfilePage.expectTabActive('shops');
     await buyerProfilePage.expectShopsTabContent();
@@ -46,13 +49,15 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
     await buyerProfilePage.expectSupportTabContent();
   });
 
-  await test.step('Switch to Feeds tab, open public image post, verify unlocked', async () => {
+  await test.step('Switch to Feeds tab, open public content', async () => {
     await buyerProfilePage.switchToTab('feeds');
     await buyerProfilePage.expectTabActive('feeds');
     await buyerProfilePage.expectFeedsTabContent();
+  });
+
+  await test.step('Switch to Feeds Exclusive tab, open exclusive image post, verify locked', async () => {
     await buyerProfilePage.toggleExclusiveOnly();
     await buyerProfilePage.expectExclusiveOnlyShowsLocked();
-    await buyerProfilePage.toggleExclusiveOnly();
     await buyerProfilePage.openFirstPublicImagePost();
     await buyerProfilePage.expectPostDetailOpen();
     await buyerProfilePage.expectPublicImageUnlocked();
