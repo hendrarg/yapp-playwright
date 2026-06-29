@@ -1,7 +1,7 @@
-import { authTest as test, expect } from '../test-base';
+import { authTest, test, expect } from '../test-base';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 
-test('injected "at" token loads the feeds page without redirecting to auth', {
+authTest('injected "at" token loads the feeds page without redirecting to auth', {
   tag: ['@feeds', '@buyer', '@smoke'],
 }, async ({ buyerFeedsPage }) => {
   await buyerFeedsPage.goto();
@@ -9,7 +9,7 @@ test('injected "at" token loads the feeds page without redirecting to auth', {
   await buyerFeedsPage.expectAuthenticated();
 });
 
-test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
+authTest('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   tag: ['@TAT-B-E2E-001', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(90000);
@@ -51,7 +51,7 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   });
 });
 
-test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
+authTest('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   tag: ['@TAT-B-E2E-003', '@feeds', '@follow', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(120000);
@@ -94,7 +94,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   });
 });
 
-test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
+authTest('Buyer Like/Unlike Post — Full Cycle Across Pages', {
   tag: ['@TAT-B-E2E-004', '@feeds', '@like', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(120000);
@@ -139,7 +139,7 @@ test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
   });
 });
 
-test('Buyer Comment on Post — Submit & Verify', {
+authTest('Buyer Comment on Post — Submit & Verify', {
   tag: ['@TAT-B-E2E-005', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage }) => {
   test.setTimeout(120000);
@@ -176,5 +176,30 @@ test('Buyer Comment on Post — Submit & Verify', {
     await buyerFeedsPage.clickBackFromPostDetail();
     await buyerFeedsPage.expectLoaded();
     await buyerFeedsPage.expectFeedCommentCountIncreased(previousCommentCount);
+  });
+});
+
+test('Guest user blocked — Following tab requires login', {
+  tag: ['@TAT-B-FV-001', '@feeds', '@auth', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, page }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open feeds as guest and verify page content', async () => {
+    await buyerFeedsPage.goto();
+    await expect(page).toHaveURL(/\/feeds/);
+    await expect(page.getByText("You're not following anyone yet")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Follow creators to see their latest posts here')).toBeVisible({ timeout: 10000 });
+  });
+
+  await test.step('Click Follow and verify sign in dialog', async () => {
+    await page.getByRole('button', { name: 'Follow', exact: true }).first().click();
+    const dialog = page.getByRole('dialog', { name: 'Sign in before following' });
+    await expect(dialog.getByText('Sign in before following')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Sign in now!' })).toBeVisible();
+  });
+
+  await test.step('Click Sign in now and verify redirected to login', async () => {
+    await page.getByRole('button', { name: 'Sign in now!' }).click();
+    await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
