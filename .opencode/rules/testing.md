@@ -8,6 +8,15 @@
 - `mockTest` (from `@fixtures/mock.fixtures`) — Use when test needs mocked external services (payment, email, analytics). Supports `test.use({ mockPayments: false })` to toggle per test.
 - `test` — **Only for auth-specific tests** (OTP login flow, unauth page access). Do NOT use for feature/business-logic tests.
 
+### Import convention for mixed auth + guest specs
+When a spec file has both authenticated and guest tests:
+```typescript
+import { authTest as test, test as guestTest, expect } from '../test-base';
+
+test('authenticated test...', ...)    // authTest aliased
+guestTest('guest/FV test...', ...)     // plain test for no-auth
+```
+
 ### API tests (no browser)
 - `test` (from `@fixtures/api.fixtures`) — Provides `buyerRequest` + `creatorRequest` pre-authenticated `APIRequestContext`. No browser launched.
   - `buyerRequest` — auto-injects `at` cookie + browser-like headers for buyer baseURL

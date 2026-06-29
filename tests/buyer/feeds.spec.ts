@@ -1,7 +1,7 @@
-import { authTest, test, expect } from '../test-base';
+import { authTest as test, test as guestTest, expect } from '../test-base';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 
-authTest('injected "at" token loads the feeds page without redirecting to auth', {
+test('injected "at" token loads the feeds page without redirecting to auth', {
   tag: ['@feeds', '@buyer', '@smoke'],
 }, async ({ buyerFeedsPage }) => {
   await buyerFeedsPage.goto();
@@ -9,7 +9,7 @@ authTest('injected "at" token loads the feeds page without redirecting to auth',
   await buyerFeedsPage.expectAuthenticated();
 });
 
-authTest('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
+test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   tag: ['@TAT-B-E2E-001', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(90000);
@@ -51,7 +51,7 @@ authTest('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   });
 });
 
-authTest('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
+test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   tag: ['@TAT-B-E2E-003', '@feeds', '@follow', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(120000);
@@ -94,7 +94,7 @@ authTest('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   });
 });
 
-authTest('Buyer Like/Unlike Post — Full Cycle Across Pages', {
+test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
   tag: ['@TAT-B-E2E-004', '@feeds', '@like', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(120000);
@@ -139,7 +139,7 @@ authTest('Buyer Like/Unlike Post — Full Cycle Across Pages', {
   });
 });
 
-authTest('Buyer Comment on Post — Submit & Verify', {
+test('Buyer Comment on Post — Submit & Verify', {
   tag: ['@TAT-B-E2E-005', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage }) => {
   test.setTimeout(120000);
@@ -179,8 +179,8 @@ authTest('Buyer Comment on Post — Submit & Verify', {
   });
 });
 
-test('Guest user blocked — Following tab requires login', {
-  tag: ['@TAT-B-FV-001', '@feeds', '@auth', '@buyer', '@regression'],
+guestTest('Guest user blocked — Following tab requires login', {
+  tag: ['@TAT-B-FV-002', '@feeds', '@auth', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
