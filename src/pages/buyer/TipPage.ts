@@ -20,7 +20,6 @@ export class TipPage {
   readonly title = this.page.locator("span").filter({ hasText: "Send Tip" }).first();
   readonly amountInput = this.page.getByRole("textbox", { name: "Input Amount" });
   readonly paymentMethod = this.page.getByRole("combobox");
-  readonly backButton = this.page.getByRole("button", { name: "Back" });
   readonly nameInput = this.page.getByRole("textbox", { name: "Your Name or Nickname" });
   readonly emailInput = this.page.getByRole("textbox", { name: "Your Email" });
   readonly anonymousCheckbox = this.page.getByRole("checkbox").first();

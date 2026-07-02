@@ -54,7 +54,6 @@ export class ProfilePage {
   readonly followingButton = this.page.getByRole("button", { name: /Following/ });
   readonly unfollowDialog = this.page.getByRole("dialog");
   readonly unfollowConfirmButton = this.unfollowDialog.getByRole("button", { name: "Unfollow" });
-  readonly cancelButton = this.unfollowDialog.getByRole("button", { name: "Cancel" });
 
   async expectFollowingState() {
     await expect(
@@ -81,12 +80,6 @@ export class ProfilePage {
       await waitForLoaded(this.page);
       await this.page.waitForLoadState("networkidle").catch(() => {});
     }
-  }
-
-  async confirmUnfollow() {
-    await safeClick(this.unfollowConfirmButton);
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   // ── Navigation ──
@@ -227,11 +220,6 @@ export class ProfilePage {
     await expect(this.main.getByText(profileLabels.memberOnly, { exact: true }).first()).toBeVisible({ timeout: 10000 }).catch(() => {});
   }
 
-  async isAllFeedsActive() {
-    const cls = (await this.allFeedsToggle.getAttribute("class")) ?? "";
-    return cls.includes(ACTIVE_TAB_CLASS);
-  }
-
   // ── Like / Unlike on creator feed posts ──
   readonly creatorFirstUnlikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Unlike post" });
   readonly creatorFirstLikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Like post" });
@@ -257,7 +245,7 @@ export class ProfilePage {
   readonly publicImagePosts = this.main
     .getByRole("button", { name: profileLabels.openPostMedia })
     .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')][1]")
-    .filter({ hasNot: this.main.getByText(profileLabels.memberOnly, { exact: true }) });
+    .filter({ hasNot: this.memberOnlyLabel });
   readonly postDetailDialog = this.page.getByRole("dialog", { name: "Post image modal" });
 
   async openFirstPublicImagePost() {

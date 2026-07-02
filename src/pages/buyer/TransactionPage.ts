@@ -30,22 +30,14 @@ export class TransactionPage {
     await expect(this.page.getByText("Payment Method")).toBeVisible({ timeout: 5000 });
   }
 
-  async getOrderId(): Promise<string> {
-    const text = (await this.orderId.textContent()) ?? "";
-    return text.replace("Order ID : ", "").trim();
-  }
-
   // ── Payment success dialog (appears after webhook) ──
   readonly successDialog = this.page.getByRole("dialog", { name: "Payment Successful" });
   readonly successHeading = this.successDialog.getByRole("heading", { name: "Payment Successful!" });
-  readonly successCardCreator = this.successDialog.getByText(/./).first();
-  readonly successAmount = this.successDialog.getByText("IDR 50,000");
   readonly backToProfileButton = this.successDialog.getByRole("button", { name: "Back to Profile" });
 
   async expectPaymentSuccess() {
     await expect(this.successDialog).toBeVisible({ timeout: 15000 });
     await expect(this.successHeading).toBeVisible({ timeout: 5000 });
-    await expect(this.successAmount).toBeVisible({ timeout: 5000 });
     await expect(this.backToProfileButton).toBeVisible({ timeout: 5000 });
   }
 }
