@@ -48,6 +48,18 @@ export class ProfilePage {
     await expect(this.main.getByText("Tester", { exact: true }).first()).toBeVisible({ timeout: 10000 });
   }
 
+  // ── Share profile ──
+  readonly shareButton = this.page.getByRole("button", { name: "Share" });
+
+  async clickShare() {
+    await safeClick(this.shareButton);
+    await this.page.waitForTimeout(500);
+  }
+
+  async expectShareOptionsVisible() {
+    await expect(this.page.getByRole("dialog", { name: /Share/i })).toBeVisible({ timeout: 5000 });
+  }
+
   // ── Follow / Unfollow ──
   readonly followButton = this.page.getByRole("button", { name: "Follow", exact: true });
   // Button shows "Following" + "Unfollow" when followed (accessible name = "Following Unfollow")

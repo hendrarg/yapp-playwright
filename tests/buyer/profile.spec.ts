@@ -260,3 +260,21 @@ test('Tip validation — Currency switch to USD', {
     await tipPage.expectPageLoaded();
   });
 });
+
+test('Share creator profile — Share button displays options', {
+  tag: ['@TAT-B-FV-009', '@profile', '@buyer', '@regression'],
+}, async ({ buyerProfilePage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open creator profile and verify Share button', async () => {
+    await buyerProfilePage.goto(creatorProfileHandle);
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.expectAuthenticated();
+    await expect(buyerProfilePage.shareButton).toBeVisible({ timeout: 5000 });
+  });
+
+  await test.step('Click Share and verify share options displayed', async () => {
+    await buyerProfilePage.clickShare();
+    await buyerProfilePage.expectShareOptionsVisible();
+  });
+});
