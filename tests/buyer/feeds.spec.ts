@@ -203,3 +203,44 @@ guestTest('Guest user blocked — Following tab requires login', {
     await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
+
+test('Free post — No monetization indicator on public content', {
+  tag: ['@TAT-B-FV-011', '@feeds', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open feeds and verify public post visible without Member Only badge', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+  });
+
+  await test.step('Open public post and verify post detail with content', async () => {
+    await buyerFeedsPage.openFirstPublicPost();
+    await buyerFeedsPage.expectPostDetailOpen();
+  });
+});
+
+test('Member-Only badge display — Consistent indicator across feed and profile', {
+  tag: ['@TAT-B-FV-012', '@feeds', '@profile', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, buyerProfilePage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open feeds and verify Member Only badge on exclusive posts', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await buyerFeedsPage.expectMemberOnlyBadgeVisible();
+  });
+
+  await test.step('Navigate to creator profile and verify same badge on Feeds tab', async () => {
+    await buyerFeedsPage.navigateToLockedPostCreatorProfile();
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.switchToTab('feeds');
+    await buyerProfilePage.expectFeedsTabContent();
+    await buyerProfilePage.toggleExclusiveOnly();
+    await buyerProfilePage.expectExclusiveOnlyShowsLocked();
+  });
+});

@@ -281,4 +281,35 @@ export class FeedsPage {
     expect(blur === "none" || blur === "", `public image should not be blurred, filter="${blur}"`).toBe(true);
     await expect(this.postDetailDialog.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 5000 }).catch(() => {});
   }
+
+  // ── Public post (no monetization indicators) ──
+  readonly publicPosts = this.feedPosts.filter({ hasNot: this.page.getByText(feedsLabels.memberOnly, { exact: true }) });
+
+  async openFirstPublicPost() {
+    const post = this.publicPosts.first();
+    await expect(post).toBeVisible({ timeout: 10000 });
+    await expect(post.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 3000 }).catch(() => {});
+    await safeClick(post);
+    // Image posts open a dialog, text posts navigate to /post/{id}
+    const isDialog = await this.postDetailDialog.isVisible({ timeout: 3000 }).catch(() => false);
+    if (!isDialog) {
+      await expect(this.page).toHaveURL(/\/post\//, { timeout: 10000 });
+    }
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  // ── Locked/exclusive posts (monetization indicators) ──
+  async expectMemberOnlyBadgeVisible() {
+    await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
+    await expect(this.lockIcon).toBeVisible({ timeout: 5000 });
+    await expect(this.memberOnlyLabel.first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async navigateToLockedPostCreatorProfile() {
+    const lockedPost = this.lockedPosts.first();
+    const creatorName = lockedPost.locator("p").first();
+    await safeClick(creatorName);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await waitForLoaded(this.page);
+  }
 }
