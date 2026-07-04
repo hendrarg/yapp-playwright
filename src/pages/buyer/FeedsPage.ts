@@ -141,6 +141,11 @@ export class FeedsPage {
     await expect(this.firstLikeButton).toBeVisible({ timeout: 15000 });
   }
 
+  async unlikeFirstPost() {
+    await this.firstUnlikeButton.click({ force: true, timeout: 10000 });
+    await this.page.waitForTimeout(1500);
+  }
+
   // ── Post detail (click post card to open detail page) ──
   readonly firstPostCard = this.feedPosts.first();
   readonly postDetailBackButton = this.page.getByRole("button", { name: "Back" });
@@ -311,5 +316,29 @@ export class FeedsPage {
     await safeClick(creatorName);
     await this.page.waitForLoadState("networkidle").catch(() => {});
     await waitForLoaded(this.page);
+  }
+
+  // ── Locked media preview (blocked before unlock) ──
+  readonly unlockPostButton = this.lockedPosts.first().getByRole("button", { name: "Unlock Post" });
+
+  async clickLockedPostMedia() {
+    await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
+    await safeClick(this.lockedPosts.first());
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
+  async expectLockedMediaBlocked() {
+    // Media opens in dialog or detail — verify blur + unlock button
+    const dialog = this.postDetailDialog;
+    const dialogVisible = await dialog.isVisible({ timeout: 3000 }).catch(() => false);
+    if (dialogVisible) {
+      const image = dialog.locator("img").first();
+      await expect(image).toBeVisible({ timeout: 5000 });
+      const blur = await image.evaluate((el) => (globalThis as any).getComputedStyle(el).filter).catch(() => "none");
+      expect(blur).not.toBe("none");
+      expect(blur).not.toBe("");
+    }
+    // Verify unlock button or unlock prompt appears
+    await expect(this.page.getByText(/Unlock|unlock/i).first()).toBeVisible({ timeout: 5000 });
   }
 }

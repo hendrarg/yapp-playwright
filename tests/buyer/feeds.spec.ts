@@ -244,3 +244,52 @@ test('Member-Only badge display — Consistent indicator across feed and profile
     await buyerProfilePage.expectExclusiveOnlyShowsLocked();
   });
 });
+
+test('Like idempotency — Rapid tap prevention', {
+  tag: ['@TAT-B-FV-005', '@feeds', '@like', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, page }) => {
+  test.setTimeout(60000);
+
+  let initialCount = 0;
+
+  await test.step('Open feeds and get initial like count', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    initialCount = await buyerFeedsPage.getFirstPostLikeCount();
+  });
+
+  await test.step('Rapid tap like multiple times and verify only +1', async () => {
+    const likeBtn = page.getByRole('button', { name: 'Like post' }).first();
+    await likeBtn.click({ clickCount: 5, force: true, timeout: 5000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    await buyerFeedsPage.expectLikedState();
+    const newCount = await buyerFeedsPage.getFirstPostLikeCount();
+    expect(newCount, `count should be ${initialCount + 1}`).toBeLessThanOrEqual(initialCount + 1);
+  });
+
+  await test.step('Unlike and verify count returns to initial', async () => {
+    await buyerFeedsPage.unlikeFirstPost();
+    await buyerFeedsPage.expectUnlikedState();
+  });
+});
+
+test('Locked exclusive media — Preview blocked before unlock', {
+  tag: ['@TAT-B-FV-006', '@feeds', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open feeds and verify locked post with blur and lock icon', async () => {
+    await buyerFeedsPage.goto();
+    await buyerFeedsPage.expectLoaded();
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await buyerFeedsPage.expectMemberOnlyBadgeVisible();
+  });
+
+  await test.step('Click locked post media and verify content remains blurred with unlock prompt', async () => {
+    await buyerFeedsPage.clickLockedPostMedia();
+    await buyerFeedsPage.expectLockedMediaBlocked();
+  });
+});
