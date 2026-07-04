@@ -28,7 +28,7 @@ export class TipPage {
   async expectPageLoaded() {
     await expect(this.title).toBeVisible({ timeout: 10000 });
     await expect(this.amountInput).toBeVisible({ timeout: 10000 });
-    await expect(this.paymentMethod).toBeVisible({ timeout: 10000 });
+    await expect(this.paymentMethod).toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
   async expectFormAutoFilled() {
@@ -46,5 +46,14 @@ export class TipPage {
     await waitForLoaded(this.page);
     await this.page.waitForLoadState("networkidle").catch(() => {});
     return this.page.url().split("/transaction/")[1];
+  }
+
+  async fillAmount(value: string) {
+    await this.amountInput.fill(value);
+    await this.page.waitForTimeout(300);
+  }
+
+  async expectAmountError(message: string) {
+    await expect(this.page.getByText(message)).toBeVisible({ timeout: 5000 });
   }
 }

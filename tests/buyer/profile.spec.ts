@@ -203,3 +203,60 @@ guestTest('Guest user blocked — Comment action requires login', {
     await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
+
+test('Tip validation — Invalid amount rejected', {
+  tag: ['@TAT-B-FV-007', '@profile', '@tip', '@buyer', '@regression'],
+}, async ({ buyerProfilePage, tipPage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open profile, verify support section and Send Tip disabled', async () => {
+    await buyerProfilePage.goto(creatorProfileHandle);
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.expectAuthenticated();
+    await buyerProfilePage.expectSupportSectionVisible();
+    await buyerProfilePage.expectSendTipDisabled();
+  });
+
+  await test.step('Enter 0 amount, verify button enabled and navigate to tip page', async () => {
+    await buyerProfilePage.fillTipAmount('0');
+    await buyerProfilePage.expectSendTipEnabled();
+    await buyerProfilePage.submitTip();
+    await tipPage.expectPageLoaded();
+  });
+
+  await test.step('Validate amount is required on tip page', async () => {
+    await tipPage.fillAmount('0');
+    await tipPage.expectAmountError('Amount is required');
+  });
+
+  await test.step('Validate minimum amount on tip page', async () => {
+    await tipPage.fillAmount('1');
+    await tipPage.expectAmountError('Minimum amount is Rp10.000');
+  });
+});
+
+test('Tip validation — Currency switch to USD', {
+  tag: ['@TAT-B-FV-008', '@profile', '@tip', '@buyer', '@regression'],
+}, async ({ buyerProfilePage, tipPage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open profile, verify support section with currency selector', async () => {
+    await buyerProfilePage.goto(creatorProfileHandle);
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.expectAuthenticated();
+    await buyerProfilePage.expectSupportSectionVisible();
+    await buyerProfilePage.expectSendTipDisabled();
+  });
+
+  await test.step('Select USDT currency and verify', async () => {
+    await buyerProfilePage.selectUsdtCurrency();
+    await expect(buyerProfilePage.usdtButton).toBeVisible({ timeout: 5000 });
+  });
+
+  await test.step('Enter valid amount, verify button enabled and submit', async () => {
+    await buyerProfilePage.fillTipAmount('50');
+    await buyerProfilePage.expectSendTipEnabled();
+    await buyerProfilePage.submitTip();
+    await tipPage.expectPageLoaded();
+  });
+});

@@ -174,6 +174,16 @@ export class ProfilePage {
     await this.page.waitForTimeout(300);
   }
 
+  async selectUsdtCurrency() {
+    await safeClick(this.usdtButton);
+    await this.page.waitForTimeout(300);
+  }
+
+  async fillTipAmount(value: string) {
+    await this.tipInput.fill(value);
+    await this.page.waitForTimeout(300);
+  }
+
   async submitTip() {
     await safeClick(this.sendTipButton);
     await this.page.waitForURL(/\/tip/, { timeout: 15000 });
