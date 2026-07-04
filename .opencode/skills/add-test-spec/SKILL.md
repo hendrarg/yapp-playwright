@@ -94,6 +94,9 @@ npx tsc --noEmit
 - If type errors → `fix-tsc-errors` skill
 
 ## Step 8: Run ONLY the new TC (grep by TC-ID tag)
+
+**⚠️ NEVER run the whole file. ALWAYS use `--grep` to isolate the single TC.**
+
 ```bash
 # E2E/FV (single browser — chromium only)
 npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @T{TC-ID}
@@ -101,7 +104,8 @@ npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @
 # API
 npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @T{TC-ID}
 ```
-**Do NOT run the whole feature spec** — only the new TC via its tag.
+
+Running the full file wastes time on unrelated tests.
 
 ## Step 9: If FAIL → snapshot first, then resolve flaky
 

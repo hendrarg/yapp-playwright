@@ -88,3 +88,4 @@ const product = { name: 'E-Book', price: 29.99 };
 - Importing `test`/`expect` directly from `@playwright/test` in spec files
 - Deep relative imports bypassing path aliases
 - `--repeat-each` for reCAPTCHA tests (e.g. `tests/auth/otp-login.spec.ts`) — rapid repeats from the same IP/machine tank the reCAPTCHA v3 score and trigger rate-limiting, causing cascading failures. To verify reliability, re-run the single test with a few minutes of cool-down between runs.
+- **Running full spec file during TC development** — always use `--grep @T<TC-ID>` to isolate the single TC. Running the whole file wastes time and tests unrelated functionality.

@@ -8,6 +8,7 @@ function requireEnv(name: string): string {
 
 export const baseURL = requireEnv('YAPP_BASE_URL');
 export const creatorsBaseURL = requireEnv('YAPP_CREATORS_BASE_URL');
+export const apiBaseURL = requireEnv('YAPP_API_BASE_URL');
 
 export function testmailEnv() {
   return {

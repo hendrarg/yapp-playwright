@@ -75,7 +75,60 @@ test.describe('Products API', () => {
 
 ---
 
-## 3. CRUD pattern
+## 3. CRUD / Multi-step pattern
+
+**⚠️ Multi-step API flows that depend on previous responses (e.g., create → complete → posts) MUST run sequentially in a SINGLE test with `test.step()`, NOT as separate parallel tests.** Separate tests run in parallel and will fail because each step needs data from the previous step.
+
+```typescript
+// ✅ Correct — single test, sequential steps (5-step upload flow)
+test.describe.configure({ mode: 'serial' });
+
+test('Full upload flow: create → sign → PUT S3 → complete → posts',
+  { tag: ['@api', '@regression'] },
+  async ({ buyerRequest }) => {
+    // Step 1: Create — returns uploadId, key
+    const createRes = await buyerRequest.post('/api/v1/file/upload/create', {
+      headers: getHeaders(),
+      data: { filename, filetype },
+    });
+    expect(createRes.ok()).toBe(true);
+    const { uploadId, key } = await createRes.json();
+
+    // Step 2: Sign — get presigned S3 URL
+    const signRes = await buyerRequest.get(`/api/v1/file/upload/sign?uploadId=${uploadId}&key=${key}&partNumber=1`);
+    const { url: presignedUrl } = await signRes.json();
+
+    // Step 3: PUT to S3 — upload file binary
+    const putRes = await buyerRequest.put(presignedUrl, {
+      headers: { 'Content-Type': filetype },
+      data: imageBuffer,
+    });
+    const s3Headers = putRes.headers();
+
+    // Step 4: Complete — finalize with ETag from S3
+    const completeRes = await buyerRequest.post('/api/v1/file/upload/complete', {
+      headers: getHeaders(),
+      data: { uploadId, key, parts: [{ PartNumber: 1, ETag: s3Headers['etag'], ... }] },
+    });
+    expect(completeRes.ok()).toBe(true);
+
+    // Step 5: Posts — create post with uploadId as asset
+    const postRes = await buyerRequest.post('/api/v1/posts', {
+      headers: getHeaders(),
+      data: { assets: [{ url: uploadId }], ... },
+    });
+    expect(postRes.ok()).toBe(true);
+  });
+```
+
+```typescript
+// ❌ Wrong — 3 separate tests run in parallel, step 2 fails without step 1
+test('1. create', ...);  // runs parallel with 2 and 3
+test('2. complete', ...); // needs uploadId from 1 → FAILS
+test('3. posts', ...);    // needs uploadId from 1 → FAILS
+```
+
+### Classic CRUD pattern (read after create)
 
 ```typescript
 test('CRUD: create → read → update → delete',
@@ -253,7 +306,16 @@ Add to `playwright.config.ts`:
 }
 ```
 
-Run: `npx playwright test --project=api`
+Run all API tests: `npx playwright test --project=api`
+
+### ⚠️ MUST: Run only the TC being developed
+When working on a specific TC, **NEVER** run the whole file. Always use `--grep`:
+
+```bash
+npx playwright test tests/api/{domain}.{feature}.spec.ts --project=api --grep "test name substring"
+```
+
+**Violating this rule runs unrelated tests and wastes time.**
 
 ---
 

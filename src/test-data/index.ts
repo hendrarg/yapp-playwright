@@ -9,6 +9,8 @@ export { campaignTemplates, generateCampaign } from "./creator/campaign.data";
 export type { CampaignInput } from "./creator/campaign.data";
 export { membershipTemplates, generateMembershipTier } from "./creator/membership.data";
 export type { MembershipTier } from "./creator/membership.data";
+export { generatePostData, testImages } from "./creator/post.data";
+export type { PostData, PostVisibility } from "./creator/post.data";
 export { paymentMock, paymentHeaders } from "./mocks/payment.data";
 export { emailMock } from "./mocks/email.data";
 export { errorMock } from "./mocks/common.data";
