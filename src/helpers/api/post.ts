@@ -20,8 +20,8 @@ export function apiUrl(path: string) {
   return `${apiBaseURL.replace(/\/$/, '')}${path}`;
 }
 
-export function getHeaders() {
-  const token = (process.env.YAPP_TEST_ACCESS_TOKEN ?? '').replace(/^"|"$/g, '');
+export function getHeaders(token?: string) {
+  const t = (token ?? process.env.YAPP_TEST_ACCESS_TOKEN ?? '').replace(/"/g, '');
   return {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
@@ -43,13 +43,15 @@ export function getHeaders() {
  */
 export async function createPost(
   request: APIRequestContext,
-  options: CreatePostOptions
+  options: CreatePostOptions,
+  token?: string
 ): Promise<{ postId: string; uploadId?: string }> {
+  const h = () => getHeaders(token);
   const { content, visibility, price = 0, isFlexiblePrice = false, productUuids = [], imagePath } = options;
 
   if (!imagePath) {
     const response = await request.post(apiUrl('/api/v1/posts'), {
-      headers: getHeaders(),
+      headers: h(),
       data: { content, status: 'active', visibility, assets: [], productUuids, price, isFlexiblePrice },
     });
     if (!response.ok()) {
@@ -65,8 +67,9 @@ export async function createPost(
   const filetype = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' || ext === 'jfif' ? 'image/jpeg' : 'image/jpeg';
 
   // Step 1: Create upload
-  const createRes = await request.post(apiUrl('/api/v1/file/upload/create'), {
-    headers: getHeaders(),
+  const createUrl = apiUrl('/api/v1/file/upload/create');
+  const createRes = await request.post(createUrl, {
+    headers: h(),
     data: { filename, filetype },
   });
   if (!createRes.ok()) {
@@ -79,7 +82,7 @@ export async function createPost(
   // Step 2: Get presigned S3 URL
   const signUrl = apiUrl(`/api/v1/file/upload/sign?uploadId=${encodeURIComponent(uploadId)}&key=${encodeURIComponent(key)}&partNumber=1`);
   const signRes = await request.get(signUrl, {
-    headers: { ...getHeaders(), 'Content-Type': undefined as any },
+    headers: { ...h(), 'Content-Type': undefined as any },
   });
   if (!signRes.ok()) {
     throw new Error(`Step 2 (sign) failed: ${signRes.status()} ${await signRes.text()}`);
@@ -110,7 +113,7 @@ export async function createPost(
   }];
 
   const completeRes = await request.post(apiUrl('/api/v1/file/upload/complete'), {
-    headers: getHeaders(),
+    headers: h(),
     data: { uploadId, key, parts },
   });
   if (!completeRes.ok()) {
@@ -119,7 +122,7 @@ export async function createPost(
 
   // Step 5: Create post
   const postRes = await request.post(apiUrl('/api/v1/posts'), {
-    headers: getHeaders(),
+    headers: h(),
     data: {
       content,
       status: 'active',
