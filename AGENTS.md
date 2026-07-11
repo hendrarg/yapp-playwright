@@ -1,8 +1,25 @@
-# Yapp E2E — Agent Guide
+# Yapp Agent Guide
 
-Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on two subdomains.
+Playwright E2E and API tests for Yapp. Buyer and creator flows run across two subdomains.
 
-## OSS Commands
+## Required Agent Runtime
+
+Before making changes, every AI agent must read:
+
+1. `.agents/runtime.md`
+2. `.agents/rules/code-style.md`
+3. `.agents/rules/testing.md`
+
+When the task matches a workflow in `.agents/skills/registry.md`, read the matching `.agents/skills/*/SKILL.md` before acting. Treat `.agents/commands/` as the command catalog for common project operations.
+
+Priority order when instructions conflict:
+
+1. `AGENTS.md`
+2. `.agents/runtime.md`
+3. `.agents/rules/*.md`
+4. The task-specific skill document
+
+## Project Commands
 
 | Command | Purpose |
 |---------|---------|
@@ -10,171 +27,82 @@ Playwright E2E tests for [Yapp](https://yapp.ink). Buyer and creator flows on tw
 | `npx playwright test --project=chromium` | Single browser |
 | `npx playwright test --project=api` | API tests only (no browser) |
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
-| `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001` | Run single TC inside a feature spec (TC ID tag) |
-| `npx playwright test --ui` | UI mode |
+| `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001` | Run one TC by tag |
+| `npx playwright test --ui` | Playwright UI mode |
 | `npx tsc --noEmit` | Type-check only |
-
-## TUI Commands (type `/` in OpenCode TUI)
-
-| Command | Usage |
-|---------|-------|
-| `/test` | Run all tests |
-| `/typecheck` | TypeScript type-check |
-| `/test-file <path>` | Single test file (e.g. `/test-file tests/buyer/explore.spec.ts`) |
-| `/test-ui` | Open Playwright UI mode |
-| `/flaky <spec>` | Re-run a flaky test 3x with trace (e.g. `/flaky tests/buyer/explore.spec.ts`) |
-| `/flaky-analyze` | Show trace from last failed flaky test |
-| `/test-api` | Run API tests only (`npx playwright test --project=api`) |
-| `/tc <id>` | Generate automation test from TC file (e.g. `/tc AT-B-E2E-001`) |
 
 ## Architecture
 
-```
-test-cases/             ← test case documents (.md) — source of truth
-  buyer/                ← AT-B-*.md
-  creator/              ← AT-C-*.md
-  auth/                 ← AT-A-*.md
-tests/test-base.ts      ← fixture entry: test, authTest, creatorAuthTest
-tests/api/              ← API-only test specs (no browser)
+```text
+test-cases/             test case documents (.md), local-only and gitignored
+tests/test-base.ts      fixture entry: test, authTest, creatorAuthTest
+tests/api/              API-only test specs
 src/
-  test-data/            ← test data (static + factory pattern)
-    mocks/              ← mock response data (payment, email, errors)
-  pages/                ← page objects (auth/, buyer/, creator/)
-  fixtures/
-    page.fixtures.ts    ← registers all page objects as fixtures
-    base.fixture.ts     ← combo fixture (for tests that import from @fixtures/)
-    api.fixtures.ts     ← pre-auth API request context (buyerRequest, creatorRequest)
-    mock.fixtures.ts    ← toggleable external service mocks (payment, email, analytics)
-  helpers/
-    auth/               ← token-login.ts, otp-login.ts
-    api/                ← API seeding helpers (seed.ts), browser-like headers
-    network/            ← network mock helpers (mock.ts)
-    otp/                ← testmail.app client
-  utils/
-    playwright.utils.ts ← safeClick/safeFill/safeCheck, navigateAndWait, waitForLoaded
-    flaky-utils.ts      ← flakyClick/flakyFill, retryUntil, flakyExpectText, flakyGoto
-    heal-utils.ts       ← smartLocator/SmartHealable, smartClick/smartFill, buildSmartStrategies, Healable
-config/env.ts           ← reads env vars (requireEnv pattern)
+  test-data/            static and factory test data
+  pages/                page objects
+  fixtures/             Playwright fixture wiring
+  helpers/              auth, API, OTP, network helpers
+  utils/                Playwright utilities and flaky/heal helpers
+config/env.ts           environment variable access
+.agents/                provider-neutral AI runtime, rules, commands, skills
 ```
 
-## Import conventions
+## Import Conventions
 
-- Use **path aliases**: `@pages/`, `@fixtures/`, `@utils/`, `@helpers/`, `@config/`
-- Test specs import from `../test-base` (relative), not `@fixtures/base.fixture` directly
-- Page objects get `baseURL` (buyer) or `creatorsBaseURL` (creator) injected via fixture
+- Use path aliases: `@pages/`, `@fixtures/`, `@utils/`, `@helpers/`, `@config/`, `@test-data/`.
+- Test specs import from `../test-base`, not `@fixtures/base.fixture`.
+- Page objects receive `baseURL` for buyer pages or `creatorsBaseURL` for creator pages through fixtures.
 
 ## Auth
 
-Three fixture variants in `tests/test-base.ts`:
-
 | Fixture | Auth method | Use for |
 |---------|-------------|---------|
-| `test` | None | OTP login tests, unauth pages |
+| `test` | None | OTP login tests, guest flows, unauth pages |
 | `authTest` | Injects `at` cookie for `baseURL` | Buyer pages |
 | `creatorAuthTest` | Injects `at` cookie for `creatorsBaseURL` | Creator pages |
 
-Token injection sets cookie on the **apex domain** (e.g. `.yapp.ink`) so one token serves both subdomains. Set `YAPP_TEST_ACCESS_TOKEN` in `.env`.
+Token injection sets the cookie on the apex domain so one token can serve buyer and creator subdomains. Set `YAPP_TEST_ACCESS_TOKEN` in `.env`.
 
-**Token auto-refresh:** if `YAPP_TEST_ACCESS_TOKEN` is expired (checked via JWT `exp` decode, no network call), `authTest`/`creatorAuthTest` automatically run the OTP login flow on a temporary page, save the fresh token to `.env`, then inject it. The OTP login runs on the buyer app; the resulting apex-domain cookie is valid for both apps.
+If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-refresh it through the OTP login flow, save the fresh token to `.env`, then inject it. With `PW_WORKERS > 1`, an expired token can cause multiple workers to attempt OTP login at once; refresh the token once first or use `PW_WORKERS=1`.
 
-**Caveat (parallel workers):** if run with `PW_WORKERS > 1` while the token is expired, multiple workers may trigger OTP login concurrently → wasted testmail.app quota and a race on writing `.env`. Mitigation: run `tests/auth/otp-login.spec.ts` once before parallel suites, or set `PW_WORKERS=1`.
-
-OTP login (testmail.app) has 90s timeout. The `continue` button retry handles reCAPTCHA timing.
-
-## Page objects
-
-22 page objects in `src/pages/`:
-- 6 buyer: `explorePage`, `cartPage`, `buyerFeedsPage`, `libraryPage`, `messagePage`, `buyerProfilePage`
-- 15 creator: `affiliatePage`, `analyticsPage`, `campaignsPage`, `creatorFeedsPage`, `membershipPage`, `messagesPage`, `ordersPage`, `productsPage`, `creatorProfilePage`, `promotionsPage`, `referralPage`, `sessionsPage`, `settingsPage`, `streamingPage`, `walletPage`
-- 1 auth: `loginPage`
-
-Each has `goto()` and `expectLoaded()`. Add locators and methods as needed. Use:
-- `safeClick`/`safeFill`/`safeCheck` from `@utils/playwright.utils` for standard interactions
-- `flakyClick`/`flakyFill`/`flakyExpectText`/`flakyGoto` from `@utils/flaky-utils` for flaky elements
-- `waitForLoaded`/`navigateAndWait` from `@utils/playwright.utils` for loading states
-
-## Env vars
-
-Loads `.env` at project root via `dotenv` in `playwright.config.ts`.
+## Environment Variables
 
 | Var | Required | Notes |
 |-----|----------|-------|
 | `YAPP_BASE_URL` | Yes | Buyer app |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app |
-| `YAPP_TEST_ACCESS_TOKEN` | For authTest/creatorAuthTest | Do not commit |
+| `YAPP_API_BASE_URL` | Yes | API base URL |
+| `YAPP_TEST_ACCESS_TOKEN` | For auth fixtures | Do not commit |
+| `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Used by creator post API tests |
 | `TESTMAIL_API_KEY` | For OTP tests | Do not commit |
-| `TESTMAIL_NAMESPACE` | For OTP tests | — |
-| `PW_HEADLESS` | No | Defaults to `false` (headed) |
+| `TESTMAIL_NAMESPACE` | For OTP tests | Do not commit |
+| `PW_HEADLESS` | No | Defaults to `false` |
 | `PW_WORKERS` | No | CI defaults to 1 |
 
-## Conventions
+## Test Case Flow
 
-- Viewport: full screen (`viewport: null` + `--start-maximized`)
-- Runs **headed** by default (`headless: false` unless `PW_HEADLESS=true`)
-- `forbidOnly: !!process.env.CI` — `test.only` fails on CI
-- Retries: 2 on CI, 0 locally
-- Page is closed in `afterEach` (logs `pass browser close`)
-- Never commit `.env` (gitignored)
-- **Never use `--repeat-each` for reCAPTCHA tests** (e.g. `tests/auth/otp-login.spec.ts`). Rapid repeats from the same IP/machine tank the reCAPTCHA v3 score and trigger rate-limiting, causing cascading failures. To verify reliability, re-run the single test with a few minutes of cool-down between runs.
-- **One spec file per feature, not per TC** — write all TCs for a feature in `tests/{domain}/{feature}.spec.ts` (e.g. all feeds TCs go in `tests/buyer/feeds.spec.ts`). Never create `tests/{domain}/{TC-ID}.spec.ts`.
-- **Run only the generated TC after `/tc <id>`**: `npx playwright test tests/{domain}/{feature}.spec.ts --grep @T<TC-ID>` — do NOT run the whole feature file, only the new TC via its tag (e.g. `--grep @TAT-B-E2E-001`).
-
-## Rules
-
-Rules loaded from `.opencode/rules/` via `opencode.json`:
-
-| File | Purpose |
-|------|---------|
-| `code-style.md` | TypeScript, POM, imports, naming conventions |
-| `testing.md` | Fixture selection, test structure, tagging reference |
-
-All tests must include tags from: `@T<TC-ID>` (literal full TC ID, e.g. `@TAT-B-E2E-001`), `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`.
-
-## Test Cases → Automation Flow
-
-```
+```text
 test-cases/{domain}/{TC-ID}.md
-    ↓ baca
-add-test-spec skill
-    ↓ generate (append to feature spec)
-tests/{domain}/{feature}.spec.ts
-    ↓ import data dari
-src/test-data/{domain}/{feature}.data.ts
-    ↓ run only the new TC
-npx playwright test tests/{domain}/{feature}.spec.ts --grep @T<TC-ID>
+  -> read TC document
+  -> load relevant .agents skill
+  -> append to tests/{domain}/{feature}.spec.ts or tests/api/{domain}.{feature}.spec.ts
+  -> import data from src/test-data/{domain}/{feature}.data.ts
+  -> run only the new TC with --grep @T<TC-ID>
 ```
 
-Setiap automation test bersumber dari dokumen `.md` di `test-cases/`.
-Dokumen `.md` berisi: Steps, Expected, Test Data, Tags.
-AI membaca `.md` lalu mengimplementasikan Playwright spec-nya.
+Test case documents are local-only and ignored by Git. Automation tests must still include the TC tag from the source document.
 
-## TC ID Format
+## Required Tags
 
-`AT-{Domain}-{Type}-{Number}`
+Every test must include:
 
-| Kode | Domain | Folder |
-|------|--------|--------|
-| `AT-B-*` | Buyer | `test-cases/buyer/` |
-| `AT-C-*` | Creator | `test-cases/creator/` |
-| `AT-A-*` | Auth | `test-cases/auth/` |
-
-Gunakan `/tc <id>` untuk generate + run automation dari TC file.
-
-## Skills
-
-Project-local skills in `.opencode/skills/` loaded automatically by the `skill` tool:
-
-| Skill | Purpose |
-|-------|---------|
-| `add-page-object` | Scaffold a page object + register in fixtures |
-| `add-test-spec` | Create a test spec following POM conventions |
-| `fix-tsc-errors` | Run `tsc --noEmit` and fix type errors |
-| `resolve-flaky-tests` | Systematic flaky element resolution — diagnose, apply fix, log pattern |
-| `iterative-e2e-testing` | Round-based iterative test development (E2E → FV → API) |
-| `reuse-patterns` | Detect and extract shared locators, steps, and functions across tests |
-| `network-mocking` | Mock external services (payment, email, analytics) in E2E tests |
-| `api-testing` | Pure API testing with request fixture — no browser, fast |
+- `@T<TC-ID>` such as `@TAT-B-E2E-001`
+- one feature tag such as `@feeds`
+- one role tag: `@buyer` or `@creator`
+- one priority tag: `@smoke`, `@regression`, or `@sanity`
 
 ## CI
 
-GitHub Actions (`.github/workflows/playwright.yml`): `npm ci` → `npx playwright install --with-deps` → `npx playwright test`. Runs on push/PR to `main`/`master`.
+GitHub Actions workflow: `.github/workflows/playwright.yml`.
+
+Pipeline: `npm ci` -> `npx playwright install --with-deps` -> `npx playwright test`.

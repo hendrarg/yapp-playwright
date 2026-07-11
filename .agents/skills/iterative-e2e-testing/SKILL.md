@@ -25,7 +25,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 1. **Load `add-test-spec` skill** — this loads the full workflow:
    ```bash
-   skill add-test-spec
+   read .agents/skills/add-test-spec/SKILL.md
    ```
    - Automatically reads the TC `.md` file
    - Calls `reuse-patterns` to check existing locators/helpers
@@ -36,7 +36,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 2. **If FAIL → load `resolve-flaky-tests` skill**:
    ```bash
-   skill resolve-flaky-tests
+   read .agents/skills/resolve-flaky-tests/SKILL.md
    ```
    - Read error → apply fix pattern → re-run
 
@@ -92,7 +92,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 1. **Load `api-testing` skill**:
    ```bash
-   skill api-testing
+   read .agents/skills/api-testing/SKILL.md
    ```
    - Uses `buyerRequest`/`creatorRequest` from `@fixtures/api.fixtures`
    - Auto-injects `at` cookie + browser-like headers (WAF bypass)

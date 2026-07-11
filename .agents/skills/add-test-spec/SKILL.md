@@ -18,9 +18,9 @@ glob test-cases/**/AT-B-E2E-001* → find file
     ↓
 Read .md → Steps, Expected, Data, Tags
     ↓
-skill reuse-patterns
+read .agents/skills/reuse-patterns/SKILL.md
     ↓
-skill add-page-object (if needed)
+read .agents/skills/add-page-object/SKILL.md if needed
     ↓
 Create/check test-data
     ↓
@@ -52,7 +52,7 @@ Input format: `AT-{Domain}-{Type}-{Number}`
 
 ## Step 2: Load `reuse-patterns` skill
 ```bash
-skill reuse-patterns
+read .agents/skills/reuse-patterns/SKILL.md
 ```
 - Check existing page objects, helpers, utils, shared locators
 - Extract locators if ≥2 pages use the same element
@@ -66,7 +66,7 @@ skill reuse-patterns
 
 ## Step 4: Create page object (if missing)
 ```bash
-skill add-page-object
+read .agents/skills/add-page-object/SKILL.md
 ```
 - Scaffold `src/pages/{domain}/{Name}Page.ts`
 - Register in `src/fixtures/page.fixtures.ts`
@@ -118,7 +118,7 @@ Running the full file wastes time on unrelated tests.
 # 2. Analyze: what are the REAL roles, names, labels, structure?
 
 # 3. Then apply fix
-skill resolve-flaky-tests
+read .agents/skills/resolve-flaky-tests/SKILL.md
 ```
 - Fix → re-run from Step 7 until PASS ✅
 

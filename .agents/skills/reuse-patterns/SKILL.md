@@ -108,7 +108,7 @@ export async function createProduct(page: Page, name: string) {
 
 Before writing a new test spec:
 1. Read 1-2 existing test specs in the same domain for style reference
-2. Check if the page object already exists (use `add-page-object` skill if not)
+2. Check if the page object already exists (read `.agents/skills/add-page-object/SKILL.md` if not)
 3. Check if existing helpers cover the setup/login steps
 4. Check if similar locators exist in shared locators or other page objects
 

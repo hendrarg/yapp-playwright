@@ -106,9 +106,9 @@ When a fix resolves a flaky test, log it in the test file as a comment near the 
 
 This comment signals to the AI in future rounds to prefer `flakyClick` for similar patterns.
 
-## TUI command
+## Agent command
 
-Use `/flaky` to re-run the last flaky test with trace + video for diagnosis.
+Use `.agents/commands/flaky.md` to re-run the last flaky test with trace for diagnosis.
 
 ## Verification
 
