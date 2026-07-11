@@ -8,6 +8,14 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    env:
+      YAPP_BASE_URL: https://yapp-dev.yapp.ink/
+      YAPP_CREATORS_BASE_URL: https://creators-dev.yapp.ink/
+      YAPP_API_BASE_URL: https://staging.yapp.ink/
+      TESTMAIL_API_KEY: "${{ secrets.TESTMAIL_API_KEY }}"
+      TESTMAIL_NAMESPACE: "${{ secrets.TESTMAIL_NAMESPACE }}"
+      YAPP_TEST_ACCESS_TOKEN: "${{ secrets.YAPP_TEST_ACCESS_TOKEN }}"
+      YAPP_TEST_ACCESS_TOKEN_2: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_2 }}"
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
@@ -17,18 +25,18 @@ jobs:
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+    - name: TypeScript type-check
+      run: npx tsc --noEmit
+    - name: Validate API test project
+      run: npx playwright test --project=api --list
     - name: Run Playwright tests
-      env:
-        YAPP_BASE_URL: https://yapp-dev.yapp.ink/
-        YAPP_CREATORS_BASE_URL: https://creators-dev.yapp.ink/
-        YAPP_API_BASE_URL: https://staging.yapp.ink/
-        TESTMAIL_API_KEY: "${{ secrets.TESTMAIL_API_KEY }}"
-        TESTMAIL_NAMESPACE: "${{ secrets.TESTMAIL_NAMESPACE }}"
-        YAPP_TEST_ACCESS_TOKEN: "${{ secrets.YAPP_TEST_ACCESS_TOKEN }}"
-        YAPP_TEST_ACCESS_TOKEN_2: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_2 }}"
+      if: ${{ env.YAPP_TEST_ACCESS_TOKEN != '' }}
       run: npx playwright test
+    - name: Skip full Playwright tests
+      if: ${{ env.YAPP_TEST_ACCESS_TOKEN == '' }}
+      run: echo "Skipping full Playwright E2E because YAPP_TEST_ACCESS_TOKEN is not configured."
     - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
+      if: ${{ !cancelled() && hashFiles('playwright-report/**') != '' }}
       with:
         name: playwright-report
         path: playwright-report/
