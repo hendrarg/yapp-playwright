@@ -1,7 +1,7 @@
 import { authTest as test } from '../test-base';
 
 test('injected "at" token loads the messages page without redirecting to auth', { 
-  tag: ['@messages', '@buyer', '@smoke'] }, async ({ messagePage }) => {
+  tag: ['@TAT-B-FV-001', '@messages', '@buyer', '@smoke'] }, async ({ messagePage }) => {
   await messagePage.goto();
   await messagePage.expectLoaded();
   await messagePage.expectAuthenticated();

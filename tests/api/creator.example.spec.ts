@@ -2,7 +2,7 @@ import { test, expect } from '../../src/fixtures/api.fixtures';
 
 test.describe('Creator API — profile', () => {
   test('GET profile returns user data',
-    { tag: ['@api', '@creator', '@smoke', '@profile'] },
+    { tag: ['@TAT-C-API-001', '@api', '@creator', '@smoke', '@profile'] },
     async ({ creatorRequest }) => {
       const response = await creatorRequest.get('/api/profile');
       expect(response.status()).toBe(200);

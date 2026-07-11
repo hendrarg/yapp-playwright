@@ -2,7 +2,7 @@ import { authTest as test, test as guestTest, expect } from '../test-base';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 
 test('injected "at" token loads the feeds page without redirecting to auth', {
-  tag: ['@feeds', '@buyer', '@smoke'],
+  tag: ['@TAT-B-FV-001', '@feeds', '@buyer', '@smoke'],
 }, async ({ buyerFeedsPage }) => {
   await buyerFeedsPage.goto();
   await buyerFeedsPage.expectLoaded();

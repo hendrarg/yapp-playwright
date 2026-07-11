@@ -2,7 +2,7 @@ import { authTest as test, test as guestTest, expect } from '../test-base';
 import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.data';
 
 test('injected "at" token loads the profile page without redirecting to auth', {
-  tag: ['@profile', '@buyer', '@smoke'],
+  tag: ['@TAT-B-FV-001', '@profile', '@buyer', '@smoke'],
 }, async ({ buyerProfilePage }) => {
   await buyerProfilePage.goto();
   await buyerProfilePage.expectLoaded();

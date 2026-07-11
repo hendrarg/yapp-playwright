@@ -3,7 +3,7 @@ import { baseURL } from '../../config/env';
 import { saveTokenToEnv } from '../../src/helpers/auth/save-token';
 
 test('user can sign in to Yapp using an emailed OTP', {
-  tag: ['@auth', '@buyer', '@smoke'] }, async ({ page, loginPage }) => {
+  tag: ['@TAT-A-E2E-001', '@auth', '@buyer', '@smoke'] }, async ({ page, loginPage }) => {
   test.setTimeout(90000);
 
   const { token } = await loginPage.loginViaOtp(baseURL);

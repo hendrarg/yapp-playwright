@@ -2,7 +2,7 @@ import { test, expect } from '../../src/fixtures/api.fixtures';
 
 test.describe('Buyer API — profile', () => {
   test('GET profile returns user data',
-    { tag: ['@api', '@buyer', '@smoke', '@profile'] },
+    { tag: ['@TAT-B-API-001', '@api', '@buyer', '@smoke', '@profile'] },
     async ({ buyerRequest }) => {
       const response = await buyerRequest.get('/api/profile');
       expect(response.status()).toBe(200);

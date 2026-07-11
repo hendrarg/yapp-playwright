@@ -15,7 +15,7 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('Post API — create post with upload (sequential)', () => {
   test('Full upload flow: create → sign → PUT S3 → complete → posts',
-    { tag: ['@api', '@regression', '@post'] },
+    { tag: ['@TAT-C-API-002', '@api', '@creator', '@regression', '@post'] },
     async ({ buyerRequest }) => {
       const token2 = requireCreatorPostToken();
       const { postId, uploadId } = await createPost(buyerRequest, {
@@ -28,7 +28,7 @@ test.describe('Post API — create post with upload (sequential)', () => {
     });
 
   test('Text-only post (single API call)',
-    { tag: ['@api', '@regression', '@post'] },
+    { tag: ['@TAT-C-API-003', '@api', '@creator', '@regression', '@post'] },
     async ({ buyerRequest }) => {
       const token2 = requireCreatorPostToken();
       const { postId } = await createPost(buyerRequest, generatePostData({ visibility: 'public' }), token2);

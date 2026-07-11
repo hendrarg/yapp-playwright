@@ -8,6 +8,7 @@ node_modules/
 /playwright/.auth/
 /.auth/
 .playwright-mcp/
+/test-cases/
 *.yml
 
 # Secrets
