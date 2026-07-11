@@ -19,9 +19,13 @@ jobs:
       run: npx playwright install --with-deps
     - name: Run Playwright tests
       env:
+        YAPP_BASE_URL: ${{ vars.YAPP_BASE_URL || 'https://yapp-dev.yapp.ink/' }}
+        YAPP_CREATORS_BASE_URL: ${{ vars.YAPP_CREATORS_BASE_URL || 'https://creators-dev.yapp.ink/' }}
+        YAPP_API_BASE_URL: ${{ vars.YAPP_API_BASE_URL || 'https://staging.yapp.ink/' }}
         TESTMAIL_API_KEY: ${{ secrets.TESTMAIL_API_KEY }}
         TESTMAIL_NAMESPACE: ${{ secrets.TESTMAIL_NAMESPACE }}
         YAPP_TEST_ACCESS_TOKEN: ${{ secrets.YAPP_TEST_ACCESS_TOKEN }}
+        YAPP_TEST_ACCESS_TOKEN_2: ${{ secrets.YAPP_TEST_ACCESS_TOKEN_2 }}
       run: npx playwright test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}

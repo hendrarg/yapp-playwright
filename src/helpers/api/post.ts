@@ -23,7 +23,7 @@ export function apiUrl(path: string) {
 export function getHeaders(token?: string) {
   const t = (token ?? process.env.YAPP_TEST_ACCESS_TOKEN ?? '').replace(/"/g, '');
   return {
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${t}`,
     'Content-Type': 'application/json',
     Origin: 'https://yapp-dev.yapp.ink',
     Referer: 'https://yapp-dev.yapp.ink/',
