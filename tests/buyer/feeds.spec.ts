@@ -262,8 +262,8 @@ test('Like idempotency — Rapid tap prevention', {
 
   await test.step('Rapid tap like multiple times and verify only +1', async () => {
     const likeBtn = page.getByRole('button', { name: 'Like post' }).first();
-    await likeBtn.click({ clickCount: 5, force: true, timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(1500);
+    await expect(likeBtn).toBeVisible({ timeout: 10000 });
+    await likeBtn.click({ clickCount: 5, timeout: 5000 });
     await buyerFeedsPage.expectLikedState();
     const newCount = await buyerFeedsPage.getFirstPostLikeCount();
     expect(newCount, `count should be ${initialCount + 1}`).toBeLessThanOrEqual(initialCount + 1);

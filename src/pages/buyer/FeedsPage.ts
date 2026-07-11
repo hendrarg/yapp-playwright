@@ -18,10 +18,14 @@ export class FeedsPage {
 
   constructor(public readonly page: Page, private readonly baseURL: string) {}
 
+  private async waitForPageSettled() {
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+  }
+
   async goto() {
     await this.page.goto(new URL("feeds", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
-    await waitForLoaded(this.page);
+    await this.waitForPageSettled();
   }
 
   async expectLoaded() {
@@ -42,8 +46,7 @@ export class FeedsPage {
     const target =
       tab === "following" ? this.followingTab : tab === "yourPost" ? this.yourPostTab : this.exclusiveTab;
     await safeClick(target);
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   async expectTabActive(label: string) {
@@ -86,13 +89,12 @@ export class FeedsPage {
 
   async followFirstCreator() {
     await safeClick(this.followButtons.first());
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   async expectCreatorRemovedFromSuggestions(creatorName: string) {
     const card = this.creatorCards.filter({ hasText: creatorName }).first();
-    await expect(card).toBeHidden({ timeout: 10000 }).catch(() => {});
+    await expect(card).toBeHidden({ timeout: 10000 });
   }
 
   async expectFollowingButtonVisible() {
@@ -124,10 +126,8 @@ export class FeedsPage {
   }
 
   async likeFirstPost(): Promise<number> {
-    await this.firstLikeButton.scrollIntoViewIfNeeded();
-    await expect(this.firstLikeButton).toBeVisible({ timeout: 10000 });
-    await this.firstLikeButton.click({ force: true, timeout: 10000 });
-    await this.page.waitForTimeout(1500);
+    await safeClick(this.firstLikeButton);
+    await expect(this.firstUnlikeButton).toBeVisible({ timeout: 15000 });
     return 0;
   }
 
@@ -142,8 +142,8 @@ export class FeedsPage {
   }
 
   async unlikeFirstPost() {
-    await this.firstUnlikeButton.click({ force: true, timeout: 10000 });
-    await this.page.waitForTimeout(1500);
+    await safeClick(this.firstUnlikeButton);
+    await expect(this.firstLikeButton).toBeVisible({ timeout: 15000 });
   }
 
   // ── Post detail (click post card to open detail page) ──
@@ -152,14 +152,12 @@ export class FeedsPage {
 
   async openFirstPostDetail() {
     await safeClick(this.firstPostCard);
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   async clickBackFromPostDetail() {
     await safeClick(this.postDetailBackButton);
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   // ── Navigate to creator profile from feed post ──
@@ -167,20 +165,17 @@ export class FeedsPage {
 
   async navigateToCreatorProfileFromPost() {
     await safeClick(this.firstPostCreatorName);
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   // ── Navigate to creator profile from Following tab post ──
   async openCreatorProfileFromFollowingTab() {
     await this.switchToTab("following");
-    await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
     await expect(this.feedPosts.first()).toBeVisible({ timeout: 15000 });
     const firstPostAvatar = this.feedPosts.first().locator("img").first();
     await safeClick(firstPostAvatar);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
-    await waitForLoaded(this.page);
+    await this.waitForPageSettled();
   }
 
   async expectExclusiveContentOnly() {
@@ -204,8 +199,8 @@ export class FeedsPage {
   }
 
   async expectLockedPostsBlurred() {
-    await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 }).catch(() => {});
-    await expect(this.lockIcon).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
+    await expect(this.lockIcon).toBeVisible({ timeout: 10000 });
   }
 
   readonly postDetailDialog = this.page.getByRole("dialog", { name: "Post image modal" });
@@ -213,7 +208,7 @@ export class FeedsPage {
   async openFirstPublicImagePost() {
     await safeClick(this.publicImagePosts.first());
     await this.postDetailDialog.waitFor({ state: "visible", timeout: 15000 });
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   // ── Comment section (post detail page) ──
@@ -248,14 +243,15 @@ export class FeedsPage {
 
   async submitComment(commentText: string) {
     await safeClick(this.postCommentButton);
-    await waitForLoaded(this.page);
-    await this.page.waitForTimeout(1500);
+    await this.waitForPageSettled();
     await expect(this.page.getByText(commentText, { exact: false })).toBeVisible({ timeout: 10000 });
   }
 
   async expectCommentCountIncreased(previousCount: number) {
-    const newCount = await this.getCommentCount();
-    expect(newCount, `comment count should be > ${previousCount}`).toBeGreaterThan(previousCount);
+    await expect.poll(() => this.getCommentCount(), {
+      message: `comment count should be > ${previousCount}`,
+      timeout: 10000,
+    }).toBeGreaterThan(previousCount);
   }
 
   async expectFeedCommentCountIncreased(previousCount: number) {
@@ -284,7 +280,7 @@ export class FeedsPage {
     await expect(image).toBeVisible({ timeout: 10000 });
     const blur = await image.evaluate((el) => (globalThis as any).getComputedStyle(el).filter).catch(() => "none");
     expect(blur === "none" || blur === "", `public image should not be blurred, filter="${blur}"`).toBe(true);
-    await expect(this.postDetailDialog.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 5000 }).catch(() => {});
+    await expect(this.postDetailDialog.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 5000 });
   }
 
   // ── Public post (no monetization indicators) ──
@@ -293,14 +289,14 @@ export class FeedsPage {
   async openFirstPublicPost() {
     const post = this.publicPosts.first();
     await expect(post).toBeVisible({ timeout: 10000 });
-    await expect(post.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 3000 }).catch(() => {});
+    await expect(post.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 3000 });
     await safeClick(post);
     // Image posts open a dialog, text posts navigate to /post/{id}
     const isDialog = await this.postDetailDialog.isVisible({ timeout: 3000 }).catch(() => false);
     if (!isDialog) {
       await expect(this.page).toHaveURL(/\/post\//, { timeout: 10000 });
     }
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   // ── Locked/exclusive posts (monetization indicators) ──
@@ -314,8 +310,7 @@ export class FeedsPage {
     const lockedPost = this.lockedPosts.first();
     const creatorName = lockedPost.locator("p").first();
     await safeClick(creatorName);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
-    await waitForLoaded(this.page);
+    await this.waitForPageSettled();
   }
 
   // ── Locked media preview (blocked before unlock) ──
@@ -324,7 +319,7 @@ export class FeedsPage {
   async clickLockedPostMedia() {
     await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
     await safeClick(this.lockedPosts.first());
-    await this.page.waitForLoadState("networkidle").catch(() => {});
+    await this.waitForPageSettled();
   }
 
   async expectLockedMediaBlocked() {
