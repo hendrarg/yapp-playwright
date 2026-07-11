@@ -10,6 +10,8 @@ Before changing files or running task-specific commands, read:
 2. `.agents/runtime.md`
 3. `.agents/rules/code-style.md`
 4. `.agents/rules/testing.md`
+5. `.agents/rules/git-hygiene.md`
+6. `.agents/rules/ci.md`
 
 For task-specific work, also read the matching skill from `.agents/skills/registry.md`.
 
