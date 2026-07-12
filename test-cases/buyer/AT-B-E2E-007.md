@@ -70,7 +70,7 @@ Semua tipe media dapat di-preview dengan benar: single image zoom, multi-image s
 
 ## Test Data
 
--
+- diambil dari assets
 
 ## Notes
 

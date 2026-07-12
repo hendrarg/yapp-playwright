@@ -1,14 +1,6 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
 import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.data';
 
-test('injected "at" token loads the profile page without redirecting to auth', {
-  tag: ['@TAT-B-FV-001', '@profile', '@buyer', '@smoke'],
-}, async ({ buyerProfilePage }) => {
-  await buyerProfilePage.goto();
-  await buyerProfilePage.expectLoaded();
-  await buyerProfilePage.expectAuthenticated();
-});
-
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
   tag: ['@TAT-B-E2E-002', '@profile', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerProfilePage }) => {

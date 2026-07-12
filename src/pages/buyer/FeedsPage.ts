@@ -28,6 +28,11 @@ export class FeedsPage {
     await this.waitForPageSettled();
   }
 
+  async gotoPost(postId: string) {
+    await this.page.goto(new URL(`post/${postId}`, this.baseURL).toString());
+    await this.waitForPageSettled();
+  }
+
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/feeds/);
     expect(this.page.url()).not.toContain("/auth");
@@ -125,6 +130,9 @@ export class FeedsPage {
   }
   private postLikeCountEl(post: Locator) {
     return post.locator("p").filter({ hasText: /^\d+$/ }).first();
+  }
+  private priceText(price: number) {
+    return `Rp${new Intl.NumberFormat("id-ID").format(price)}`;
   }
 
   async getFirstPostLikeCount(): Promise<number> {
@@ -274,6 +282,12 @@ export class FeedsPage {
   async expectLockedPostsBlurred() {
     await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
     await expect(this.unlockPostButtons.first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectLockedPostVisible(content: string) {
+    const post = this.postByContent(content);
+    await expect(post).toBeVisible({ timeout: 15000 });
+    await expect(post.getByRole("button", { name: "Unlock Post" })).toBeVisible({ timeout: 10000 });
   }
 
   readonly postDetailDialog = this.page.getByRole("dialog", { name: "Post image modal" });
@@ -510,5 +524,64 @@ export class FeedsPage {
     }
     // Verify unlock button or unlock prompt appears
     await expect(this.page.getByText(/Unlock|unlock/i).first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectLockedPostDetail() {
+    await this.expectPostDetailOpen();
+    await expect(this.page.getByRole("button", { name: "Unlock Post" }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("button", { name: /Unlock Now|Unlock now/ })).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(/Unlock post to add comments/i).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async openUnlockPreview(price = 20000) {
+    await safeClick(this.page.getByRole("button", { name: "Unlock Post" }).first());
+    await expect(this.page.getByText(/Exclusive Content Preview|Unlock Exclusive Post|Unlock/i).first()).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.page.getByText(this.priceText(price)).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectLockedEngagementBlocked() {
+    await expect(this.page.getByText(/Unlock post to add comments/i).first()).toBeVisible({ timeout: 10000 });
+    if (await this.commentInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await expect(this.commentInput).toBeDisabled({ timeout: 5000 });
+    }
+  }
+
+  async submitUnlockPayment(name: string, phone: string): Promise<string> {
+    await safeClick(this.page.getByRole("button", { name: /Unlock Now|Unlock now/ }).last());
+    const dialog = this.page.getByRole("dialog").filter({ hasText: /Unlock Exclusive Post|Exclusive Post/ }).first();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    const emailInput = dialog.locator('input[type="email"], input[name*="email" i]').first();
+    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    expect((await emailInput.inputValue()).length).toBeGreaterThan(0);
+
+    const nameInput = dialog.locator('input[name*="name" i], input[placeholder*="name" i]').first();
+    const phoneInput = dialog.locator('input[type="tel"], input[name*="phone" i], input[placeholder*="phone" i]').first();
+    await nameInput.fill(name);
+    await phoneInput.fill(phone);
+
+    await safeClick(dialog.getByRole("button", { name: /Pay|Unlock|Continue/i }).last());
+    await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
+    await this.waitForPageSettled();
+    return this.page.url().split("/transaction/")[1];
+  }
+
+  async expectUnlockedExclusivePost(content: string) {
+    await this.expectPostDetailOpen();
+    await expect(this.page.getByText(content, { exact: false })).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("button", { name: "Unlock Post" })).toBeHidden({ timeout: 10000 });
+    await expect(this.page.locator("main img").first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async zoomUnlockedPostMedia() {
+    const image = this.page.locator("main img").first();
+    await expect(image).toBeVisible({ timeout: 10000 });
+    await image.hover();
+    await this.page.mouse.wheel(0, -700);
+    await this.page.waitForTimeout(300);
+    await this.page.mouse.wheel(0, 700);
+    await expect(image).toBeVisible({ timeout: 5000 });
   }
 }

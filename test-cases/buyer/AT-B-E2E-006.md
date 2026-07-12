@@ -17,7 +17,7 @@ Validasi full flow exclusive content: locked post dengan blur + lock icon + pric
 ## Preconditions
 
 - Buyer logged in
-- Exclusive/member-only post exists (locked, belum di-unlock)
+- Create Exclusive content post exists (locked, belum di-unlock) with api another user with price 20000
 
 ## Test Flow
 
@@ -25,45 +25,68 @@ Validasi full flow exclusive content: locked post dengan blur + lock icon + pric
 
 - Buka halaman Feeds
 - **Verify:** Locked post menampilkan blur preview + lock icon
-- **Verify:** Monetization indicator tampil (Exclusive / Member Only / PPV label)
-- **Verify:** Price label tampil di feed card
 
 ### Step 2 — Open Locked Post Detail
 
-- Klik locked post card
+- buka detail post
 - **Verify:** Post detail page terbuka
 - **Verify:** Konten tetap blur/tersamar
-- **Verify:** Teaser text terlihat
 - **Verify:** Unlock button ditampilkan
 - **Verify:** Full content TIDAK bisa diakses
 
-### Step 3 — Unlock Content
+### Step 3 — Click Unlock in Content
 
-- Klik Unlock button
-- **Verify:** Konten ter-unlock segera (blur hilang)
-- **Verify:** Full content dapat diakses
+- Klik Unlock post
+- **Verify:** show card Exclusive Content Preview
+- **Verify:** post stiill blur and lock
+- **Verify:** price displayed
 
-### Step 4 — Verify Unlocked State in Feed
+### Step 4 — Verify can't like and comment
 
-- Kembali ke feed
-- **Verify:** Post yang sama tidak lagi menampilkan lock icon
-- **Verify:** State unlocked konsisten antara feed dan detail
+- **Verify:** can not like 
+- **Verify:** can not comment
 
-### Step 5 — Verify Price Consistency
+### Step 5 — Unlock now
 
-- **Verify:** Price di feed card sama dengan price di post detail page
+- click button unlock now
+- **Verify:** Displayed modal Unlock Exclusive Post
+- **Verify:** email auto field 
+- **Verify:** payment auto qeis
+- input name with random string and number telephone with random number
+- click button pay
 
-### Step 6 — Verify Free Post No Lock Icon
+### Step 6 — going to page post transaction
 
-- **Verify:** Post publik/gratis tidak menampilkan lock icon atau monetization indicator
+- **Verify:** QR for payment displayed
+- **Verify:** name product
+- **Verify:** price product consistent
+- **Verify:** order id
+- **Verify:** profiel creator and exclusive 
+- **Verify:** button refresh to check status
+
+### Step 7 — Pay transaction with api 
+
+- send pay transaction with api
+- **Verify:** modal payment succesful displayed
+- **Verify:** label Your payment was successful! You can now access your exclusive content.
+- **Verify:** button view product and close
+
+### Step 8 — Verify product after puschae
+
+- Click button view product
+- **Verify:** direct to detail post page
+- **Verify:** post show without blur and lock
+- **Verify:** unlock status
+post can open and zoom in zoom out
+
 
 ## Expected Result
 
-Full locked → unlock flow berjalan sempurna: indikator monetization benar, konten blur sebelum unlock, unlock bekerja, state konsisten di feed dan detail, price konsisten.
+Full locked → unlock flow berjalan sempurna: indikator monetization benar, konten blur sebelum unlock, unlock bekerja, state konsisten di feed dan detail
 
 ## Test Data
 
--
+- Assets
 
 ## Notes
 

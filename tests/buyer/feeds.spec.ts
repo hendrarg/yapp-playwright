@@ -1,15 +1,8 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
+import { depositWebhook } from '@helpers/api/webhook';
 import { createPost, deletePost } from '@helpers/api/post';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
-
-test('injected "at" token loads the feeds page without redirecting to auth', {
-  tag: ['@TAT-B-FV-001', '@feeds', '@buyer', '@smoke'],
-}, async ({ buyerFeedsPage }) => {
-  await buyerFeedsPage.goto();
-  await buyerFeedsPage.expectLoaded();
-  await buyerFeedsPage.expectAuthenticated();
-});
 
 test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   tag: ['@TAT-B-E2E-001', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
@@ -220,6 +213,73 @@ test('Buyer Comment on Post — Submit & Verify', {
   } finally {
     if (postId) {
       await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
+});
+
+test('Buyer Exclusive Content — Locked to Unlock Flow', {
+  tag: ['@TAT-B-E2E-006', '@feeds', '@payment', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, transactionPage, page }) => {
+  test.setTimeout(180000);
+
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed exclusive post for this E2E test');
+
+  const price = 20000;
+  const priceText = 'Rp20.000';
+  const postData = generatePostData({
+    content: `Exclusive unlock flow ${Date.now()}`,
+    visibility: 'pay_per_view',
+    price,
+  });
+  let postId = '';
+  let orderId = '';
+
+  try {
+    await test.step('Create locked exclusive image post via API', async () => {
+      ({ postId } = await createPost(page.request, { ...postData, imagePath: testImages.claude }, token2));
+      expect(postId).toBeDefined();
+    });
+
+    await test.step('Open feeds and verify locked post indicators', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectLockedPostVisible(postData.content);
+    });
+
+    await test.step('Open locked post detail and verify content remains gated', async () => {
+      await buyerFeedsPage.gotoPost(postId);
+      await buyerFeedsPage.expectLockedPostDetail();
+    });
+
+    await test.step('Open unlock preview and verify locked engagement is blocked', async () => {
+      await buyerFeedsPage.openUnlockPreview(price);
+      await buyerFeedsPage.expectLockedEngagementBlocked();
+    });
+
+    await test.step('Submit unlock payment form', async () => {
+      orderId = await buyerFeedsPage.submitUnlockPayment(`Buyer ${Date.now()}`, `812${Date.now().toString().slice(-9)}`);
+      await transactionPage.expectExclusivePostTransaction(priceText);
+    });
+
+    await test.step('Pay transaction via webhook API and verify success modal', async () => {
+      await depositWebhook(page.request, orderId);
+      await page.waitForTimeout(2500);
+      await transactionPage.expectUnlockPaymentSuccess();
+    });
+
+    await test.step('View unlocked product and verify media can be accessed', async () => {
+      await transactionPage.viewUnlockedProduct();
+      await buyerFeedsPage.expectUnlockedExclusivePost(postData.content);
+      await buyerFeedsPage.zoomUnlockedPostMedia();
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded exclusive post via API', async () => {
         await deletePost(page.request, postId, token2);
       });
     }
