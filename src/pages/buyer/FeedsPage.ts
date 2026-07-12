@@ -112,6 +112,7 @@ export class FeedsPage {
     .filter({ has: this.page.getByRole("button", { name: feedsLabels.openPostMedia }) })
     .filter({ hasNot: this.page.getByRole("button", { name: "Unlock Post" }) })
     .filter({ hasNot: this.page.getByText(feedsLabels.memberOnly, { exact: true }) });
+  readonly mediaButtons = this.page.getByRole("button", { name: feedsLabels.openPostMedia });
 
   // ── Like / Unlike ──
   readonly firstLikeButton = this.page.getByRole("button", { name: feedsLabels.likePost }).first();
@@ -288,6 +289,89 @@ export class FeedsPage {
     await safeClick(mediaButton);
     await this.postDetailDialog.waitFor({ state: "visible", timeout: 15000 });
     await this.waitForPageSettled();
+  }
+
+  async openPostMedia(content: string) {
+    const mediaButton = this.postByContent(content).getByRole("button", { name: feedsLabels.openPostMedia }).first();
+    await safeClick(mediaButton);
+    await this.waitForPageSettled();
+  }
+
+  async expectMediaPostsVisible() {
+    await expect(this.publicImagePosts.first()).toBeVisible({ timeout: 15000 });
+    await expect(this.mediaButtons.first()).toBeVisible({ timeout: 15000 });
+  }
+
+  async zoomPreviewImage() {
+    const image = this.postDetailDialog.locator("img").first();
+    await expect(image).toBeVisible({ timeout: 10000 });
+    await image.hover();
+    await this.page.mouse.wheel(0, -700);
+    await this.page.waitForTimeout(300);
+    await this.page.mouse.wheel(0, 700);
+    await expect(image).toBeVisible({ timeout: 5000 });
+  }
+
+  async closePreview() {
+    await this.page.keyboard.press("Escape");
+    await expect(this.postDetailDialog).toBeHidden({ timeout: 10000 });
+    await this.expectLoaded();
+  }
+
+  async openSecondGalleryMediaIfAvailable(): Promise<boolean> {
+    const count = await this.feedPosts.count();
+    for (let i = 0; i < count; i++) {
+      const post = this.feedPosts.nth(i);
+      const media = post.getByRole("button", { name: feedsLabels.openPostMedia });
+      if ((await media.count()) > 1) {
+        await safeClick(media.nth(1));
+        await this.postDetailDialog.waitFor({ state: "visible", timeout: 15000 });
+        await this.waitForPageSettled();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async swipePreviewLeftRight() {
+    await expect(this.postDetailDialog).toBeVisible({ timeout: 10000 });
+    await this.page.mouse.move(900, 400);
+    await this.page.mouse.down();
+    await this.page.mouse.move(300, 400, { steps: 8 });
+    await this.page.mouse.up();
+    await this.page.waitForTimeout(300);
+    await this.page.mouse.down();
+    await this.page.mouse.move(900, 400, { steps: 8 });
+    await this.page.mouse.up();
+    await expect(this.postDetailDialog.locator("img").first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async openVideoPreviewIfAvailable(): Promise<boolean> {
+    const video = this.page.locator("video").first();
+    if (!(await video.isVisible().catch(() => false))) {
+      return false;
+    }
+    await safeClick(video);
+    await this.waitForPageSettled();
+    return true;
+  }
+
+  async expectVideoPreviewOpen() {
+    await expect(this.page.locator("video").first()).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectVideoPlaybackControls() {
+    const video = this.page.locator("video").first();
+    await expect(video).toBeVisible({ timeout: 10000 });
+    await video.evaluate((el) => (el as any).pause());
+    await expect.poll(() => video.evaluate((el) => (el as any).paused)).toBe(true);
+    await video.evaluate((el) => (el as any).play());
+    await expect.poll(() => video.evaluate((el) => (el as any).paused)).toBe(false);
+    await video.evaluate((el) => {
+      const media = el as any;
+      media.currentTime = Math.min(media.duration || 1, media.currentTime + 1);
+    });
+    await expect(video).toBeVisible({ timeout: 5000 });
   }
 
   // ── Comment section (post detail page) ──

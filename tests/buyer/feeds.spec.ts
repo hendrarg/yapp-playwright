@@ -1,7 +1,7 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
 import { createPost, deletePost } from '@helpers/api/post';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
-import { generatePostData } from '@test-data/creator/post.data';
+import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 
 test('injected "at" token loads the feeds page without redirecting to auth', {
   tag: ['@TAT-B-FV-001', '@feeds', '@buyer', '@smoke'],
@@ -221,6 +221,80 @@ test('Buyer Comment on Post — Submit & Verify', {
     if (postId) {
       await test.step('Delete seeded post via API', async () => {
         await deletePost(page.request, postId, token2);
+      });
+    }
+  }
+});
+
+test('Buyer Media Preview — Image Gallery & Video Playback', {
+  tag: ['@TAT-B-E2E-007', '@feeds', '@media', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, page }) => {
+  test.setTimeout(120000);
+
+  const token = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+  test.skip(!token, 'YAPP_TEST_ACCESS_TOKEN must be set to seed media posts for this E2E test');
+
+  const imagePost = generatePostData({
+    content: `Media preview photo ${Date.now()}`,
+    visibility: 'public',
+  });
+  const extraImagePosts = [
+    { data: generatePostData({ content: `Media preview deepseek ${Date.now()}`, visibility: 'public' }), imagePath: testImages.deepseek },
+    { data: generatePostData({ content: `Media preview gemini ${Date.now()}`, visibility: 'public' }), imagePath: testImages.gemini },
+    { data: generatePostData({ content: `Media preview gpt ${Date.now()}`, visibility: 'public' }), imagePath: testImages.gpt },
+  ];
+  const videoPost = generatePostData({
+    content: `Media preview video ${Date.now()}`,
+    visibility: 'public',
+  });
+  const postIds: string[] = [];
+
+  try {
+    await test.step('Upload photo and video posts with descriptions', async () => {
+      const image = await createPost(page.request, { ...imagePost, imagePath: testImages.claude }, token);
+      const video = await createPost(page.request, { ...videoPost, mediaPath: testVideos.sample }, token);
+      for (const post of extraImagePosts) {
+        const uploaded = await createPost(page.request, { ...post.data, imagePath: post.imagePath }, token);
+        postIds.push(uploaded.postId);
+        expect(uploaded.postId).toBeDefined();
+      }
+      postIds.push(image.postId, video.postId);
+      expect(image.postId).toBeDefined();
+      expect(video.postId).toBeDefined();
+    });
+
+    await test.step('Open Your Post feed and verify uploaded media descriptions', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.switchToTab('yourPost');
+      await buyerFeedsPage.expectTabActive(feedsTabs.yourPost);
+      await buyerFeedsPage.expectPostVisible(imagePost.content);
+      for (const post of extraImagePosts) {
+        await buyerFeedsPage.expectPostVisible(post.data.content);
+      }
+      await buyerFeedsPage.expectPostVisible(videoPost.content);
+    });
+
+    await test.step('Preview uploaded photo and zoom', async () => {
+      await buyerFeedsPage.openPostMedia(imagePost.content);
+      await buyerFeedsPage.expectPostDetailOpen();
+      await buyerFeedsPage.expectPublicImageUnlocked();
+      await buyerFeedsPage.zoomPreviewImage();
+      await buyerFeedsPage.closePreview();
+    });
+
+    await test.step('Preview uploaded video and control playback', async () => {
+      await buyerFeedsPage.openPostMedia(videoPost.content);
+      await buyerFeedsPage.expectVideoPreviewOpen();
+      await buyerFeedsPage.expectVideoPlaybackControls();
+    });
+  } finally {
+    if (postIds.length) {
+      await test.step('Delete seeded media posts via API', async () => {
+        for (const id of postIds) {
+          await deletePost(page.request, id, token);
+        }
       });
     }
   }

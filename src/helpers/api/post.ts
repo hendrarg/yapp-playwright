@@ -14,6 +14,7 @@ export interface CreatePostOptions {
   isFlexiblePrice?: boolean;
   productUuids?: string[];
   imagePath?: string;
+  mediaPath?: string;
 }
 
 export function apiUrl(path: string) {
@@ -47,9 +48,17 @@ export async function createPost(
   token?: string
 ): Promise<{ postId: string; uploadId?: string }> {
   const h = () => getHeaders(token);
-  const { content, visibility, price = 0, isFlexiblePrice = false, productUuids = [], imagePath } = options;
+  const {
+    content,
+    visibility,
+    price = 0,
+    isFlexiblePrice = false,
+    productUuids = [],
+    imagePath,
+    mediaPath = imagePath,
+  } = options;
 
-  if (!imagePath) {
+  if (!mediaPath) {
     const response = await request.post(apiUrl('/api/v1/posts'), {
       headers: h(),
       data: { content, status: 'active', visibility, assets: [], productUuids, price, isFlexiblePrice },
@@ -62,9 +71,13 @@ export async function createPost(
   }
 
   // ── Image upload flow ──
-  const ext = imagePath.split('.').pop() ?? 'jpeg';
-  const filename = imagePath.split('/').pop() ?? `${randomUUID()}.${ext}`;
-  const filetype = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' || ext === 'jfif' ? 'image/jpeg' : 'image/jpeg';
+  const ext = mediaPath.split('.').pop()?.toLowerCase() ?? 'jpeg';
+  const filename = mediaPath.split('/').pop() ?? `${randomUUID()}.${ext}`;
+  const filetype =
+    ext === 'png' ? 'image/png' :
+      ext === 'mp4' ? 'video/mp4' :
+        ext === 'jpg' || ext === 'jpeg' || ext === 'jfif' ? 'image/jpeg' : 'image/jpeg';
+  const assetType = filetype.startsWith('video/') ? 'video' : 'image';
 
   // Step 1: Create upload
   const createUrl = apiUrl('/api/v1/file/upload/create');
@@ -91,7 +104,7 @@ export async function createPost(
   const presignedUrl = signBody.url ?? signBody.data?.url ?? signBody.presignedUrl;
 
   // Step 3: Upload file to S3 via presigned URL
-  const resolvedPath = path.isAbsolute(imagePath) ? imagePath : path.resolve(PROJECT_ROOT, imagePath);
+  const resolvedPath = path.isAbsolute(mediaPath) ? mediaPath : path.resolve(PROJECT_ROOT, mediaPath);
   const imageBuffer = fs.readFileSync(resolvedPath);
   const putRes = await request.put(presignedUrl, {
     headers: { 'Content-Type': filetype },
@@ -127,7 +140,7 @@ export async function createPost(
       content,
       status: 'active',
       visibility,
-      assets: [{ url: uploadId, assetType: 'image', order: 0 }],
+      assets: [{ url: uploadId, assetType, order: 0 }],
       productUuids,
       price,
       isFlexiblePrice,
