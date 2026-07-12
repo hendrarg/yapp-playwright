@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
@@ -77,7 +77,15 @@ export class ProfilePage {
     await expect(this.followButton).toBeVisible({ timeout: 10000 });
   }
 
+  async clickFollow() {
+    await safeClick(this.followButton);
+    await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle").catch(() => {});
+  }
+
   async clickUnfollow() {
+    await this.page.keyboard.press("Escape");
+    await expect(this.page.getByRole("dialog", { name: "Post image modal" })).toBeHidden({ timeout: 3000 }).catch(() => {});
     // Hover the following button to reveal the Unfollow text
     const btn = this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" });
     await btn.scrollIntoViewIfNeeded();
@@ -246,6 +254,9 @@ export class ProfilePage {
   readonly creatorFirstUnlikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Unlike post" });
   readonly creatorFirstLikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Like post" });
   readonly creatorFirstLikeCount = this.creatorFeedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+  private creatorPostByContent(content: string): Locator {
+    return this.creatorFeedPosts.filter({ hasText: content }).first();
+  }
 
   async getCreatorFirstPostLikeCount(): Promise<number> {
     const text = (await this.creatorFirstLikeCount.textContent()) ?? "0";
@@ -262,6 +273,13 @@ export class ProfilePage {
 
   async expectCreatorPostUnlikedState() {
     await expect(this.creatorFirstLikeButton).toBeVisible({ timeout: 10000 });
+  }
+
+  async unlikeCreatorPost(content: string) {
+    const post = this.creatorPostByContent(content);
+    await safeClick(post.getByRole("button", { name: "Unlike post" }));
+    await waitForLoaded(this.page);
+    await expect(post.getByRole("button", { name: "Like post" })).toBeVisible({ timeout: 10000 });
   }
   readonly memberOnlyLabel = this.main.getByText(profileLabels.memberOnly, { exact: true });
   readonly publicImagePosts = this.main

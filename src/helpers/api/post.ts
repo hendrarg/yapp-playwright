@@ -139,3 +139,16 @@ export async function createPost(
   const post = await postRes.json();
   return { postId: post.data?.uuid ?? post.uuid, uploadId };
 }
+
+export async function deletePost(
+  request: APIRequestContext,
+  postId: string,
+  token?: string
+): Promise<void> {
+  const response = await request.delete(apiUrl(`/api/v1/posts/${postId}`), {
+    headers: getHeaders(token),
+  });
+  if (!response.ok()) {
+    throw new Error(`Delete post failed: ${response.status()} ${await response.text()}`);
+  }
+}

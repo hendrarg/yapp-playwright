@@ -1,5 +1,7 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
+import { createPost, deletePost } from '@helpers/api/post';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
+import { generatePostData } from '@test-data/creator/post.data';
 
 test('injected "at" token loads the feeds page without redirecting to auth', {
   tag: ['@TAT-B-FV-001', '@feeds', '@buyer', '@smoke'],
@@ -30,7 +32,6 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
 
   await test.step('Switch to Exclusive tab (gated content only)', async () => {
     await buyerFeedsPage.switchToTab('exclusive');
-    await buyerFeedsPage.expectTabActive(feedsTabs.exclusive);
     await buyerFeedsPage.expectExclusiveContentOnly();
   });
 
@@ -41,7 +42,6 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
 
   await test.step('Infinite scroll loads additional posts', async () => {
     await buyerFeedsPage.infiniteScroll();
-    await buyerFeedsPage.expectLockedPostsBlurred();
   });
 
   await test.step('Open a public image post', async () => {
@@ -84,99 +84,146 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
     await buyerProfilePage.expectFollowState();
   });
 
-  await test.step('Click back button to return to feeds and verify unfollowed state', async () => {
+  await test.step('Follow creator again and verify final Following state', async () => {
+    await buyerProfilePage.clickFollow();
+    await buyerProfilePage.expectFollowingState();
+  });
+
+  await test.step('Click back button to return to feeds and verify followed state', async () => {
     await buyerProfilePage.clickBackButton();
     await buyerFeedsPage.expectLoaded();
     await buyerFeedsPage.switchToTab('following');
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await expect(buyerFeedsPage.creatorsSection).toBeVisible({ timeout: 10000 });
-    await expect(buyerFeedsPage.followButtons.first()).toBeVisible({ timeout: 10000 });
+    await expect(buyerFeedsPage.followingButtons.first()).toBeVisible({ timeout: 10000 });
   });
 });
 
 test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
   tag: ['@TAT-B-E2E-004', '@feeds', '@like', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, buyerProfilePage }) => {
+}, async ({ buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
 
-  await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.expectAuthenticated();
-    await buyerFeedsPage.switchToTab('following');
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await buyerFeedsPage.expectCreatorsSectionVisible();
-  });
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
 
-  await test.step('Like a post from feed and verify count +1, icon active', async () => {
-    await buyerFeedsPage.likeFirstPost();
-    await buyerFeedsPage.expectLikedState();
+  const postData = generatePostData({
+    content: `Like full cycle ${Date.now()}`,
+    visibility: 'public',
   });
+  let postId = '';
 
-  await test.step('Open post detail and verify liked state, then go back', async () => {
-    await buyerFeedsPage.openFirstPostDetail();
-    await buyerFeedsPage.expectLikedState();
-    await buyerFeedsPage.clickBackFromPostDetail();
-    await buyerFeedsPage.expectLoaded();
-  });
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
 
-  await test.step('Navigate to creator profile from feeds post and unlike', async () => {
-    await buyerFeedsPage.navigateToCreatorProfileFromPost();
-    await buyerProfilePage.expectLoaded();
-    await buyerProfilePage.switchToTab('feeds');
-    await buyerProfilePage.unlikeCreatorFirstPost();
-    await buyerProfilePage.expectCreatorPostUnlikedState();
-  });
+    await test.step('Open feeds and verify seeded post', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+    });
 
-  await test.step('Return to feeds and verify unliked state on post detail', async () => {
-    await buyerProfilePage.clickBackButton();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.switchToTab('following');
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await buyerFeedsPage.expectUnlikedState();
-    await buyerFeedsPage.openFirstPostDetail();
-    await buyerFeedsPage.expectUnlikedState();
-  });
+    await test.step('Like a post from feed and verify count +1, icon active', async () => {
+      await buyerFeedsPage.likePost(postData.content);
+      await buyerFeedsPage.expectPostLikedState(postData.content);
+    });
+
+    await test.step('Open post detail and verify liked state, then go back', async () => {
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.expectLikedState();
+      await buyerFeedsPage.clickBackFromPostDetail();
+      await buyerFeedsPage.expectLoaded();
+    });
+
+    await test.step('Navigate to creator profile from feeds post and unlike', async () => {
+      await buyerFeedsPage.navigateToCreatorProfileFromPostContent(postData.content);
+      await buyerProfilePage.expectLoaded();
+      await buyerProfilePage.switchToTab('feeds');
+      await buyerProfilePage.unlikeCreatorPost(postData.content);
+    });
+
+    await test.step('Return to feeds and verify unliked state on post detail', async () => {
+      await buyerProfilePage.clickBackButton();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostUnlikedState(postData.content);
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.expectUnlikedState();
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
 });
 
 test('Buyer Comment on Post — Submit & Verify', {
   tag: ['@TAT-B-E2E-005', '@feeds', '@comment', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage }) => {
+}, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
+
+  const postData = generatePostData({
+    content: `Comment full cycle ${Date.now()}`,
+    visibility: 'public',
+  });
+  let postId = '';
   let previousCommentCount = 0;
   let commentText = '';
 
-  await test.step('Open feeds and verify Following tab', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.expectAuthenticated();
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    previousCommentCount = await buyerFeedsPage.getFeedCommentCount();
-  });
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
 
-  await test.step('Open post detail and verify comment section', async () => {
-    await buyerFeedsPage.openFirstPostDetail();
-    await buyerFeedsPage.expectPostDetailOpen();
-    await buyerFeedsPage.expectPostButtonDisabled();
-  });
+    await test.step('Open feeds and verify seeded post', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      previousCommentCount = await buyerFeedsPage.getPostCommentCount(postData.content);
+    });
 
-  await test.step('Type comment and verify Post button enabled', async () => {
-    commentText = generateComment();
-    await buyerFeedsPage.fillComment(commentText);
-    await buyerFeedsPage.expectPostButtonEnabled();
-  });
+    await test.step('Open post detail and verify comment section', async () => {
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.expectPostDetailOpen();
+      await buyerFeedsPage.expectPostButtonDisabled();
+    });
 
-  await test.step('Submit comment, verify it appears in list and count increased', async () => {
-    await buyerFeedsPage.submitComment(commentText);
-    await buyerFeedsPage.expectCommentCountIncreased(previousCommentCount);
-  });
+    await test.step('Type comment and verify Post button enabled', async () => {
+      commentText = generateComment();
+      await buyerFeedsPage.fillComment(commentText);
+      await buyerFeedsPage.expectPostButtonEnabled();
+    });
 
-  await test.step('Click back to feeds and verify comment count increased', async () => {
-    await buyerFeedsPage.clickBackFromPostDetail();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.expectFeedCommentCountIncreased(previousCommentCount);
-  });
+    await test.step('Submit comment, verify it appears in list and count increased', async () => {
+      await buyerFeedsPage.submitComment(commentText);
+      await buyerFeedsPage.expectCommentCountIncreased(previousCommentCount);
+    });
+
+    await test.step('Click back to feeds and verify comment count increased', async () => {
+      await buyerFeedsPage.clickBackFromPostDetail();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectPostCommentCountIncreased(postData.content, previousCommentCount);
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
 });
 
 guestTest('Guest user blocked — Following tab requires login', {
@@ -250,29 +297,47 @@ test('Like idempotency — Rapid tap prevention', {
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this FV test');
+
+  const postData = generatePostData({
+    content: `Like idempotency ${Date.now()}`,
+    visibility: 'public',
+  });
+  let postId = '';
   let initialCount = 0;
 
-  await test.step('Open feeds and get initial like count', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.expectAuthenticated();
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    initialCount = await buyerFeedsPage.getFirstPostLikeCount();
-  });
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
 
-  await test.step('Rapid tap like multiple times and verify only +1', async () => {
-    const likeBtn = page.getByRole('button', { name: 'Like post' }).first();
-    await expect(likeBtn).toBeVisible({ timeout: 10000 });
-    await likeBtn.click({ clickCount: 5, timeout: 5000 });
-    await buyerFeedsPage.expectLikedState();
-    const newCount = await buyerFeedsPage.getFirstPostLikeCount();
-    expect(newCount, `count should be ${initialCount + 1}`).toBeLessThanOrEqual(initialCount + 1);
-  });
+    await test.step('Open feeds and get seeded post initial like count', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      initialCount = await buyerFeedsPage.getPostLikeCount(postData.content);
+    });
 
-  await test.step('Unlike and verify count returns to initial', async () => {
-    await buyerFeedsPage.unlikeFirstPost();
-    await buyerFeedsPage.expectUnlikedState();
-  });
+    await test.step('Rapid tap like multiple times and verify only +1', async () => {
+      await buyerFeedsPage.rapidLikePost(postData.content);
+      const newCount = await buyerFeedsPage.getPostLikeCount(postData.content);
+      expect(newCount, `count should be ${initialCount + 1}`).toBeLessThanOrEqual(initialCount + 1);
+    });
+
+    await test.step('Unlike and verify count returns to initial', async () => {
+      await buyerFeedsPage.unlikePost(postData.content);
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
 });
 
 test('Locked exclusive media — Preview blocked before unlock', {

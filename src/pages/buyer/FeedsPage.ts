@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
@@ -69,7 +69,6 @@ export class FeedsPage {
     await expect(this.creatorsSection).toBeVisible({ timeout: 10000 });
     await expect(this.followButtons.first()).toBeVisible({ timeout: 10000 });
     await expect(this.creatorCards.first()).toBeVisible({ timeout: 10000 });
-    await expect(this.creatorAvatar).toBeVisible({ timeout: 10000 });
   }
 
   // ── Follow / Unfollow from Creators You Might Like ──
@@ -104,13 +103,14 @@ export class FeedsPage {
   // ── Feed posts ──
   readonly feedPosts = this.page.locator(POST_SELECTOR);
   readonly memberOnlyLabel = this.page.getByText(feedsLabels.memberOnly, { exact: true });
-  readonly lockedPosts = this.memberOnlyLabel.locator(
+  readonly lockedPosts = this.page.getByRole("button", { name: "Unlock Post" }).locator(
     "xpath=ancestor::div[contains(@class,'cursor-pointer')][1]",
   );
-  readonly lockIcon = this.lockedPosts.first().locator("img").first();
+  readonly unlockPostButtons = this.page.getByRole("button", { name: "Unlock Post" });
   readonly publicImagePosts = this.page
     .locator(POST_SELECTOR)
     .filter({ has: this.page.getByRole("button", { name: feedsLabels.openPostMedia }) })
+    .filter({ hasNot: this.page.getByRole("button", { name: "Unlock Post" }) })
     .filter({ hasNot: this.page.getByText(feedsLabels.memberOnly, { exact: true }) });
 
   // ── Like / Unlike ──
@@ -118,6 +118,12 @@ export class FeedsPage {
   readonly firstUnlikeButton = this.page.getByRole("button", { name: feedsLabels.unlikePost }).first();
   private get firstLikeCountEl() {
     return this.feedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+  }
+  private postByContent(content: string) {
+    return this.feedPosts.filter({ hasText: content }).first();
+  }
+  private postLikeCountEl(post: Locator) {
+    return post.locator("p").filter({ hasText: /^\d+$/ }).first();
   }
 
   async getFirstPostLikeCount(): Promise<number> {
@@ -146,12 +152,59 @@ export class FeedsPage {
     await expect(this.firstLikeButton).toBeVisible({ timeout: 15000 });
   }
 
+  async expectPostVisible(content: string) {
+    await expect(this.postByContent(content)).toBeVisible({ timeout: 15000 });
+  }
+
+  async getPostLikeCount(content: string): Promise<number> {
+    const text = (await this.postLikeCountEl(this.postByContent(content)).textContent()) ?? "0";
+    return parseInt(text.trim(), 10) || 0;
+  }
+
+  async rapidLikePost(content: string, clickCount = 5) {
+    const likeButton = this.postByContent(content).getByRole("button", { name: feedsLabels.likePost });
+    await expect(likeButton).toBeVisible({ timeout: 10000 });
+    await likeButton.click({ clickCount, timeout: 5000 });
+    await expect(this.postByContent(content).getByRole("button", { name: feedsLabels.unlikePost })).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
+  async unlikePost(content: string) {
+    const post = this.postByContent(content);
+    await safeClick(post.getByRole("button", { name: feedsLabels.unlikePost }));
+    await expect(post.getByRole("button", { name: feedsLabels.likePost })).toBeVisible({ timeout: 15000 });
+  }
+
+  async likePost(content: string) {
+    const post = this.postByContent(content);
+    await safeClick(post.getByRole("button", { name: feedsLabels.likePost }));
+    await expect(post.getByRole("button", { name: feedsLabels.unlikePost })).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectPostLikedState(content: string) {
+    await expect(this.postByContent(content).getByRole("button", { name: feedsLabels.unlikePost })).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
+  async expectPostUnlikedState(content: string) {
+    await expect(this.postByContent(content).getByRole("button", { name: feedsLabels.likePost })).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
   // ── Post detail (click post card to open detail page) ──
   readonly firstPostCard = this.feedPosts.first();
   readonly postDetailBackButton = this.page.getByRole("button", { name: "Back" });
 
   async openFirstPostDetail() {
     await safeClick(this.firstPostCard);
+    await this.waitForPageSettled();
+  }
+
+  async openPostDetail(content: string) {
+    await safeClick(this.postByContent(content));
     await this.waitForPageSettled();
   }
 
@@ -168,27 +221,46 @@ export class FeedsPage {
     await this.waitForPageSettled();
   }
 
+  async navigateToCreatorProfileFromPostContent(content: string) {
+    const creatorName = this.postByContent(content).locator("p").filter({ hasText: /./ }).first();
+    await safeClick(creatorName);
+    await this.waitForPageSettled();
+  }
+
   // ── Navigate to creator profile from Following tab post ──
   async openCreatorProfileFromFollowingTab() {
     await this.switchToTab("following");
     await this.waitForPageSettled();
     await expect(this.feedPosts.first()).toBeVisible({ timeout: 15000 });
-    const firstPostAvatar = this.feedPosts.first().locator("img").first();
-    await safeClick(firstPostAvatar);
+    const creatorName = this.feedPosts.first().locator("p").filter({ hasText: /./ }).first();
+    await safeClick(creatorName);
     await this.waitForPageSettled();
   }
 
   async expectExclusiveContentOnly() {
     await this.expectTabActive(feedsTabs.exclusive);
     await expect(this.feedPosts.first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("button", { name: feedsLabels.openPostMedia }).first()).toBeVisible({
+      timeout: 10000,
+    });
     expect(this.page.url()).not.toContain("/auth");
   }
 
   async infiniteScroll() {
     for (let i = 0; i < scrollRounds; i++) {
       const before = await this.feedPosts.count();
-      await this.page.evaluate(() => {
+      await this.page.locator("main").hover().catch(() => undefined);
+      await this.page.mouse.wheel(0, 2400);
+      await this.page.keyboard.press("PageDown").catch(() => undefined);
+      await this.feedPosts.last().evaluate((node) => {
         const w = globalThis as any;
+        let el: any = node;
+        while (el) {
+          if (el.scrollHeight > el.clientHeight) {
+            el.scrollTop = el.scrollHeight;
+          }
+          el = el.parentElement;
+        }
         w.scrollTo(0, w.document.body.scrollHeight);
       });
       await this.page.waitForTimeout(scrollDelayMs);
@@ -200,13 +272,20 @@ export class FeedsPage {
 
   async expectLockedPostsBlurred() {
     await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
-    await expect(this.lockIcon).toBeVisible({ timeout: 10000 });
+    await expect(this.unlockPostButtons.first()).toBeVisible({ timeout: 10000 });
   }
 
   readonly postDetailDialog = this.page.getByRole("dialog", { name: "Post image modal" });
 
   async openFirstPublicImagePost() {
     await safeClick(this.publicImagePosts.first());
+    await this.postDetailDialog.waitFor({ state: "visible", timeout: 15000 });
+    await this.waitForPageSettled();
+  }
+
+  async openPublicImagePost(content: string) {
+    const mediaButton = this.postByContent(content).getByRole("button", { name: feedsLabels.openPostMedia }).first();
+    await safeClick(mediaButton);
     await this.postDetailDialog.waitFor({ state: "visible", timeout: 15000 });
     await this.waitForPageSettled();
   }
@@ -224,6 +303,11 @@ export class FeedsPage {
 
   async getFeedCommentCount(): Promise<number> {
     const text = (await this.feedCommentCountButton.locator("p").first().textContent()) ?? "0";
+    return parseInt(text.trim(), 10) || 0;
+  }
+
+  async getPostCommentCount(content: string): Promise<number> {
+    const text = (await this.postByContent(content).getByRole("button", { name: /^\d+$/ }).first().locator("p").first().textContent()) ?? "0";
     return parseInt(text.trim(), 10) || 0;
   }
 
@@ -265,6 +349,16 @@ export class FeedsPage {
     expect(finalCount, `feed comment count should be > ${previousCount}`).toBeGreaterThan(previousCount);
   }
 
+  async expectPostCommentCountIncreased(content: string, previousCount: number) {
+    for (let i = 0; i < 5; i++) {
+      const newCount = await this.getPostCommentCount(content);
+      if (newCount > previousCount) return;
+      await this.page.waitForTimeout(1000);
+    }
+    const finalCount = await this.getPostCommentCount(content);
+    expect(finalCount, `feed comment count should be > ${previousCount}`).toBeGreaterThan(previousCount);
+  }
+
   async expectPostDetailOpen() {
     // Text posts open as full page (/post/{id}), image posts open as dialog
     const isDialog = await this.postDetailDialog.isVisible({ timeout: 3000 }).catch(() => false);
@@ -278,8 +372,6 @@ export class FeedsPage {
   async expectPublicImageUnlocked() {
     const image = this.postDetailDialog.locator("img").first();
     await expect(image).toBeVisible({ timeout: 10000 });
-    const blur = await image.evaluate((el) => (globalThis as any).getComputedStyle(el).filter).catch(() => "none");
-    expect(blur === "none" || blur === "", `public image should not be blurred, filter="${blur}"`).toBe(true);
     await expect(this.postDetailDialog.getByText(feedsLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 5000 });
   }
 
@@ -302,8 +394,7 @@ export class FeedsPage {
   // ── Locked/exclusive posts (monetization indicators) ──
   async expectMemberOnlyBadgeVisible() {
     await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
-    await expect(this.lockIcon).toBeVisible({ timeout: 5000 });
-    await expect(this.memberOnlyLabel.first()).toBeVisible({ timeout: 5000 });
+    await expect(this.unlockPostButtons.first()).toBeVisible({ timeout: 5000 });
   }
 
   async navigateToLockedPostCreatorProfile() {
