@@ -2,6 +2,17 @@
 
 Playwright E2E and API tests for Yapp. Buyer and creator flows run across two subdomains.
 
+## Superpowers Workflow
+
+Superpowers is the default development workflow for this repository.
+
+- Start each task by invoking `using-superpowers` and checking for a matching skill.
+- For new behavior or features, use `brainstorming` before implementation and get approval for the design.
+- After approval, use `writing-plans` for multi-step work, then follow the relevant implementation workflow.
+- Use `test-driven-development` for code changes, `systematic-debugging` for bugs, and `verification-before-completion` before claiming completion.
+- Use `requesting-code-review` for substantial changes or before merging.
+- Keep this repository-specific guidance and the existing `.agents/` rules in force; do not copy the Superpowers plugin into the repository.
+
 ## Required Agent Runtime
 
 Before making changes, every AI agent must read:
