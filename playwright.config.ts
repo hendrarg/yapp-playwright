@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
-const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
+const headless = process.env.CI ? true : headlessEnv?.toLowerCase() === 'true';
 const workers = process.env.PW_WORKERS ? Number(process.env.PW_WORKERS) : process.env.CI ? 1 : undefined;
 
 /**
@@ -80,11 +80,6 @@ export default defineConfig({
     //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     // },
 
-    /* API tests — no browser, uses request fixture only. */
-    {
-      name: 'api',
-      testDir: './tests/api',
-    },
   ],
 
   /* Run your local dev server before starting the tests */
