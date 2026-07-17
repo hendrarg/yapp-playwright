@@ -76,6 +76,28 @@ Each report includes the Automation ID, TC ID, source sheet and row, original st
 
 ## Generation Rules
 
+### Automation Tags
+
+- `Automation ID` from `Automation Mapping` is the Playwright test tag source of truth.
+- Use the exact mapping ID as the tag, for example `@AUT-E2E-008` or `@AUT-FV-216`.
+- Replace legacy `@TAT-B-*` tags in existing buyer automation; do not keep dual tags.
+- Apply mapping tags to both `Automated` and `Partially Automated` coverage so `--grep @AUT-*` runs every currently available implementation for that mapping.
+- One test may have multiple `@AUT-*` tags, and one mapping tag may appear on multiple tests, because legacy coverage and the new mapping are many-to-many.
+- Keep feature, role, priority, and optional status/domain tags unchanged.
+- Keep covered manual TC IDs in Playwright annotations rather than adding one tag per manual TC.
+
+Example:
+
+```typescript
+tag: ['@AUT-FV-216', '@AUT-FV-246', '@feeds', '@like', '@buyer', '@regression']
+```
+
+Filtering uses the exact mapping ID:
+
+```text
+npx playwright test --grep @AUT-FV-216
+```
+
 ### E2E Journey
 
 - Generate one journey test per Automation ID.
@@ -98,7 +120,7 @@ The draft is ready for human review only after:
 1. mapping and source-case validation passes;
 2. no open clarification blocks the Automation ID;
 3. `npx tsc --noEmit` passes;
-4. only the generated test or TC tags are run with Playwright;
+4. only the generated Automation Mapping tag is run with Playwright;
 5. the generated diff and Playwright trace/evidence are available for review.
 
 ## Initial Scope
