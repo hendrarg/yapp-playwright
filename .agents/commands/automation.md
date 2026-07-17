@@ -9,4 +9,9 @@ Use this workflow for one ID such as `AUT-E2E-002` or `AUT-FV-013`.
 3. Stop and report every blocker if context validation fails.
 4. Reuse existing page objects, helpers, and test data before adding code.
 5. Generate a reviewable Playwright draft with source-TC annotations.
-6. Run `npx tsc --noEmit` and only the generated automation or source-TC tags.
+6. Tag generated tests with the exact Automation ID, such as `@AUT-E2E-008`.
+7. Run `npx tsc --noEmit` and only the generated Automation ID tag.
+
+```powershell
+npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008
+```

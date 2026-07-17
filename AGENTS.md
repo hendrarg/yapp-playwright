@@ -39,7 +39,7 @@ Priority order when instructions conflict:
 | `npx playwright test --project=chromium` | Single browser |
 | `npx playwright test --project=api` | API tests only (no browser) |
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
-| `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001` | Run one TC by tag |
+| `npx playwright test tests/buyer/feeds.spec.ts --grep @AUT-E2E-008` | Run one mapped automation by tag |
 | `npm run automation:context -- AUT-E2E-002` | Build validated context from Google Sheets |
 | `npx playwright test --ui` | Playwright UI mode |
 | `npx tsc --noEmit` | Type-check only |
@@ -98,23 +98,22 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
 ## Test Case Flow
 
 ```text
-test-cases/{domain}/{TC-ID}.md
-  -> read TC document
+/automation <AUT-ID>
+  -> read Automation Mapping and active source TC sheets
   -> load relevant .agents skill
   -> append to tests/{domain}/{feature}.spec.ts or tests/api/{domain}.{feature}.spec.ts
   -> import data from src/test-data/{domain}/{feature}.data.ts
-  -> run only the new TC with --grep @T<TC-ID>
+  -> run only the mapped automation with --grep @<AUT-ID>
 ```
 
-Test case documents are local-only and ignored by Git. Automation tests must still include the TC tag from the source document.
-
-For mapped automation, run `/automation <AUT-ID>` to read Automation Mapping and its covered manual TCs directly from Google Sheets. Do not create intermediate Markdown files.
+Do not create intermediate Markdown files. The local `/tc` workflow remains available only for non-buyer local test documents and is not a dependency of `/automation`.
 
 ## Required Tags
 
 Every test must include:
 
-- `@T<TC-ID>` such as `@TAT-B-E2E-001`
+- `@<Automation ID>` such as `@AUT-E2E-008` for mapped automation
+- `@TAT-A-*` or `@TAT-C-*` only for supported non-buyer local test documents
 - one feature tag such as `@feeds`
 - one role tag: `@buyer` or `@creator`
 - one priority tag: `@smoke`, `@regression`, or `@sanity`

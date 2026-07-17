@@ -41,7 +41,7 @@ guestTest('guest/FV test...', ...)     // plain test for no-auth
 Every test must have at least one tag from each applicable category:
 
 ```typescript
-test('description', { tag: ['@T<id>', '@feature', '@role', '@priority'] }, async ({ pageObject }) => {
+test('description', { tag: ['@AUT-FV-216', '@feature', '@role', '@priority'] }, async ({ pageObject }) => {
   // ...
 });
 ```
@@ -52,7 +52,8 @@ Tags at `test.describe()` level apply to all child tests.
 
 | Category | Tags | Required |
 |----------|------|----------|
-| Test ID | `@T<number>` | Yes if linked to test case |
+| Automation ID | `@AUT-E2E-*`, `@AUT-FV-*` | Yes for mapped automation |
+| Local Test ID | `@TAT-A-*`, `@TAT-C-*` | Only for supported non-buyer local test documents |
 | Feature | `@cart`, `@checkout`, `@auth`, `@membership`, `@products`, `@feeds`, `@profile`, `@messages`, `@wallet`, `@settings`, `@analytics`, `@campaigns`, `@streaming`, `@affiliate`, `@referral`, `@promotions`, `@sessions`, `@network-mock`, `@payment` | Yes |
 | Role | `@buyer`, `@creator` | Yes |
 | Priority | `@smoke`, `@regression`, `@sanity` | Yes |
@@ -88,4 +89,4 @@ const product = { name: 'E-Book', price: 29.99 };
 - Importing `test`/`expect` directly from `@playwright/test` in spec files
 - Deep relative imports bypassing path aliases
 - `--repeat-each` for reCAPTCHA tests (e.g. `tests/auth/otp-login.spec.ts`) — rapid repeats from the same IP/machine tank the reCAPTCHA v3 score and trigger rate-limiting, causing cascading failures. To verify reliability, re-run the single test with a few minutes of cool-down between runs.
-- **Running full spec file during TC development** — always use `--grep @T<TC-ID>` to isolate the single TC. Running the whole file wastes time and tests unrelated functionality.
+- **Running full spec file during mapped automation development** — always use `--grep @<AUT-ID>` to isolate the mapping. Running the whole file wastes time and tests unrelated functionality.

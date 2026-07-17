@@ -13,7 +13,8 @@ Use `/tc <AT-ID>` for a local Markdown test case. Use `/automation <AUT-ID>` for
 3. Load `reuse-patterns` and inspect existing page objects, helpers, test data, and similar specs.
 4. For `AUT-E2E-*`, generate one journey test and attach covered TC IDs as Playwright annotations.
 5. For `AUT-FV-*`, generate one `test.describe` group; keep independently failing cases separate and parameterize only identical flows with different data.
-6. Continue from Step 3 below for fixtures, page objects, test data, locators, type-checking, and isolated Playwright execution.
+6. Tag every generated test with the exact Automation ID, for example `@AUT-E2E-008`.
+7. Continue from Step 3 below for fixtures, page objects, test data, locators, type-checking, and isolated Playwright execution.
 
 Do not create intermediate Markdown files. Keep locators in page objects and never hide ambiguity with `.first()`.
 
@@ -91,7 +92,8 @@ read .agents/skills/add-page-object/SKILL.md
 - **E2E/FV**: Append to existing `tests/{domain}/{feature}.spec.ts` (e.g. `tests/buyer/feeds.spec.ts`). If the feature spec does not exist, create it. **Never** create `tests/{domain}/{TC-ID}.spec.ts`. Import fixture from `../test-base`.
 - **API**: Append to existing `tests/api/{domain}.{feature}.spec.ts` (e.g. `tests/api/buyer.feeds.spec.ts`). If missing, create it. Import `test` from `../../src/fixtures/api.fixtures`.
 - Import test data using path alias: `from '@test-data/{domain}/{feature}.data'`
-- Tags: `@T<TC-ID>` (literal full TC ID, e.g. `@TAT-B-E2E-001`), `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
+- Sheet workflow tags: exact `@<AUT-ID>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
+- Local non-buyer workflow tags: `@T<TC-ID>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
 - Test title = the TC's descriptive title (NOT the TC ID) — the TC ID goes only in the tag.
 - `test.step(' descriptive step name ')` — use descriptive step names, not "Step N — ...".
 - **E2E only**: Locators via `smartLocator` from `@utils/heal-utils` with fallback chain (testId → role → text → label → placeholder → selector). If the app has no `data-testid`, use `getByRole` + `getByText` as primary.
@@ -104,12 +106,15 @@ npx tsc --noEmit
 ```
 - If type errors → `fix-tsc-errors` skill
 
-## Step 8: Run ONLY the new TC (grep by TC-ID tag)
+## Step 8: Run ONLY the generated mapping or local TC
 
 **⚠️ NEVER run the whole file. ALWAYS use `--grep` to isolate the single TC.**
 
 ```bash
-# E2E/FV (single browser — chromium only)
+# Sheet E2E/FV (single browser — chromium only)
+npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @<AUT-ID>
+
+# Non-buyer local E2E/FV
 npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @T{TC-ID}
 
 # API
@@ -139,15 +144,15 @@ read .agents/skills/resolve-flaky-tests/SKILL.md
 
 Each round completes only when:
 - `tsc --noEmit` ✅
-- `npx playwright test tests/{domain}/{feature}.spec.ts --grep @T{TC-ID}` PASS ✅
+- `npx playwright test tests/{domain}/{feature}.spec.ts --grep @<AUT-ID>` PASS ✅ for sheet automation
 
 ## Examples
 
-### /tc AT-B-E2E-001
-→ glob `test-cases/buyer/AT-B-E2E-001*` → read `.md`
-→ fixture: `authTest`
-→ feature spec: `tests/buyer/feeds.spec.ts` (append, do not create `tests/buyer/AT-B-E2E-001.spec.ts`)
-→ run: `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @TAT-B-E2E-001`
+### /automation AUT-E2E-008
+→ run `npm run automation:context -- AUT-E2E-008`
+→ resolve active source TC sheets
+→ feature spec: `tests/buyer/feeds.spec.ts`
+→ run: `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008`
 
 ### /tc AT-C-E2E-001
 → glob `test-cases/creator/AT-C-E2E-001*` → read `.md`
@@ -155,9 +160,8 @@ Each round completes only when:
 → feature spec: `tests/creator/{feature}.spec.ts`
 → run: `npx playwright test tests/creator/{feature}.spec.ts --project=chromium --grep @TAT-C-E2E-001`
 
-### /tc AT-B-API-001
-→ glob `test-cases/buyer/AT-B-API-001*` → read `.md`
+### /tc AT-A-API-001
+→ glob `test-cases/auth/AT-A-API-001*` → read `.md`
 → Type is **API** → load `api-testing` skill
-→ fixture: `buyerRequest` from `@fixtures/api.fixtures`
-→ feature spec: `tests/api/buyer.{feature}.spec.ts`
-→ run: `npx playwright test --project=api tests/api/buyer.{feature}.spec.ts --grep @TAT-B-API-001`
+→ feature spec: `tests/api/auth.{feature}.spec.ts`
+→ run: `npx playwright test --project=api tests/api/auth.{feature}.spec.ts --grep @TAT-A-API-001`
