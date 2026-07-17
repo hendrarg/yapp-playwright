@@ -17,7 +17,7 @@ The automation will validate:
 - UI eligibility at the discovery boundary: only product IDs returned by the discovery API may appear in each section.
 - Navigation from one Popular card and one Recommended card to the matching product detail URL.
 - Popular Products `See More` navigation to `/explore/products`.
-- The full products view contains additional eligible products and preserves the API-defined order.
+- The full products view displays the `Explore Products` heading and additional eligible products.
 
 The test will not independently validate the backend popularity algorithm. Backend ranking calculation belongs in API-level tests; this UI test verifies that the frontend preserves the system-provided order.
 
@@ -35,7 +35,7 @@ The test will have these steps:
 4. Open a Popular product and validate its detail URL, then return to Explore.
 5. Validate Recommended card metadata and eligibility.
 6. Open a Recommended product and validate its detail URL, then return to Explore.
-7. Select Popular Products `See More` and validate the full products view, additional products, and order.
+7. Select Popular Products `See More`, validate the `/explore/products` URL and `Explore Products` heading, and confirm additional eligible products are displayed.
 
 The test will use these tags:
 
