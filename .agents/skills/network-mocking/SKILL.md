@@ -31,7 +31,7 @@ test('checkout with mocked payment',
     // ...
   });
 
-test('real payment integration (nightly)',
+test('real payment integration',
   { tag: ['@checkout', '@buyer', '@regression'] },
   async ({ page, cartPage }) => {
     test.use({ mockPayments: false }); // Override
@@ -215,6 +215,5 @@ import { errorMock } from '@test-data/mocks/common.data';
 | Use `route.continue()` thinking it mocks | Passes request to real server | Use `route.fulfill()` to serve fake data |
 
 ## Related skills
-- `api-testing` — pure API tests without browser
 - `resolve-flaky-tests` — if mocked UI tests are still flaky
 - `reuse-patterns` — extract shared mock patterns to helpers

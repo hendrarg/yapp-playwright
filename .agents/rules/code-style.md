@@ -61,4 +61,3 @@ readonly nameInput = this.page.locator('.form-input-name');
 - `src/fixtures/` — Playwright fixture wiring (page, API, mock)
 - `src/test-data/` — test data (static + factory pattern)
   - `src/test-data/mocks/` — mock response data (payment, email, errors)
-- `tests/api/` — API-only test specs (no browser)

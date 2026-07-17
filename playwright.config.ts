@@ -1,16 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = process.env.CI ? true : headlessEnv?.toLowerCase() === 'true';
-const workers = process.env.PW_WORKERS ? Number(process.env.PW_WORKERS) : process.env.CI ? 1 : undefined;
-
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-import dotenv from 'dotenv';
-import path from 'path';
-dotenv.config({ path: path.resolve(__dirname, '.env') });
+const workers = Number(process.env.PW_WORKERS ?? 1);
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -22,8 +18,8 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Custom worker count from env if provided, otherwise CI defaults to 1. */
+  retries: process.env.CI ? 1 : 0,
+  /* Shared auth and mutable app state make one worker the safe default. */
   workers,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
@@ -43,43 +39,12 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  /* Configure projects for major browsers */
+  /* Chromium is the only required browser for now. */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: null, deviceScaleFactor: undefined },
     },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'], viewport: null, deviceScaleFactor: undefined },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'], viewport: null, deviceScaleFactor: undefined },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-
   ],
 
   /* Run your local dev server before starting the tests */

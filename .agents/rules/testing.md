@@ -17,11 +17,6 @@ test('authenticated test...', ...)    // authTest aliased
 guestTest('guest/FV test...', ...)     // plain test for no-auth
 ```
 
-### API tests (no browser)
-- `test` (from `@fixtures/api.fixtures`) — Provides `buyerRequest` + `creatorRequest` pre-authenticated `APIRequestContext`. No browser launched.
-  - `buyerRequest` — auto-injects `at` cookie + browser-like headers for buyer baseURL
-  - `creatorRequest` — auto-injects `at` cookie + browser-like headers for creator baseURL
-
 ## Test Structure
 - Every test must use a page object fixture: `pageObject.goto()` + `pageObject.expectLoaded()`
 - Add meaningful interactions beyond navigation when applicable
@@ -34,7 +29,6 @@ guestTest('guest/FV test...', ...)     // plain test for no-auth
   // ❌ Forbidden
   test.step('Step 1: Open feeds and verify Following tab', async () => { ... });
   ```
-- **Exception**: API tests (in `tests/api/`) use `buyerRequest`/`creatorRequest` fixtures — no page object, no browser
 
 ## Tagging Convention
 
@@ -58,7 +52,6 @@ Tags at `test.describe()` level apply to all child tests.
 | Role | `@buyer`, `@creator` | Yes |
 | Priority | `@smoke`, `@regression`, `@sanity` | Yes |
 | Status | `@flaky`, `@slow` | Optional |
-| Domain | `@api`, `@ui` | Optional |
 
 ### Filtering
 

@@ -19,14 +19,13 @@ Use when changing `.github/workflows/`, CI environment variables, GitHub secrets
 
 - Confirm required env vars are passed to the test step.
 - Confirm optional env vars do not crash tests when unset.
-- Confirm API-only tests are intended to run in the selected project.
 - Confirm artifact upload still runs with `if: ${{ !cancelled() }}`.
 
 ## Verification
 
 ```bash
 npx tsc --noEmit
-npx playwright test --project=api --list
+npx playwright test --project=chromium --list
 ```
 
 Run full CI locally only when explicitly requested.

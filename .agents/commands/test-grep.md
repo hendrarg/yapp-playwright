@@ -13,9 +13,3 @@ Example:
 ```bash
 npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008
 ```
-
-For API tests:
-
-```bash
-npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @<AUT-ID>
-```

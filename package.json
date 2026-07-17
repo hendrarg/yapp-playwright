@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test",
+    "test": "playwright test --project=chromium",
+    "test:smoke": "playwright test --project=chromium --grep @smoke",
+    "test:regression": "playwright test --project=chromium --grep @regression",
     "test:automation-context": "node --test --test-isolation=none scripts/automation-context.test.mjs",
     "automation:context": "node scripts/automation-context.mjs"
   },

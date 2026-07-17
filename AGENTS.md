@@ -1,6 +1,6 @@
 # Yapp Agent Guide
 
-Playwright E2E and API tests for Yapp. Buyer and creator flows run across two subdomains.
+Playwright E2E tests for Yapp. Buyer and creator flows run across two subdomains.
 
 ## Superpowers Workflow
 
@@ -35,9 +35,10 @@ Priority order when instructions conflict:
 
 | Command | Purpose |
 |---------|---------|
-| `npm test` | Run all Playwright tests |
+| `npm test` | Run all Chromium tests |
+| `npm run test:smoke` | Run Chromium smoke tests |
+| `npm run test:regression` | Run Chromium regression tests |
 | `npx playwright test --project=chromium` | Single browser |
-| `npx playwright test --project=api` | API tests only (no browser) |
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
 | `npx playwright test tests/buyer/feeds.spec.ts --grep @AUT-E2E-008` | Run one mapped automation by tag |
 | `npm run automation:context -- AUT-E2E-002` | Build validated context from Google Sheets |
@@ -48,7 +49,6 @@ Priority order when instructions conflict:
 
 ```text
 tests/test-base.ts      fixture entry: test, authTest, creatorAuthTest
-tests/api/              API-only test specs
 src/
   test-data/            static and factory test data
   pages/                page objects
@@ -85,14 +85,14 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app |
 | `YAPP_API_BASE_URL` | Yes | API base URL |
 | `YAPP_TEST_ACCESS_TOKEN` | For auth fixtures | Do not commit |
-| `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Used by creator post API tests |
+| `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Used to seed creator posts for E2E tests |
 | `YAPP_AUTOMATION_SHEET_ID` | For `/automation` | Google Spreadsheet ID |
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
 | `YAPP_AUTOMATION_CLARIFICATIONS_SHEET` | No | Defaults to `Automation Clarifications` |
 | `TESTMAIL_API_KEY` | For OTP tests | Do not commit |
 | `TESTMAIL_NAMESPACE` | For OTP tests | Do not commit |
 | `PW_HEADLESS` | No | Defaults to `false` |
-| `PW_WORKERS` | No | CI defaults to 1 |
+| `PW_WORKERS` | No | Defaults to 1 |
 
 ## Test Case Flow
 
@@ -100,7 +100,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
 /automation <AUT-ID>
   -> read Automation Mapping and active source TC sheets
   -> load relevant .agents skill
-  -> append to tests/{domain}/{feature}.spec.ts or tests/api/{domain}.{feature}.spec.ts
+  -> append to tests/{domain}/{feature}.spec.ts
   -> import data from src/test-data/{domain}/{feature}.data.ts
   -> run only the mapped automation with --grep @<AUT-ID>
 ```
@@ -125,4 +125,4 @@ Every test must also include:
 
 GitHub Actions workflow: `.github/workflows/playwright.yml`.
 
-Pipeline: `npm ci` -> `npx playwright install --with-deps` -> `npx playwright test`.
+Pipeline: `npm ci` -> `npx playwright install --with-deps chromium` -> `npm run test:smoke`.

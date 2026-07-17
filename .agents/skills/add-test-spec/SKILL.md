@@ -32,8 +32,6 @@ read .agents/skills/reuse-patterns/SKILL.md
 
 - **Buyer E2E/FV**: `authTest` plus a buyer page object.
 - **Creator E2E/FV**: `creatorAuthTest` plus a creator page object.
-- **Buyer API**: `buyerRequest` from `@fixtures/api.fixtures`; load `api-testing`.
-- **Creator API**: `creatorRequest` from `@fixtures/api.fixtures`; load `api-testing`.
 - **Auth only**: `test` plus `loginPage`.
 
 ## Step 3: Create a page object if missing
@@ -53,14 +51,12 @@ read .agents/skills/add-page-object/SKILL.md
 
 ## Step 5: Append the mapped automation to its feature spec
 
-- **E2E/FV**: Append to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
-- **API**: Append to `tests/api/{domain}.{feature}.spec.ts`; create it only if missing. Import `test` from `../../src/fixtures/api.fixtures`.
+- Append to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
 - Import test data with `@test-data/{domain}/{feature}.data`.
 - Use the exact `@<AUT-ID>`, one feature tag, `@buyer` or `@creator`, and one priority tag.
 - Use the descriptive automation title as the test title; keep the Automation ID in the tag.
 - Use descriptive `test.step()` names without `Step N` prefixes.
-- **E2E only**: Keep locators in page objects. Prefer `data-testid`, then role, text, label, placeholder, and selector fallbacks. Use `safeClick`, `safeFill`, `safeCheck`, `flakyClick`, or `flakyFill` where appropriate.
-- **API only**: Use `buyerRequest` or `creatorRequest` methods; do not use browser locators.
+- Keep locators in page objects. Prefer `data-testid`, then role, text, label, placeholder, and selector fallbacks. Use `safeClick`, `safeFill`, `safeCheck`, `flakyClick`, or `flakyFill` where appropriate.
 
 ## Step 6: Type-check
 
@@ -75,11 +71,7 @@ If type errors occur, load `fix-tsc-errors`.
 Never run the whole feature file while developing one mapping.
 
 ```bash
-# E2E/FV
 npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @<AUT-ID>
-
-# API
-npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @<AUT-ID>
 ```
 
 ## Step 8: Diagnose failures before changing locators

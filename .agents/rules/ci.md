@@ -17,7 +17,7 @@ The Playwright workflow must provide:
 - `TESTMAIL_API_KEY`
 - `TESTMAIL_NAMESPACE`
 
-`YAPP_TEST_ACCESS_TOKEN_2` is optional and only needed for creator post API tests.
+`YAPP_TEST_ACCESS_TOKEN_2` is optional and only needed to seed creator posts for E2E tests.
 
 ## Secrets
 
@@ -27,6 +27,6 @@ The Playwright workflow must provide:
 
 ## Validation
 
-- For config-only workflow edits, run `npx playwright test --project=api --list`.
+- For config-only workflow edits, run `npx playwright test --project=chromium --list`.
 - For TypeScript-impacting CI changes, also run `npx tsc --noEmit`.
 - Do not run full E2E in CI-maintenance work unless explicitly requested.

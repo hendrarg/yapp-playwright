@@ -4,7 +4,7 @@ description: Iterative round-based E2E test development — write, run, fix, ext
 ---
 
 ## When to use
-Use when asked to create a new test case (e.g. `AT-E2E-xxx`, `AT-FV-xxx`, `AT-API-xxx`) or when adding a batch of tests. This skill formalizes the pattern of building tests incrementally across rounds, each round reusing and extracting from prior work.
+Use when asked to create mapped browser automation (for example `AUT-E2E-*` or `AUT-FV-*`) or when adding a batch of tests. This skill formalizes the pattern of building tests incrementally across rounds, each round reusing and extracting from prior work.
 
 ## Core pattern
 
@@ -15,9 +15,8 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 | Round type | Description |
 |------------|-------------|
-| `AT-E2E-*` | Full browser E2E (Playwright + page objects) |
-| `AT-FV-*`  | Functional verification (helpers-only, lighter, batch) |
-| `AT-API-*` | API-level tests (no browser, use `fetch` / `request` fixture) |
+| `AUT-E2E-*` | Full browser E2E (Playwright + page objects) |
+| `AUT-FV-*`  | Functional verification (helpers-only, lighter, batch) |
 
 ---
 
@@ -27,7 +26,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
    ```bash
    read .agents/skills/add-test-spec/SKILL.md
    ```
-   - Automatically reads the TC `.md` file
+   - Builds validated context from Automation Mapping and active source TC sheets
    - Calls `reuse-patterns` to check existing locators/helpers
    - Calls `add-page-object` if page object missing
    - Creates test data files if needed
@@ -73,7 +72,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 ---
 
-## Round 4: Batch functional verification (AT-FV-*)
+## Round 4: Batch functional verification (AUT-FV-*)
 
 1. **Create multiple FV tests** (`tests/buyer/` or `tests/creator/`).
    - Load `reuse-patterns` first — leverage all existing page objects, helpers, and locators
@@ -85,26 +84,6 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
    - If FAIL → `resolve-flaky-tests` batch.
 
 3. If a pattern repeats across 3+ tests, extract further into helpers.
-
----
-
-## Round 5: API tests (AT-API-*)
-
-1. **Load `api-testing` skill**:
-   ```bash
-   read .agents/skills/api-testing/SKILL.md
-   ```
-   - Uses `buyerRequest`/`creatorRequest` from `@fixtures/api.fixtures`
-   - Auto-injects `at` cookie + browser-like headers (WAF bypass)
-   - No browser launched — tests run in milliseconds
-
-2. **Create API-only spec** in `tests/api/`:
-   - Import `test` from `../../src/fixtures/api.fixtures`
-   - Use `buyerRequest` for buyer API, `creatorRequest` for creator API
-   - Data still comes from `src/test-data/`
-   - Tags: `@api`, `@buyer|@creator`, `@smoke|@regression|@sanity`
-
-3. **Run API tests**: `npx playwright test --project=api`
 
 ---
 
