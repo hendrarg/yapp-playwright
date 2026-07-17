@@ -10,7 +10,6 @@
 ## Secrets and Local Files
 
 - Never commit `.env`, `.env.*`, auth state, reports, traces, or local test outputs.
-- `test-cases/` is local-only and ignored by Git. Do not force-add test case documents.
 - To stop tracking a local-only file without deleting it, use `git rm --cached`, not filesystem deletion.
 
 ## Git Commands

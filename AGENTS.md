@@ -47,7 +47,6 @@ Priority order when instructions conflict:
 ## Architecture
 
 ```text
-test-cases/             test case documents (.md), local-only and gitignored
 tests/test-base.ts      fixture entry: test, authTest, creatorAuthTest
 tests/api/              API-only test specs
 src/
@@ -106,14 +105,18 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
   -> run only the mapped automation with --grep @<AUT-ID>
 ```
 
-Do not create intermediate Markdown files. The local `/tc` workflow remains available only for non-buyer local test documents and is not a dependency of `/automation`.
+Do not create intermediate Markdown files. Automation Mapping and its active source TC sheets are the only supported inputs for generating new automation.
 
 ## Required Tags
 
-Every test must include:
+Every mapped test must include:
 
 - `@<Automation ID>` such as `@AUT-E2E-008` for mapped automation
-- `@TAT-A-*` or `@TAT-C-*` only for supported non-buyer local test documents
+
+Existing unmapped auth and creator tests may retain legacy `@TAT-A-*` or `@TAT-C-*` identifiers until a validated Automation Mapping row exists. Do not use these legacy identifiers for new tests.
+
+Every test must also include:
+
 - one feature tag such as `@feeds`
 - one role tag: `@buyer` or `@creator`
 - one priority tag: `@smoke`, `@regression`, or `@sanity`

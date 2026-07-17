@@ -53,7 +53,7 @@ Tags at `test.describe()` level apply to all child tests.
 | Category | Tags | Required |
 |----------|------|----------|
 | Automation ID | `@AUT-E2E-*`, `@AUT-FV-*` | Yes for mapped automation |
-| Local Test ID | `@TAT-A-*`, `@TAT-C-*` | Only for supported non-buyer local test documents |
+| Legacy Test ID | `@TAT-A-*`, `@TAT-C-*` | Existing unmapped tests only; do not use for new tests |
 | Feature | `@cart`, `@checkout`, `@auth`, `@membership`, `@products`, `@feeds`, `@profile`, `@messages`, `@wallet`, `@settings`, `@analytics`, `@campaigns`, `@streaming`, `@affiliate`, `@referral`, `@promotions`, `@sessions`, `@network-mock`, `@payment` | Yes |
 | Role | `@buyer`, `@creator` | Yes |
 | Priority | `@smoke`, `@regression`, `@sanity` | Yes |

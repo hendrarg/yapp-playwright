@@ -16,7 +16,7 @@ Every mapped test must include:
 - one role tag: `@buyer` or `@creator`
 - one priority tag: `@smoke`, `@regression`, or `@sanity`
 
-Supported non-buyer local test documents may still use `@TAT-A-*` or `@TAT-C-*`. Buyer legacy tags are retired.
+Existing unmapped auth and creator tests may retain `@TAT-A-*` or `@TAT-C-*` as legacy identifiers. Do not use legacy identifiers for new tests, and do not replace one until a matching Automation Mapping row is validated. Buyer legacy tags are retired.
 
 API tests should also include `@api`.
 
@@ -37,10 +37,9 @@ rg "from ['\"]@playwright/test['\"]" tests
 ## Fix Workflow
 
 1. Read the affected spec and nearby tests.
-2. Match the test to an existing local test case document when possible.
+2. Match the test to an existing Automation Mapping row when possible.
 3. If no active mapping exists and the user wants tag-only cleanup, stop and report the unmapped test instead of inventing an ID.
-4. Do not create or force-add files under `test-cases/`; the directory is local-only and gitignored.
-5. Re-run the audit command until it returns no missing TC-tag matches.
+4. Re-run the audit command until it returns no missing TC-tag matches.
 
 ## Verification
 

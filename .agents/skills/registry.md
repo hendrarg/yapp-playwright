@@ -5,7 +5,7 @@ Use this registry to decide which workflow document to read for a task.
 | Skill | Read when |
 |-------|-----------|
 | `add-page-object` | Adding or registering a new page object |
-| `add-test-spec` | Creating automation from a local TC or Google Sheets Automation ID |
+| `add-test-spec` | Creating automation from a Google Sheets Automation ID |
 | `api-testing` | Creating or fixing API-only Playwright tests |
 | `ci-maintenance` | Maintaining GitHub Actions, CI env, secrets, or artifacts |
 | `fix-tsc-errors` | Running `tsc --noEmit` and fixing TypeScript errors |

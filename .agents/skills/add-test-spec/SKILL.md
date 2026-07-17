@@ -1,12 +1,13 @@
 ---
 name: add-test-spec
-description: Use when generating Playwright automation from a local AT test case or a Google Sheets AUT mapping ID
+description: Use when generating Playwright automation from a Google Sheets AUT mapping ID
 ---
 
 ## When to use
-Use `/tc <AT-ID>` for a local Markdown test case. Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual TCs in Google Sheets.
 
-## Sheet automation workflow
+Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual TCs in Google Sheets.
+
+## Workflow
 
 1. Run `npm run automation:context -- <AUT-ID>`.
 2. If validation fails, stop and report the exact TC IDs, source rows, or open clarifications. Do not guess.
@@ -14,154 +15,89 @@ Use `/tc <AT-ID>` for a local Markdown test case. Use `/automation <AUT-ID>` for
 4. For `AUT-E2E-*`, generate one journey test and attach covered TC IDs as Playwright annotations.
 5. For `AUT-FV-*`, generate one `test.describe` group; keep independently failing cases separate and parameterize only identical flows with different data.
 6. Tag every generated test with the exact Automation ID, for example `@AUT-E2E-008`.
-7. Continue from Step 3 below for fixtures, page objects, test data, locators, type-checking, and isolated Playwright execution.
+7. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
 
 Do not create intermediate Markdown files. Keep locators in page objects and never hide ambiguity with `.first()`.
 
-## Local Markdown workflow
+## Step 1: Load `reuse-patterns`
 
-```
-/tc AT-B-E2E-001  (user input)
-    ↓
-Parse ID: AT-{Domain}-{Type}-{Number}
-  Domain: B=buyer, C=creator, A=auth
-    ↓
-glob test-cases/**/AT-B-E2E-001* → find file
-    ↓
-Read .md → Steps, Expected, Data, Tags
-    ↓
-read .agents/skills/reuse-patterns/SKILL.md
-    ↓
-read .agents/skills/add-page-object/SKILL.md if needed
-    ↓
-Create/check test-data
-    ↓
-Generate spec → tsc → test → fix until PASS
-```
-
-## Step 0: Parse TC ID
-
-Input format: `AT-{Domain}-{Type}-{Number}`
-
-| Pattern | Domain | Type | Globs for file |
-|---------|--------|------|----------------|
-| `AT-B-E2E-001` | buyer | E2E | `test-cases/buyer/AT-B-E2E-001*` |
-| `AT-C-E2E-001` | creator | E2E | `test-cases/creator/AT-C-E2E-001*` |
-| `AT-B-FV-001` | buyer | FV | `test-cases/buyer/AT-B-FV-001*` |
-| `AT-B-API-001` | buyer | API | `test-cases/buyer/AT-B-API-001*` |
-| `AT-C-API-001` | creator | API | `test-cases/creator/AT-C-API-001*` |
-| `AT-A-API-001` | auth | API | `test-cases/auth/AT-A-API-001*` |
-
-1. Extract domain letter from ID:
-   - `B` → buyer → fixture: `authTest` (E2E/FV) or `buyerRequest` (API), glob: `test-cases/buyer/`
-   - `C` → creator → fixture: `creatorAuthTest` (E2E/FV) or `creatorRequest` (API), glob: `test-cases/creator/`
-   - `A` → auth → fixture: `test`, glob: `test-cases/auth/`
-
-2. Glob file: `glob test-cases/{domain}/{tcId}*` → read the `.md`
-
-## Step 1: Read TC document
-- Parse: **Steps**, **Expected**, **Test Data**, **Tags**
-
-## Step 2: Load `reuse-patterns` skill
 ```bash
 read .agents/skills/reuse-patterns/SKILL.md
 ```
-- Check existing page objects, helpers, utils, shared locators
-- Extract locators if ≥2 pages use the same element
 
-## Step 3: Pick fixture + page object
-- **Buyer E2E/FV**: `authTest` + buyer page (e.g. `explorePage`, `cartPage`)
-- **Creator E2E/FV**: `creatorAuthTest` + creator page
-- **Buyer API**: `buyerRequest` from `@fixtures/api.fixtures` — load `api-testing` skill
-- **Creator API**: `creatorRequest` from `@fixtures/api.fixtures` — load `api-testing` skill
-- **Auth only**: `test` + `loginPage`
+- Check existing page objects, helpers, utils, and shared locators.
+- Extract locators if at least two pages use the same element.
 
-## Step 4: Create page object (if missing)
+## Step 2: Pick fixture and page object
+
+- **Buyer E2E/FV**: `authTest` plus a buyer page object.
+- **Creator E2E/FV**: `creatorAuthTest` plus a creator page object.
+- **Buyer API**: `buyerRequest` from `@fixtures/api.fixtures`; load `api-testing`.
+- **Creator API**: `creatorRequest` from `@fixtures/api.fixtures`; load `api-testing`.
+- **Auth only**: `test` plus `loginPage`.
+
+## Step 3: Create a page object if missing
+
 ```bash
 read .agents/skills/add-page-object/SKILL.md
 ```
-- Scaffold `src/pages/{domain}/{Name}Page.ts`
-- Register in `src/fixtures/page.fixtures.ts`
 
-## Step 5: Create/check test data
-- Check `src/test-data/{domain}/` for existing data
-- If missing, create `src/test-data/{domain}/{feature}.data.ts`
-- Update `src/test-data/index.ts`
+- Scaffold `src/pages/{domain}/{Name}Page.ts`.
+- Register it in `src/fixtures/page.fixtures.ts`.
 
-## Step 6: Append TC to feature spec file
-- **E2E/FV**: Append to existing `tests/{domain}/{feature}.spec.ts` (e.g. `tests/buyer/feeds.spec.ts`). If the feature spec does not exist, create it. **Never** create `tests/{domain}/{TC-ID}.spec.ts`. Import fixture from `../test-base`.
-- **API**: Append to existing `tests/api/{domain}.{feature}.spec.ts` (e.g. `tests/api/buyer.feeds.spec.ts`). If missing, create it. Import `test` from `../../src/fixtures/api.fixtures`.
-- Import test data using path alias: `from '@test-data/{domain}/{feature}.data'`
-- Sheet workflow tags: exact `@<AUT-ID>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
-- Local non-buyer workflow tags: `@T<TC-ID>`, `@<feature>`, `@buyer|@creator`, `@smoke|@regression|@sanity`
-- Test title = the TC's descriptive title (NOT the TC ID) — the TC ID goes only in the tag.
-- `test.step(' descriptive step name ')` — use descriptive step names, not "Step N — ...".
-- **E2E only**: Locators via `smartLocator` from `@utils/heal-utils` with fallback chain (testId → role → text → label → placeholder → selector). If the app has no `data-testid`, use `getByRole` + `getByText` as primary.
-- **E2E only**: Interactions: `safeClick`/`safeFill`/`safeCheck` or `flakyClick`/`flakyFill`
-- **API only**: Use `buyerRequest.get()` / `.post()` / `.patch()` / `.delete()` — no locators
+## Step 4: Create or reuse test data
 
-## Step 7: Run `tsc --noEmit`
+- Check `src/test-data/{domain}/` first.
+- If needed, create `src/test-data/{domain}/{feature}.data.ts`.
+- Update `src/test-data/index.ts`.
+
+## Step 5: Append the mapped automation to its feature spec
+
+- **E2E/FV**: Append to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
+- **API**: Append to `tests/api/{domain}.{feature}.spec.ts`; create it only if missing. Import `test` from `../../src/fixtures/api.fixtures`.
+- Import test data with `@test-data/{domain}/{feature}.data`.
+- Use the exact `@<AUT-ID>`, one feature tag, `@buyer` or `@creator`, and one priority tag.
+- Use the descriptive automation title as the test title; keep the Automation ID in the tag.
+- Use descriptive `test.step()` names without `Step N` prefixes.
+- **E2E only**: Keep locators in page objects. Prefer `data-testid`, then role, text, label, placeholder, and selector fallbacks. Use `safeClick`, `safeFill`, `safeCheck`, `flakyClick`, or `flakyFill` where appropriate.
+- **API only**: Use `buyerRequest` or `creatorRequest` methods; do not use browser locators.
+
+## Step 6: Type-check
+
 ```bash
 npx tsc --noEmit
 ```
-- If type errors → `fix-tsc-errors` skill
 
-## Step 8: Run ONLY the generated mapping or local TC
+If type errors occur, load `fix-tsc-errors`.
 
-**⚠️ NEVER run the whole file. ALWAYS use `--grep` to isolate the single TC.**
+## Step 7: Run only the generated mapping
+
+Never run the whole feature file while developing one mapping.
 
 ```bash
-# Sheet E2E/FV (single browser — chromium only)
+# E2E/FV
 npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @<AUT-ID>
 
-# Non-buyer local E2E/FV
-npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @T{TC-ID}
-
 # API
-npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @T{TC-ID}
+npx playwright test --project=api tests/api/{domain}.{feature}.spec.ts --grep @<AUT-ID>
 ```
 
-Running the full file wastes time on unrelated tests.
+## Step 8: Diagnose failures before changing locators
 
-## Step 9: If FAIL → snapshot first, then resolve flaky
-
-**⚠️ If the test fails 2+ times**, FIRST capture a browser snapshot of the page state to see the actual DOM. Do NOT iterate fixes blindly.
-
-```bash
-# 1. Navigate to the failing page with auth and inspect the real DOM
-#    Use: playwright_browser_navigate → playwright_browser_snapshot
-
-# 2. Analyze: what are the REAL roles, names, labels, structure?
-
-# 3. Then apply fix
-read .agents/skills/resolve-flaky-tests/SKILL.md
-```
-- Fix → re-run from Step 7 until PASS ✅
-
----
+If the test fails at least twice, capture the actual browser state and inspect the DOM before making another change. Then load `.agents/skills/resolve-flaky-tests/SKILL.md`, apply the smallest fix, and repeat Steps 6 and 7.
 
 ## Verification
 
 Each round completes only when:
-- `tsc --noEmit` ✅
-- `npx playwright test tests/{domain}/{feature}.spec.ts --grep @<AUT-ID>` PASS ✅ for sheet automation
 
-## Examples
+- `npx tsc --noEmit` passes.
+- The isolated Playwright command for `@<AUT-ID>` passes.
+
+## Example
 
 ### /automation AUT-E2E-008
-→ run `npm run automation:context -- AUT-E2E-008`
-→ resolve active source TC sheets
-→ feature spec: `tests/buyer/feeds.spec.ts`
-→ run: `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008`
 
-### /tc AT-C-E2E-001
-→ glob `test-cases/creator/AT-C-E2E-001*` → read `.md`
-→ fixture: `creatorAuthTest`
-→ feature spec: `tests/creator/{feature}.spec.ts`
-→ run: `npx playwright test tests/creator/{feature}.spec.ts --project=chromium --grep @TAT-C-E2E-001`
-
-### /tc AT-A-API-001
-→ glob `test-cases/auth/AT-A-API-001*` → read `.md`
-→ Type is **API** → load `api-testing` skill
-→ feature spec: `tests/api/auth.{feature}.spec.ts`
-→ run: `npx playwright test --project=api tests/api/auth.{feature}.spec.ts --grep @TAT-A-API-001`
+- Run `npm run automation:context -- AUT-E2E-008`.
+- Resolve the active source TC sheets.
+- Update `tests/buyer/feeds.spec.ts`.
+- Run `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008`.
