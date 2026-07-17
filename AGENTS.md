@@ -11,6 +11,7 @@ Superpowers is the default development workflow for this repository.
 - After approval, use `writing-plans` for multi-step work, then follow the relevant implementation workflow.
 - Use `test-driven-development` for code changes, `systematic-debugging` for bugs, and `verification-before-completion` before claiming completion.
 - Use `requesting-code-review` for substantial changes or before merging.
+- Name files under `docs/superpowers/specs/` and `docs/superpowers/plans/` without a date prefix.
 - Keep this repository-specific guidance and the existing `.agents/` rules in force; do not copy the Superpowers plugin into the repository.
 
 ## Required Agent Runtime
