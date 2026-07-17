@@ -67,7 +67,8 @@ The spreadsheet ID and mapping-sheet GID are configured through environment vari
 - `Buyer AT` and `TC Buyer Old` are retired and may be hidden or deleted.
 - The generator and maintenance workflow must not read or depend on either retired sheet.
 - Coverage is determined only from `Automation Mapping`, its active source TC sheets, and the current Playwright implementation.
-- `Automated` means the current implementation covers the mapped active behavior. `Partially Automated` means at least one mapped behavior exists in code but some mapped behavior is still missing.
+- `Automated` means a current Playwright implementation exists for the Automation ID. Do not use a separate `Partially Automated` status.
+- Record any remaining mapped behavior in Notes without changing the status back from `Automated`.
 - Mapping notes must reference active TC IDs or current test files, not legacy `AT-B-*` IDs.
 
 ## Clarification Gate
@@ -89,7 +90,7 @@ Each report includes the Automation ID, TC ID, source sheet and row, original st
 - `Automation ID` from `Automation Mapping` is the Playwright test tag source of truth.
 - Use the exact mapping ID as the tag, for example `@AUT-E2E-008` or `@AUT-FV-216`.
 - Replace legacy `@TAT-B-*` tags in existing buyer automation; do not keep dual tags.
-- Apply mapping tags to both `Automated` and `Partially Automated` coverage so `--grep @AUT-*` runs every currently available implementation for that mapping.
+- Apply the mapping tag whenever a current implementation exists so `--grep @AUT-*` runs every available test for that mapping.
 - One test may have multiple `@AUT-*` tags, and one mapping tag may appear on multiple tests, because current code coverage and the new mapping are many-to-many.
 - Keep feature, role, priority, and optional status/domain tags unchanged.
 - Keep covered manual TC IDs in Playwright annotations rather than adding one tag per manual TC.
