@@ -1,7 +1,7 @@
 import { authTest as test } from '../test-base';
 
 test('injected "at" token loads the explore page without redirecting to auth', { 
-  tag: ['@TAT-B-FV-001', '@explore', '@buyer', '@smoke'] }, async ({ explorePage }) => {
+  tag: ['@AUT-FV-175', '@explore', '@buyer', '@smoke'] }, async ({ explorePage }) => {
   await explorePage.goto();
   await explorePage.expectLoaded();
   await explorePage.expectAuthenticated();

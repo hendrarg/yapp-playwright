@@ -5,7 +5,7 @@ import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 
 test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
-  tag: ['@TAT-B-E2E-001', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-175', '@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(90000);
 
@@ -45,7 +45,7 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
 });
 
 test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
-  tag: ['@TAT-B-E2E-003', '@feeds', '@follow', '@buyer', '@regression'],
+  tag: ['@AUT-FV-175', '@AUT-FV-238', '@feeds', '@follow', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(120000);
 
@@ -92,7 +92,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
 });
 
 test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
-  tag: ['@TAT-B-E2E-004', '@feeds', '@like', '@buyer', '@regression'],
+  tag: ['@AUT-FV-216', '@AUT-FV-218', '@AUT-FV-239', '@AUT-FV-246', '@AUT-FV-247', '@feeds', '@like', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
 
@@ -158,7 +158,7 @@ test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
 });
 
 test('Buyer Comment on Post — Submit & Verify', {
-  tag: ['@TAT-B-E2E-005', '@feeds', '@comment', '@buyer', '@regression'],
+  tag: ['@AUT-FV-217', '@AUT-FV-218', '@AUT-FV-244', '@AUT-FV-248', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
@@ -220,7 +220,7 @@ test('Buyer Comment on Post — Submit & Verify', {
 });
 
 test('Buyer Exclusive Content — Locked to Unlock Flow', {
-  tag: ['@TAT-B-E2E-006', '@feeds', '@payment', '@buyer', '@regression'],
+  tag: ['@AUT-E2E-008', '@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-238', '@AUT-FV-240', '@AUT-FV-243', '@feeds', '@payment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
@@ -287,7 +287,7 @@ test('Buyer Exclusive Content — Locked to Unlock Flow', {
 });
 
 test('Buyer Media Preview — Image Gallery & Video Playback', {
-  tag: ['@TAT-B-E2E-007', '@feeds', '@media', '@buyer', '@regression'],
+  tag: ['@AUT-FV-215', '@AUT-FV-237', '@AUT-FV-244', '@feeds', '@media', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
@@ -361,7 +361,7 @@ test('Buyer Media Preview — Image Gallery & Video Playback', {
 });
 
 guestTest('Guest user blocked — Following tab requires login', {
-  tag: ['@TAT-B-FV-002', '@feeds', '@auth', '@buyer', '@regression'],
+  tag: ['@AUT-FV-238', '@feeds', '@auth', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
@@ -386,7 +386,7 @@ guestTest('Guest user blocked — Following tab requires login', {
 });
 
 test('Free post — No monetization indicator on public content', {
-  tag: ['@TAT-B-FV-011', '@feeds', '@buyer', '@regression'],
+  tag: ['@AUT-FV-237', '@feeds', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage }) => {
   test.setTimeout(60000);
 
@@ -404,7 +404,7 @@ test('Free post — No monetization indicator on public content', {
 });
 
 test('Member-Only badge display — Consistent indicator across feed and profile', {
-  tag: ['@TAT-B-FV-012', '@feeds', '@profile', '@buyer', '@regression'],
+  tag: ['@AUT-FV-213', '@AUT-FV-214', '@AUT-FV-237', '@AUT-FV-239', '@feeds', '@profile', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(60000);
 
@@ -427,7 +427,7 @@ test('Member-Only badge display — Consistent indicator across feed and profile
 });
 
 test('Like idempotency — Rapid tap prevention', {
-  tag: ['@TAT-B-FV-005', '@feeds', '@like', '@buyer', '@regression'],
+  tag: ['@AUT-FV-246', '@feeds', '@like', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
@@ -475,7 +475,7 @@ test('Like idempotency — Rapid tap prevention', {
 });
 
 test('Locked exclusive media — Preview blocked before unlock', {
-  tag: ['@TAT-B-FV-006', '@feeds', '@buyer', '@regression'],
+  tag: ['@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage }) => {
   test.setTimeout(60000);
 

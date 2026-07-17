@@ -2,7 +2,7 @@ import { authTest as test, test as guestTest, expect } from '../test-base';
 import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.data';
 
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
-  tag: ['@TAT-B-E2E-002', '@profile', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-214', '@AUT-FV-237', '@AUT-FV-243', '@AUT-FV-294', '@AUT-FV-295', '@AUT-FV-296', '@profile', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerProfilePage }) => {
   test.setTimeout(90000);
 
@@ -57,7 +57,7 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
 });
 
 test('Buyer Support Creator — Tip IDR with Custom Amount', {
-  tag: ['@TAT-B-E2E-008', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-E2E-009', '@AUT-FV-068', '@AUT-FV-069', '@AUT-FV-070', '@AUT-FV-072', '@AUT-FV-073', '@AUT-FV-294', '@AUT-FV-295', '@AUT-FV-296', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
@@ -104,7 +104,7 @@ test('Buyer Support Creator — Tip IDR with Custom Amount', {
 });
 
 test('Buyer View Membership Plans — Browse & Select Tier', {
-  tag: ['@TAT-B-E2E-009', '@profile', '@membership', '@buyer', '@regression'],
+  tag: ['@AUT-FV-214', '@profile', '@membership', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
   test.setTimeout(120000);
   const creatorHandle = 'davidalfasunarna';
@@ -133,7 +133,7 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
 });
 
 guestTest('Guest user blocked — Like action requires login', {
-  tag: ['@TAT-B-FV-003', '@profile', '@auth', '@buyer', '@regression'],
+  tag: ['@AUT-FV-246', '@profile', '@auth', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, page }) => {
   guestTest.setTimeout(60000);
 
@@ -162,7 +162,7 @@ guestTest('Guest user blocked — Like action requires login', {
 });
 
 guestTest('Guest user blocked — Comment action requires login', {
-  tag: ['@TAT-B-FV-004', '@profile', '@auth', '@buyer', '@regression'],
+  tag: ['@AUT-FV-248', '@profile', '@auth', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, page }) => {
   guestTest.setTimeout(60000);
 
@@ -197,7 +197,7 @@ guestTest('Guest user blocked — Comment action requires login', {
 });
 
 test('Tip validation — Invalid amount rejected', {
-  tag: ['@TAT-B-FV-007', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-070', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
@@ -228,7 +228,7 @@ test('Tip validation — Invalid amount rejected', {
 });
 
 test('Tip validation — Currency switch to USD', {
-  tag: ['@TAT-B-FV-008', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-070', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
@@ -254,7 +254,7 @@ test('Tip validation — Currency switch to USD', {
 });
 
 test('Share creator profile — Share button displays options', {
-  tag: ['@TAT-B-FV-009', '@profile', '@buyer', '@regression'],
+  tag: ['@AUT-FV-294', '@profile', '@buyer', '@regression'],
 }, async ({ buyerProfilePage }) => {
   test.setTimeout(60000);
 
