@@ -11,9 +11,19 @@ export function parseGviz(text, sheetName) {
     throw new Error(`Unable to read ${sheetName}: ${response.errors?.[0]?.detailed_message ?? response.status}`);
   }
 
-  const labels = response.table.cols.map((column) => column.label);
-  return response.table.rows.map((row, index) => ({
-    ...Object.fromEntries(labels.map((label, column) => [label, row.c?.[column]?.v ?? ''])),
+  let labels = response.table.cols.map((column) => column.label);
+  let rows = response.table.rows;
+  if (!labels.includes('Test Case ID')) {
+    const firstRow = rows[0]?.c?.map((cell) => cell?.v ?? '') ?? [];
+    if (firstRow.includes('Test Case ID')) {
+      labels = firstRow;
+      rows = rows.slice(1);
+    }
+  }
+
+  const columns = labels.map((label, index) => ({ label, index })).filter(({ label }) => label);
+  return rows.map((row, index) => ({
+    ...Object.fromEntries(columns.map(({ label, index: column }) => [label, row.c?.[column]?.v ?? ''])),
     _source: { sheet: sheetName, row: index + 2 },
   }));
 }

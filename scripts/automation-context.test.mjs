@@ -28,6 +28,27 @@ test('parseGviz maps labeled columns and source rows', () => {
   ]);
 });
 
+test('parseGviz uses the first data row when GViz omits column labels', () => {
+  const payload = `google.visualization.Query.setResponse(${JSON.stringify({
+    status: 'ok',
+    table: {
+      cols: [{ label: '' }, { label: '' }],
+      rows: [
+        { c: [{ v: 'Test Case ID' }, { v: 'Steps' }] },
+        { c: [{ v: 'TC-FE-C-029' }, { v: '1. Publish exclusive post' }] },
+      ],
+    },
+  })});`;
+
+  assert.deepEqual(parseGviz(payload, 'Feeds and Exclusive'), [
+    {
+      'Test Case ID': 'TC-FE-C-029',
+      Steps: '1. Publish exclusive post',
+      _source: { sheet: 'Feeds and Exclusive', row: 2 },
+    },
+  ]);
+});
+
 const mapping = {
   'Automation ID': 'AUT-E2E-002',
   Layer: 'E2E Journey',
