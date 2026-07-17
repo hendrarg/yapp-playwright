@@ -13,12 +13,10 @@ export function parseGviz(text, sheetName) {
 
   let labels = response.table.cols.map((column) => column.label);
   let rows = response.table.rows;
-  if (!labels.includes('Test Case ID')) {
-    const firstRow = rows[0]?.c?.map((cell) => cell?.v ?? '') ?? [];
-    if (firstRow.includes('Test Case ID')) {
-      labels = firstRow;
-      rows = rows.slice(1);
-    }
+  const firstRow = rows[0]?.c?.map((cell) => cell?.v ?? '') ?? [];
+  if (!labels.some(Boolean) && firstRow.some(Boolean)) {
+    labels = firstRow;
+    rows = rows.slice(1);
   }
 
   const columns = labels.map((label, index) => ({ label, index })).filter(({ label }) => label);
@@ -52,6 +50,12 @@ export function buildAutomationContext(automationId, mappings, sourceSheets, cla
     errors.push(`TC Count expected ${mapping['TC Count']} but found ${coveredIds.length}`);
   }
 
+  const coveredCounts = new Map();
+  for (const id of coveredIds) coveredCounts.set(id, (coveredCounts.get(id) ?? 0) + 1);
+  for (const [id, count] of coveredCounts) {
+    if (count > 1) errors.push(`${id} appears ${count} times in Covered TC IDs`);
+  }
+
   const resolved = [];
   for (const id of coveredIds) {
     const rows = index.get(id) ?? [];
@@ -66,7 +70,7 @@ export function buildAutomationContext(automationId, mappings, sourceSheets, cla
   }
 
   for (const clarification of clarifications.filter(
-    (row) => row['Automation ID'] === automationId && String(row.Status).toLowerCase() !== 'resolved',
+    (row) => row['Automation ID'] === automationId && String(row.Status).trim().toLowerCase() !== 'resolved',
   )) {
     errors.push(`Open clarification ${clarification['Clarification ID']}`);
   }
@@ -78,7 +82,14 @@ export function buildAutomationContext(automationId, mappings, sourceSheets, cla
     layer: mapping.Layer,
     role: mapping.Role,
     scenario: mapping['Automation Scenario'],
+    sourceSheet: mapping['Domain / Source Sheet'],
+    coverageCategory: mapping['Coverage Category'],
     priority: mapping.Priority,
+    preconditions: mapping['Preconditions / Test Data'],
+    flow: mapping['Automation Flow / Validation'],
+    expectedOutcome: mapping['Expected Outcome'],
+    runScope: mapping['Run Scope'],
+    notes: mapping.Notes,
     sourceCases: resolved.map((row) => ({
       id: row['Test Case ID'],
       epic: row.Epic,

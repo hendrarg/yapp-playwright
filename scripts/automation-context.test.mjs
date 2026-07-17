@@ -49,14 +49,36 @@ test('parseGviz uses the first data row when GViz omits column labels', () => {
   ]);
 });
 
+test('parseGviz uses a generic first row header for clarifications', () => {
+  const payload = `google.visualization.Query.setResponse(${JSON.stringify({
+    status: 'ok',
+    table: {
+      cols: [{ label: '' }, { label: '' }],
+      rows: [
+        { c: [{ v: 'Clarification ID' }, { v: 'Status' }] },
+        { c: [{ v: 'CLR-0001' }, { v: 'Open' }] },
+      ],
+    },
+  })});`;
+
+  assert.equal(parseGviz(payload, 'Automation Clarifications')[0]['Clarification ID'], 'CLR-0001');
+});
+
 const mapping = {
   'Automation ID': 'AUT-E2E-002',
   Layer: 'E2E Journey',
   Role: 'Cross-role',
   'Automation Scenario': 'Digital product purchase and access',
+  'Domain / Source Sheet': 'Product Digital',
+  'Coverage Category': 'Critical business journey',
   'Covered TC IDs': 'TC-PD-C-011, TC-CART-B-004',
   'TC Count': 2,
   Priority: 'P0',
+  'Preconditions / Test Data': 'Stable product and buyer account',
+  'Automation Flow / Validation': 'Publish product, buy, verify access',
+  'Expected Outcome': 'Buyer receives product access',
+  'Run Scope': 'Smoke + Release',
+  Notes: 'Happy path',
   _source: { sheet: 'Automation Mapping', row: 3 },
 };
 
@@ -101,10 +123,26 @@ test('buildAutomationContext resolves covered cases across sheets', () => {
   );
 
   assert.equal(context.automationId, 'AUT-E2E-002');
+  assert.equal(context.preconditions, 'Stable product and buyer account');
+  assert.equal(context.flow, 'Publish product, buy, verify access');
+  assert.equal(context.expectedOutcome, 'Buyer receives product access');
+  assert.equal(context.runScope, 'Smoke + Release');
   assert.deepEqual(context.sourceCases.map(({ id, sourceSheet, sourceRow }) => ({ id, sourceSheet, sourceRow })), [
     { id: 'TC-PD-C-011', sourceSheet: 'Product Digital', sourceRow: 12 },
     { id: 'TC-CART-B-004', sourceSheet: 'Cart', sourceRow: 5 },
   ]);
+});
+
+test('buildAutomationContext rejects duplicate IDs in Covered TC IDs', () => {
+  assert.throws(
+    () => buildAutomationContext(
+      'AUT-E2E-002',
+      [{ ...mapping, 'Covered TC IDs': 'TC-PD-C-011, TC-PD-C-011' }],
+      { 'Product Digital': [productCase] },
+      [],
+    ),
+    /TC-PD-C-011 appears 2 times in Covered TC IDs/,
+  );
 });
 
 test('buildAutomationContext reports all structural blockers', () => {
