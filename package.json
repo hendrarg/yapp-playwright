@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "test:automation-context": "node --test --test-isolation=none scripts/automation-context.test.mjs"
+    "test:automation-context": "node --test --test-isolation=none scripts/automation-context.test.mjs",
+    "automation:context": "node scripts/automation-context.mjs"
   },
   "keywords": [],
   "author": "",

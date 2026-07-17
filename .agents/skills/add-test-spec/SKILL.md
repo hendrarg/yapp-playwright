@@ -1,12 +1,23 @@
 ---
 name: add-test-spec
-description: Generate a Playwright test spec from a test case document in test-cases/
+description: Use when generating Playwright automation from a local AT test case or a Google Sheets AUT mapping ID
 ---
 
 ## When to use
-Use when asked to create a new test spec or when `/tc <ID>` is invoked. The test case must already exist as a `.md` file in `test-cases/`.
+Use `/tc <AT-ID>` for a local Markdown test case. Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual TCs in Google Sheets.
 
-## Workflow
+## Sheet automation workflow
+
+1. Run `npm run automation:context -- <AUT-ID>`.
+2. If validation fails, stop and report the exact TC IDs, source rows, or open clarifications. Do not guess.
+3. Load `reuse-patterns` and inspect existing page objects, helpers, test data, and similar specs.
+4. For `AUT-E2E-*`, generate one journey test and attach covered TC IDs as Playwright annotations.
+5. For `AUT-FV-*`, generate one `test.describe` group; keep independently failing cases separate and parameterize only identical flows with different data.
+6. Continue from Step 3 below for fixtures, page objects, test data, locators, type-checking, and isolated Playwright execution.
+
+Do not create intermediate Markdown files. Keep locators in page objects and never hide ambiguity with `.first()`.
+
+## Local Markdown workflow
 
 ```
 /tc AT-B-E2E-001  (user input)

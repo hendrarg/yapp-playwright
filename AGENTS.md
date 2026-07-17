@@ -40,6 +40,7 @@ Priority order when instructions conflict:
 | `npx playwright test --project=api` | API tests only (no browser) |
 | `npx playwright test tests/buyer/explore.spec.ts` | Single file |
 | `npx playwright test tests/buyer/feeds.spec.ts --grep @TAT-B-E2E-001` | Run one TC by tag |
+| `npm run automation:context -- AUT-E2E-002` | Build validated context from Google Sheets |
 | `npx playwright test --ui` | Playwright UI mode |
 | `npx tsc --noEmit` | Type-check only |
 
@@ -86,6 +87,9 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
 | `YAPP_API_BASE_URL` | Yes | API base URL |
 | `YAPP_TEST_ACCESS_TOKEN` | For auth fixtures | Do not commit |
 | `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Used by creator post API tests |
+| `YAPP_AUTOMATION_SHEET_ID` | For `/automation` | Google Spreadsheet ID |
+| `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
+| `YAPP_AUTOMATION_CLARIFICATIONS_SHEET` | No | Defaults to `Automation Clarifications` |
 | `TESTMAIL_API_KEY` | For OTP tests | Do not commit |
 | `TESTMAIL_NAMESPACE` | For OTP tests | Do not commit |
 | `PW_HEADLESS` | No | Defaults to `false` |
@@ -103,6 +107,8 @@ test-cases/{domain}/{TC-ID}.md
 ```
 
 Test case documents are local-only and ignored by Git. Automation tests must still include the TC tag from the source document.
+
+For mapped automation, run `/automation <AUT-ID>` to read Automation Mapping and its covered manual TCs directly from Google Sheets. Do not create intermediate Markdown files.
 
 ## Required Tags
 

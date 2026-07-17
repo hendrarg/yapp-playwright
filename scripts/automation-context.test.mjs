@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildAutomationContext, parseGviz } from './automation-context.mjs';
+import { buildAutomationContext, buildSheetUrl, parseGviz } from './automation-context.mjs';
 
 test('parseGviz maps labeled columns and source rows', () => {
   const payload = `google.visualization.Query.setResponse(${JSON.stringify({
@@ -95,5 +95,16 @@ test('buildAutomationContext reports all structural blockers', () => {
       [{ 'Automation ID': 'AUT-E2E-002', Status: 'Open', 'Clarification ID': 'CLR-0001' }],
     ),
     /TC Count expected 3 but found 4.*TC-PD-C-011 appears 2 times.*TC-MISSING was not found.*TC-GAP-001 is a GAP case.*TC-EMPTY has empty Steps.*TC-EMPTY has empty Expected Result.*Open clarification CLR-0001/s,
+  );
+});
+
+test('buildSheetUrl encodes a sheet name or mapping gid', () => {
+  assert.equal(
+    buildSheetUrl('sheet-id', { sheet: 'Product Digital' }),
+    'https://docs.google.com/spreadsheets/d/sheet-id/gviz/tq?tqx=out%3Ajson&sheet=Product+Digital',
+  );
+  assert.equal(
+    buildSheetUrl('sheet-id', { gid: '1448466957' }),
+    'https://docs.google.com/spreadsheets/d/sheet-id/gviz/tq?tqx=out%3Ajson&gid=1448466957',
   );
 });

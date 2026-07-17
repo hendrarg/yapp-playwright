@@ -1,3 +1,6 @@
+import 'dotenv/config';
+import { pathToFileURL } from 'node:url';
+
 export function parseGviz(text, sheetName) {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
@@ -79,4 +82,46 @@ export function buildAutomationContext(automationId, mappings, sourceSheets, cla
       sourceRow: row._source.row,
     })),
   };
+}
+
+export function buildSheetUrl(spreadsheetId, { gid, sheet }) {
+  const url = new URL(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq`);
+  url.searchParams.set('tqx', 'out:json');
+  if (gid) url.searchParams.set('gid', gid);
+  if (sheet) url.searchParams.set('sheet', sheet);
+  return url.toString();
+}
+
+async function readSheet(spreadsheetId, selector, sourceName) {
+  const response = await fetch(buildSheetUrl(spreadsheetId, selector));
+  if (!response.ok) throw new Error(`Unable to read ${sourceName}: HTTP ${response.status}`);
+  return parseGviz(await response.text(), sourceName);
+}
+
+export async function loadAutomationContext(automationId, env = process.env) {
+  const spreadsheetId = env.YAPP_AUTOMATION_SHEET_ID;
+  const mappingGid = env.YAPP_AUTOMATION_MAPPING_GID;
+  const clarificationSheet = env.YAPP_AUTOMATION_CLARIFICATIONS_SHEET ?? 'Automation Clarifications';
+  if (!spreadsheetId || !mappingGid) {
+    throw new Error('YAPP_AUTOMATION_SHEET_ID and YAPP_AUTOMATION_MAPPING_GID are required');
+  }
+
+  const mappings = await readSheet(spreadsheetId, { gid: mappingGid }, 'Automation Mapping');
+  const sourceNames = [...new Set(mappings.map((row) => String(row['Domain / Source Sheet']).trim()).filter(Boolean))];
+  const entries = await Promise.all(sourceNames.map(async (sheet) => [
+    sheet,
+    await readSheet(spreadsheetId, { sheet }, sheet),
+  ]));
+  const clarifications = await readSheet(spreadsheetId, { sheet: clarificationSheet }, clarificationSheet);
+  return buildAutomationContext(automationId, mappings, Object.fromEntries(entries), clarifications);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const automationId = process.argv[2];
+  loadAutomationContext(automationId)
+    .then((context) => process.stdout.write(`${JSON.stringify(context, null, 2)}\n`))
+    .catch((error) => {
+      process.stderr.write(`${error.message}\n`);
+      process.exitCode = 1;
+    });
 }
