@@ -5,7 +5,7 @@ import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 
 test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
-  tag: ['@AUT-FV-175', '@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(90000);
 
@@ -45,7 +45,7 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
 });
 
 test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
-  tag: ['@AUT-FV-175', '@AUT-FV-238', '@feeds', '@follow', '@buyer', '@regression'],
+  tag: ['@AUT-FV-238', '@feeds', '@follow', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(120000);
 

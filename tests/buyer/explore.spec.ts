@@ -1,11 +1,51 @@
 import { authTest as test } from '../test-base';
 import { exploreData } from '@test-data/buyer/explore.data';
 
-test('injected "at" token loads the explore page without redirecting to auth', { 
-  tag: ['@AUT-FV-175', '@explore', '@buyer', '@smoke'] }, async ({ explorePage }) => {
-  await explorePage.goto();
-  await explorePage.expectLoaded();
-  await explorePage.expectAuthenticated();
+test('Explore Page: Search & Creator Discovery', {
+  tag: ['@AUT-FV-175', '@explore', '@buyer', '@smoke', '@regression'],
+}, async ({ explorePage }) => {
+  const data = exploreData.creatorDiscovery;
+  let matchingCreatorHrefs: string[] = [];
+
+  await test.step('Open Explore and validate creator Search', async () => {
+    await explorePage.goto();
+    await explorePage.expectLoaded();
+    await explorePage.expectAuthenticated();
+    await explorePage.expectSearchVisible();
+  });
+
+  await test.step('Search by display name and validate matching creators', async () => {
+    await explorePage.searchCreators(data.displayNameQuery);
+    matchingCreatorHrefs = await explorePage.expectCreatorResults(data.displayNameQuery, 2);
+  });
+
+  await test.step('Replace the query with a username and validate updated results', async () => {
+    await explorePage.searchCreators(data.usernameQuery);
+    await explorePage.expectExactCreatorResult(data.selectedCreator);
+  });
+
+  await test.step('Validate the creator empty state for a no-match query', async () => {
+    await explorePage.searchCreators(data.noMatchQuery);
+    await explorePage.expectNoCreatorResults(data.noMatchQuery);
+  });
+
+  await test.step('Validate Creators For You metadata', async () => {
+    await explorePage.clearSearch();
+    await explorePage.expectRecommendedCreators(data.expectedCreators);
+  });
+
+  await test.step('Open a creator from search and Creators For You', async () => {
+    await explorePage.searchCreators(data.usernameQuery);
+    await explorePage.openSearchCreator(data.selectedCreator.href);
+    await explorePage.returnToExplore();
+    await explorePage.openRecommendedCreator(data.selectedCreator);
+    await explorePage.returnToExplore();
+  });
+
+  await test.step('Open the full creator list and validate matching creators', async () => {
+    await explorePage.openAllCreators();
+    await explorePage.expectFullCreatorResults(data.displayNameQuery, matchingCreatorHrefs);
+  });
 });
 
 test('Explore Page: Popular & Recommended Product Discovery', {
@@ -22,7 +62,7 @@ test('Explore Page: Popular & Recommended Product Discovery', {
   });
 
   await test.step('Validate Popular and Recommended section visibility', async () => {
-    await explorePage.expectDiscoverySections();
+    await explorePage.expectProductSections();
   });
 
   await test.step('Validate product card metadata', async () => {
@@ -31,7 +71,7 @@ test('Explore Page: Popular & Recommended Product Discovery', {
   });
 
   await test.step('Validate system-defined popularity order', async () => {
-    await explorePage.expectStaticDiscoveryOrder(exploreData.popularProducts, exploreData.creators);
+    await explorePage.expectPopularOrder(exploreData.popularProducts);
   });
 
   await test.step('Validate only eligible public products are shown', async () => {
@@ -42,13 +82,7 @@ test('Explore Page: Popular & Recommended Product Discovery', {
     await explorePage.openProductFromEachSection(products);
   });
 
-  await test.step('Open the full creator list and search a creator', async () => {
-    await explorePage.openAllCreators();
-    await explorePage.expectCreatorSearch(exploreData.creatorSearch);
-  });
-
   await test.step('Open the full product list and search a product', async () => {
-    await explorePage.returnToExplore();
     await explorePage.openAllProducts();
     await explorePage.expectPaidAndFreeProducts();
     await explorePage.expectProductSearch(exploreData.productSearch);

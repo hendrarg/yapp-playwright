@@ -1,6 +1,16 @@
 export const exploreData = {
   popularProducts: ['Crypto Product', 'Test Discounted Product'],
-  creators: ['Jason', 'HOHO', 'mutiajaveline', 'iyansr32'],
-  creatorSearch: 'Jason',
   productSearch: 'Qase Management Testcase',
+  creatorDiscovery: {
+    displayNameQuery: 'Jason',
+    usernameQuery: 'yoms07',
+    noMatchQuery: 'no-creator-aut-fv-175',
+    selectedCreator: { name: 'Jason', username: '@yoms07', href: '/yoms07' },
+    expectedCreators: [
+      { name: 'Jason', username: '@yoms07', category: 'Education' },
+      { name: 'HOHO', username: '@testuser123' },
+      { name: 'mutiajaveline', username: '@mutiajaveline' },
+      { name: 'iyansr32', username: '@iyansr32', category: 'Politics' },
+    ],
+  },
 } as const;

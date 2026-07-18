@@ -16,6 +16,8 @@ export class ExplorePage {
   readonly recommendedGrid: Locator;
   readonly creatorsSeeMore: Locator;
   readonly popularSeeMore: Locator;
+  readonly searchInput: Locator;
+  readonly searchCreatorLinks: Locator;
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.creatorsHeading = page.getByRole('heading', { name: 'Creators For You', exact: true });
@@ -26,6 +28,10 @@ export class ExplorePage {
     this.recommendedGrid = this.recommendedHeading.locator('xpath=../following-sibling::div[1]');
     this.creatorsSeeMore = this.creatorsHeading.locator('xpath=..').getByRole('link', { name: 'See More', exact: true });
     this.popularSeeMore = this.popularHeading.locator('xpath=..').getByRole('link', { name: 'See More', exact: true });
+    this.searchInput = page.getByRole('textbox', { name: 'Search', exact: true });
+    this.searchCreatorLinks = page.locator(
+      'main a[href^="/"]:has(h3):not([href*="/product/"]):not([href^="/campaign/"])',
+    );
   }
 
   async goto() {
@@ -42,8 +48,83 @@ export class ExplorePage {
     await this.auth.expectValid();
   }
 
-  async expectDiscoverySections() {
+  async expectSearchVisible() {
+    await expect(this.searchInput).toBeVisible();
+  }
+
+  async searchCreators(query: string) {
+    await safeFill(this.searchInput, query);
+    await expect(this.page).toHaveURL(new RegExp(`keyword=${encodeURIComponent(query)}`));
+  }
+
+  async expectCreatorResults(query: string, minimum: number): Promise<string[]> {
+    await expect.poll(() => this.searchCreatorLinks.count()).toBeGreaterThanOrEqual(minimum);
+    const results = await this.searchCreatorLinks.evaluateAll((links) => links.map((link) => ({
+      href: link.getAttribute('href') ?? '',
+      name: link.querySelector('h3')?.textContent?.trim() ?? '',
+    })));
+    expect(results.every(({ name }) => name.toLowerCase().includes(query.toLowerCase()))).toBeTruthy();
+    return results.map(({ href }) => href);
+  }
+
+  async expectExactCreatorResult(creator: { name: string; username: string; href: string }) {
+    const card = this.page.locator(`main a[href="${creator.href}"]`);
+    await expect(card).toHaveCount(1);
+    await expect(card.getByRole('heading', { name: creator.name, exact: true })).toBeVisible();
+    await expect(card).toContainText(creator.username);
+  }
+
+  async expectNoCreatorResults(query: string) {
+    await expect(this.page.getByText(`No creators found for "${query}"`, { exact: true })).toBeVisible();
+  }
+
+  async clearSearch() {
+    await safeFill(this.searchInput, '');
     await expect(this.creatorsHeading).toBeVisible();
+  }
+
+  async expectRecommendedCreators(creators: readonly {
+    name: string;
+    username: string;
+    category?: string;
+  }[]) {
+    for (const creator of creators) {
+      const heading = this.creatorsGrid.getByRole('heading', { name: creator.name, exact: true });
+      const card = heading.locator('xpath=ancestor::*[@role="group"][1]');
+      await expect(heading).toBeVisible();
+      await expect(card).toContainText(creator.username);
+      const metadata = await card.evaluate((element) => ({
+        lines: (element as unknown as { innerText: string }).innerText.split('\n').filter(Boolean),
+        images: element.querySelectorAll('img').length,
+      }));
+      expect(
+        metadata.images > 0 || metadata.lines[0] === creator.name[0].toUpperCase(),
+        `${creator.name} must show an avatar or initial fallback`,
+      ).toBeTruthy();
+      if (creator.category) await expect(card).toContainText(creator.category);
+    }
+  }
+
+  async openSearchCreator(href: string) {
+    await safeClick(this.page.locator(`main a[href="${href}"]`));
+    await expect(this.page).toHaveURL(new URL(href.slice(1), this.baseURL).toString());
+  }
+
+  async openRecommendedCreator(creator: { name: string; href: string }) {
+    const heading = this.creatorsGrid.getByRole('heading', { name: creator.name, exact: true });
+    await safeClick(heading.locator('xpath=../../..').locator('div.absolute.inset-0'));
+    await expect(this.page).toHaveURL(new URL(creator.href.slice(1), this.baseURL).toString());
+  }
+
+  async expectFullCreatorResults(query: string, expectedHrefs: string[]) {
+    const input = this.page.getByRole('textbox', { name: 'Find creators', exact: true });
+    await safeFill(input, query);
+    const links = this.page.locator('main a[href^="/"]:has(h3)');
+    await expect.poll(() => links.count()).toBe(expectedHrefs.length);
+    expect(await links.evaluateAll((items) => items.map((item) => item.getAttribute('href')))).toEqual(expectedHrefs);
+  }
+
+  async expectProductSections() {
     await expect(this.popularHeading).toBeVisible();
     await expect(this.recommendedHeading).toBeVisible();
   }
@@ -83,9 +164,8 @@ export class ExplorePage {
     };
   }
 
-  async expectStaticDiscoveryOrder(popularProducts: readonly string[], creators: readonly string[]) {
+  async expectPopularOrder(popularProducts: readonly string[]) {
     expect((await this.productCards(this.popularGrid)).map(({ title }) => title)).toEqual([...popularProducts]);
-    await expect(this.creatorsGrid.locator('h3')).toHaveText([...creators]);
   }
 
   async expectProductsInPublicList(products: VisibleProducts) {
@@ -131,11 +211,6 @@ export class ExplorePage {
     await expect(this.page).toHaveURL(new URL('explore/creators', this.baseURL).toString());
     await expect(this.page.getByRole('heading', { name: 'Explore Creators', exact: true })).toBeVisible();
     await expect.poll(() => this.page.locator('main a:has(h3)').count()).toBeGreaterThan(4);
-  }
-
-  async expectCreatorSearch(name: string) {
-    await safeFill(this.page.getByRole('textbox', { name: 'Find creators', exact: true }), name);
-    await expect(this.page.getByRole('heading', { name, exact: true })).toBeVisible();
   }
 
   async openAllProducts() {
