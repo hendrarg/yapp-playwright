@@ -88,3 +88,33 @@ test('Explore Page: Popular & Recommended Product Discovery', {
     await explorePage.expectProductSearch(exploreData.productSearch);
   });
 });
+
+test('Explore Page: Recent Product Recommendations', {
+  tag: ['@AUT-FV-177', '@explore', '@buyer', '@regression'],
+}, async ({ explorePage }) => {
+  let recommendations!: Awaited<ReturnType<typeof explorePage.getRecommendedProducts>>;
+
+  await test.step('Open Explore and validate populated recommendations', async () => {
+    await explorePage.goto();
+    await explorePage.expectLoaded();
+    await explorePage.expectAuthenticated();
+    await explorePage.expectRecommendedSectionPopulated();
+  });
+
+  await test.step('Validate recommendation product metadata', async () => {
+    await explorePage.expectRecommendedProductCardMetadata();
+  });
+
+  await test.step('Capture recommended product links and order', async () => {
+    recommendations = await explorePage.getRecommendedProducts();
+  });
+
+  await test.step('Compare recommendations with the leading public products', async () => {
+    await explorePage.expectRecommendationsLeadPublicList(recommendations);
+  });
+
+  await test.step('Open the first recommended product', async () => {
+    await explorePage.returnToExplore();
+    await explorePage.openRecommendedProduct(recommendations[0]);
+  });
+});

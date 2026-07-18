@@ -129,8 +129,13 @@ export class ExplorePage {
     await expect(this.recommendedHeading).toBeVisible();
   }
 
-  async expectProductCardMetadata() {
-    for (const section of [this.popularGrid, this.recommendedGrid]) {
+  async expectRecommendedSectionPopulated() {
+    await expect(this.recommendedHeading).toBeVisible();
+    await expect.poll(() => this.recommendedGrid.locator('a[href*="/product/"]').count()).toBeGreaterThan(0);
+  }
+
+  async expectProductCardMetadata(sections = [this.popularGrid, this.recommendedGrid]) {
+    for (const section of sections) {
       const cards = await section.locator('a[href*="/product/"]').evaluateAll((links) => links.map((link) => {
         const text = (link as unknown as { innerText: string }).innerText;
         const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
@@ -157,11 +162,19 @@ export class ExplorePage {
     }
   }
 
+  async expectRecommendedProductCardMetadata() {
+    await this.expectProductCardMetadata([this.recommendedGrid]);
+  }
+
   async getVisibleProducts(): Promise<VisibleProducts> {
     return {
       popular: await this.productCards(this.popularGrid),
       recommended: await this.productCards(this.recommendedGrid),
     };
+  }
+
+  async getRecommendedProducts(): Promise<ProductCard[]> {
+    return this.productCards(this.recommendedGrid);
   }
 
   async expectPopularOrder(popularProducts: readonly string[]) {
@@ -174,10 +187,6 @@ export class ExplorePage {
     await expect.poll(() => fullLinks.count()).toBeGreaterThanOrEqual(products.recommended.length);
 
     const listed = await this.productCards(this.page.locator('main'));
-    expect(listed.slice(0, products.recommended.length).map(({ href }) => href)).toEqual(
-      products.recommended.map(({ href }) => href),
-    );
-
     const listedHrefs = new Set(listed.map(({ href }) => href));
     const search = this.page.getByRole('textbox', { name: 'Find products', exact: true });
     for (const product of [...products.popular, ...products.recommended]) {
@@ -187,6 +196,22 @@ export class ExplorePage {
     }
 
     await this.returnToExplore();
+  }
+
+  async expectRecommendationsLeadPublicList(recommendations: readonly ProductCard[]) {
+    expect(recommendations.length, 'Recommended For You must contain products').toBeGreaterThan(0);
+    await this.openAllProducts();
+    const publicProducts = await this.productCards(this.page.locator('main'));
+    expect(publicProducts.length, 'Public product list must contain recommendations').toBeGreaterThanOrEqual(
+      recommendations.length,
+    );
+    expect(publicProducts.slice(0, recommendations.length)).toEqual([...recommendations]);
+  }
+
+  async openRecommendedProduct(product: ProductCard) {
+    expect(product, 'Recommended For You must contain a product').toBeTruthy();
+    await safeClick(this.recommendedGrid.locator(`a[href="${product.href}"]`));
+    await expect(this.page).toHaveURL(new URL(product.href.slice(1), this.baseURL).toString());
   }
 
   async openProductFromEachSection(products: VisibleProducts) {
