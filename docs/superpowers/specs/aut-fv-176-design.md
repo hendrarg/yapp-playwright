@@ -11,7 +11,6 @@ The journey validates:
 - Popular Products and Recommended For You visibility.
 - Static development data and order for Popular Products.
 - Product-card thumbnail, name, creator, and price or Free label.
-- Recommended order matches the beginning of the full `/explore/products` list, which reflects the newest or most recently updated products.
 - Only product links exposed by the public `/explore/products` UI appear in the Explore product sections.
 - One product from Popular and one from Recommended can be opened.
 - Product `See More` opens `/explore/products`, shows paid and Free products, and supports search.
@@ -47,11 +46,11 @@ The test follows the mapped seven steps:
 2. Validate Popular and Recommended section visibility.
 3. Validate product-card metadata.
 4. Validate system-defined Popular Products order using the stable development list.
-5. Validate displayed products exist in the public full-product list and Recommended preserves its leading order.
+5. Validate displayed products exist in the public full-product list.
 6. Open one product from Popular and one from Recommended.
 7. Open Popular Products `See More`, validate `/explore/products`, paid and Free products, and product search.
 
-Creator search, Creators For You metadata/navigation, and `/explore/creators` belong only to `AUT-FV-175`.
+Creator search, Creators For You metadata/navigation, and `/explore/creators` belong only to `AUT-FV-175`. Recommended recency ordering against `/explore/products` belongs only to `AUT-FV-177`.
 
 ## Failure behavior
 
