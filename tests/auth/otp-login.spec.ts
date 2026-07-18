@@ -2,6 +2,7 @@ import { test, expect } from '../test-base';
 import { baseURL } from '../../config/env';
 import { saveTokenToEnv } from '../../src/helpers/auth/save-token';
 
+test.describe('OTP Login', () => {
 test('user can sign in to Yapp using an emailed OTP', {
   tag: ['@TAT-A-E2E-001', '@auth', '@buyer', '@smoke'] }, async ({ page, loginPage }) => {
   test.setTimeout(90000);
@@ -11,4 +12,5 @@ test('user can sign in to Yapp using an emailed OTP', {
   await expect(page).toHaveURL(/\/explore/);
 
   saveTokenToEnv(token);
+});
 });

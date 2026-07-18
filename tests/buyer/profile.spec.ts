@@ -1,6 +1,7 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
 import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.data';
 
+test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
   tag: ['@AUT-FV-214', '@AUT-FV-237', '@AUT-FV-243', '@AUT-FV-294', '@AUT-FV-295', '@AUT-FV-296', '@profile', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerProfilePage }) => {
@@ -269,4 +270,5 @@ test('Share creator profile — Share button displays options', {
     await buyerProfilePage.clickShare();
     await buyerProfilePage.expectShareOptionsVisible();
   });
+});
 });

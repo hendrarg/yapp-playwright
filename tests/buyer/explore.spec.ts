@@ -1,6 +1,7 @@
 import { authTest as test } from '../test-base';
 import { exploreData } from '@test-data/buyer/explore.data';
 
+test.describe('Buyer Explore', () => {
 test('Explore Page: Search & Creator Discovery', {
   tag: ['@AUT-FV-175', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ explorePage }) => {
@@ -117,4 +118,5 @@ test('Explore Page: Recent Product Recommendations', {
     await explorePage.returnToExplore();
     await explorePage.openRecommendedProduct(recommendations[0]);
   });
+});
 });

@@ -4,6 +4,7 @@ import { createPost, deletePost } from '@helpers/api/post';
 import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 
+test.describe('Buyer Feeds', () => {
 test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   tag: ['@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
@@ -491,4 +492,5 @@ test('Locked exclusive media — Preview blocked before unlock', {
     await buyerFeedsPage.clickLockedPostMedia();
     await buyerFeedsPage.expectLockedMediaBlocked();
   });
+});
 });
