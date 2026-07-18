@@ -56,9 +56,9 @@ Add one unauthenticated Buyer-surface test tagged:
 The test uses descriptive steps to:
 
 1. Open the eligible `Telebot` purchase flow and capture the original order summary.
-2. Apply `U6UY6Y130UE` and verify the subtotal remains stable, a 12% discount appears, and the total decreases by the discount amount.
-3. Reopen a clean eligible purchase detail for each nonexistent, expired, and maximum-usage code; verify an error is visible and the order summary is unchanged.
-4. Open `Test Discounted Product`, apply `27NZ6DYXETP`, verify `Invalid promo code`, and verify the order summary is unchanged.
+2. Apply `U6UY6Y130UE` and verify a 12% discount appears, the displayed subtotal decreases by that discount, and the fee-adjusted total decreases.
+3. Reopen a clean eligible purchase detail for each nonexistent, expired, and maximum-usage code; verify the promotion is not applied and the order summary is unchanged.
+4. Open `Test Discounted Product`, apply `27NZ6DYXETP`, verify `Invalid promo code`, and verify the product subtotal is unchanged with no discount.
 
 The invalid cases remain inside the single AUT-FV-206 test. Reopening the direct purchase flow isolates each assertion without depending on a remove-promotion action or state left by the preceding case.
 
@@ -71,7 +71,7 @@ The invalid cases remain inside the single AUT-FV-206 test. Reopening the direct
 
 ## Failure behavior
 
-Missing product fixtures, purchase controls, promo controls, or order-summary values fail with the affected product or promotion context. Invalid cases fail if any summary value changes. No case is skipped or silently replaced with another product.
+Missing product fixtures, purchase controls, promo controls, or order-summary values fail with the affected product or promotion context. The eligible-product invalid cases fail if any summary value changes. The creator-ineligible case fails if its exact error is absent, the product subtotal changes, or a discount appears. No case is skipped or silently replaced with another product.
 
 ## Verification
 

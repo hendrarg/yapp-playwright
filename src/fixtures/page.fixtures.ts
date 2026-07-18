@@ -1,6 +1,7 @@
 import { LoginPage } from "@pages/auth/LoginPage";
 import { ExplorePage } from "@pages/buyer/ExplorePage";
 import { CartPage } from "@pages/buyer/CartPage";
+import { ProductPurchasePage } from "@pages/buyer/ProductPurchasePage";
 import { FeedsPage as BuyerFeedsPage } from "@pages/buyer/FeedsPage";
 import { LibraryPage } from "@pages/buyer/LibraryPage";
 import { MembershipPage as BuyerMembershipPage } from "@pages/buyer/MembershipPage";
@@ -30,6 +31,7 @@ export type PageFixtures = {
   loginPage: LoginPage;
   explorePage: ExplorePage;
   cartPage: CartPage;
+  productPurchasePage: ProductPurchasePage;
   buyerFeedsPage: BuyerFeedsPage;
   libraryPage: LibraryPage;
   buyerMembershipPage: BuyerMembershipPage;
@@ -66,6 +68,10 @@ export const pageFixtures = {
 
   cartPage: async ({ page }: any, use: any) => {
     await use(new CartPage(page, baseURL));
+  },
+
+  productPurchasePage: async ({ page }: any, use: any) => {
+    await use(new ProductPurchasePage(page, baseURL));
   },
 
   buyerFeedsPage: async ({ page }: any, use: any) => {
