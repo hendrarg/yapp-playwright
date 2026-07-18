@@ -7,10 +7,11 @@ Playwright E2E tests for Yapp. Buyer and creator flows run across two subdomains
 Superpowers is the default development workflow for this repository.
 
 - Start each task by invoking `using-superpowers` and checking for a matching skill.
-- For new behavior or features, use `brainstorming` before implementation and get approval for the design.
-- After approval, use `writing-plans` for multi-step work, then follow the relevant implementation workflow.
+- For new behavior or features, use `brainstorming` before implementation and get one approval for the design.
+- After design approval, write and self-review the spec, then continue to `writing-plans` for multi-step work without requesting separate spec approval. Ask again only if the written spec materially changes the approved scope or leaves unresolved ambiguity.
 - Use `test-driven-development` for code changes, `systematic-debugging` for bugs, and `verification-before-completion` before claiming completion.
 - Use `requesting-code-review` for substantial changes or before merging.
+- Review the diff and run required verification before committing. After review, stage and commit each logical change in one execution.
 - Name files under `docs/superpowers/specs/` and `docs/superpowers/plans/` without a date prefix.
 - Keep this repository-specific guidance and the existing `.agents/` rules in force; do not copy the Superpowers plugin into the repository.
 
