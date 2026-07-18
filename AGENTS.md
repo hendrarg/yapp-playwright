@@ -9,6 +9,7 @@ Superpowers is the default development workflow for this repository.
 - Start each task by invoking `using-superpowers` and checking for a matching skill.
 - For new behavior or features, use `brainstorming` before implementation and get one approval for the design.
 - After design approval, write and self-review the spec, then continue to `writing-plans` for multi-step work without requesting separate spec approval. Ask again only if the written spec materially changes the approved scope or leaves unresolved ambiguity.
+- Default automation work to Inline Execution and do not ask the user to choose an execution mode. Use subagents only when explicitly requested or required by a mandatory repository workflow.
 - Use `test-driven-development` for code changes, `systematic-debugging` for bugs, and `verification-before-completion` before claiming completion.
 - Use `requesting-code-review` for substantial changes or before merging.
 - Review the diff and run required verification before committing. After review, stage and commit each logical change in one execution.
