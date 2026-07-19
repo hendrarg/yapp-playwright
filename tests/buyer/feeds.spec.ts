@@ -47,49 +47,71 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
 
 test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   tag: ['@AUT-FV-238', '@feeds', '@follow', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, buyerProfilePage }) => {
+}, async ({ buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
+  const sundaneseToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!sundaneseToken, 'YAPP_TEST_ACCESS_TOKEN_2 for Sundanese is required to seed the creator post');
+  if (!sundaneseToken) return;
 
-  await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.expectAuthenticated();
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await buyerFeedsPage.expectCreatorsSectionVisible();
+  const postData = generatePostData({
+    content: `Follow cycle ${Date.now()}`,
+    visibility: 'public',
   });
+  let postId = '';
 
-  await test.step('Follow creator from Creators You Might Like', async () => {
-    await buyerFeedsPage.followFirstCreator();
-    // Page redirects to / after follow
-  });
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, sundaneseToken));
+      expect(postId).toBeDefined();
+    });
 
-  await test.step('Open creator profile from Following tab post', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.openCreatorProfileFromFollowingTab();
-    await buyerProfilePage.expectLoaded();
-  });
+    await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectCreatorsSectionVisible();
+    });
 
-  await test.step('Verify Following state on creator profile', async () => {
-    await buyerProfilePage.expectFollowingState();
-  });
+    await test.step('Follow creator from Creators You Might Like', async () => {
+      await buyerFeedsPage.followFirstCreator();
+      // Page redirects to / after follow
+    });
 
-  await test.step('Unfollow from creator profile', async () => {
-    await buyerProfilePage.clickUnfollow();
-    await buyerProfilePage.expectFollowState();
-  });
+    await test.step('Open creator profile from Following tab post', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.openCreatorProfileFromFollowingTab();
+      await buyerProfilePage.expectLoaded();
+    });
 
-  await test.step('Follow creator again and verify final Following state', async () => {
-    await buyerProfilePage.clickFollow();
-    await buyerProfilePage.expectFollowingState();
-  });
+    await test.step('Verify Following state on creator profile', async () => {
+      await buyerProfilePage.expectFollowingState();
+    });
 
-  await test.step('Click back button to return to feeds and verify followed state', async () => {
-    await buyerProfilePage.clickBackButton();
-    await buyerFeedsPage.expectLoaded();
-    await buyerFeedsPage.switchToTab('following');
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await expect(buyerFeedsPage.followingButtons.first()).toBeVisible({ timeout: 10000 });
-  });
+    await test.step('Unfollow from creator profile', async () => {
+      await buyerProfilePage.clickUnfollow();
+      await buyerProfilePage.expectFollowState();
+    });
+
+    await test.step('Follow creator again and verify final Following state', async () => {
+      await buyerProfilePage.clickFollow();
+      await buyerProfilePage.expectFollowingState();
+    });
+
+    await test.step('Click back button to return to feeds and verify followed state', async () => {
+      await buyerProfilePage.clickBackButton();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await expect(buyerFeedsPage.followingButtons.first()).toBeVisible({ timeout: 10000 });
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, sundaneseToken);
+      });
+    }
+  }
 });
 
 test('Buyer Like/Unlike Post — Full Cycle Across Pages', {

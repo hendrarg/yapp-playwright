@@ -14,7 +14,6 @@ export const promotionData = {
     title: 'Test Discounted Product',
     path: '/geri/product/XJJwewhm_U',
   },
-  active: { code: 'U6UY6Y130UE', discountPercent: 12 },
   invalid: [
     { label: 'nonexistent', code: 'ZZZ205206ZZ' },
     { label: 'expired', code: 'NOB4GFYHHHX' },

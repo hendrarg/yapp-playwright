@@ -77,6 +77,11 @@ config/env.ts           environment variable access
 
 Token injection sets the cookie on the apex domain so one token can serve buyer and creator subdomains. Set `YAPP_TEST_ACCESS_TOKEN` in `.env`.
 
+Token mapping:
+
+- `YAPP_TEST_ACCESS_TOKEN` (token1) belongs to Hendra (`jendraljohn92`). Use it for Hendra-owned products and promotions.
+- `YAPP_TEST_ACCESS_TOKEN_2` (token2) belongs to Sundanese (`x7nv1.sdet`). Use it for creator-post seeding.
+
 If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-refresh it through the OTP login flow, save the fresh token to `.env`, then inject it. With `PW_WORKERS > 1`, an expired token can cause multiple workers to attempt OTP login at once; refresh the token once first or use `PW_WORKERS=1`.
 
 ## Environment Variables
@@ -86,8 +91,8 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
 | `YAPP_BASE_URL` | Yes | Buyer app |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app |
 | `YAPP_API_BASE_URL` | Yes | API base URL |
-| `YAPP_TEST_ACCESS_TOKEN` | For auth fixtures | Do not commit |
-| `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Used to seed creator posts for E2E tests |
+| `YAPP_TEST_ACCESS_TOKEN` | For Hendra auth/API setup | Do not commit |
+| `YAPP_TEST_ACCESS_TOKEN_2` | Optional Sundanese token | Used to seed creator posts for E2E tests |
 | `YAPP_AUTOMATION_SHEET_ID` | For `/automation` | Google Spreadsheet ID |
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
 | `YAPP_AUTOMATION_CLARIFICATIONS_SHEET` | No | Defaults to `Automation Clarifications` |
