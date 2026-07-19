@@ -75,7 +75,6 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
 
     await test.step('Follow creator from Creators You Might Like', async () => {
       await buyerFeedsPage.followFirstCreator();
-      // Page redirects to / after follow
     });
 
     await test.step('Open creator profile from Following tab post', async () => {

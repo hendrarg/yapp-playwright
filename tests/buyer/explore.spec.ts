@@ -119,4 +119,40 @@ test('Explore Page: Recent Product Recommendations', {
     await explorePage.openRecommendedProduct(recommendations[0]);
   });
 });
+
+test('Explore Page: Navigate to full creator and product lists using See More', {
+  tag: ['@AUT-FV-179', '@explore', '@buyer', '@smoke', '@regression'],
+}, async ({ explorePage }) => {
+  const data = exploreData.seeMoreNavigation;
+
+  test.info().annotations.push(
+    { type: 'TC', description: 'TC-EXP-B-041' },
+    { type: 'TC', description: 'TC-EXP-B-042' },
+  );
+
+  await test.step('Open Explore as an authenticated buyer', async () => {
+    await explorePage.goto();
+    await explorePage.expectLoaded();
+    await explorePage.expectAuthenticated();
+  });
+
+  await test.step('Open the full creator list from Creators For You', async () => {
+    await explorePage.openAllCreators();
+  });
+
+  await test.step('Search for Hendrarg and verify the creator result', async () => {
+    await explorePage.expectFullCreatorResults(data.creator.query, [data.creator.href]);
+    await explorePage.expectExactCreatorResult(data.creator);
+  });
+
+  await test.step('Return to Explore and open the full popular product list', async () => {
+    await explorePage.returnToExplore();
+    await explorePage.openAllProducts();
+    await explorePage.expectPaidAndFreeProducts();
+  });
+
+  await test.step('Search for Telebot and verify the product result', async () => {
+    await explorePage.expectProductSearch(data.productQuery);
+  });
+});
 });

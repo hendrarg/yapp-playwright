@@ -1,6 +1,10 @@
 export const exploreData = {
   popularProducts: ['Crypto Product', 'Test Discounted Product'],
   productSearch: 'Qase Management Testcase',
+  seeMoreNavigation: {
+    creator: { query: 'hendrarg', name: 'Hendra Rizal Gunawan', username: '@hendrarg', href: '/hendrarg' },
+    productQuery: 'Telebot',
+  },
   creatorDiscovery: {
     displayNameQuery: 'Jason',
     usernameQuery: 'yoms07',
