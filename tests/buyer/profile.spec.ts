@@ -3,7 +3,7 @@ import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.da
 
 test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
-  tag: ['@AUT-FV-214', '@AUT-FV-237', '@AUT-FV-243', '@AUT-FV-294', '@AUT-FV-295', '@AUT-FV-296', '@profile', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-308', '@profile', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerProfilePage }) => {
   test.setTimeout(90000);
 
@@ -57,8 +57,8 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
   });
 });
 
-test('Buyer Support Creator — Tip IDR with Custom Amount', {
-  tag: ['@AUT-E2E-009', '@AUT-FV-068', '@AUT-FV-069', '@AUT-FV-070', '@AUT-FV-072', '@AUT-FV-073', '@AUT-FV-294', '@AUT-FV-295', '@AUT-FV-296', '@profile', '@tip', '@buyer', '@regression'],
+test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
+  tag: ['@AUT-E2E-009','@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
 

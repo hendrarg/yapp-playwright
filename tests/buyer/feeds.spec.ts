@@ -293,7 +293,7 @@ test('Buyer Comment CRUD — Create, Edit, Delete', {
   }
 });
 
-test('Buyer Exclusive Content — Locked to Unlock Flow', {
+test('Buyer Exclusive Post — Unlock via PPV Payment', {
   tag: ['@AUT-E2E-008', '@feeds', '@payment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, transactionPage, page }) => {
   test.setTimeout(180000);
