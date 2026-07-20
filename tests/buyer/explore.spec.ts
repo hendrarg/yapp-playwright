@@ -125,11 +125,6 @@ test('Explore Page: Navigate to full creator and product lists using See More', 
 }, async ({ explorePage }) => {
   const data = exploreData.seeMoreNavigation;
 
-  test.info().annotations.push(
-    { type: 'TC', description: 'TC-EXP-B-041' },
-    { type: 'TC', description: 'TC-EXP-B-042' },
-  );
-
   await test.step('Open Explore as an authenticated buyer', async () => {
     await explorePage.goto();
     await explorePage.expectLoaded();

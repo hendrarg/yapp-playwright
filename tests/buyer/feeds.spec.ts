@@ -6,7 +6,7 @@ import { generatePostData, testImages, testVideos } from '@test-data/creator/pos
 
 test.describe('Buyer Feeds', () => {
 test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
-  tag: ['@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-243', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(90000);
 
@@ -180,7 +180,7 @@ test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
 });
 
 test('Buyer Comment on Post — Submit & Verify', {
-  tag: ['@AUT-FV-217', '@AUT-FV-218', '@AUT-FV-244', '@AUT-FV-248', '@feeds', '@comment', '@buyer', '@regression'],
+  tag: ['@AUT-FV-248', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
@@ -245,11 +245,6 @@ test('Buyer Comment CRUD — Create, Edit, Delete', {
   tag: ['@AUT-FV-247', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(120000);
-  test.info().annotations.push(
-    { type: 'TC', description: 'TC-FE-B-042' },
-    { type: 'TC', description: 'TC-FE-B-044' },
-    { type: 'TC', description: 'TC-FE-B-045' },
-  );
 
   const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
   test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
@@ -299,7 +294,7 @@ test('Buyer Comment CRUD — Create, Edit, Delete', {
 });
 
 test('Buyer Exclusive Content — Locked to Unlock Flow', {
-  tag: ['@AUT-E2E-008', '@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-238', '@AUT-FV-240', '@AUT-FV-243', '@feeds', '@payment', '@buyer', '@regression'],
+  tag: ['@AUT-E2E-008', '@feeds', '@payment', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
@@ -308,7 +303,7 @@ test('Buyer Exclusive Content — Locked to Unlock Flow', {
 
   const price = 20000;
   const priceText = 'Rp20.000';
-  const postData = generatePostData({
+  const postData = generatePostData({ 
     content: `Exclusive unlock flow ${Date.now()}`,
     visibility: 'pay_per_view',
     price,
@@ -361,12 +356,11 @@ test('Buyer Exclusive Content — Locked to Unlock Flow', {
       await test.step('Delete seeded exclusive post via API', async () => {
         await deletePost(page.request, postId, token2);
       });
-    }
-  }
+    }}
 });
 
 test('Buyer Media Preview — Image Gallery & Video Playback', {
-  tag: ['@AUT-FV-215', '@AUT-FV-237', '@AUT-FV-244', '@feeds', '@media', '@buyer', '@regression'],
+  tag: ['@AUT-FV-244', '@feeds', '@media', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
@@ -435,8 +429,7 @@ test('Buyer Media Preview — Image Gallery & Video Playback', {
           await deletePost(page.request, id, token);
         }
       });
-    }
-  }
+    }}
 });
 
 guestTest('Guest user blocked — Following tab requires login', {
@@ -465,7 +458,7 @@ guestTest('Guest user blocked — Following tab requires login', {
 });
 
 test('Free post — No monetization indicator on public content', {
-  tag: ['@AUT-FV-237', '@feeds', '@buyer', '@regression'],
+  tag: ['@AUT-FV-239', '@feeds', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage }) => {
   test.setTimeout(60000);
 
@@ -483,7 +476,7 @@ test('Free post — No monetization indicator on public content', {
 });
 
 test('Member-Only badge display — Consistent indicator across feed and profile', {
-  tag: ['@AUT-FV-213', '@AUT-FV-214', '@AUT-FV-237', '@AUT-FV-239', '@feeds', '@profile', '@buyer', '@regression'],
+  tag: ['@AUT-FV-239', '@feeds', '@profile', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(60000);
 
@@ -549,12 +542,11 @@ test('Like idempotency — Rapid tap prevention', {
       await test.step('Delete seeded post via API', async () => {
         await deletePost(page.request, postId, token2);
       });
-    }
-  }
+    }}
 });
 
 test('Locked exclusive media — Preview blocked before unlock', {
-  tag: ['@AUT-FV-213', '@AUT-FV-237', '@AUT-FV-243', '@feeds', '@buyer', '@regression'],
+  tag: ['@AUT-FV-237','@feeds', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage }) => {
   test.setTimeout(60000);
 
