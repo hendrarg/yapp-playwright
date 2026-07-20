@@ -113,8 +113,8 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   }
 });
 
-test('Buyer Like/Unlike Post — Full Cycle Across Pages', {
-  tag: ['@AUT-FV-216', '@AUT-FV-218', '@AUT-FV-239', '@AUT-FV-246', '@AUT-FV-247', '@feeds', '@like', '@buyer', '@regression'],
+test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
+  tag: ['@AUT-FV-246', '@feeds', '@profile', '@like', '@buyer', '@regression'],
 }, async ({ buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
 
@@ -231,6 +231,63 @@ test('Buyer Comment on Post — Submit & Verify', {
       await buyerFeedsPage.clickBackFromPostDetail();
       await buyerFeedsPage.expectLoaded();
       await buyerFeedsPage.expectPostCommentCountIncreased(postData.content, previousCommentCount);
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
+});
+
+test('Buyer Comment CRUD — Create, Edit, Delete', {
+  tag: ['@AUT-FV-247', '@feeds', '@comment', '@buyer', '@regression'],
+}, async ({ buyerFeedsPage, page }) => {
+  test.setTimeout(120000);
+  test.info().annotations.push(
+    { type: 'TC', description: 'TC-FE-B-042' },
+    { type: 'TC', description: 'TC-FE-B-044' },
+    { type: 'TC', description: 'TC-FE-B-045' },
+  );
+
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
+  if (!token2) return;
+
+  const postData = generatePostData({
+    content: `Comment CRUD ${Date.now()}`,
+    visibility: 'public',
+  });
+  const commentText = generateComment();
+  const updatedCommentText = `${commentText} updated`;
+  let postId = '';
+
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
+
+    await test.step('Open the seeded post and submit a comment', async () => {
+      await buyerFeedsPage.goto();
+      await buyerFeedsPage.expectLoaded();
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.fillComment(commentText);
+      await buyerFeedsPage.submitComment(commentText);
+    });
+
+    await test.step('Edit the own comment and verify updated text', async () => {
+      await buyerFeedsPage.editComment(commentText, updatedCommentText);
+      await buyerFeedsPage.expectCommentVisible(updatedCommentText);
+    });
+
+    await test.step('Delete the own comment and verify it is removed', async () => {
+      await buyerFeedsPage.deleteComment(updatedCommentText);
+      await buyerFeedsPage.expectCommentHidden(updatedCommentText);
     });
   } finally {
     if (postId) {

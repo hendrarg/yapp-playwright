@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
-import { safeClick, waitForLoaded } from "@utils/playwright.utils";
+import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
 import {
   feedsTabs,
   feedsLabels,
@@ -427,6 +427,47 @@ export class FeedsPage {
     await safeClick(this.postCommentButton);
     await this.waitForPageSettled();
     await expect(this.page.getByText(commentText, { exact: false })).toBeVisible({ timeout: 10000 });
+  }
+
+  private commentActions(commentText: string) {
+    return this.page
+      .getByText(commentText, { exact: true })
+      .locator('xpath=ancestor::div[.//button][1]')
+      .getByRole('button')
+      .last();
+  }
+
+  private commentAction(name: string) {
+    return this.page
+      .getByRole('menuitem', { name, exact: true })
+      .or(this.page.getByRole('button', { name, exact: true }))
+      .last();
+  }
+
+  async expectCommentVisible(commentText: string) {
+    await expect(this.page.getByText(commentText, { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectCommentHidden(commentText: string) {
+    await expect(this.page.getByText(commentText, { exact: true })).toBeHidden({ timeout: 10000 });
+  }
+
+  async editComment(commentText: string, updatedText: string) {
+    await safeClick(this.commentActions(commentText));
+    await safeClick(this.commentAction('Edit'));
+    await safeFill(this.page.locator('textarea, input').last(), updatedText);
+    await safeClick(this.page.getByRole('button', { name: /Save|Update/i }).last());
+    await this.expectCommentVisible(updatedText);
+  }
+
+  async deleteComment(commentText: string) {
+    await safeClick(this.commentActions(commentText));
+    await safeClick(this.commentAction('Delete'));
+    const confirmation = this.page.getByRole('button', { name: /Delete|Confirm/i }).last();
+    if (await confirmation.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await expect(confirmation).toBeVisible({ timeout: 5000 });
+      await confirmation.click({ timeout: 10000 });
+    }
   }
 
   async expectCommentCountIncreased(previousCount: number) {
