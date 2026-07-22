@@ -112,7 +112,4 @@ Use `.agents/commands/flaky.md` to re-run the last flaky test with trace for dia
 
 ## Verification
 
-After applying a fix:
-1. Run the test 3x: `npx playwright test --repeat-each=3 <spec>`
-2. If all pass, the fix is considered effective
-3. If any fail again, escalate to next fix pattern
+After applying a fix, run the isolated failing target once. If it passes, stop. If it fails, continue diagnosis, apply the next smallest fix, and run it once again. Do not use `--repeat-each` unless the user explicitly requests repeated verification.

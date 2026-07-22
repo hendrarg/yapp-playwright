@@ -11,7 +11,7 @@ Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual 
 
 1. Run `npm run automation:context -- <AUT-ID>`.
 2. If validation fails, stop and report the exact TC IDs, source rows, or open clarifications. Do not guess.
-3. Load `reuse-patterns` and inspect existing page objects, helpers, test data, and similar specs.
+3. Complete the blocking Mandatory Reuse Gate in Step 1. Do not edit before it is complete.
 4. For every Automation Mapping ID, generate exactly one Playwright `test()`; the mapping is the automation testcase.
 5. For `AUT-E2E-*`, make the covered journey actions `test.step()` calls and attach covered TC IDs as annotations.
 6. For `AUT-FV-*`, keep covered manual TCs as ordered `test.step()` calls inside the single test; parameterize only identical flows with different data.
@@ -20,13 +20,17 @@ Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual 
 
 Do not create intermediate Markdown files. Keep locators in page objects and never hide ambiguity with `.first()`.
 
-## Step 1: Load `reuse-patterns`
+## Step 1: Complete the Mandatory Reuse Gate
 
 ```bash
 read .agents/skills/reuse-patterns/SKILL.md
 ```
 
-- Check existing page objects, helpers, utils, and shared locators.
+- Read the target spec, its page objects, 1-2 similar specs, and every AUT explicitly referenced by the user.
+- Search `tests/` and `src/` with `rg` for matching step intent, locators, page-object methods, helpers, utils, fixtures, mocks, and test data.
+- In the working conversation, classify every required operation as **Reuse**, **Extend**, or **New**.
+- Do not begin implementation until this inventory is complete.
+- New code requires search evidence that no suitable implementation can be reused or minimally extended.
 - Extract locators if at least two pages use the same element.
 
 ## Step 2: Pick fixture and page object
@@ -85,6 +89,8 @@ Each round completes only when:
 
 - `npx tsc --noEmit` passes.
 - The isolated Playwright command for `@<AUT-ID>` passes.
+
+Run the isolated target once after the latest code change and stop when it passes. After a failure and fix, run it once again. Do not use `--repeat-each`, repeated confirmation runs, a full spec, or a broader suite unless the user explicitly requests them.
 
 ## Example
 

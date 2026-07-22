@@ -77,9 +77,16 @@ const product = generateProduct({ category: 'digital' });
 const product = { name: 'E-Book', price: 29.99 };
 ```
 
+## Single-pass Verification
+
+- Run the isolated target once after the latest code change.
+- A passing run ends verification.
+- After a failure and fix, run the isolated target once again.
+- Do not use `--repeat-each`, repeated confirmation runs, a full spec, or a broader suite unless the user explicitly requests them.
+
 ## Forbidden
 - `test.only()` on shared branches (CI fails via `forbidOnly`)
 - Importing `test`/`expect` directly from `@playwright/test` in spec files
 - Deep relative imports bypassing path aliases
-- `--repeat-each` for reCAPTCHA tests (e.g. `tests/auth/otp-login.spec.ts`) — rapid repeats from the same IP/machine tank the reCAPTCHA v3 score and trigger rate-limiting, causing cascading failures. To verify reliability, re-run the single test with a few minutes of cool-down between runs.
+- `--repeat-each` unless the user explicitly requests repeated verification. This is especially important for reCAPTCHA tests, where rapid repeats from the same IP/machine reduce the reCAPTCHA v3 score and trigger rate-limiting.
 - **Running full spec file during mapped automation development** — always use `--grep @<AUT-ID>` to isolate the mapping. Running the whole file wastes time and tests unrelated functionality.

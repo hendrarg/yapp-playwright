@@ -17,7 +17,18 @@
 - Methods named as actions (`search()`, `selectFilter()`, `submitForm()`)
 - Assertion methods prefixed `expect*()` (`expectLoaded()`, `expectItemVisible()`)
 - Use `safeClick`/`safeFill`/`safeCheck` from `@utils/playwright.utils` for flakiness-prone interactions
-- **Reuse over rewrite**: Before adding a new locator/method, check existing page objects, helpers, and utils for identical or similar patterns. If the same locator appears in ≥2 pages, extract to `src/pages/shared/locators.ts`. If the same step sequence appears in ≥2 tests, extract to a helper.
+## Mandatory Reuse Gate
+
+Before editing any Playwright test, page object, fixture, helper, mock, or test data:
+
+1. Read the target spec, its page objects, and every existing AUT explicitly referenced by the user.
+2. Search `tests/` and `src/` with `rg` for matching step intent, locator labels, page-object methods, helpers, utilities, fixtures, mocks, and test data.
+3. Classify every required operation as **Reuse**, **Extend**, or **New** in the working conversation.
+4. Do not edit until this inventory is complete.
+
+Reuse an existing implementation unchanged whenever its behavior matches. If it almost fits, parameterize or minimally extend it. Add a new locator, method, helper, mock, test-data file, or page object only when the search proves no suitable implementation exists. User-referenced AUTs are mandatory implementation references.
+
+If the same locator appears in ≥2 pages, extract it to `src/pages/shared/locators.ts`. If the same step sequence appears in ≥2 tests, extract it to a helper.
 
 ## Selector Priority
 When creating locators, use `smartLocator` from `@utils/heal-utils` with fallback chain. Always provide multiple selector strategies ordered by stability:
