@@ -37,4 +37,10 @@ export const tipCheckoutData = {
   votingOption: "Item A",
 } as const;
 
+export const tipAmountBoundary = {
+  belowMinimum: "9999",
+  minimum: "10000",
+  minimumError: "Minimum amount is Rp10.000",
+} as const;
+
 export type ProfileTab = keyof typeof profileTabs;

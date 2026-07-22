@@ -131,6 +131,12 @@ export class TipPage {
     await this.page.waitForTimeout(300);
   }
 
+  async selectCurrency(currency: string) {
+    const currencyTab = this.page.getByRole("tab", { name: currency, exact: true });
+    await safeClick(currencyTab);
+    await expect(currencyTab).toHaveAttribute("aria-selected", "true");
+  }
+
   async expectAmountError(message: string) {
     await expect(this.page.getByText(message)).toBeVisible({ timeout: 5000 });
   }

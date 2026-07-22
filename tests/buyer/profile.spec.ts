@@ -1,5 +1,5 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
-import { creatorProfileHandle, profileLabels, tipCheckoutData } from '@test-data/buyer/profile.data';
+import { creatorProfileHandle, profileLabels, tipAmountBoundary, tipCheckoutData } from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
@@ -186,6 +186,50 @@ test('Tipping: Payment & Transaction Summary', {
       subtotal: tipCheckoutData.displayAmount,
       total: reviewTotal,
     });
+  });
+});
+
+test('Tipping: Agreement Selected by Default', {
+  tag: ['@AUT-FV-075', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ tipPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open the tip review state with a valid amount and payment method', async () => {
+    await tipPage.goto(creatorProfileHandle);
+    await tipPage.expectPageLoaded();
+    await tipPage.expectFormAutoFilled();
+    await tipPage.fillAmount(tipCheckoutData.amount);
+    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
+    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+  });
+
+  await test.step('Verify the agreement is selected by default and Send Tip is visible', async () => {
+    await expect(tipPage.supportAgreementCheckbox).toHaveAttribute('aria-checked', 'true');
+    await expect(tipPage.sendButton).toBeVisible();
+    await tipPage.expectSendTipEnabled();
+  });
+});
+
+test('Tip: IDR Minimum Amount Boundary', {
+  tag: ['@AUT-FV-310', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ tipPage }) => {
+  test.setTimeout(90000);
+
+  await test.step('Select IDR and open the tip amount form', async () => {
+    await tipPage.goto(creatorProfileHandle);
+    await tipPage.expectPageLoaded();
+    await tipPage.expectFormAutoFilled();
+    await tipPage.selectCurrency(tipCheckoutData.currency);
+  });
+
+  await test.step('Reject Rp9.999 as below the minimum', async () => {
+    await tipPage.fillAmount(tipAmountBoundary.belowMinimum);
+    await tipPage.expectAmountError(tipAmountBoundary.minimumError);
+  });
+
+  await test.step('Accept Rp10.000 with Send Tip enabled', async () => {
+    await tipPage.fillAmount(tipAmountBoundary.minimum);
+    await tipPage.expectSendTipEnabled();
   });
 });
 
