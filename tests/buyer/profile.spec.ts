@@ -159,6 +159,36 @@ test('Tipping: Checkout, Payment & Transaction', {
   });
 });
 
+test('Tipping: Payment & Transaction Summary', {
+  tag: ['@AUT-FV-074', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ tipPage, transactionPage }) => {
+  test.setTimeout(120000);
+
+  let reviewTotal = '';
+
+  await test.step('Prepare the tip with the selected amount and payment method', async () => {
+    await tipPage.goto(creatorProfileHandle);
+    await tipPage.expectPageLoaded();
+    await tipPage.expectFormAutoFilled();
+    await tipPage.fillAmount(tipCheckoutData.amount);
+    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
+    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+    await tipPage.acceptSupportAgreement();
+    await tipPage.fillNotes(tipCheckoutData.publicNote, tipCheckoutData.privateNote);
+    reviewTotal = await tipPage.expectReviewInformation(tipCheckoutData);
+    await tipPage.submit();
+  });
+
+  await test.step('Open Detail Transactions and verify payment method, subtotal, and Total Amount', async () => {
+    await transactionPage.expectPageLoaded(tipCheckoutData.creatorName, reviewTotal);
+    await transactionPage.expectTipPaymentInstructions({
+      paymentMethod: tipCheckoutData.paymentMethod,
+      subtotal: tipCheckoutData.displayAmount,
+      total: reviewTotal,
+    });
+  });
+});
+
 test('Tip: Validation & Boundary', {
   tag: ['@AUT-FV-072', '@profile', '@buyer', '@regression'],
 }, async ({ tipPage }) => {
