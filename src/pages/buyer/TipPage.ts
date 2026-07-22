@@ -62,6 +62,10 @@ export class TipPage {
     await expect(this.page.getByText(message, { exact: true })).toBeVisible({ timeout: 5000 });
   }
 
+  async expectEmailError(message = "Email is required") {
+    await expect(this.page.getByText(message, { exact: true })).toBeVisible({ timeout: 5000 });
+  }
+
   async expectEmailDisabled() {
     await expect(this.emailInput).toBeDisabled();
   }
@@ -97,6 +101,15 @@ export class TipPage {
     await waitForLoaded(this.page);
     await this.page.waitForLoadState("networkidle").catch(() => {});
     return this.page.url().split("/transaction/")[1];
+  }
+
+  async attemptSubmit() {
+    await safeClick(this.sendButton);
+  }
+
+  async expectSubmissionBlocked() {
+    expect(this.page.url()).toContain("/tip");
+    await expect(this.sendButton).toBeVisible();
   }
 
   async fillAmount(value: string) {

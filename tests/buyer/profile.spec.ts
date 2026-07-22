@@ -139,6 +139,34 @@ test('Tip: Validation & Boundary', {
   });
 });
 
+guestTest('Tip validation — Name and Email are required', {
+  tag: ['@AUT-FV-071', '@profile', '@tip', '@buyer', '@regression'],
+}, async ({ tipPage }) => {
+  guestTest.setTimeout(60000);
+
+  await guestTest.step('Open tip page and enter a valid amount', async () => {
+    await tipPage.goto(creatorProfileHandle);
+    await tipPage.expectPageLoaded();
+    await tipPage.fillAmount('50000');
+  });
+
+  await guestTest.step('Leave Name and Email empty', async () => {
+    await expect(tipPage.nameInput).toHaveValue('');
+    await expect(tipPage.emailInput).toHaveValue('');
+  });
+
+  await guestTest.step('Attempt to submit the tip', async () => {
+    await tipPage.expectSendTipEnabled();
+    await tipPage.attemptSubmit();
+  });
+
+  await guestTest.step('Verify submission blocked with required errors on Name and Email', async () => {
+    await tipPage.expectNameError();
+    await tipPage.expectEmailError();
+    await tipPage.expectSubmissionBlocked();
+  });
+});
+
 test('Buyer View Membership Plans — Browse & Select Tier', {
   tag: ['@AUT-FV-214', '@profile', '@membership', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
