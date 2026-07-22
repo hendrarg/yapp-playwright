@@ -20,6 +20,21 @@ Priority order when instructions conflict:
 3. `.agents/rules/*.md`
 4. The task-specific skill document
 
+## Fast Path for Scoped Playwright Work
+
+For one mapped AUT or a small change to an existing Playwright flow, work inline and finish through this sequence:
+
+1. Load the validated automation context when an AUT ID exists.
+2. Complete the Mandatory Reuse Gate.
+3. Apply the smallest edit to existing files.
+4. Run `npx tsc --noEmit`.
+5. Run only the target AUT once.
+6. Stop when it passes.
+
+Do not create design documents, implementation plans, worktrees, or subagents, and do not ask the user to choose an execution mode for this fast path.
+
+Use an extended planning or delegated workflow only when the user explicitly requests it, the task spans multiple independent systems, or a blocking architectural decision cannot be resolved from repository evidence.
+
 ## Project Commands
 
 | Command | Purpose |

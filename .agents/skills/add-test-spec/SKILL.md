@@ -7,6 +7,10 @@ description: Use when generating Playwright automation from a Google Sheets AUT 
 
 Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual TCs in Google Sheets.
 
+## Execution Mode
+
+Use the inline fast path for one Automation ID: context → reuse gate → minimum edit → type-check → one isolated run → stop on pass. Do not create design/plan documents, worktrees, or subagents, and do not ask the user to choose an execution mode unless an extended workflow condition in `AGENTS.md` is met.
+
 ## Workflow
 
 1. Run `npm run automation:context -- <AUT-ID>`.

@@ -21,6 +21,10 @@ For task-specific work, also read the matching skill from `.agents/skills/regist
 - These rules apply to all code changes, reviews, tests, and automation work.
 - If a task-specific skill conflicts with a rule, follow the rule unless the user explicitly overrides it.
 
+## Fast Path
+
+Single-AUT automation and small Playwright maintenance use the inline fast path from `AGENTS.md`: context, reuse audit, minimum edit, type-check, one isolated run, then stop on pass. Do not add brainstorming, design/plan documents, worktrees, subagents, repeated verification, or execution-mode questions unless an extended workflow condition in `AGENTS.md` is met.
+
 ## Commands
 
 - `.agents/commands/` documents common project operations.

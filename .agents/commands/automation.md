@@ -4,6 +4,8 @@ description: Generate automation from a Google Sheets Automation ID
 
 Use this workflow for one ID such as `AUT-E2E-002` or `AUT-FV-013`.
 
+Run this command inline. Do not create design/plan documents, worktrees, or subagents, and do not ask for an execution-mode choice unless an extended workflow condition in `AGENTS.md` is met.
+
 1. Read `.agents/skills/add-test-spec/SKILL.md`.
 2. Run `npm run automation:context -- <AUT-ID>`.
 3. Stop and report every blocker if context validation fails.
