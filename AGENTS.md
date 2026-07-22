@@ -22,7 +22,12 @@ Priority order when instructions conflict:
 
 ## Fast Path for Scoped Playwright Work
 
-For one mapped AUT or a small change to an existing Playwright flow, work inline and finish through this sequence:
+First determine the mode with `rg -n "@<AUT-ID>" tests`:
+
+- **New automation**: no existing test has the exact AUT tag. Create a short local plan at `docs/automation-plans/<AUT-ID>.md` before editing. It contains only the ordered test steps, covered source TC IDs, expected result for each step, and the existing step/helper/locator to reuse. Do not wait for separate plan approval; continue inline.
+- **Small update/edit**: the AUT tag already exists and the request changes its current implementation. Do not create a plan document.
+
+Then work inline and finish through this sequence:
 
 1. Load the validated automation context when an AUT ID exists.
 2. Complete the Mandatory Reuse Gate.
@@ -31,7 +36,7 @@ For one mapped AUT or a small change to an existing Playwright flow, work inline
 5. Run only the target AUT once.
 6. Stop when it passes.
 
-Do not create design documents, implementation plans, worktrees, or subagents, and do not ask the user to choose an execution mode for this fast path.
+Do not create long design documents or implementation plans. The short new-automation test-step plan is local-only and must not be committed. Do not create worktrees or subagents, and do not ask the user to choose an execution mode for this fast path.
 
 Use an extended planning or delegated workflow only when the user explicitly requests it, the task spans multiple independent systems, or a blocking architectural decision cannot be resolved from repository evidence.
 
@@ -114,7 +119,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-re
   -> run only the mapped automation with --grep @<AUT-ID>
 ```
 
-Do not create intermediate Markdown files. Automation Mapping and its active source TC sheets are the only supported inputs for generating new automation.
+Do not create intermediate Markdown files other than the required short, local test-step plan for a new AUT. Automation Mapping and its active source TC sheets remain the authoritative inputs.
 
 ## Required Tags
 

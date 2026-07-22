@@ -4,7 +4,7 @@ description: Generate automation from a Google Sheets Automation ID
 
 Use this workflow for one ID such as `AUT-E2E-002` or `AUT-FV-013`.
 
-Run this command inline. Do not create design/plan documents, worktrees, or subagents, and do not ask for an execution-mode choice unless an extended workflow condition in `AGENTS.md` is met.
+Run this command inline. If `rg -n "@<AUT-ID>" tests` finds no exact tag, first create a short local `docs/automation-plans/<AUT-ID>.md` table with source TC ID, test step, expected result, and reuse target. If the tag exists and this is a small update/edit, create no plan. Never commit the short plan. Do not create long plans, worktrees, or subagents unless an extended workflow condition in `AGENTS.md` is met.
 
 1. Read `.agents/skills/add-test-spec/SKILL.md`.
 2. Run `npm run automation:context -- <AUT-ID>`.

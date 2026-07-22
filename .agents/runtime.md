@@ -23,7 +23,7 @@ For task-specific work, also read the matching skill from `.agents/skills/regist
 
 ## Fast Path
 
-Single-AUT automation and small Playwright maintenance use the inline fast path from `AGENTS.md`: context, reuse audit, minimum edit, type-check, one isolated run, then stop on pass. Do not add brainstorming, design/plan documents, worktrees, subagents, repeated verification, or execution-mode questions unless an extended workflow condition in `AGENTS.md` is met.
+Single-AUT automation and small Playwright maintenance use the inline fast path from `AGENTS.md`. A new AUT gets one short, local, uncommitted test-step plan; an update to an existing AUT gets no plan. Then use context, reuse audit, minimum edit, type-check, one isolated run, and stop on pass. Do not add brainstorming, long design/implementation plans, worktrees, subagents, repeated verification, or execution-mode questions unless an extended workflow condition in `AGENTS.md` is met.
 
 ## Commands
 

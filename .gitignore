@@ -9,6 +9,7 @@ node_modules/
 /.auth/
 .playwright-mcp/
 *.yml
+/docs/automation-plans/
 
 # Secrets
 .env

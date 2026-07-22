@@ -9,7 +9,7 @@ Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual 
 
 ## Execution Mode
 
-Use the inline fast path for one Automation ID: context → reuse gate → minimum edit → type-check → one isolated run → stop on pass. Do not create design/plan documents, worktrees, or subagents, and do not ask the user to choose an execution mode unless an extended workflow condition in `AGENTS.md` is met.
+Check for the exact AUT tag with `rg -n "@<AUT-ID>" tests`. If it does not exist, create `docs/automation-plans/<AUT-ID>.md` containing only an ordered table of source TC ID, test step, expected result, and reuse target; keep it local and uncommitted, then continue inline without an approval pause. If the tag exists and this is a small update/edit, create no plan. Continue with context → reuse gate → minimum edit → type-check → one isolated run → stop on pass. Do not create long plans, worktrees, or subagents unless an extended workflow condition in `AGENTS.md` is met.
 
 ## Workflow
 
@@ -22,7 +22,7 @@ Use the inline fast path for one Automation ID: context → reuse gate → minim
 7. Tag the single generated test with the exact Automation ID, for example `@AUT-E2E-008`.
 8. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
 
-Do not create intermediate Markdown files. Keep locators in page objects and never hide ambiguity with `.first()`.
+Do not create intermediate Markdown files other than the required short test-step plan for a new AUT. Keep locators in page objects and never hide ambiguity with `.first()`.
 
 ## Step 1: Complete the Mandatory Reuse Gate
 
