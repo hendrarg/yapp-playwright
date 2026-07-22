@@ -6,12 +6,14 @@ Prevent Playwright automation work from creating parallel steps, locators, helpe
 
 ## Scope
 
-The gate applies to every Playwright test change in this repository, including mapped `/automation <AUT-ID>` work, maintenance, bug fixes, and flaky-test fixes.
+The gate applies to every Playwright test change in this repository, including mapped `/automation <AUT-ID>` work, maintenance, bug fixes, and flaky-test fixes. Verification also follows a single-pass rule: once the isolated target passes, testing stops.
 
 The implementation changes only these instruction surfaces:
 
 - `.agents/rules/code-style.md` for the always-on rule.
+- `.agents/rules/testing.md` for single-pass verification.
 - `.agents/skills/add-test-spec/SKILL.md` for the mapped-automation workflow.
+- `.agents/skills/resolve-flaky-tests/SKILL.md` to remove mandatory three-run verification.
 - `.agents/commands/automation.md` for the command checklist.
 
 No runtime script, duplicate-code linter, or CI job will be added. Semantic reuse requires repository-aware judgment, while automatic similarity checks would introduce false positives.
@@ -55,4 +57,6 @@ Before claiming completion, the agent must review the final diff and confirm:
 - The diff contains only additions required for the testcase.
 - Type-checking and the isolated mapped test pass when code was changed.
 
-For instruction-only changes, verification consists of reading the final diff and checking that all three instruction surfaces contain the same blocking gate without contradictory wording.
+Run the isolated target once after the latest code change. A passing run is sufficient evidence and ends verification. If it fails, diagnose and fix it, then run it once again. Do not use `--repeat-each`, repeated confirmation runs, a full spec, or a broader suite unless the user explicitly requests them.
+
+For instruction-only changes, verification consists of reading the final diff and checking that all instruction surfaces contain the same blocking reuse and single-pass rules without contradictory wording.
