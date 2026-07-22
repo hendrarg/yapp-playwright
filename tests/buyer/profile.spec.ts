@@ -1,5 +1,5 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
-import { creatorProfileHandle, profileLabels } from '@test-data/buyer/profile.data';
+import { creatorProfileHandle, profileLabels, tipCheckoutData } from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
@@ -100,6 +100,61 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
   });
 
   await test.step('Verify Payment Successful', async () => {
+    await transactionPage.expectPaymentSuccess();
+  });
+});
+
+test('Tipping: Checkout, Payment & Transaction', {
+  tag: ['@AUT-FV-073', '@tip', '@buyer', '@smoke', '@regression'],
+}, async ({ tipPage, transactionPage, page }) => {
+  test.setTimeout(120000);
+
+  let orderId = '';
+  let reviewTotal = '';
+
+  await test.step('View and select an available payment method', async () => {
+    await tipPage.goto(creatorProfileHandle);
+    await tipPage.expectPageLoaded();
+    await tipPage.expectFormAutoFilled();
+    await tipPage.fillAmount(tipCheckoutData.amount);
+    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
+    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+  });
+
+  await test.step('Block payment until the support agreement is accepted', async () => {
+    await tipPage.uncheckSupportAgreement();
+    await tipPage.expectSendTipDisabled();
+    await tipPage.expectSubmissionBlocked();
+  });
+
+  await test.step('Review the tip information and start payment', async () => {
+    await tipPage.acceptSupportAgreement();
+    await tipPage.fillNotes(tipCheckoutData.publicNote, tipCheckoutData.privateNote);
+    reviewTotal = await tipPage.expectReviewInformation(tipCheckoutData);
+    orderId = await tipPage.submit();
+  });
+
+  await test.step('Follow the selected payment method instructions', async () => {
+    await transactionPage.expectPageLoaded(tipCheckoutData.creatorName, reviewTotal);
+    await transactionPage.expectTipPaymentInstructions({
+      paymentMethod: tipCheckoutData.paymentMethod,
+      subtotal: tipCheckoutData.displayAmount,
+      total: reviewTotal,
+    });
+  });
+
+  await test.step('Post transaction via webhook API', async () => {
+    const { depositWebhook } = await import('@helpers/api/webhook');
+    await depositWebhook(page.request, orderId);
+  });
+
+  await test.step('Verify the payment status updates automatically', async () => {
+    await transactionPage.expectPaymentSuccess();
+  });
+
+  await test.step('Refresh the latest status without creating a new transaction', async () => {
+    await transactionPage.reload();
+    await transactionPage.expectSameTipTransaction(orderId, reviewTotal);
     await transactionPage.expectPaymentSuccess();
   });
 });

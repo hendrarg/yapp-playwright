@@ -26,4 +26,15 @@ export const profileLabels = {
   tierPricePattern: "IDR",
 } as const;
 
+export const tipCheckoutData = {
+  amount: "50000",
+  displayAmount: "Rp50.000",
+  currency: "IDR",
+  creatorName: "Hendra Rizal",
+  paymentMethod: "QRIS",
+  publicNote: "AUT-FV-073 public note",
+  privateNote: "AUT-FV-073 private note",
+  votingOption: "Item A",
+} as const;
+
 export type ProfileTab = keyof typeof profileTabs;

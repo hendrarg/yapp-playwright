@@ -1,6 +1,16 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { safeClick, waitForLoaded } from "@utils/playwright.utils";
+import { smartClick } from "@utils/heal-utils";
+import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
+
+type TipReviewData = {
+  displayAmount: string;
+  currency: string;
+  creatorName: string;
+  paymentMethod: string;
+  publicNote: string;
+  privateNote: string;
+};
 
 export class TipPage {
   constructor(public readonly page: Page, private readonly baseURL: string) {}
@@ -28,6 +38,10 @@ export class TipPage {
   readonly giveNotesInput = this.page.getByRole("textbox", { name: "Notes can be seen by public" });
   readonly privateNotesInput = this.page.getByRole("textbox", { name: "Notes can only be seen by creator" });
   readonly sendButton = this.page.getByRole("button", { name: "Send Tip" }).last();
+  readonly supportAgreementCheckbox = this.page
+    .getByText(/^With this, I declare that this transaction/)
+    .locator("xpath=../../..")
+    .getByRole("checkbox");
 
   async expectPageLoaded() {
     await expect(this.title).toBeVisible({ timeout: 10000 });
@@ -119,5 +133,90 @@ export class TipPage {
 
   async expectAmountError(message: string) {
     await expect(this.page.getByText(message)).toBeVisible({ timeout: 5000 });
+  }
+
+  async selectVotingOptionIfPresent(optionName: string) {
+    const option = this.page.getByRole("radio", { name: optionName, exact: true });
+    if (await option.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await smartClick(this.page, {
+        role: "radio",
+        name: optionName,
+        text: optionName,
+      });
+    }
+  }
+
+  async expectPaymentMethodAvailableAndSelect(method: string) {
+    await expect(this.paymentMethod).toBeEnabled({ timeout: 10000 });
+    await smartClick(this.page, {
+      role: "combobox",
+      selector: 'button[role="combobox"]',
+    });
+
+    const option = this.page.getByRole("option", { name: method, exact: false });
+    await expect(option).toBeVisible({ timeout: 5000 });
+    await smartClick(this.page, {
+      role: "option",
+      name: method,
+      text: method,
+    });
+    await expect(this.paymentMethod).toContainText(new RegExp(method, "i"));
+  }
+
+  async uncheckSupportAgreement() {
+    await expect(this.supportAgreementCheckbox).toBeVisible({ timeout: 5000 });
+    if (await this.supportAgreementCheckbox.getAttribute("aria-checked") === "true") {
+      await safeClick(this.supportAgreementCheckbox);
+    }
+    await expect(this.supportAgreementCheckbox).toHaveAttribute("aria-checked", "false");
+  }
+
+  async expectSendTipDisabled() {
+    await expect(this.sendButton).toBeDisabled();
+  }
+
+  async acceptSupportAgreement() {
+    if (await this.supportAgreementCheckbox.getAttribute("aria-checked") !== "true") {
+      await safeClick(this.supportAgreementCheckbox);
+    }
+    await expect(this.supportAgreementCheckbox).toHaveAttribute("aria-checked", "true");
+  }
+
+  async fillNotes(publicNote: string, privateNote: string) {
+    await safeFill(this.giveNotesInput, publicNote);
+    await safeFill(this.privateNotesInput, privateNote);
+  }
+
+  async expectReviewInformation(data: TipReviewData): Promise<string> {
+    await expect(this.page.getByText(data.creatorName, { exact: true })).toBeVisible();
+    await expect(this.page.getByRole("tab", { name: data.currency, exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(this.amountInput).toHaveValue(data.displayAmount);
+    expect((await this.nameInput.inputValue()).length).toBeGreaterThan(0);
+    expect((await this.emailInput.inputValue()).length).toBeGreaterThan(0);
+    await expect(this.anonymousCheckbox).toHaveAttribute("aria-checked", "false");
+    await expect(this.giveNotesInput).toHaveValue(data.publicNote);
+    await expect(this.privateNotesInput).toHaveValue(data.privateNote);
+    await expect(this.paymentMethod).toContainText(new RegExp(data.paymentMethod, "i"));
+
+    const subtotalLabel = this.page.getByText("Subtotal", { exact: true });
+    if (!await subtotalLabel.isVisible()) {
+      await smartClick(this.page, {
+        role: "button",
+        name: "Detail Transactions",
+        text: "Detail Transactions",
+      }, { timeout: 1500 });
+    }
+
+    const subtotalRow = subtotalLabel.locator("..");
+    const totalRow = this.page.getByText("Total", { exact: true }).locator("..");
+    await expect(subtotalRow.getByText(data.displayAmount, { exact: true })).toBeVisible();
+
+    const totalValue = totalRow.locator("span").filter({ hasText: /^Rp[\d.]+$/ });
+    await expect(totalValue).toHaveCount(1);
+    await expect(this.sendButton).toBeEnabled();
+    return (await totalValue.innerText()).trim();
   }
 }
