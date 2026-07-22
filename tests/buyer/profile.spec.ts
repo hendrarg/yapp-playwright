@@ -104,6 +104,41 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
   });
 });
 
+test('Tip: Validation & Boundary', {
+  tag: ['@AUT-FV-072', '@profile', '@buyer', '@regression'],
+}, async ({ tipPage }) => {
+
+  await test.step('Verify buyer name and email are prefilled', async () => {
+    await tipPage.goto(creatorProfileHandle);
+    await tipPage.expectPageLoaded();
+    await tipPage.expectFormAutoFilled();
+  });
+
+  await test.step('Validate required name on blur', async () => {
+    await tipPage.clearName();
+    await tipPage.blurName();
+    await tipPage.expectNameError();
+    await tipPage.expectEmailDisabled();
+    await tipPage.fillName('Hendra Rizal');
+  });
+
+  await test.step('Enable anonymous tip and continue with a valid amount', async () => {
+    await tipPage.fillAmount('50000');
+    await tipPage.selectAnonymous();
+    await tipPage.expectAnonymousSelected();
+    await tipPage.expectSendTipEnabled();
+  });
+
+  await test.step('Continue with optional notes empty', async () => {
+    await tipPage.expectNotesEmpty();
+    await tipPage.expectSendTipEnabled();
+  });
+
+  await test.step('Accept 200 Give Notes characters and block the 201st', async () => {
+    await tipPage.expectGiveNotesLimit();
+  });
+});
+
 test('Buyer View Membership Plans — Browse & Select Tier', {
   tag: ['@AUT-FV-214', '@profile', '@membership', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {

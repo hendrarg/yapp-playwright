@@ -12,10 +12,11 @@ Use `/automation <AUT-ID>` for an Automation Mapping row and its covered manual 
 1. Run `npm run automation:context -- <AUT-ID>`.
 2. If validation fails, stop and report the exact TC IDs, source rows, or open clarifications. Do not guess.
 3. Load `reuse-patterns` and inspect existing page objects, helpers, test data, and similar specs.
-4. For `AUT-E2E-*`, generate one journey test and attach covered TC IDs as Playwright annotations.
-5. For `AUT-FV-*`, generate one `test.describe` group; keep independently failing cases separate and parameterize only identical flows with different data.
-6. Tag every generated test with the exact Automation ID, for example `@AUT-E2E-008`.
-7. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
+4. For every Automation Mapping ID, generate exactly one Playwright `test()`; the mapping is the automation testcase.
+5. For `AUT-E2E-*`, make the covered journey actions `test.step()` calls and attach covered TC IDs as annotations.
+6. For `AUT-FV-*`, keep covered manual TCs as ordered `test.step()` calls inside the single test; parameterize only identical flows with different data.
+7. Tag the single generated test with the exact Automation ID, for example `@AUT-E2E-008`.
+8. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
 
 Do not create intermediate Markdown files. Keep locators in page objects and never hide ambiguity with `.first()`.
 
