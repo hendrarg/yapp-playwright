@@ -3,7 +3,7 @@ import { creatorProfileHandle, profileLabels, tipAmountBoundary, tipCheckoutData
 
 test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
-  tag: ['@AUT-FV-308', '@profile', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-091', '@profile', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerProfilePage }) => {
   test.setTimeout(90000);
 
@@ -58,7 +58,7 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
 });
 
 test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
-  tag: ['@AUT-E2E-009','@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-E2E-014','@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
@@ -105,7 +105,7 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
 });
 
 test('Tipping: Checkout, Payment & Transaction', {
-  tag: ['@AUT-FV-073', '@tip', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-287', '@tip', '@buyer', '@smoke', '@regression'],
 }, async ({ tipPage, transactionPage, page }) => {
   test.setTimeout(120000);
 
@@ -160,7 +160,7 @@ test('Tipping: Checkout, Payment & Transaction', {
 });
 
 test('Tipping: Payment & Transaction Summary', {
-  tag: ['@AUT-FV-074', '@payment', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-288', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ tipPage, transactionPage }) => {
   test.setTimeout(120000);
 
@@ -190,7 +190,7 @@ test('Tipping: Payment & Transaction Summary', {
 });
 
 test('Tipping: Agreement Selected by Default', {
-  tag: ['@AUT-FV-075', '@payment', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-289', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ tipPage }) => {
   test.setTimeout(120000);
 
@@ -211,7 +211,7 @@ test('Tipping: Agreement Selected by Default', {
 });
 
 test('Tip: IDR Minimum Amount Boundary', {
-  tag: ['@AUT-FV-310', '@payment', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-291', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ tipPage }) => {
   test.setTimeout(90000);
 
@@ -234,7 +234,7 @@ test('Tip: IDR Minimum Amount Boundary', {
 });
 
 test('Tip: Validation & Boundary', {
-  tag: ['@AUT-FV-072', '@profile', '@buyer', '@regression'],
+  tag: ['@AUT-FV-286', '@profile', '@buyer', '@regression'],
 }, async ({ tipPage }) => {
 
   await test.step('Verify buyer name and email are prefilled', async () => {
@@ -269,7 +269,7 @@ test('Tip: Validation & Boundary', {
 });
 
 guestTest('Tip validation — Name and Email are required', {
-  tag: ['@AUT-FV-071', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-285', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ tipPage }) => {
   guestTest.setTimeout(60000);
 
@@ -297,7 +297,7 @@ guestTest('Tip validation — Name and Email are required', {
 });
 
 test('Buyer View Membership Plans — Browse & Select Tier', {
-  tag: ['@AUT-FV-214', '@profile', '@membership', '@buyer', '@regression'],
+  tag: ['@AUT-FV-128', '@profile', '@membership', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
   test.setTimeout(120000);
   const creatorHandle = 'davidalfasunarna';
@@ -326,7 +326,7 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
 });
 
 guestTest('Guest user blocked — Like action requires login', {
-  tag: ['@AUT-FV-246', '@profile', '@auth', '@buyer', '@regression'],
+  tag: ['@AUT-FV-085', '@profile', '@auth', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, page }) => {
   guestTest.setTimeout(60000);
 
@@ -355,7 +355,7 @@ guestTest('Guest user blocked — Like action requires login', {
 });
 
 guestTest('Guest user blocked — Comment action requires login', {
-  tag: ['@AUT-FV-248', '@profile', '@auth', '@buyer', '@regression'],
+  tag: ['@AUT-FV-087', '@profile', '@auth', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, page }) => {
   guestTest.setTimeout(60000);
 
@@ -390,7 +390,7 @@ guestTest('Guest user blocked — Comment action requires login', {
 });
 
 test('Tip validation — Invalid amount rejected', {
-  tag: ['@AUT-FV-070', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-284', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
@@ -421,7 +421,7 @@ test('Tip validation — Invalid amount rejected', {
 });
 
 test('Tip validation — Currency switch to USD', {
-  tag: ['@AUT-FV-070', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-284', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
@@ -447,7 +447,7 @@ test('Tip validation — Currency switch to USD', {
 });
 
 test('Share creator profile — Share button displays options', {
-  tag: ['@AUT-FV-294', '@profile', '@buyer', '@regression'],
+  tag: ['@AUT-FV-232', '@profile', '@buyer', '@regression'],
 }, async ({ buyerProfilePage }) => {
   test.setTimeout(60000);
 

@@ -3,7 +3,7 @@ import { exploreData } from '@test-data/buyer/explore.data';
 
 test.describe('Buyer Explore', () => {
 test('Explore Page: Search & Creator Discovery', {
-  tag: ['@AUT-FV-175', '@explore', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-055', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ explorePage }) => {
   const data = exploreData.creatorDiscovery;
   let matchingCreatorHrefs: string[] = [];
@@ -50,7 +50,7 @@ test('Explore Page: Search & Creator Discovery', {
 });
 
 test('Explore Page: Popular & Recommended Product Discovery', {
-  tag: ['@AUT-FV-176', '@explore', '@buyer', '@regression'],
+  tag: ['@AUT-FV-056', '@explore', '@buyer', '@regression'],
 }, async ({ explorePage }) => {
   test.setTimeout(90000);
 
@@ -91,7 +91,7 @@ test('Explore Page: Popular & Recommended Product Discovery', {
 });
 
 test('Explore Page: Recent Product Recommendations', {
-  tag: ['@AUT-FV-177', '@explore', '@buyer', '@regression'],
+  tag: ['@AUT-FV-057', '@explore', '@buyer', '@regression'],
 }, async ({ explorePage }) => {
   let recommendations!: Awaited<ReturnType<typeof explorePage.getRecommendedProducts>>;
 
@@ -121,7 +121,7 @@ test('Explore Page: Recent Product Recommendations', {
 });
 
 test('Explore Page: Navigate to full creator and product lists using See More', {
-  tag: ['@AUT-FV-179', '@explore', '@buyer', '@smoke', '@regression'],
+  tag: ['@AUT-FV-059', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ explorePage }) => {
   const data = exploreData.seeMoreNavigation;
 

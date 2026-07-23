@@ -32,8 +32,8 @@ export const tipCheckoutData = {
   currency: "IDR",
   creatorName: "Hendra Rizal",
   paymentMethod: "QRIS",
-  publicNote: "AUT-FV-073 public note",
-  privateNote: "AUT-FV-073 private note",
+  publicNote: "AUT-FV-287 public note",
+  privateNote: "AUT-FV-287 private note",
   votingOption: "Item A",
 } as const;
 

@@ -16,7 +16,7 @@ function getPromotionId(response: unknown): string {
 
 test.describe('Guest promotion redemption', () => {
   test('Promotion: Redeem valid voucher before payment', {
-    tag: ['@AUT-FV-205', '@promotions', '@buyer', '@smoke', '@regression'],
+    tag: ['@AUT-FV-247', '@promotions', '@buyer', '@smoke', '@regression'],
   }, async ({ productPurchasePage, page }) => {
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
@@ -44,7 +44,7 @@ test.describe('Guest promotion redemption', () => {
   });
 
   test('Promotion: Validate order summary and reject invalid vouchers', {
-    tag: ['@AUT-FV-206', '@promotions', '@buyer', '@regression'],
+    tag: ['@AUT-FV-248', '@promotions', '@buyer', '@regression'],
   }, async ({ productPurchasePage, page }) => {
     test.setTimeout(60_000);
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
