@@ -36,6 +36,7 @@ read .agents/skills/reuse-patterns/SKILL.md
 - Do not begin implementation until this inventory is complete.
 - New code requires search evidence that no suitable implementation can be reused or minimally extended.
 - Extract locators if at least two pages use the same element.
+- **Reuse behavior and page-object methods, not fragile selectors.** If an existing locator is CSS/XPath-only (`page.locator('.class')`, raw XPath) or a single-strategy `getByRole`/`getByText` without fallback, classify it as **Extend** and wrap or replace it with `smartLocator` when you touch that page object for this AUT. Do not copy fragile selectors unchanged into new code.
 
 ## Step 2: Pick fixture and page object
 
@@ -65,7 +66,11 @@ read .agents/skills/add-page-object/SKILL.md
 - Use the exact `@<AUT-ID>`, one feature tag, `@buyer` or `@creator`, and one priority tag.
 - Use the descriptive automation title as the test title; keep the Automation ID in the tag.
 - Use descriptive `test.step()` names without `Step N` prefixes.
-- Keep locators in page objects. Prefer `data-testid`, then role, text, label, placeholder, and selector fallbacks. Use `safeClick`, `safeFill`, `safeCheck`, `flakyClick`, or `flakyFill` where appropriate.
+- Keep locators in page objects — never in spec files.
+- **Every new or touched locator MUST use `smartLocator` from `@utils/heal-utils`** with the full fallback chain from `.agents/rules/code-style.md`: `testId` → `role` → `text` → `label` → `placeholder` → `selector` (last resort only).
+- Provide at least two strategies per locator. CSS/XPath alone is forbidden for new locators.
+- For interactions on `smartLocator` elements, use `smartClick` / `smartFill` from `@utils/heal-utils`, or `safeClick` / `safeFill` / `safeCheck` from `@utils/playwright.utils` on standard Playwright locators.
+- When extending an existing page object, upgrade any fragile locator you rely on in this AUT to `smartLocator` in the same edit — do not leave CSS-only locators adjacent to new `smartLocator` ones on the same page.
 
 ## Step 6: Type-check
 
@@ -85,7 +90,7 @@ npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @
 
 ## Step 8: Diagnose failures before changing locators
 
-If the test fails at least twice, capture the actual browser state and inspect the DOM before making another change. Then load `.agents/skills/resolve-flaky-tests/SKILL.md`, apply the smallest fix, and repeat Steps 6 and 7.
+If the test fails at least twice, capture the actual browser state and inspect the DOM before making another change. Then load `.agents/skills/resolve-flaky-tests/SKILL.md`, apply the smallest fix, and repeat Steps 6 and 7. When a locator fix is needed, prefer rewriting with `smartLocator` (add missing strategies from the DOM snapshot) over swapping one fragile selector for another.
 
 ## Verification
 

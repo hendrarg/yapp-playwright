@@ -28,10 +28,15 @@ Before editing any Playwright test, page object, fixture, helper, mock, or test 
 
 Reuse an existing implementation unchanged whenever its behavior matches. If it almost fits, parameterize or minimally extend it. Add a new locator, method, helper, mock, test-data file, or page object only when the search proves no suitable implementation exists. User-referenced AUTs are mandatory implementation references.
 
-If the same locator appears in ≥2 pages, extract it to `src/pages/shared/locators.ts`. If the same step sequence appears in ≥2 tests, extract it to a helper.
+**Exception — fragile locators:** "Reuse unchanged" does **not** apply to CSS/XPath-only locators or single-strategy selectors. Reuse the **page-object method** or **element intent**; when touching that code, classify the locator as **Extend** and wrap or replace it with `smartLocator`. Never propagate `page.locator('.class')` or raw XPath into new tests or locators.
+
+If the same locator appears in ≥2 pages, extract it to `src/pages/shared/locators.ts` using `smartLocator`. If the same step sequence appears in ≥2 tests, extract it to a helper.
 
 ## Selector Priority
-When creating locators, use `smartLocator` from `@utils/heal-utils` with fallback chain. Always provide multiple selector strategies ordered by stability:
+
+**Mandatory for all new and touched locators in page objects.** Spec files must not contain locators.
+
+When creating or editing locators, use `smartLocator` from `@utils/heal-utils` with fallback chain. Always provide multiple selector strategies ordered by stability:
 
 | Priority | Strategy | Stability |
 |----------|----------|-----------|

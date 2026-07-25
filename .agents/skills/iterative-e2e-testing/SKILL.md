@@ -30,7 +30,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
    - Calls `reuse-patterns` to check existing locators/helpers
    - Calls `add-page-object` if page object missing
    - Creates test data files if needed
-   - Generates the spec file
+   - Generates the spec file with **`smartLocator` in every new/touched page-object locator** (see `add-test-spec` Step 5)
    - Runs `tsc --noEmit` and `npx playwright test`
 
 2. **If FAIL → load `resolve-flaky-tests` skill**:
@@ -55,7 +55,7 @@ Round N: Test(s) + reference(s) + helpers + context → run → fix → PASS
 
 4. **Extract helpers**: If step sequences from Round 1 + Round 2 overlap, extract to `src/helpers/{domain}/{action}.ts`.
 
-5. **Check self-healing**: If a locator fails consistently, update the page object to use `smartLocator` from `@utils/heal-utils` with full fallback chain.
+5. **Upgrade locators touched in this round**: Any page-object locator added or edited in Round 2 MUST use `smartLocator` with ≥2 strategies. If reusing a page object that still has CSS-only locators, upgrade those locators when you touch that file — do not wait for a flaky failure.
 
 ---
 

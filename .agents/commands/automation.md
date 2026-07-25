@@ -14,7 +14,8 @@ Run this command inline. If `rg -n "@<AUT-ID>" tests` finds no exact tag, first 
    - Search `tests/` and `src/` with `rg` for reusable steps, locators, methods, helpers, fixtures, mocks, and test data.
    - Classify every required operation as `Reuse`, `Extend`, or `New` in the working conversation.
    - Do not create new code when an existing implementation can be reused or minimally extended.
-5. Generate a reviewable Playwright draft with source-TC annotations.
+   - **Fragile locators (CSS/XPath-only) are always `Extend`, never `Reuse` unchanged** — wrap with `smartLocator` when touching that page object.
+5. Generate a reviewable Playwright draft with source-TC annotations. **All new/touched locators must use `smartLocator`.**
 6. Tag generated tests with the exact Automation ID, such as `@AUT-E2E-008`.
 7. Run `npx tsc --noEmit`, then run only the generated Automation ID once after the latest change. Stop when it passes; do not use `--repeat-each`, a full spec, or a broader suite unless the user explicitly requests it.
 

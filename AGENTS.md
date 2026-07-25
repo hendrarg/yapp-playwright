@@ -31,7 +31,7 @@ Then work inline and finish through this sequence:
 
 1. Load the validated automation context when an AUT ID exists.
 2. Complete the Mandatory Reuse Gate.
-3. Apply the smallest edit to existing files.
+3. Apply the smallest edit to existing files. **Every new or touched page-object locator must use `smartLocator`** — fragile CSS/XPath-only locators are `Extend`, not `Reuse` unchanged (see `.agents/rules/code-style.md` and `add-test-spec` Step 5).
 4. Run `npx tsc --noEmit`.
 5. Run only the target AUT once.
 6. Stop when it passes.

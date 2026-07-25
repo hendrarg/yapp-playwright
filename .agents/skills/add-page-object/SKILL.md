@@ -14,9 +14,11 @@ Use when asked to create a new page object for a buyer or creator page.
 
 3. Generate `src/pages/{domain}/{pascalName}.ts`:
    - Import `type { Page }` and `expect` from `@playwright/test`
+   - Import `smartLocator` from `@utils/heal-utils`
    - Constructor takes `page: Page` and `baseURL: string`
    - `goto()` — navigate to the route
    - `expectLoaded()` — assert URL matches and no `/auth` redirect
+   - **Every locator MUST use `smartLocator(this.page, { ... })` with at least two strategies** (see `.agents/rules/code-style.md`). Never scaffold with bare `page.locator('.class')` or a single `getByRole`/`getByText` without fallback.
 
 4. Update `src/fixtures/page.fixtures.ts`:
    - Add import at the top
@@ -24,6 +26,33 @@ Use when asked to create a new page object for a buyer or creator page.
    - Add fixture factory using the correct baseURL constant
 
 5. Run `npx tsc --noEmit` to verify.
+
+## Locator scaffold
+
+```typescript
+import type { Page } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { smartLocator } from "@utils/heal-utils";
+
+export class RewardsPage {
+  constructor(public readonly page: Page, private readonly baseURL: string) {}
+
+  readonly pageHeading = smartLocator(this.page, {
+    role: "heading",
+    name: "Rewards",
+    text: "Rewards",
+  });
+
+  async goto() {
+    await this.page.goto(new URL("rewards", this.baseURL).toString());
+  }
+
+  async expectLoaded() {
+    await expect(this.page).toHaveURL(/\/rewards/);
+    expect(this.page.url()).not.toContain("/auth");
+  }
+}
+```
 
 ## Example
 

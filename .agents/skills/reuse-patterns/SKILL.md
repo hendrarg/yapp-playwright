@@ -8,9 +8,36 @@ Use when creating a new page object, test spec, or helper. Before writing new co
 
 ---
 
+## 0. Reuse behavior, upgrade fragile locators
+
+**Rule**: Reuse page-object **methods**, **step sequences**, and **element intent** — not fragile selector strings.
+
+| Existing locator | Classification | Action |
+|------------------|----------------|--------|
+| `smartLocator` with ≥2 strategies | **Reuse** | Reference unchanged |
+| Single `getByRole` / `getByText` / `getByLabel` | **Extend** | Wrap with `smartLocator`, keep existing strategy as one fallback |
+| CSS class or XPath only (`page.locator('.flex...')`) | **Extend** | Replace with `smartLocator`; use old selector as last-resort `selector` only |
+| New element, no existing match | **New** | Create with `smartLocator` and ≥2 strategies |
+
+Do not copy CSS-only locators into new page objects or shared locators. When the Mandatory Reuse Gate finds an existing fragile locator on a page you are editing, upgrade it in the same change.
+
+```typescript
+// ❌ Reuse unchanged — forbidden for fragile selectors
+readonly feedPosts = this.page.locator(".flex.flex-row.gap-3");
+
+// ✅ Extend — reuse intent, upgrade locator
+readonly feedPosts = smartLocator(this.page, {
+  testId: "feed-post",
+  role: "article",
+  selector: ".flex.flex-row.gap-3.items-start.cursor-pointer.p-4",
+});
+```
+
+---
+
 ## 1. Reuse locators
 
-**Rule**: If a locator already exists in another page object with the same selector, don't rewrite it — extract to shared or reference it.
+**Rule**: If a locator already exists in another page object for the same element, extract to shared — but always as `smartLocator`, never as a raw selector copy.
 
 ### Pattern: Extract to shared locator file
 
@@ -19,10 +46,16 @@ When the same element (e.g. `nameInput`, `saveButton`, `searchField`) appears ac
 ```typescript
 // src/pages/shared/locators.ts
 import type { Page } from "@playwright/test";
+import { smartLocator } from "@utils/heal-utils";
 
-export const nameInput = (page: Page) => page.getByLabel("Name");
-export const saveButton = (page: Page) => page.getByRole("button", { name: "Save" });
-export const searchField = (page: Page) => page.getByPlaceholder("Search...");
+export const nameInput = (page: Page) =>
+  smartLocator(page, { testId: "name-input", role: "textbox", label: "Name", placeholder: "Enter name" });
+
+export const saveButton = (page: Page) =>
+  smartLocator(page, { testId: "save-button", role: "button", name: "Save", text: "Save" });
+
+export const searchField = (page: Page) =>
+  smartLocator(page, { role: "searchbox", placeholder: "Search...", label: "Search" });
 ```
 
 Then in page objects:
@@ -50,9 +83,9 @@ export class EditPage {
 ### When to extract
 | Condition | Action |
 |-----------|--------|
-| Same locator in 2+ page objects | Move to `src/pages/shared/locators.ts`, reference from both pages |
-| Same locator pattern with different label (e.g. "Name" vs "Email") | Create a parameterized function: `inputByLabel(label: string) => page.getByLabel(label)` |
-| Locator is page-specific | Keep in page object (no extraction) |
+| Same locator in 2+ page objects | Move to `src/pages/shared/locators.ts` as `smartLocator`, reference from both pages |
+| Same locator pattern with different label (e.g. "Name" vs "Email") | Create a parameterized `smartLocator` factory: `(page, label) => smartLocator(page, { label, role: 'textbox' })` |
+| Locator is page-specific | Keep in page object as `smartLocator` (no extraction) |
 
 ---
 
@@ -93,10 +126,11 @@ export async function createProduct(page: Page, name: string) {
 **Rule**: Check existing utils/helpers before creating a new function.
 
 ### Checklist before writing a new function
-1. Does `src/utils/playwright.utils.ts` already have it? (safeClick, safeFill, safeCheck, waitForLoaded, navigateAndWait)
-2. Does `src/utils/flaky-utils.ts` already have it? (flakyClick, flakyFill, flakyGoto, flakyExpectText, retryUntil)
-3. Does any existing helper in `src/helpers/` do the same thing?
-4. Does any page object already have a method with the same logic?
+1. Does `src/utils/heal-utils.ts` already have it? (`smartLocator`, `smartClick`, `smartFill`)
+2. Does `src/utils/playwright.utils.ts` already have it? (safeClick, safeFill, safeCheck, waitForLoaded, navigateAndWait)
+3. Does `src/utils/flaky-utils.ts` already have it? (flakyClick, flakyFill, flakyGoto, flakyExpectText, retryUntil)
+4. Does any existing helper in `src/helpers/` do the same thing?
+5. Does any page object already have a method with the same logic?
 
 ### If function already exists but doesn't quite fit
 - Add a parameter instead of copying + modifying
