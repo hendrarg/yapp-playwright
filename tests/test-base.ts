@@ -90,7 +90,6 @@ test.afterEach(async ({ page }) => {
   if (!page.isClosed()) {
     await page.close();
   }
-  console.log('pass browser close');
 });
 
 export { expect, headless };

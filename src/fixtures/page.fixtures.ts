@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { LoginPage } from "@pages/auth/LoginPage";
 import { ExplorePage } from "@pages/buyer/ExplorePage";
 import { CartPage } from "@pages/buyer/CartPage";
@@ -26,6 +27,21 @@ import { SettingsPage } from "@pages/creator/SettingsPage";
 import { StreamingPage } from "@pages/creator/StreamingPage";
 import { WalletPage } from "@pages/creator/WalletPage";
 import { baseURL, creatorsBaseURL } from "@config/env";
+
+type UseFixture<T> = (fixture: T) => Promise<void>;
+type PageArgs = { page: Page };
+
+function buyerPage<T>(PageClass: new (page: Page, baseURL: string) => T) {
+  return async ({ page }: PageArgs, use: UseFixture<T>) => {
+    await use(new PageClass(page, baseURL));
+  };
+}
+
+function creatorPage<T>(PageClass: new (page: Page, baseURL: string) => T) {
+  return async ({ page }: PageArgs, use: UseFixture<T>) => {
+    await use(new PageClass(page, creatorsBaseURL));
+  };
+}
 
 export type PageFixtures = {
   loginPage: LoginPage;
@@ -58,111 +74,35 @@ export type PageFixtures = {
 };
 
 export const pageFixtures = {
-  loginPage: async ({ page }: any, use: any) => {
+  loginPage: async ({ page }: PageArgs, use: UseFixture<LoginPage>) => {
     await use(new LoginPage(page));
   },
 
-  explorePage: async ({ page }: any, use: any) => {
-    await use(new ExplorePage(page, baseURL));
-  },
+  explorePage: buyerPage(ExplorePage),
+  cartPage: buyerPage(CartPage),
+  productPurchasePage: buyerPage(ProductPurchasePage),
+  buyerFeedsPage: buyerPage(BuyerFeedsPage),
+  libraryPage: buyerPage(LibraryPage),
+  messagePage: buyerPage(MessagePage),
+  buyerProfilePage: buyerPage(BuyerProfilePage),
+  tipPage: buyerPage(TipPage),
+  transactionPage: buyerPage(TransactionPage),
+  buyerMembershipPage: buyerPage(BuyerMembershipPage),
+  tierDetailPage: buyerPage(TierDetailPage),
 
-  cartPage: async ({ page }: any, use: any) => {
-    await use(new CartPage(page, baseURL));
-  },
-
-  productPurchasePage: async ({ page }: any, use: any) => {
-    await use(new ProductPurchasePage(page, baseURL));
-  },
-
-  buyerFeedsPage: async ({ page }: any, use: any) => {
-    await use(new BuyerFeedsPage(page, baseURL));
-  },
-
-  libraryPage: async ({ page }: any, use: any) => {
-    await use(new LibraryPage(page, baseURL));
-  },
-
-  messagePage: async ({ page }: any, use: any) => {
-    await use(new MessagePage(page, baseURL));
-  },
-
-  buyerProfilePage: async ({ page }: any, use: any) => {
-    await use(new BuyerProfilePage(page, baseURL));
-  },
-
-  tipPage: async ({ page }: any, use: any) => {
-    await use(new TipPage(page, baseURL));
-  },
-
-  transactionPage: async ({ page }: any, use: any) => {
-    await use(new TransactionPage(page, baseURL));
-  },
-
-  buyerMembershipPage: async ({ page }: any, use: any) => {
-    await use(new BuyerMembershipPage(page, baseURL));
-  },
-
-  tierDetailPage: async ({ page }: any, use: any) => {
-    await use(new TierDetailPage(page, baseURL));
-  },
-
-  affiliatePage: async ({ page }: any, use: any) => {
-    await use(new AffiliatePage(page, creatorsBaseURL));
-  },
-
-  analyticsPage: async ({ page }: any, use: any) => {
-    await use(new AnalyticsPage(page, creatorsBaseURL));
-  },
-
-  campaignsPage: async ({ page }: any, use: any) => {
-    await use(new CampaignsPage(page, creatorsBaseURL));
-  },
-
-  creatorFeedsPage: async ({ page }: any, use: any) => {
-    await use(new CreatorFeedsPage(page, creatorsBaseURL));
-  },
-
-  membershipPage: async ({ page }: any, use: any) => {
-    await use(new MembershipPage(page, creatorsBaseURL));
-  },
-
-  messagesPage: async ({ page }: any, use: any) => {
-    await use(new MessagesPage(page, creatorsBaseURL));
-  },
-
-  ordersPage: async ({ page }: any, use: any) => {
-    await use(new OrdersPage(page, creatorsBaseURL));
-  },
-
-  productsPage: async ({ page }: any, use: any) => {
-    await use(new ProductsPage(page, creatorsBaseURL));
-  },
-
-  creatorProfilePage: async ({ page }: any, use: any) => {
-    await use(new CreatorProfilePage(page, creatorsBaseURL));
-  },
-
-  promotionsPage: async ({ page }: any, use: any) => {
-    await use(new PromotionsPage(page, creatorsBaseURL));
-  },
-
-  referralPage: async ({ page }: any, use: any) => {
-    await use(new ReferralPage(page, creatorsBaseURL));
-  },
-
-  sessionsPage: async ({ page }: any, use: any) => {
-    await use(new SessionsPage(page, creatorsBaseURL));
-  },
-
-  settingsPage: async ({ page }: any, use: any) => {
-    await use(new SettingsPage(page, creatorsBaseURL));
-  },
-
-  streamingPage: async ({ page }: any, use: any) => {
-    await use(new StreamingPage(page, creatorsBaseURL));
-  },
-
-  walletPage: async ({ page }: any, use: any) => {
-    await use(new WalletPage(page, creatorsBaseURL));
-  },
+  affiliatePage: creatorPage(AffiliatePage),
+  analyticsPage: creatorPage(AnalyticsPage),
+  campaignsPage: creatorPage(CampaignsPage),
+  creatorFeedsPage: creatorPage(CreatorFeedsPage),
+  membershipPage: creatorPage(MembershipPage),
+  messagesPage: creatorPage(MessagesPage),
+  ordersPage: creatorPage(OrdersPage),
+  productsPage: creatorPage(ProductsPage),
+  creatorProfilePage: creatorPage(CreatorProfilePage),
+  promotionsPage: creatorPage(PromotionsPage),
+  referralPage: creatorPage(ReferralPage),
+  sessionsPage: creatorPage(SessionsPage),
+  settingsPage: creatorPage(SettingsPage),
+  streamingPage: creatorPage(StreamingPage),
+  walletPage: creatorPage(WalletPage),
 };
