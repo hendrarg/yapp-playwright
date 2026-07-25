@@ -19,7 +19,8 @@ For task-specific work, also read the matching skill from `.agents/skills/regist
 
 - `.agents/rules/` contains always-on project rules.
 - These rules apply to all code changes, reviews, tests, and automation work.
-- If a task-specific skill conflicts with a rule, follow the rule unless the user explicitly overrides it.
+- If a task-specific skill conflicts with a rule, **follow the rule**. Task skills add procedure; they do not weaken rule requirements unless the user explicitly overrides.
+- Non-overridable without explicit user request: `smartLocator` for new/touched locators, minimum `@AUT-*` test depth, locators in page objects only, API cleanup for seeded data.
 
 ## Fast Path
 

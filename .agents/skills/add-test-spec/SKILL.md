@@ -59,6 +59,51 @@ read .agents/skills/add-page-object/SKILL.md
 - If needed, create `src/test-data/{domain}/{feature}.data.ts`.
 - Update `src/test-data/index.ts`.
 
+## Step 4b: API seeding and cleanup (when pre-created data is required)
+
+Search existing helpers before writing new API calls:
+
+```bash
+rg "createPost|deletePost|depositWebhook|createPromotion" src/helpers/api tests/
+```
+
+| Token | Env var | Owner | Use for |
+|-------|---------|-------|---------|
+| token1 | `YAPP_TEST_ACCESS_TOKEN` | Hendra (`jendraljohn92`) | Hendra-owned products, promotions, buyer media seeding |
+| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding consumed by buyer tests |
+
+**When to seed via API:** the UI under test depends on data that does not exist reliably in the environment (new post, promotion, exclusive content, order state).
+
+**Pattern:**
+
+```typescript
+const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN_2 is required to seed creator post for this test');
+if (!seedToken) return;
+
+const postData = generatePostData({ content: `AUT-FV-077 ${Date.now()}`, visibility: 'public' });
+let postId = '';
+
+try {
+  await test.step('Create public post via API', async () => {
+    ({ postId } = await createPost(page.request, postData, seedToken));
+    expect(postId).toBeDefined();
+  });
+
+  await test.step('Verify post appears in feeds', async () => {
+    // UI steps...
+  });
+} finally {
+  if (postId) await deletePost(page.request, postId, seedToken);
+}
+```
+
+**Rules:**
+- Always clean up mutable seeded data in `finally` when the helper supports delete.
+- Use `test.skip()` with a clear message when a required token is missing — do not throw inside the test body for optional env deps.
+- Use factory data from `@test-data/` — never hardcode business payloads in specs.
+- Prefer existing helpers in `@helpers/api/` over raw `page.request` calls.
+
 ## Step 5: Append the mapped automation to its feature spec
 
 - Append to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
@@ -71,6 +116,19 @@ read .agents/skills/add-page-object/SKILL.md
 - Provide at least two strategies per locator. CSS/XPath alone is forbidden for new locators.
 - For interactions on `smartLocator` elements, use `smartClick` / `smartFill` from `@utils/heal-utils`, or `safeClick` / `safeFill` / `safeCheck` from `@utils/playwright.utils` on standard Playwright locators.
 - When extending an existing page object, upgrade any fragile locator you rely on in this AUT to `smartLocator` in the same edit — do not leave CSS-only locators adjacent to new `smartLocator` ones on the same page.
+
+### Minimum test depth checklist (required before Step 6)
+
+Every generated `@AUT-*` test must pass this checklist:
+
+- [ ] Every covered manual TC ID from the automation context has a matching `test.step()` (or annotation for `AUT-E2E-*`).
+- [ ] **`@AUT-E2E-*`:** full journey from the sheet — smoke-only (`goto` + `expectLoaded`) is **forbidden**.
+- [ ] **`@AUT-FV-*`:** at least one interaction and one assertion beyond `expectLoaded()` per covered TC step.
+- [ ] No locators in the spec file — all UI targeting lives in page objects.
+- [ ] API seeding added when the flow needs pre-created data (Step 4b).
+- [ ] After append, run `npm run audit:tags` — fix any tag gaps before finishing.
+
+For new locators, read `.agents/skills/generate-locators-mcp/SKILL.md` and validate against the browser before writing the spec.
 
 ## Step 6: Type-check
 
@@ -90,7 +148,7 @@ npx playwright test tests/{domain}/{feature}.spec.ts --project=chromium --grep @
 
 ## Step 8: Diagnose failures before changing locators
 
-If the test fails at least twice, capture the actual browser state and inspect the DOM before making another change. Then load `.agents/skills/resolve-flaky-tests/SKILL.md`, apply the smallest fix, and repeat Steps 6 and 7. When a locator fix is needed, prefer rewriting with `smartLocator` (add missing strategies from the DOM snapshot) over swapping one fragile selector for another.
+If the test fails at least twice, capture the actual browser state and inspect the DOM before making another change. Load `.agents/skills/generate-locators-mcp/SKILL.md` when defining or fixing locators, then `.agents/skills/resolve-flaky-tests/SKILL.md` for actionability fixes. Repeat Steps 6 and 7. When a locator fix is needed, prefer rewriting with `smartLocator` (add missing strategies from the DOM snapshot) over swapping one fragile selector for another.
 
 ## Verification
 

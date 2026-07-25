@@ -1,6 +1,6 @@
 ---
 name: tag-compliance
-description: Audit and fix Playwright test tags so every test has TC, feature, role, and priority tags
+description: Audit and fix Playwright test tags so every test has AUT, feature, role, and priority tags
 ---
 
 ## When to use
@@ -9,42 +9,49 @@ Use when adding tests, reviewing test metadata, or fixing missing tags.
 
 ## Rules
 
-Every mapped test must include:
+Every test must include:
 
-- an exact Automation Mapping tag such as `@AUT-E2E-008` or `@AUT-FV-216`
+- an exact Automation Mapping tag: `@AUT-E2E-*` or `@AUT-FV-*` from Google Sheets
 - one feature tag such as `@feeds`
 - one role tag: `@buyer` or `@creator`
 - one priority tag: `@smoke`, `@regression`, or `@sanity`
 
-Existing unmapped auth and creator tests may retain `@TAT-A-*` or `@TAT-C-*` as legacy identifiers. Do not use legacy identifiers for new tests, and do not replace one until a matching Automation Mapping row is validated. Buyer legacy tags are retired.
+`@TAT-*` tags are **retired**. Do not use them. Tests still carrying `@TAT-*` must be remapped to `@AUT-*` via `migrate-unmapped-aut`.
 
 API tests should also include `@api`.
 
 ## Audit
 
-Find tests whose tag list does not include a TC tag:
+Run the tag audit script:
 
 ```bash
-rg -P "tag: \[(?![^\]]*'@(AUT-|TAT-(A|C)-))" tests
+npm run audit:tags
 ```
 
-Find direct Playwright imports in specs:
+Or manually find tests missing an `@AUT-*` tag:
 
 ```bash
-rg "from ['\"]@playwright/test['\"]" tests
+rg -P "tag: \[(?![^\]]*'@AUT-(E2E|FV)-)" tests
+```
+
+Find any remaining retired `@TAT-*` usage:
+
+```bash
+rg -n "@TAT-" tests
 ```
 
 ## Fix Workflow
 
 1. Read the affected spec and nearby tests.
-2. Match the test to an existing Automation Mapping row when possible.
-3. If no active mapping exists and the user wants tag-only cleanup, stop and report the unmapped test instead of inventing an ID.
-4. Re-run the audit command until it returns no missing TC-tag matches.
+2. Match the test to an existing Automation Mapping row via `npm run automation:context -- <AUT-ID>`.
+3. If no active mapping exists, stop and report the unmapped test — do not invent an ID or reuse `@TAT-*`.
+4. Re-run `npm run audit:tags` until clean.
 
 ## Verification
 
 ```bash
-rg -P "tag: \[(?![^\]]*'@(AUT-|TAT-(A|C)-))" tests
+npm run audit:tags
+rg -n "@TAT-" tests   # must return no matches after cleanup
 npx tsc --noEmit
 npx playwright test --list
 ```

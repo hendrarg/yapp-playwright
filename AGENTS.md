@@ -20,6 +20,8 @@ Priority order when instructions conflict:
 3. `.agents/rules/*.md`
 4. The task-specific skill document
 
+**Non-overridable rules:** Task skills may add workflow detail but must **not** weaken requirements from `.agents/rules/` — especially `code-style.md` (`smartLocator`, reuse-gate exceptions) and `testing.md` (minimum test depth, API seeding, locator placement). Only an explicit user override can relax a rule.
+
 ## Fast Path for Scoped Playwright Work
 
 First determine the mode with `rg -n "@<AUT-ID>" tests`:
@@ -53,6 +55,8 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npm run automation:context -- AUT-E2E-002` | Build validated context from Google Sheets |
 | `npx playwright test --ui` | Playwright UI mode |
 | `npx tsc --noEmit` | Type-check only |
+| `npm run audit:tags` | Audit TC, feature, role, priority tags |
+| `npm run audit:locators` | Audit fragile locators in page objects |
 
 ## Architecture
 
@@ -125,9 +129,9 @@ Do not create intermediate Markdown files other than the required short, local t
 
 Every mapped test must include:
 
-- `@<Automation ID>` such as `@AUT-E2E-008` for mapped automation
+- `@<Automation ID>` such as `@AUT-E2E-008` or `@AUT-FV-216` from Automation Mapping
 
-Existing unmapped auth and creator tests may retain legacy `@TAT-A-*` or `@TAT-C-*` identifiers until a validated Automation Mapping row exists. Do not use these legacy identifiers for new tests.
+Do not use `@TAT-*` tags — they are retired. Unmapped tests must be assigned a validated `@AUT-*` ID via Google Sheets before merge.
 
 Every test must also include:
 

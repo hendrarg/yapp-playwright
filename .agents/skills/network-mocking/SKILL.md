@@ -50,6 +50,57 @@ test('real payment integration',
 
 ---
 
+## 1b. Compose with auth (checkout / payment tests)
+
+`mockTest` from `@fixtures/mock.fixtures` does not inject the `at` cookie. Payment and checkout flows need **both** auth and external mocks.
+
+Extend `authTest` (buyer) or `creatorAuthTest` (creator) with mock route options:
+
+```typescript
+import { authTest as baseAuthTest } from '../test-base';
+import { paymentMock } from '@test-data/mocks/payment.data';
+
+type MockOptions = { mockPayments: boolean };
+
+export const checkoutTest = baseAuthTest.extend<MockOptions>({
+  mockPayments: [true, { option: true }],
+
+  page: async ({ page, mockPayments }, use) => {
+    if (mockPayments) {
+      await page.route('**/api/payment*/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(paymentMock.success),
+        })
+      );
+    }
+    await use(page);
+  },
+});
+
+export { expect } from '../test-base';
+```
+
+Usage in a spec:
+
+```typescript
+import { checkoutTest as test, expect } from './checkout.fixture';
+
+test('Buyer completes checkout with mocked payment', {
+  tag: ['@AUT-FV-099', '@checkout', '@buyer', '@smoke'],
+}, async ({ cartPage }) => {
+  await cartPage.goto();
+  // auth injected + payment API mocked
+});
+
+test.use({ mockPayments: false }); // opt into real payment gateway when needed
+```
+
+Place composed fixtures in the spec file or `src/fixtures/` when reused across multiple specs. Load `add-test-spec` for tagging and `generate-locators-mcp` for checkout UI locators.
+
+---
+
 ## 2. Manual route interception
 
 For one-off mocks that don't fit the fixture pattern:

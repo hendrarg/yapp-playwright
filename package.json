@@ -8,7 +8,9 @@
     "test:smoke": "playwright test --project=chromium --grep @smoke",
     "test:regression": "playwright test --project=chromium --grep @regression",
     "test:automation-context": "node --test --test-isolation=none scripts/automation-context.test.mjs",
-    "automation:context": "node scripts/automation-context.mjs"
+    "automation:context": "node scripts/automation-context.mjs",
+    "audit:tags": "node scripts/audit-tags.mjs",
+    "audit:locators": "node scripts/audit-locators.mjs"
   },
   "keywords": [],
   "author": "",
