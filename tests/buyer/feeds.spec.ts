@@ -77,7 +77,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
 
     await test.step('Open creator profile from Following tab post', async () => {
       await buyerNav.goto('feeds');
-      await buyerFeedsPage.openCreatorProfileFromFollowingTab();
+      await buyerFeedsPage.openCreatorProfileFromFollowingTab(postData.content);
       await buyerNav.expectLoaded('profile');
     });
 

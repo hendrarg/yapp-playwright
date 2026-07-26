@@ -111,20 +111,20 @@ export class ProfilePage {
     await expect(this.page.getByRole("dialog", { name: /Share/i })).toBeVisible({ timeout: 5000 });
   }
 
-  // ── Follow / Unfollow ──
-  readonly followButton = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.follow,
-    text: profileLabels.follow,
-  });
-  readonly followingButton = this.page.getByRole("button", { name: /Following/ });
-  readonly unfollowDialog = locatorChain(this.page, { role: "dialog" });
+  // ── Follow / Unfollow (profile header — exclude Feeds tab and sidebar suggestions) ──
+  private get followButton() {
+    return this.main.getByRole("button", { name: profileLabels.follow, exact: true }).first();
+  }
+
+  private get followingButton() {
+    return this.main.getByRole("button", { name: /Following Unfollow/i });
+  }
+
+  readonly unfollowDialog = this.page.getByRole("dialog");
   readonly unfollowConfirmButton = this.unfollowDialog.getByRole("button", { name: "Unfollow" });
 
   async expectFollowingState() {
-    await expect(
-      this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" }),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(this.followingButton).toBeVisible({ timeout: 10000 });
   }
 
   async expectFollowState() {
@@ -140,7 +140,7 @@ export class ProfilePage {
   async clickUnfollow() {
     await this.page.keyboard.press("Escape");
     await expect(this.postDetailDialog).toBeHidden({ timeout: 3000 }).catch(() => {});
-    const btn = this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" });
+    const btn = this.followingButton;
     await btn.scrollIntoViewIfNeeded();
     await btn.hover();
     await this.page.waitForTimeout(1000);
@@ -154,11 +154,7 @@ export class ProfilePage {
   }
 
   // ── Navigation ──
-  readonly backButton = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.back,
-    text: profileLabels.back,
-  });
+  readonly backButton = this.main.getByRole("button", { name: profileLabels.back, exact: true });
 
   async clickBackButton() {
     await safeClick(this.backButton);

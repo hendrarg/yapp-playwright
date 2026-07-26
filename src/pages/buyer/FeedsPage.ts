@@ -11,6 +11,7 @@ import {
   type FeedsTab,
 } from "@test-data/buyer/feeds.data";
 
+const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
 const POST_FALLBACK_SELECTOR = "main div.cursor-pointer.p-4.flex-row";
 const ACTIVE_TAB_COLOR = "text-[#373737]";
 
@@ -44,21 +45,13 @@ export class FeedsPage {
   }
 
   // ── Tabs (rendered as buttons; active tab uses dark text color class) ──
-  readonly followingTab = locatorChain(this.page, {
-    role: "button",
-    name: feedsTabs.following,
-    text: feedsTabs.following,
-  });
-  readonly yourPostTab = locatorChain(this.page, {
-    role: "button",
-    name: feedsTabs.yourPost,
-    text: feedsTabs.yourPost,
-  });
-  readonly exclusiveTab = locatorChain(this.page, {
-    role: "button",
-    name: feedsTabs.exclusive,
-    text: feedsTabs.exclusive,
-  });
+  private tabButton(label: string) {
+    return this.page.getByRole("button", { name: label, exact: true });
+  }
+
+  readonly followingTab = this.page.getByRole("button", { name: feedsTabs.following, exact: true });
+  readonly yourPostTab = this.page.getByRole("button", { name: feedsTabs.yourPost, exact: true });
+  readonly exclusiveTab = this.page.getByRole("button", { name: feedsTabs.exclusive, exact: true });
 
   async switchToTab(tab: FeedsTab) {
     const target =
@@ -68,7 +61,7 @@ export class FeedsPage {
   }
 
   async expectTabActive(label: string) {
-    const tab = locatorChain(this.page, { role: "button", name: label, text: label });
+    const tab = this.tabButton(label);
     await expect(tab).toBeVisible({ timeout: 10000 });
     const ariaSelected = await tab.getAttribute("aria-selected");
     if (ariaSelected === "true") {
@@ -142,16 +135,7 @@ export class FeedsPage {
 
   // ── Feed posts ──
   private get feedPosts(): Locator {
-    const likeButton = locatorChain(this.page, {
-      role: "button",
-      name: feedsLabels.likePost,
-      text: feedsLabels.likePost,
-    });
-    return this.page
-      .locator("main")
-      .locator("div")
-      .filter({ has: likeButton })
-      .or(locatorChain(this.page, { selector: POST_FALLBACK_SELECTOR, role: "button", name: feedsLabels.likePost }));
+    return this.page.locator("main").locator(POST_SELECTOR);
   }
 
   readonly memberOnlyLabel = locatorChain(this.page, {
@@ -290,7 +274,7 @@ export class FeedsPage {
   }
 
   // ── Navigate to creator profile from feed post ──
-  readonly firstPostCreatorName = this.feedPosts.first().locator("p").filter({ hasText: /./ }).first();
+  readonly firstPostCreatorName = this.feedPosts.first().locator("p").first();
 
   async navigateToCreatorProfileFromPost() {
     await safeClick(this.firstPostCreatorName);
@@ -298,18 +282,23 @@ export class FeedsPage {
   }
 
   async navigateToCreatorProfileFromPostContent(content: string) {
-    const creatorName = this.postByContent(content).locator("p").filter({ hasText: /./ }).first();
-    await safeClick(creatorName);
+    const creatorHandle = this.postByContent(content).locator("p").first();
+    await safeClick(creatorHandle);
     await this.waitForPageSettled();
   }
 
   // ── Navigate to creator profile from Following tab post ──
-  async openCreatorProfileFromFollowingTab() {
+  async openCreatorProfileFromFollowingTab(content?: string) {
     await this.switchToTab("following");
     await this.waitForPageSettled();
-    await expect(this.feedPosts.first()).toBeVisible({ timeout: 15000 });
-    const creatorName = this.feedPosts.first().locator("p").filter({ hasText: /./ }).first();
-    await safeClick(creatorName);
+    if (content) {
+      await expect(this.postByContent(content)).toBeVisible({ timeout: 15000 });
+      await this.navigateToCreatorProfileFromPostContent(content);
+    } else {
+      await expect(this.feedPosts.first()).toBeVisible({ timeout: 15000 });
+      await safeClick(this.firstPostCreatorName);
+    }
+    await expect(this.page).not.toHaveURL(/\/feeds\/?$/, { timeout: 15000 });
     await this.waitForPageSettled();
   }
 
@@ -726,16 +715,9 @@ export class FeedsPage {
   readonly guestFollowingEmptySubtext = locatorChain(this.page, {
     text: feedsLabels.guestFollowingEmptySubtext,
   });
-  readonly signInBeforeFollowingDialog = locatorChain(this.page, {
-    role: "dialog",
-    name: feedsLabels.signInBeforeFollowing,
-    text: feedsLabels.signInBeforeFollowing,
-  });
-  readonly signInNowButton = locatorChain(this.page, {
-    role: "button",
-    name: feedsLabels.signInNow,
-    text: feedsLabels.signInNow,
-  });
+  readonly signInBeforeFollowingDialog = this.page
+    .getByRole("dialog")
+    .filter({ hasText: feedsLabels.signInBeforeFollowing });
 
   async expectGuestFollowingEmptyState() {
     await expect(this.guestFollowingEmptyHeading).toBeVisible({ timeout: 10000 });
@@ -748,11 +730,14 @@ export class FeedsPage {
 
   async expectSignInBeforeFollowingDialog() {
     await expect(this.signInBeforeFollowingDialog).toBeVisible({ timeout: 10000 });
-    await expect(this.signInBeforeFollowingDialog.getByText(feedsLabels.signInBeforeFollowing)).toBeVisible();
     await expect(this.signInBeforeFollowingDialog.getByRole("button", { name: feedsLabels.signInNow })).toBeVisible();
   }
 
   async clickSignInNowFromDialog() {
-    await safeClick(this.signInNowButton);
+    const signIn = this.signInBeforeFollowingDialog.getByRole("button", { name: feedsLabels.signInNow, exact: true });
+    await Promise.all([
+      this.page.waitForURL(/\/auth/, { timeout: 15000 }),
+      safeClick(signIn),
+    ]);
   }
 }
