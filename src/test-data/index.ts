@@ -2,7 +2,16 @@ export { buyerUser, creatorUser, otpUser } from "./users";
 export { formLabels, addressTemplate, contactTemplate, paymentTemplate, generateAddress, generateContact } from "./shared/form.data";
 export { cartItemTemplates, checkoutData, searchQueries, exploreFilters, generateCartItem, generateCheckoutData } from "./buyer/cart.data";
 export { feedsTabs, feedsLabels, scrollRounds, scrollDelayMs, type FeedsTab } from "./buyer/feeds.data";
-export { creatorProfile, membershipCreatorProfile, profileTabs, profileLabels, type ProfileTab } from "./buyer/profile.data";
+export {
+  creatorProfile,
+  membershipCreatorProfile,
+  creatorProfiles,
+  resolveCreatorProfile,
+  profileTabs,
+  profileLabels,
+  type CreatorProfileContext,
+  type ProfileTab,
+} from "./buyer/profile.data";
 export { productTemplates, productEditData, generateProduct } from "./creator/product.data";
 export type { ProductInput } from "./creator/product.data";
 export { campaignTemplates, generateCampaign } from "./creator/campaign.data";

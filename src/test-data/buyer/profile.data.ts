@@ -1,7 +1,44 @@
-export const creatorProfile = "hendrarg";
+export type CreatorProfileContext = {
+  handle: string;
+  displayName: string;
+  bioTags: readonly string[];
+  supportHeading: string;
+  tierPricePattern: string;
+  tipSuggestions: { idr: readonly string[] };
+};
 
-/** Creator with membership tiers for @AUT-FV-128 */
-export const membershipCreatorProfile = "davidalfasunarna";
+export const creatorProfiles = {
+  hendrarg: {
+    handle: "hendrarg",
+    displayName: "Hendra Rizal Gunawan",
+    bioTags: ["Software Developer", "Tester"],
+    supportHeading: "Support Hendra Rizal Gunawan",
+    tierPricePattern: "IDR",
+    tipSuggestions: { idr: ["Rp12.000", "Rp50.000", "Rp200.000"] },
+  },
+  davidalfasunarna: {
+    handle: "davidalfasunarna",
+    displayName: "David Alfa Sunarna",
+    bioTags: [],
+    supportHeading: "Support David Alfa Sunarna",
+    tierPricePattern: "IDR",
+    tipSuggestions: { idr: [] },
+  },
+} as const satisfies Record<string, CreatorProfileContext>;
+
+export function resolveCreatorProfile(handle: string): CreatorProfileContext {
+  return creatorProfiles[handle as keyof typeof creatorProfiles] ?? {
+    handle,
+    displayName: handle,
+    bioTags: [],
+    supportHeading: `Support ${handle}`,
+    tierPricePattern: "IDR",
+    tipSuggestions: { idr: [] },
+  };
+}
+
+export const creatorProfile = creatorProfiles.hendrarg.handle;
+export const membershipCreatorProfile = creatorProfiles.davidalfasunarna.handle;
 
 export const profileTabs = {
   shops: "Shops",
@@ -10,8 +47,8 @@ export const profileTabs = {
   support: "Support",
 } as const;
 
+/** Shared profile UI copy — not creator-specific */
 export const profileLabels = {
-  supportHeading: "Support Hendra Rizal Gunawan",
   sendTip: "Send Tip",
   inputTipPlaceholder: "Input tip amount here...",
   idr: "IDR",
@@ -23,9 +60,6 @@ export const profileLabels = {
   exclusiveOnly: "Exclusive Only",
   memberOnly: "Member Only",
   openPostMedia: "Open post media",
-  tipSuggestion: {
-    idr: ["Rp12.000", "Rp50.000", "Rp200.000"],
-  },
   tierPricePattern: "IDR",
 } as const;
 

@@ -3,17 +3,28 @@ import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
 import {
-  creatorProfile,
   profileTabs,
   profileLabels,
+  resolveCreatorProfile,
+  type CreatorProfileContext,
   type ProfileTab,
 } from "@test-data/buyer/profile.data";
 
 const ACTIVE_TAB_CLASS = "primary-text-color";
 const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
+const BUYER_APP_ROUTES = new Set([
+  "feeds",
+  "explore",
+  "cart",
+  "library",
+  "messages",
+  "profile",
+  "auth",
+]);
 
 export class ProfilePage {
   private auth = trackAuthToken(this.page);
+  private creator: CreatorProfileContext | null = null;
 
   constructor(public readonly page: Page, private readonly baseURL: string) {}
 
@@ -21,10 +32,36 @@ export class ProfilePage {
     return this.page.locator("main");
   }
 
+  private get creatorContext(): CreatorProfileContext {
+    if (!this.creator) {
+      throw new Error(
+        'ProfilePage creator context is not set. Use goto(handle), buyerNav.open("profile", { handle }), or navigate to a creator profile URL first.',
+      );
+    }
+    return this.creator;
+  }
+
+  setCreator(handle: string) {
+    this.creator = resolveCreatorProfile(handle);
+  }
+
+  private syncCreatorFromUrl() {
+    const segment = new URL(this.page.url()).pathname.replace(/^\//, "").split("/")[0];
+    if (!segment || BUYER_APP_ROUTES.has(segment)) {
+      return;
+    }
+    this.setCreator(segment);
+  }
+
   // ── Navigation ──
   // No-arg goto → buyer's own profile (/profile).
   // Pass a creator handle to open a creator profile (/{handle}).
   async goto(handle?: string) {
+    if (handle) {
+      this.setCreator(handle);
+    } else {
+      this.creator = null;
+    }
     const path = handle ?? "profile";
     await this.page.goto(new URL(path, this.baseURL).toString());
     await this.page.waitForLoadState("networkidle");
@@ -33,6 +70,7 @@ export class ProfilePage {
 
   async expectLoaded() {
     expect(this.page.url()).not.toContain("/auth");
+    this.syncCreatorFromUrl();
   }
 
   async expectAuthenticated() {
@@ -40,12 +78,15 @@ export class ProfilePage {
   }
 
   // ── Creator profile header ──
-  readonly profilePicture = this.page.getByRole("img", { name: "Hendra Rizal Gunawan" });
+  private get profilePicture() {
+    return this.page.getByRole("img", { name: this.creatorContext.displayName });
+  }
 
   async expectProfileHeaderVisible() {
     await expect(this.profilePicture).toBeVisible({ timeout: 10000 });
-    await expect(this.main.getByText("Software Developer", { exact: true }).first()).toBeVisible({ timeout: 10000 });
-    await expect(this.main.getByText("Tester", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    for (const tag of this.creatorContext.bioTags) {
+      await expect(this.main.getByText(tag, { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    }
   }
 
   // ── Share profile ──
@@ -62,14 +103,13 @@ export class ProfilePage {
 
   // ── Follow / Unfollow ──
   readonly followButton = this.page.getByRole("button", { name: "Follow", exact: true });
-  // Button shows "Following" + "Unfollow" when followed (accessible name = "Following Unfollow")
   readonly followingButton = this.page.getByRole("button", { name: /Following/ });
   readonly unfollowDialog = this.page.getByRole("dialog");
   readonly unfollowConfirmButton = this.unfollowDialog.getByRole("button", { name: "Unfollow" });
 
   async expectFollowingState() {
     await expect(
-      this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" })
+      this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" }),
     ).toBeVisible({ timeout: 10000 });
   }
 
@@ -86,14 +126,11 @@ export class ProfilePage {
   async clickUnfollow() {
     await this.page.keyboard.press("Escape");
     await expect(this.page.getByRole("dialog", { name: "Post image modal" })).toBeHidden({ timeout: 3000 }).catch(() => {});
-    // Hover the following button to reveal the Unfollow text
     const btn = this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" });
     await btn.scrollIntoViewIfNeeded();
     await btn.hover();
     await this.page.waitForTimeout(1000);
-    // Click the button — hovering reveals "Unfollow" text, click triggers dialog
     await safeClick(btn);
-    // Check if confirmation dialog appeared
     const dialogVisible = await this.unfollowDialog.isVisible({ timeout: 5000 }).catch(() => false);
     if (dialogVisible) {
       await safeClick(this.unfollowConfirmButton);
@@ -135,7 +172,9 @@ export class ProfilePage {
   }
 
   // ── Shops tab: product cards ──
-  readonly productCards = this.main.locator(`a[href^="/${creatorProfile}/product/"]`);
+  private get productCards() {
+    return this.main.locator(`a[href^="/${this.creatorContext.handle}/product/"]`);
+  }
 
   async expectShopsTabContent() {
     await this.expectTabActive("shops");
@@ -147,7 +186,11 @@ export class ProfilePage {
   // ── Membership section (right column, visible on every tab) ──
   readonly membershipHeading = this.main.getByRole("paragraph").filter({ hasText: profileLabels.membership });
   readonly showMoreButton = this.main.getByRole("button", { name: profileLabels.showMore, exact: true });
-  readonly tierCards = this.main.locator(`text=/${profileLabels.tierPricePattern} .* \\/ month/`);
+
+  private get tierCards() {
+    const pattern = this.creator?.tierPricePattern ?? profileLabels.tierPricePattern;
+    return this.main.locator(`text=/${pattern} .* \\/ month/`);
+  }
 
   async expectMembershipSectionVisible() {
     await expect(this.membershipHeading).toBeVisible({ timeout: 10000 });
@@ -158,7 +201,10 @@ export class ProfilePage {
   }
 
   // ── Support section (right column) — tip form ──
-  readonly supportSectionHeading = this.main.getByText(profileLabels.supportHeading, { exact: true }).first();
+  private get supportSectionHeading() {
+    return this.main.getByText(this.creatorContext.supportHeading, { exact: true }).first();
+  }
+
   readonly tipCurrencyGroup = this.main.getByRole("group", { name: "Tip currency" });
   readonly idrButton = this.main.getByRole("button", { name: profileLabels.idr, exact: true });
   readonly usdtButton = this.main.getByRole("button", { name: profileLabels.usdt, exact: true });
@@ -185,8 +231,12 @@ export class ProfilePage {
     await this.expectSendTipDisabled();
   }
 
-  async selectTipSuggestion(amountLabel: string = profileLabels.tipSuggestion.idr[1]) {
-    await safeClick(this.main.getByRole("button", { name: amountLabel, exact: true }));
+  async selectTipSuggestion(amountLabel?: string) {
+    const label = amountLabel ?? this.creatorContext.tipSuggestions.idr[1];
+    if (!label) {
+      throw new Error(`No IDR tip suggestion configured for creator "${this.creatorContext.handle}"`);
+    }
+    await safeClick(this.main.getByRole("button", { name: label, exact: true }));
     await this.page.waitForTimeout(500);
   }
 
@@ -216,7 +266,7 @@ export class ProfilePage {
     await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
-  // ── Links tab ── (renders campaign/link cards with images + headings)
+  // ── Links tab ──
   readonly linkCards = this.main.locator('a[href^="/campaign/"]');
 
   async expectLinksTabContent() {
@@ -259,6 +309,7 @@ export class ProfilePage {
   readonly creatorFirstUnlikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Unlike post" });
   readonly creatorFirstLikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Like post" });
   readonly creatorFirstLikeCount = this.creatorFeedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+
   private creatorPostByContent(content: string): Locator {
     return this.creatorFeedPosts.filter({ hasText: content }).first();
   }
@@ -286,6 +337,7 @@ export class ProfilePage {
     await waitForLoaded(this.page);
     await expect(post.getByRole("button", { name: "Like post" })).toBeVisible({ timeout: 10000 });
   }
+
   readonly memberOnlyLabel = this.main.getByText(profileLabels.memberOnly, { exact: true });
   readonly publicImagePosts = this.main
     .getByRole("button", { name: profileLabels.openPostMedia })

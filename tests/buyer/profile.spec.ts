@@ -3,7 +3,6 @@ import { depositWebhook } from '@helpers/api/webhook';
 import {
   creatorProfile,
   membershipCreatorProfile,
-  profileLabels,
   tipAmountBoundary,
   tipCheckoutData,
 } from '@test-data/buyer/profile.data';
@@ -32,7 +31,7 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
   await test.step('View Support creator section + tip form interactions', async () => {
     await buyerProfilePage.expectSupportSectionVisible();
     await buyerProfilePage.expectSendTipDisabled();
-    await buyerProfilePage.selectTipSuggestion(profileLabels.tipSuggestion.idr[1]);
+    await buyerProfilePage.selectTipSuggestion();
     await buyerProfilePage.expectSendTipEnabled();
   });
 
@@ -82,7 +81,7 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
   });
 
   await test.step('Select tip suggestion Rp50.000 and verify Send Tip enabled', async () => {
-    await buyerProfilePage.selectTipSuggestion(profileLabels.tipSuggestion.idr[1]);
+    await buyerProfilePage.selectTipSuggestion();
     await buyerProfilePage.expectSendTipEnabled();
   });
 
