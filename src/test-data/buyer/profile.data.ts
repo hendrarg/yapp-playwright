@@ -10,9 +10,9 @@ export type CreatorProfileContext = {
 export const creatorProfiles = {
   hendrarg: {
     handle: "hendrarg",
-    displayName: "Hendra Rizal Gunawan",
+    displayName: "Hendra Rizal",
     bioTags: ["Software Developer", "Tester"],
-    supportHeading: "Support Hendra Rizal Gunawan",
+    supportHeading: "Support Hendra Rizal",
     tierPricePattern: "IDR",
     tipSuggestions: { idr: ["Rp12.000", "Rp50.000", "Rp200.000"] },
   },
@@ -94,6 +94,9 @@ export const tipCheckoutData = {
   amount: "50000",
   displayAmount: "Rp50.000",
   currency: "IDR",
+  usdtCurrency: "USDT",
+  usdtAmount: "50",
+  usdtDisplayAmount: "USD 50",
   creatorName: "Hendra Rizal",
   paymentMethod: "QRIS",
   publicNote: "AUT-FV-287 public note",
@@ -104,6 +107,7 @@ export const tipCheckoutData = {
 export const tipAmountBoundary = {
   belowMinimum: "9999",
   minimum: "10000",
+  requiredError: "Amount is required",
   minimumError: "Minimum amount is Rp10.000",
 } as const;
 

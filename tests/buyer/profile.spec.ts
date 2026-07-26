@@ -363,55 +363,54 @@ guestTest('Guest user blocked — Comment action requires login', {
 });
 
 test('Tip validation — Invalid amount rejected', {
-  tag: ['@AUT-FV-284', '@profile', '@tip', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerProfilePage, tipPage }) => {
+  tag: ['@AUT-FV-284', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ buyerNav, tipPage }) => {
   test.setTimeout(60000);
 
-  await test.step('Open profile, verify support section and Send Tip disabled', async () => {
-    await buyerNav.open('profile', { handle: creatorProfile });
-    await buyerProfilePage.expectAuthenticated();
-    await buyerProfilePage.expectSupportTipFormInitialState();
-  });
-
-  await test.step('Enter 0 amount, verify button enabled and navigate to tip page', async () => {
-    await buyerProfilePage.fillTipAmount('0');
-    await buyerProfilePage.expectSendTipEnabled();
-    await buyerProfilePage.submitTip();
+  await test.step('Open tip amount form', async () => {
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
+    await tipPage.selectCurrency(tipCheckoutData.currency);
   });
 
-  await test.step('Validate amount is required on tip page', async () => {
+  await test.step('Reject empty amount', async () => {
+    await tipPage.clearAmount();
+    await tipPage.expectAmountError(tipAmountBoundary.requiredError);
+  });
+
+  await test.step('Reject zero amount', async () => {
     await tipPage.fillAmount('0');
-    await tipPage.expectAmountError('Amount is required');
+    await tipPage.expectAmountError(tipAmountBoundary.requiredError);
   });
 
-  await test.step('Validate minimum amount on tip page', async () => {
-    await tipPage.fillAmount('1');
-    await tipPage.expectAmountError('Minimum amount is Rp10.000');
+  await test.step('Reject amount below minimum', async () => {
+    await tipPage.fillAmount(tipAmountBoundary.belowMinimum);
+    await tipPage.expectAmountError(tipAmountBoundary.minimumError);
   });
 });
 
-test('Tip validation — Currency switch to USD', {
-  tag: ['@AUT-FV-290', '@profile', '@tip', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerProfilePage, tipPage }) => {
+test('Tip validation — Currency switch to USDT', {
+  tag: ['@AUT-FV-290', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ buyerNav, tipPage }) => {
   test.setTimeout(60000);
 
-  await test.step('Open profile, verify support section with currency selector', async () => {
-    await buyerNav.open('profile', { handle: creatorProfile });
-    await buyerProfilePage.expectAuthenticated();
-    await buyerProfilePage.expectSupportTipFormInitialState();
-  });
-
-  await test.step('Select USDT currency and verify', async () => {
-    await buyerProfilePage.selectUsdtCurrency();
-    await expect(buyerProfilePage.usdtButton).toBeVisible({ timeout: 5000 });
-  });
-
-  await test.step('Enter valid amount, verify button enabled and submit', async () => {
-    await buyerProfilePage.fillTipAmount('50');
-    await buyerProfilePage.expectSendTipEnabled();
-    await buyerProfilePage.submitTip();
+  await test.step('Open tip amount form', async () => {
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
+  });
+
+  await test.step('Switch currency between IDR and USDT — only one active', async () => {
+    await tipPage.selectCurrency(tipCheckoutData.currency);
+    await tipPage.expectOnlyCurrencyActive(tipCheckoutData.currency, tipCheckoutData.usdtCurrency);
+    await tipPage.selectCurrency(tipCheckoutData.usdtCurrency);
+    await tipPage.expectOnlyCurrencyActive(tipCheckoutData.usdtCurrency, tipCheckoutData.currency);
+  });
+
+  await test.step('Enter valid USDT amount and verify tip form is ready', async () => {
+    await tipPage.fillAmount(tipCheckoutData.usdtAmount);
+    await tipPage.expectOnlyCurrencyActive(tipCheckoutData.usdtCurrency, tipCheckoutData.currency);
+    await expect(tipPage.amountInput).toHaveValue(tipCheckoutData.usdtDisplayAmount);
+    await tipPage.expectSendTipEnabled();
   });
 });
 

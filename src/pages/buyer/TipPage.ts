@@ -26,6 +26,7 @@ export class TipPage {
     const path = amount ? `${handle}/tip?amount=${amount}` : `${handle}/tip`;
     await this.page.goto(new URL(path, this.baseURL).toString(), { waitUntil: "domcontentloaded" });
     await waitForLoaded(this.page);
+    await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
   }
 
   async expectLoaded() {
@@ -33,18 +34,17 @@ export class TipPage {
   }
 
   // ── Tip page form ──
-  readonly title = locatorChain(this.page, {
-    role: "heading",
-    name: tipLabels.sendTip,
-    text: tipLabels.sendTip,
-    selector: "span:has-text('Send Tip')",
-  });
+  // FLAKY_FIX: no bare getByText("Send Tip") — also matches the submit button
+  readonly title = this.page
+    .getByRole("heading", { name: tipLabels.sendTip, exact: true })
+    .or(this.page.locator("span.font-bold").filter({ hasText: new RegExp(`^${tipLabels.sendTip}$`) }));
 
-  readonly amountInput = locatorChain(this.page, {
-    role: "textbox",
-    name: tipLabels.inputAmount,
-    placeholder: tipLabels.inputAmount,
-  });
+  // tip-amount-input is the controlled field (tabindex=-1); role/placeholder alone can miss updates
+  readonly amountInput = this.page
+    .locator("input.tip-amount-input")
+    .or(this.page.getByRole("textbox", { name: tipLabels.inputAmount, exact: true }))
+    .or(this.page.getByPlaceholder(tipLabels.inputAmount, { exact: true }))
+    .first();
 
   readonly paymentMethod = locatorChain(this.page, {
     role: "combobox",
@@ -185,19 +185,72 @@ export class TipPage {
     await expect(this.sendButton).toBeVisible();
   }
 
+  private async focusAmountInput() {
+    await expect(this.amountInput).toBeVisible({ timeout: 10000 });
+    await this.amountInput.scrollIntoViewIfNeeded();
+    await this.amountInput.click({ force: true });
+    await this.amountInput.focus();
+  }
+
+  private async commitAmountInput() {
+    // Blur via Tab so React validation runs (native blur() is flaky on this controlled input)
+    await this.amountInput.press("Tab");
+    await this.page.waitForTimeout(400);
+  }
+
+  async clearAmount() {
+    // Seed via suggestion or typing — clearing an already-empty field skips validation
+    await this.focusAmountInput();
+    const suggestion = this.page.getByRole("button", { name: /^Rp[\d.]+$/ }).first();
+    if (await suggestion.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await safeClick(suggestion);
+      await this.page.waitForTimeout(300);
+      await this.focusAmountInput();
+    } else {
+      await this.amountInput.pressSequentially("2", { delay: 40 });
+    }
+    await this.amountInput.press("ControlOrMeta+A");
+    await this.amountInput.press("Backspace");
+    await this.commitAmountInput();
+  }
+
   async fillAmount(value: string) {
-    await this.amountInput.fill(value);
-    await this.page.waitForTimeout(300);
+    await this.focusAmountInput();
+    await this.amountInput.press("ControlOrMeta+A");
+    await this.amountInput.press("Backspace");
+    if (value !== "") {
+      await this.amountInput.pressSequentially(value, { delay: 40 });
+    }
+    await this.commitAmountInput();
+  }
+
+  // FLAKY_FIX: no text fallback — getByText("IDR") matches inner <span> inside the tab
+  private currencyTab(currency: string) {
+    return this.page
+      .getByRole("tab", { name: currency, exact: true })
+      .or(this.page.locator(`[role="tab"]:has(:text-is("${currency}"))`));
   }
 
   async selectCurrency(currency: string) {
-    const currencyTab = locatorChain(this.page, { role: "tab", name: currency, text: currency });
+    const currencyTab = this.currencyTab(currency);
     await safeClick(currencyTab);
     await expect(currencyTab).toHaveAttribute("aria-selected", "true");
   }
 
+  async expectOnlyCurrencyActive(active: string, inactive: string) {
+    await expect(this.currencyTab(active)).toHaveAttribute("aria-selected", "true");
+    await expect(this.currencyTab(inactive)).toHaveAttribute("aria-selected", "false");
+  }
+
   async expectAmountError(message: string) {
-    await expect(locatorChain(this.page, { text: message, role: "alert", name: message })).toBeVisible({ timeout: 5000 });
+    // Poll main copy first — error text is plain, not always role=alert
+    await expect
+      .poll(async () => (await this.page.locator("main").innerText()).includes(message), {
+        timeout: 10000,
+        message: `expected amount error visible: ${message}`,
+      })
+      .toBe(true);
+    await expect(this.page.getByText(message, { exact: true })).toBeVisible({ timeout: 5000 });
   }
 
   async selectVotingOptionIfPresent(optionName: string) {

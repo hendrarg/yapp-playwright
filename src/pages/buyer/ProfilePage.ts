@@ -240,11 +240,19 @@ export class ProfilePage {
     name: profileLabels.inputTipPlaceholder,
   });
   readonly tipSuggestions = this.main.getByRole("button", { name: /^Rp[\d.]+$/ });
-  readonly sendTipButton = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.sendTip,
-    text: profileLabels.sendTip,
-  });
+  // FLAKY_FIX: scope to tip form — page also renders a sticky duplicate "Send Tip" CTA
+  private get tipFormRoot() {
+    return this.main
+      .locator("div")
+      .filter({ has: this.page.getByRole("group", { name: "Tip currency" }) })
+      .filter({ has: this.page.getByPlaceholder(profileLabels.inputTipPlaceholder) })
+      .first();
+  }
+  private get sendTipButton() {
+    return this.tipFormRoot
+      .getByRole("button", { name: profileLabels.sendTip, exact: true })
+      .or(this.tipFormRoot.locator(`button:has(:text-is("${profileLabels.sendTip}"))`));
+  }
 
   async expectSupportSectionVisible() {
     await expect(this.supportSectionHeading).toBeVisible({ timeout: 10000 });

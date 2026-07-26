@@ -252,10 +252,12 @@ export class FeedsPage {
 
   // ── Post detail (click post card to open detail page) ──
   readonly firstPostCard = this.feedPosts.first();
+  // FLAKY_FIX: no text fallback — getByText("Back") matches inner <p>, not the button
   readonly postDetailBackButton = locatorChain(this.page, {
     role: "button",
     name: feedsLabels.back,
-    text: feedsLabels.back,
+    exact: true,
+    selector: `button:has(:text-is("${feedsLabels.back}"))`,
   });
 
   async openFirstPostDetail() {
@@ -458,10 +460,12 @@ export class FeedsPage {
     name: feedsLabels.writeComment,
     placeholder: feedsLabels.writeComment,
   });
+  // FLAKY_FIX: exact:true — role name "Post" substring-matched aria-label "Like post"
   readonly postCommentButton = locatorChain(this.page, {
     role: "button",
     name: feedsLabels.postComment,
-    text: feedsLabels.postComment,
+    exact: true,
+    selector: `button:has(:text-is("${feedsLabels.postComment}"))`,
   });
   readonly commentCountButton = this.page.getByRole("button", { name: /^\d+$/ }).first();
   readonly feedCommentCountButton = this.feedPosts.first().getByRole("button", { name: /^\d+$/ }).first();

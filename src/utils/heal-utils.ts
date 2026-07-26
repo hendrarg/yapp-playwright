@@ -28,6 +28,8 @@ export type StrategyMeta = {
   testId?: string;
   role?: string;
   name?: string;
+  /** When true, role/name matching uses exact accessible name (avoids "Post" matching "Like post"). */
+  exact?: boolean;
   text?: string;
   label?: string;
   placeholder?: string;
@@ -85,8 +87,11 @@ export function buildSmartStrategies(page: Page, meta: StrategyMeta): Locator[] 
   if (meta.role) {
     strategies.push({
       priority: p++,
-      locator: page.getByRole(meta.role as any, { name: meta.name }),
-      desc: `role:${meta.role} name:${meta.name ?? ""}`,
+      locator: page.getByRole(meta.role as any, {
+        name: meta.name,
+        ...(meta.exact !== undefined ? { exact: meta.exact } : {}),
+      }),
+      desc: `role:${meta.role} name:${meta.name ?? ""}${meta.exact ? " exact" : ""}`,
     });
   }
   if (meta.text) {
@@ -138,8 +143,11 @@ function buildStrategyChain(
   if (meta.role) {
     strategies.push({
       priority: p++,
-      locator: page.getByRole(meta.role as any, { name: meta.name }),
-      desc: `role:${meta.role} name:${meta.name ?? ""}`,
+      locator: page.getByRole(meta.role as any, {
+        name: meta.name,
+        ...(meta.exact !== undefined ? { exact: meta.exact } : {}),
+      }),
+      desc: `role:${meta.role} name:${meta.name ?? ""}${meta.exact ? " exact" : ""}`,
     });
   }
   if (meta.text) {
