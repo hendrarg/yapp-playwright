@@ -21,6 +21,22 @@ test('authenticated test...', ...)    // authTest aliased
 guestTest('guest/FV test...', ...)     // plain test for no-auth
 ```
 
+### Buyer navigation (`buyerNav`)
+
+`authTest` includes a `buyerNav` fixture for route-based open/goto without repeating page-object boilerplate:
+
+```typescript
+await buyerNav.open('feeds');
+await buyerNav.open('profile', { handle: 'hendrarg' });
+await buyerNav.open('sendTip', { handle: 'hendrarg', amount: '50000' });
+await buyerNav.goto('membership', { handle: 'hendrarg' });
+await buyerNav.expectLoaded('membership');
+```
+
+Routes: `feeds`, `explore`, `cart`, `library`, `messages` (`direct`), `profile`, `tip` (`sendTip`), `membership`, `tierDetail`, `transaction`, `productPurchase`.
+
+Page-specific assertions (`expectAuthenticated`, tab checks, form interactions) stay on the page object fixture.
+
 ## Test Structure
 - Every test must use a page object fixture: `pageObject.goto()` + `pageObject.expectLoaded()`
 - Add meaningful interactions beyond navigation — see **Minimum test depth** below

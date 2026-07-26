@@ -1,4 +1,5 @@
 import type { PageFixtures } from '../src/fixtures/page.fixtures';
+import type { BuyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 import type { BrowserContext } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
@@ -8,6 +9,7 @@ import { isTokenExpired } from '../src/helpers/auth/token-utils';
 import { signInWithEmailOtp } from '../src/helpers/auth/otp-login';
 import { saveTokenToEnv } from '../src/helpers/auth/save-token';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
+import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
@@ -17,6 +19,8 @@ type MyFixtures = PageFixtures;
 export const test = base.extend<MyFixtures>({
   ...pageFixtures,
 });
+
+type AuthFixtures = PageFixtures & BuyerNavFixtures;
 
 /**
  * Ensures YAPP_TEST_ACCESS_TOKEN is valid. If expired (JWT exp check), runs the
@@ -58,7 +62,8 @@ async function ensureFreshToken(context: BrowserContext): Promise<string> {
   return token;
 }
 
-export const authTest = test.extend({
+export const authTest = test.extend<AuthFixtures>({
+  ...buyerNavFixtures,
   context: [async ({ context }, use) => {
     const token = await ensureFreshToken(context);
     await loginWithToken(context, token, baseURL);
