@@ -131,7 +131,7 @@ Every mapped test must include:
 
 - `@<Automation ID>` such as `@AUT-E2E-008` or `@AUT-FV-216` from Automation Mapping
 
-Do not use `@TAT-*` tags — they are retired. Unmapped tests must be assigned a validated `@AUT-*` ID via Google Sheets before merge.
+Unmapped tests must be assigned a validated `@AUT-*` ID via Google Sheets before merge.
 
 Every test must also include:
 

@@ -5,15 +5,14 @@ description: Assign @AUT-* tags and business flows to smoke tests that lack Auto
 
 ## When to use
 
-Use when a spec has no `@AUT-E2E-*` or `@AUT-FV-*` tag, or still carries a retired `@TAT-*` tag.
+Use when a spec has no `@AUT-E2E-*` or `@AUT-FV-*` tag.
 
 Do **not** invent an `@AUT-*` ID. The Automation Mapping row must exist in Google Sheets before migration starts.
 
 ## Workflow
 
-1. Find unmapped or retired-tag tests:
+1. Find unmapped tests:
    ```bash
-   rg -n "@TAT-" tests
    rg -P "tag: \[(?![^\]]*'@AUT-(E2E|FV)-)" tests
    ```
 
@@ -21,14 +20,13 @@ Do **not** invent an `@AUT-*` ID. The Automation Mapping row must exist in Googl
    ```bash
    npm run automation:context -- <AUT-ID>
    ```
-   If no mapping exists, stop and report — do not leave the test untagged or reuse `@TAT-*`.
+   If no mapping exists, stop and report — do not leave the test untagged.
 
 3. Read `.agents/skills/add-test-spec/SKILL.md` and follow the full generate workflow for that `@AUT-ID`.
 
 4. Replace the unmapped test in place (same spec file) or merge into an existing `@AUT-*` test if the mapping already partially exists.
 
 5. Update tags:
-   - Remove any `@TAT-*` tag (retired)
    - Add exact `@AUT-E2E-*` or `@AUT-FV-*` from the sheet
    - Keep feature, role, and priority tags
 
@@ -46,13 +44,12 @@ Do **not** invent an `@AUT-*` ID. The Automation Mapping row must exist in Googl
 ## Migration checklist
 
 - [ ] Automation Mapping row validated via `automation:context`
-- [ ] Retired `@TAT-*` tag removed (if present)
 - [ ] Exact `@AUT-*` tag added
 - [ ] Covered TC IDs represented as `test.step()` calls
 - [ ] Minimum test depth met (see `add-test-spec` Step 5 checklist)
 - [ ] API seeding added if the flow needs pre-created data (see `add-test-spec` Step 4b)
 - [ ] Locators use `smartLocator` for every new/touched element
-- [ ] `npm run audit:tags` passes with no `@TAT-*` remaining
+- [ ] `npm run audit:tags` passes
 
 ## Example
 

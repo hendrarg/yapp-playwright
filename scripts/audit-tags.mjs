@@ -5,12 +5,11 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const TESTS_DIR = path.join(ROOT, 'tests');
 
 const TC_TAG = /@AUT-(?:E2E|FV)-\d+/;
-const RETIRED_TAT_TAG = /@TAT-/;
 const FEATURE_TAGS = [
   '@cart', '@checkout', '@auth', '@membership', '@products', '@feeds', '@profile',
   '@messages', '@wallet', '@settings', '@analytics', '@campaigns', '@streaming',
   '@affiliate', '@referral', '@promotions', '@sessions', '@network-mock', '@payment',
-  '@explore', '@follow', '@library', '@chart', '@message',
+  '@explore', '@follow', '@library', '@chart', '@message', '@like', '@comment', '@media', '@tip',
 ];
 const ROLE_TAGS = ['@buyer', '@creator'];
 const PRIORITY_TAGS = ['@smoke', '@regression', '@sanity'];
@@ -65,9 +64,6 @@ for (const file of files) {
     const tagStrings = [...block.tags.matchAll(/'(@[^']+)'|"(@[^"]+)"/g)].map((m) => m[1] ?? m[2]);
     const issues = [];
 
-    if (tagStrings.some((tag) => RETIRED_TAT_TAG.test(tag))) {
-      issues.push('retired @TAT-* tag — replace with @AUT-* from Automation Mapping');
-    }
     if (!tagStrings.some((tag) => TC_TAG.test(tag))) {
       issues.push('missing @AUT-E2E-* or @AUT-FV-* tag');
     }
@@ -77,7 +73,6 @@ for (const file of files) {
         (!ROLE_TAGS.includes(t) &&
           !PRIORITY_TAGS.includes(t) &&
           !TC_TAG.test(t) &&
-          !RETIRED_TAT_TAG.test(t) &&
           t !== '@flaky' &&
           t !== '@slow' &&
           t !== '@api'),
@@ -96,7 +91,7 @@ for (const file of files) {
 }
 
 if (exitCode === 0) {
-  console.log('All spec tag blocks include @AUT-*, feature, role, and priority tags. No retired @TAT-* tags.');
+  console.log('All spec tag blocks include @AUT-*, feature, role, and priority tags.');
 }
 
 process.exit(exitCode);

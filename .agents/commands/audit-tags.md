@@ -14,6 +14,4 @@ Every `tag: [...]` block in spec files must include:
 - one role tag: `@buyer` or `@creator`
 - one priority tag: `@smoke`, `@regression`, or `@sanity`
 
-`@TAT-*` tags are retired and will fail the audit. Remap via `.agents/skills/migrate-unmapped-aut/SKILL.md`.
-
 For fixes, read `.agents/skills/tag-compliance/SKILL.md`. Do not invent `@AUT-*` IDs without a validated Automation Mapping row.

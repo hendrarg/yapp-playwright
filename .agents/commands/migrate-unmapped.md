@@ -2,12 +2,11 @@
 description: Assign @AUT-* tags and business flows to unmapped smoke tests
 ---
 
-Use when specs lack `@AUT-E2E-*` / `@AUT-FV-*` tags or still carry retired `@TAT-*` tags.
+Use when specs lack `@AUT-E2E-*` / `@AUT-FV-*` tags.
 
 1. Read `.agents/skills/migrate-unmapped-aut/SKILL.md`.
 2. Find affected tests:
    ```bash
-   rg -n "@TAT-" tests
    npm run audit:tags
    ```
 3. Run `npm run automation:context -- <AUT-ID>` for the target mapping.
@@ -19,4 +18,4 @@ Use when specs lack `@AUT-E2E-*` / `@AUT-FV-*` tags or still carry retired `@TAT
    npm run audit:tags
    ```
 
-Do not assign `@AUT-*` without a validated mapping row. Do not use `@TAT-*` — it is retired.
+Do not assign `@AUT-*` without a validated mapping row.

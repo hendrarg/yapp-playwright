@@ -42,8 +42,6 @@ guestTest('guest/FV test...', ...)     // plain test for no-auth
 | `@AUT-FV-*` | At least one interaction and one assertion beyond `expectLoaded()` per covered TC step. |
 | Unmapped (no `@AUT-*`) | Not acceptable for new or updated tests. Assign `@AUT-*` from Automation Mapping via `migrate-unmapped-aut` skill. |
 
-`@TAT-*` tags are **retired**. Do not use them in new or updated tests. Replace any remaining `@TAT-*` with a validated `@AUT-*` from Google Sheets.
-
 ## Locators
 
 - **All locators live in page objects** — never in spec files.
@@ -137,6 +135,5 @@ Run both after generating or migrating automation when practical.
 - Deep relative imports bypassing path aliases
 - Locators in spec files — use page objects with `smartLocator`
 - Smoke-only `@AUT-E2E-*` tests (`goto` + `expectLoaded` only)
-- `@TAT-*` tags — retired; use `@AUT-*` from Automation Mapping only
 - `--repeat-each` unless the user explicitly requests repeated verification. This is especially important for reCAPTCHA tests, where rapid repeats from the same IP/machine reduce the reCAPTCHA v3 score and trigger rate-limiting.
 - **Running full spec file during mapped automation development** — always use `--grep @<AUT-ID>` to isolate the mapping. Running the whole file wastes time and tests unrelated functionality.
