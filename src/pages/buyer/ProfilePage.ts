@@ -12,7 +12,7 @@ import {
 } from "@test-data/buyer/profile.data";
 
 const ACTIVE_TAB_CLASS = "primary-text-color";
-const POST_FALLBACK_SELECTOR = "main div.cursor-pointer.flex-row";
+const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
 const BUYER_APP_ROUTES = new Set([
   "feeds",
   "explore",
@@ -322,27 +322,11 @@ export class ProfilePage {
   }
 
   // ── Feeds tab (creator's posts) ──
-  readonly allFeedsToggle = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.allFeeds,
-    text: profileLabels.allFeeds,
-  });
-  readonly exclusiveOnlyToggle = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.exclusiveOnly,
-    text: profileLabels.exclusiveOnly,
-  });
+  readonly allFeedsToggle = this.main.getByRole("button", { name: profileLabels.allFeeds, exact: true });
+  readonly exclusiveOnlyToggle = this.main.getByRole("button", { name: profileLabels.exclusiveOnly, exact: true });
 
   private get creatorFeedPosts(): Locator {
-    const likeButton = locatorChain(this.page, {
-      role: "button",
-      name: profileLabels.likePost,
-      text: profileLabels.likePost,
-    });
-    return this.main
-      .locator("div")
-      .filter({ has: likeButton })
-      .or(locatorChain(this.page, { selector: POST_FALLBACK_SELECTOR, role: "button", name: profileLabels.likePost }));
+    return this.main.locator(POST_SELECTOR);
   }
 
   async expectFeedsTabContent() {
@@ -445,13 +429,12 @@ export class ProfilePage {
     await expect(this.postDetailDialog.getByText(profileLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 5000 }).catch(() => {});
   }
 
-  // ── Guest auth prompts (Feeds tab) ──
-  readonly firstLikeButton = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.likePost,
-    text: profileLabels.likePost,
-  }).first();
+  private get publicFeedPosts(): Locator {
+    const unlockButton = this.page.getByRole("button", { name: profileLabels.unlockPost });
+    return this.creatorFeedPosts.filter({ hasNot: unlockButton });
+  }
 
+  // ── Guest auth prompts (Feeds tab) ──
   readonly signInNowButton = locatorChain(this.page, {
     role: "button",
     name: profileLabels.signInNow,
@@ -469,13 +452,12 @@ export class ProfilePage {
   }
 
   async clickFirstLikePostAsGuest() {
-    await safeClick(this.firstLikeButton);
+    await safeClick(this.publicFeedPosts.first().getByRole("button", { name: profileLabels.likePost }));
   }
 
   async expectLoveThisPostSignInDialog() {
-    const dialog = locatorChain(this.page, { role: "dialog" });
+    const dialog = this.page.getByRole("dialog").filter({ hasText: /Love this post/i });
     await expect(dialog).toBeVisible({ timeout: 10000 });
-    await expect(dialog.getByText(/Love this post/)).toBeVisible();
     await expect(dialog.getByRole("button", { name: profileLabels.signInNow })).toBeVisible();
   }
 
@@ -484,16 +466,22 @@ export class ProfilePage {
   }
 
   async clickFirstCommentButtonOnFeed() {
-    await safeClick(this.main.getByRole("button", { name: /^\d+$/ }).first());
+    await safeClick(this.publicFeedPosts.first().getByRole("button", { name: /^\d+$/ }).first());
   }
 
   async expectGuestCommentPrompt() {
-    await expect(locatorChain(this.page, { text: profileLabels.noCommentsYet })).toBeVisible({ timeout: 5000 }).catch(() => {});
-    await expect(locatorChain(this.page, { text: profileLabels.signInToComment })).toBeVisible({ timeout: 5000 });
+    await expect(this.main.getByText(profileLabels.noCommentsYet).first()).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(this.main.getByText(profileLabels.signInToComment).first()).toBeVisible({ timeout: 5000 });
   }
 
   async clickSignInOnComment() {
-    await safeClick(locatorChain(this.page, { role: "button", name: profileLabels.signIn, text: profileLabels.signIn }));
+    await safeClick(this.main.getByRole("button", { name: profileLabels.signIn, exact: true }).first());
+  }
+
+  async expectGuestCommentSignInDialog() {
+    const dialog = this.page.getByRole("dialog").filter({ hasText: profileLabels.guestCommentSignInHeading });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole("button", { name: profileLabels.signInNow })).toBeVisible();
   }
 
   async expectSignInBeforeFollowingDialog() {

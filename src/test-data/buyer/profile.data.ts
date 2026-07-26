@@ -59,6 +59,7 @@ export const profileLabels = {
   allFeeds: "All Feeds",
   exclusiveOnly: "Exclusive Only",
   memberOnly: "Member Only",
+  unlockPost: "Unlock Post",
   openPostMedia: "Open post media",
   tierPricePattern: "IDR",
   share: "Share",
@@ -71,6 +72,7 @@ export const profileLabels = {
   signIn: "Sign In",
   noCommentsYet: "No comments yet.",
   signInToComment: "Sign in to drop a comment!",
+  guestCommentSignInHeading: "Got something to say?",
   postImageModal: "Post image modal",
 } as const;
 

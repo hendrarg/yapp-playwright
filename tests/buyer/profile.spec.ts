@@ -353,7 +353,7 @@ guestTest('Guest user blocked — Comment action requires login', {
 
   await guestTest.step('Click Sign In and verify sign in dialog', async () => {
     await buyerProfilePage.clickSignInOnComment();
-    await buyerProfilePage.expectSignInBeforeFollowingDialog();
+    await buyerProfilePage.expectGuestCommentSignInDialog();
   });
 
   await guestTest.step('Click Sign in now and verify redirected to login', async () => {
