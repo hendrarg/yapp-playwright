@@ -428,24 +428,21 @@ test('Buyer Media Preview — Image Gallery & Video Playback', {
 guestTest('Guest user blocked — Following tab requires login', {
   tag: ['@AUT-FV-077', '@feeds', '@auth', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
-  test.setTimeout(60000);
+  guestTest.setTimeout(60000);
 
-  await test.step('Open feeds as guest and verify page content', async () => {
+  await guestTest.step('Open feeds as guest and verify page content', async () => {
     await buyerNav.goto('feeds');
     await expect(page).toHaveURL(/\/feeds/);
-    await expect(page.getByText("You're not following anyone yet")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Follow creators to see their latest posts here')).toBeVisible({ timeout: 10000 });
+    await buyerFeedsPage.expectGuestFollowingEmptyState();
   });
 
-  await test.step('Click Follow and verify sign in dialog', async () => {
-    await page.getByRole('button', { name: 'Follow', exact: true }).first().click();
-    const dialog = page.getByRole('dialog', { name: 'Sign in before following' });
-    await expect(dialog.getByText('Sign in before following')).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Sign in now!' })).toBeVisible();
+  await guestTest.step('Click Follow and verify sign in dialog', async () => {
+    await buyerFeedsPage.clickFirstFollowButton();
+    await buyerFeedsPage.expectSignInBeforeFollowingDialog();
   });
 
-  await test.step('Click Sign in now and verify redirected to login', async () => {
-    await page.getByRole('button', { name: 'Sign in now!' }).click();
+  await guestTest.step('Click Sign in now and verify redirected to login', async () => {
+    await buyerFeedsPage.clickSignInNowFromDialog();
     await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });

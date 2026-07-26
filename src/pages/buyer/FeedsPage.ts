@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
+import { locatorChain, smartLocator } from "@utils/heal-utils";
 import {
   feedsTabs,
   feedsLabels,
@@ -10,7 +11,7 @@ import {
   type FeedsTab,
 } from "@test-data/buyer/feeds.data";
 
-const POST_SELECTOR = ".flex.flex-row.gap-3.items-start.cursor-pointer.p-4";
+const POST_FALLBACK_SELECTOR = "main div.cursor-pointer.p-4.flex-row";
 const ACTIVE_TAB_COLOR = "text-[#373737]";
 
 export class FeedsPage {
@@ -43,9 +44,21 @@ export class FeedsPage {
   }
 
   // ── Tabs (rendered as buttons; active tab uses dark text color class) ──
-  readonly followingTab = this.page.getByRole("button", { name: feedsTabs.following, exact: true });
-  readonly yourPostTab = this.page.getByRole("button", { name: feedsTabs.yourPost, exact: true });
-  readonly exclusiveTab = this.page.getByRole("button", { name: feedsTabs.exclusive, exact: true });
+  readonly followingTab = locatorChain(this.page, {
+    role: "button",
+    name: feedsTabs.following,
+    text: feedsTabs.following,
+  });
+  readonly yourPostTab = locatorChain(this.page, {
+    role: "button",
+    name: feedsTabs.yourPost,
+    text: feedsTabs.yourPost,
+  });
+  readonly exclusiveTab = locatorChain(this.page, {
+    role: "button",
+    name: feedsTabs.exclusive,
+    text: feedsTabs.exclusive,
+  });
 
   async switchToTab(tab: FeedsTab) {
     const target =
@@ -55,20 +68,38 @@ export class FeedsPage {
   }
 
   async expectTabActive(label: string) {
-    const tab = this.page.getByRole("button", { name: label, exact: true });
+    const tab = locatorChain(this.page, { role: "button", name: label, text: label });
     await expect(tab).toBeVisible({ timeout: 10000 });
+    const ariaSelected = await tab.getAttribute("aria-selected");
+    if (ariaSelected === "true") {
+      return;
+    }
     const cls = (await tab.getAttribute("class")) ?? "";
     expect(
       cls.includes(ACTIVE_TAB_COLOR),
-      `Tab "${label}" should be active (class missing "${ACTIVE_TAB_COLOR}"): ${cls}`,
+      `Tab "${label}" should be active (aria-selected or class missing "${ACTIVE_TAB_COLOR}"): ${cls}`,
     ).toBe(true);
   }
 
   // ── Creators You Might Like section ──
-  readonly creatorsSection = this.page.getByText(feedsLabels.creatorsYouMightLike, { exact: true });
-  readonly followButtons = this.page.getByRole("button", { name: feedsLabels.follow, exact: true });
-  readonly creatorCards = this.followButtons.locator("xpath=..");
-  readonly creatorAvatar = this.creatorCards.first().locator("img").first();
+  readonly creatorsSection = locatorChain(this.page, {
+    text: feedsLabels.creatorsYouMightLike,
+    role: "heading",
+    name: feedsLabels.creatorsYouMightLike,
+  });
+  readonly followButtons = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.follow,
+    text: feedsLabels.follow,
+  });
+
+  private get creatorCards(): Locator {
+    return this.page.locator("main").locator("div").filter({
+      has: locatorChain(this.page, { role: "button", name: feedsLabels.follow, text: feedsLabels.follow }),
+    });
+  }
+
+  readonly creatorAvatar = this.page.locator("main img").first();
 
   async expectCreatorsSectionVisible() {
     await expect(this.creatorsSection).toBeVisible({ timeout: 10000 });
@@ -77,7 +108,11 @@ export class FeedsPage {
   }
 
   // ── Follow / Unfollow from Creators You Might Like ──
-  readonly followingButtons = this.page.getByRole("button", { name: feedsLabels.following, exact: true });
+  readonly followingButtons = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.following,
+    text: feedsLabels.following,
+  });
 
   async getFirstCreatorName(): Promise<string> {
     const card = this.creatorCards.first();
@@ -106,22 +141,50 @@ export class FeedsPage {
   }
 
   // ── Feed posts ──
-  readonly feedPosts = this.page.locator(POST_SELECTOR);
-  readonly memberOnlyLabel = this.page.getByText(feedsLabels.memberOnly, { exact: true });
-  readonly lockedPosts = this.page.getByRole("button", { name: "Unlock Post" }).locator(
-    "xpath=ancestor::div[contains(@class,'cursor-pointer')][1]",
-  );
-  readonly unlockPostButtons = this.page.getByRole("button", { name: "Unlock Post" });
-  readonly publicImagePosts = this.page
-    .locator(POST_SELECTOR)
-    .filter({ has: this.page.getByRole("button", { name: feedsLabels.openPostMedia }) })
-    .filter({ hasNot: this.page.getByRole("button", { name: "Unlock Post" }) })
-    .filter({ hasNot: this.page.getByText(feedsLabels.memberOnly, { exact: true }) });
-  readonly mediaButtons = this.page.getByRole("button", { name: feedsLabels.openPostMedia });
+  private get feedPosts(): Locator {
+    const likeButton = locatorChain(this.page, {
+      role: "button",
+      name: feedsLabels.likePost,
+      text: feedsLabels.likePost,
+    });
+    return this.page
+      .locator("main")
+      .locator("div")
+      .filter({ has: likeButton })
+      .or(locatorChain(this.page, { selector: POST_FALLBACK_SELECTOR, role: "button", name: feedsLabels.likePost }));
+  }
+
+  readonly memberOnlyLabel = locatorChain(this.page, {
+    text: feedsLabels.memberOnly,
+    selector: `main :text-is("${feedsLabels.memberOnly}")`,
+  });
+
+  private get lockedPosts(): Locator {
+    return this.feedPosts.filter({
+      has: locatorChain(this.page, { role: "button", name: feedsLabels.unlockPost, text: feedsLabels.unlockPost }),
+    });
+  }
+
+  readonly unlockPostButtons = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.unlockPost,
+    text: feedsLabels.unlockPost,
+  });
+
+  readonly publicImagePosts = this.feedPosts
+    .filter({ has: locatorChain(this.page, { role: "button", name: feedsLabels.openPostMedia, text: feedsLabels.openPostMedia }) })
+    .filter({ hasNot: this.unlockPostButtons })
+    .filter({ hasNot: this.memberOnlyLabel });
+
+  readonly mediaButtons = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.openPostMedia,
+    text: feedsLabels.openPostMedia,
+  });
 
   // ── Like / Unlike ──
-  readonly firstLikeButton = this.page.getByRole("button", { name: feedsLabels.likePost }).first();
-  readonly firstUnlikeButton = this.page.getByRole("button", { name: feedsLabels.unlikePost }).first();
+  readonly firstLikeButton = locatorChain(this.page, { role: "button", name: feedsLabels.likePost, text: feedsLabels.likePost }).first();
+  readonly firstUnlikeButton = locatorChain(this.page, { role: "button", name: feedsLabels.unlikePost, text: feedsLabels.unlikePost }).first();
   private get firstLikeCountEl() {
     return this.feedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
   }
@@ -205,7 +268,11 @@ export class FeedsPage {
 
   // ── Post detail (click post card to open detail page) ──
   readonly firstPostCard = this.feedPosts.first();
-  readonly postDetailBackButton = this.page.getByRole("button", { name: "Back" });
+  readonly postDetailBackButton = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.back,
+    text: feedsLabels.back,
+  });
 
   async openFirstPostDetail() {
     await safeClick(this.firstPostCard);
@@ -249,7 +316,7 @@ export class FeedsPage {
   async expectExclusiveContentOnly() {
     await this.expectTabActive(feedsTabs.exclusive);
     await expect(this.feedPosts.first()).toBeVisible({ timeout: 10000 });
-    await expect(this.page.getByRole("button", { name: feedsLabels.openPostMedia }).first()).toBeVisible({
+    await expect(locatorChain(this.page, { role: "button", name: feedsLabels.openPostMedia, text: feedsLabels.openPostMedia }).first()).toBeVisible({
       timeout: 10000,
     });
     expect(this.page.url()).not.toContain("/auth");
@@ -258,7 +325,7 @@ export class FeedsPage {
   async infiniteScroll() {
     for (let i = 0; i < scrollRounds; i++) {
       const before = await this.feedPosts.count();
-      await this.page.locator("main").hover().catch(() => undefined);
+      await this.page.getByRole("main").hover().catch(() => undefined);
       await this.page.mouse.wheel(0, 2400);
       await this.page.keyboard.press("PageDown").catch(() => undefined);
       await this.feedPosts.last().evaluate((node) => {
@@ -287,10 +354,14 @@ export class FeedsPage {
   async expectLockedPostVisible(content: string) {
     const post = this.postByContent(content);
     await expect(post).toBeVisible({ timeout: 15000 });
-    await expect(post.getByRole("button", { name: "Unlock Post" })).toBeVisible({ timeout: 10000 });
+    await expect(post.getByRole("button", { name: feedsLabels.unlockPost })).toBeVisible({ timeout: 10000 });
   }
 
-  readonly postDetailDialog = this.page.getByRole("dialog", { name: "Post image modal" });
+  readonly postDetailDialog = locatorChain(this.page, {
+    role: "dialog",
+    name: "Post image modal",
+    text: "Post image modal",
+  });
 
   async openFirstPublicImagePost() {
     await safeClick(this.publicImagePosts.first());
@@ -360,8 +431,12 @@ export class FeedsPage {
     await expect(this.postDetailDialog.locator("img").first()).toBeVisible({ timeout: 5000 });
   }
 
+  private get previewVideo(): Locator {
+    return this.page.locator("main video").or(this.page.locator("video"));
+  }
+
   async openVideoPreviewIfAvailable(): Promise<boolean> {
-    const video = this.page.locator("video").first();
+    const video = this.previewVideo.first();
     if (!(await video.isVisible().catch(() => false))) {
       return false;
     }
@@ -371,11 +446,11 @@ export class FeedsPage {
   }
 
   async expectVideoPreviewOpen() {
-    await expect(this.page.locator("video").first()).toBeVisible({ timeout: 15000 });
+    await expect(this.previewVideo.first()).toBeVisible({ timeout: 15000 });
   }
 
   async expectVideoPlaybackControls() {
-    const video = this.page.locator("video").first();
+    const video = this.previewVideo.first();
     await expect(video).toBeVisible({ timeout: 10000 });
     await video.evaluate((el) => (el as any).pause());
     await expect.poll(() => video.evaluate((el) => (el as any).paused)).toBe(true);
@@ -389,8 +464,16 @@ export class FeedsPage {
   }
 
   // ── Comment section (post detail page) ──
-  readonly commentInput = this.page.getByRole("textbox", { name: "Write your comment" });
-  readonly postCommentButton = this.page.getByRole("button", { name: "Post", exact: true });
+  readonly commentInput = locatorChain(this.page, {
+    role: "textbox",
+    name: feedsLabels.writeComment,
+    placeholder: feedsLabels.writeComment,
+  });
+  readonly postCommentButton = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.postComment,
+    text: feedsLabels.postComment,
+  });
   readonly commentCountButton = this.page.getByRole("button", { name: /^\d+$/ }).first();
   readonly feedCommentCountButton = this.feedPosts.first().getByRole("button", { name: /^\d+$/ }).first();
 
@@ -431,9 +514,10 @@ export class FeedsPage {
 
   private commentActions(commentText: string) {
     return this.page
-      .getByText(commentText, { exact: true })
-      .locator('xpath=ancestor::div[.//button][1]')
-      .getByRole('button')
+      .locator("div")
+      .filter({ hasText: commentText })
+      .filter({ has: this.page.getByRole("button") })
+      .getByRole("button")
       .last();
   }
 
@@ -455,8 +539,9 @@ export class FeedsPage {
   async editComment(commentText: string, updatedText: string) {
     await safeClick(this.commentActions(commentText));
     await safeClick(this.commentAction('Edit'));
-    await safeFill(this.page.locator('textarea, input').last(), updatedText);
-    await safeClick(this.page.getByRole('button', { name: /Save|Update/i }).last());
+    const editField = this.page.getByRole('textbox').last().or(this.page.locator('textarea').last());
+    await safeFill(editField, updatedText);
+    await safeClick(locatorChain(this.page, { role: 'button', name: 'Save', text: 'Save' }).or(this.page.getByRole('button', { name: /Save|Update/i }).last()));
     await this.expectCommentVisible(updatedText);
   }
 
@@ -544,7 +629,7 @@ export class FeedsPage {
   }
 
   // ── Locked media preview (blocked before unlock) ──
-  readonly unlockPostButton = this.lockedPosts.first().getByRole("button", { name: "Unlock Post" });
+  readonly unlockPostButton = this.lockedPosts.first().getByRole("button", { name: feedsLabels.unlockPost });
 
   async clickLockedPostMedia() {
     await expect(this.lockedPosts.first()).toBeVisible({ timeout: 10000 });
@@ -553,7 +638,6 @@ export class FeedsPage {
   }
 
   async expectLockedMediaBlocked() {
-    // Media opens in dialog or detail — verify blur + unlock button
     const dialog = this.postDetailDialog;
     const dialogVisible = await dialog.isVisible({ timeout: 3000 }).catch(() => false);
     if (dialogVisible) {
@@ -563,19 +647,22 @@ export class FeedsPage {
       expect(blur).not.toBe("none");
       expect(blur).not.toBe("");
     }
-    // Verify unlock button or unlock prompt appears
     await expect(this.page.getByText(/Unlock|unlock/i).first()).toBeVisible({ timeout: 5000 });
   }
 
   async expectLockedPostDetail() {
     await this.expectPostDetailOpen();
-    await expect(this.page.getByRole("button", { name: "Unlock Post" }).first()).toBeVisible({ timeout: 10000 });
-    await expect(this.page.getByRole("button", { name: /Unlock Now|Unlock now/ })).toBeVisible({ timeout: 10000 });
+    await expect(this.unlockPostButtons.first()).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, { role: "button", name: "Unlock Now", text: "Unlock now" }).or(
+        this.page.getByRole("button", { name: /Unlock Now|Unlock now/ }),
+      ),
+    ).toBeVisible({ timeout: 10000 });
     await expect(this.page.getByText(/Unlock post to add comments/i).first()).toBeVisible({ timeout: 10000 });
   }
 
   async openUnlockPreview(price = 20000) {
-    await safeClick(this.page.getByRole("button", { name: "Unlock Post" }).first());
+    await safeClick(this.unlockPostButtons.first());
     await expect(this.page.getByText(/Exclusive Content Preview|Unlock Exclusive Post|Unlock/i).first()).toBeVisible({
       timeout: 10000,
     });
@@ -590,18 +677,22 @@ export class FeedsPage {
   }
 
   async submitUnlockPayment(name: string, phone: string): Promise<string> {
-    await safeClick(this.page.getByRole("button", { name: /Unlock Now|Unlock now/ }).last());
+    await safeClick(
+      locatorChain(this.page, { role: "button", name: "Unlock Now", text: "Unlock now" }).or(
+        this.page.getByRole("button", { name: /Unlock Now|Unlock now/ }).last(),
+      ),
+    );
     const dialog = this.page.getByRole("dialog").filter({ hasText: /Unlock Exclusive Post|Exclusive Post/ }).first();
     await expect(dialog).toBeVisible({ timeout: 10000 });
 
-    const emailInput = dialog.locator('input[type="email"], input[name*="email" i]').first();
-    await expect(emailInput).toBeVisible({ timeout: 10000 });
-    expect((await emailInput.inputValue()).length).toBeGreaterThan(0);
+    const emailInput = dialog.locator('input[type="email"]').or(dialog.getByRole("textbox", { name: /email/i }));
+    await expect(emailInput.first()).toBeVisible({ timeout: 10000 });
+    expect((await emailInput.first().inputValue()).length).toBeGreaterThan(0);
 
-    const nameInput = dialog.locator('input[name*="name" i], input[placeholder*="name" i]').first();
-    const phoneInput = dialog.locator('input[type="tel"], input[name*="phone" i], input[placeholder*="phone" i]').first();
-    await nameInput.fill(name);
-    await phoneInput.fill(phone);
+    const nameInput = dialog.getByRole("textbox", { name: /name/i }).or(dialog.locator('input[name*="name" i]'));
+    const phoneInput = dialog.getByRole("textbox", { name: /phone/i }).or(dialog.locator('input[type="tel"]'));
+    await nameInput.first().fill(name);
+    await phoneInput.first().fill(phone);
 
     await safeClick(dialog.getByRole("button", { name: /Pay|Unlock|Continue/i }).last());
     await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
@@ -612,17 +703,56 @@ export class FeedsPage {
   async expectUnlockedExclusivePost(content: string) {
     await this.expectPostDetailOpen();
     await expect(this.page.getByText(content, { exact: false })).toBeVisible({ timeout: 10000 });
-    await expect(this.page.getByRole("button", { name: "Unlock Post" })).toBeHidden({ timeout: 10000 });
-    await expect(this.page.locator("main img").first()).toBeVisible({ timeout: 10000 });
+    await expect(this.unlockPostButtons.first()).toBeHidden({ timeout: 10000 });
+    await expect(this.page.getByRole("main").locator("img").first()).toBeVisible({ timeout: 10000 });
   }
 
   async zoomUnlockedPostMedia() {
-    const image = this.page.locator("main img").first();
+    const image = this.page.getByRole("main").locator("img").first();
     await expect(image).toBeVisible({ timeout: 10000 });
     await image.hover();
     await this.page.mouse.wheel(0, -700);
     await this.page.waitForTimeout(300);
     await this.page.mouse.wheel(0, 700);
     await expect(image).toBeVisible({ timeout: 5000 });
+  }
+
+  // ── Guest auth prompts (Following tab) ──
+  readonly guestFollowingEmptyHeading = locatorChain(this.page, {
+    text: feedsLabels.guestFollowingEmptyHeading,
+    role: "heading",
+    name: feedsLabels.guestFollowingEmptyHeading,
+  });
+  readonly guestFollowingEmptySubtext = locatorChain(this.page, {
+    text: feedsLabels.guestFollowingEmptySubtext,
+  });
+  readonly signInBeforeFollowingDialog = locatorChain(this.page, {
+    role: "dialog",
+    name: feedsLabels.signInBeforeFollowing,
+    text: feedsLabels.signInBeforeFollowing,
+  });
+  readonly signInNowButton = locatorChain(this.page, {
+    role: "button",
+    name: feedsLabels.signInNow,
+    text: feedsLabels.signInNow,
+  });
+
+  async expectGuestFollowingEmptyState() {
+    await expect(this.guestFollowingEmptyHeading).toBeVisible({ timeout: 10000 });
+    await expect(this.guestFollowingEmptySubtext).toBeVisible({ timeout: 10000 });
+  }
+
+  async clickFirstFollowButton() {
+    await safeClick(this.followButtons.first());
+  }
+
+  async expectSignInBeforeFollowingDialog() {
+    await expect(this.signInBeforeFollowingDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.signInBeforeFollowingDialog.getByText(feedsLabels.signInBeforeFollowing)).toBeVisible();
+    await expect(this.signInBeforeFollowingDialog.getByRole("button", { name: feedsLabels.signInNow })).toBeVisible();
+  }
+
+  async clickSignInNowFromDialog() {
+    await safeClick(this.signInNowButton);
   }
 }

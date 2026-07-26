@@ -112,6 +112,15 @@ export function buildSmartStrategies(page: Page, meta: StrategyMeta): Locator[] 
   return strategies.map((s) => s.locator);
 }
 
+/** Combines smart strategies into one Locator via `.or()` for page object fields. */
+export function locatorChain(page: Page, meta: StrategyMeta): Locator {
+  const strategies = buildSmartStrategies(page, meta);
+  if (strategies.length === 0) {
+    return page.getByTestId("__nonexistent__");
+  }
+  return strategies.slice(1).reduce((acc, loc) => acc.or(loc), strategies[0]);
+}
+
 /**
  * Build smart strategy chain and return [primary, ...fallbacks].
  * Primary = highest priority strategy. Fallbacks = rest in priority order.

@@ -15,6 +15,14 @@ export const feedsLabels = {
   unlikePost: "Unlike post",
   memberOnly: "Member Only",
   openPostMedia: "Open post media",
+  guestFollowingEmptyHeading: "You're not following anyone yet",
+  guestFollowingEmptySubtext: "Follow creators to see their latest posts here",
+  signInBeforeFollowing: "Sign in before following",
+  signInNow: "Sign in now!",
+  unlockPost: "Unlock Post",
+  writeComment: "Write your comment",
+  back: "Back",
+  postComment: "Post",
 } as const;
 
 export type FeedsTab = keyof typeof feedsTabs;
