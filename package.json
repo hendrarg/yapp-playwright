@@ -10,7 +10,8 @@
     "test:automation-context": "node --test --test-isolation=none scripts/automation-context.test.mjs",
     "automation:context": "node scripts/automation-context.mjs",
     "audit:tags": "node scripts/audit-tags.mjs",
-    "audit:locators": "node scripts/audit-locators.mjs"
+    "audit:locators": "node scripts/audit-locators.mjs",
+    "token:inspect": "node scripts/inspect-tokens.mjs"
   },
   "keywords": [],
   "author": "",

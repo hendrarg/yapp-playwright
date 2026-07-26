@@ -105,12 +105,14 @@ test('explore page loads without auth redirect', { tag: ['@explore', '@buyer', '
 | OTP Login | Real email OTP via testmail.app | `test` + `loginPage` |
 | Token Injection | Injects `at` cookie from env | `authTest` (buyer), `creatorAuthTest` (creator) |
 
-Token injection sets the cookie on the apex domain so one token works for both buyer and creator subdomains. If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-refresh it through the OTP login flow and save the fresh token to `.env`.
+Token injection sets the cookie on the apex domain so one token works for both buyer and creator subdomains.
+
+**Important:** OTP login uses the testmail Sundanese inbox (`{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app`) and saves to `YAPP_TEST_ACCESS_TOKEN_2` only. It must **not** overwrite `YAPP_TEST_ACCESS_TOKEN` (Hendra). If token1 is expired or swapped, auth fixtures fail fast — refresh Hendra manually. Run `npm run token:inspect` to verify which user each env var holds.
 
 | Token | Env var | Owner | Use for |
 |-------|---------|-------|---------|
-| token1 | `YAPP_TEST_ACCESS_TOKEN` | Hendra (`jendraljohn92`) | Hendra-owned products and promotions |
-| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding |
+| token1 | `YAPP_TEST_ACCESS_TOKEN` | Hendra (`jendraljohn92`) | `authTest`, `creatorAuthTest`, Hendra-owned products and promotions |
+| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding; refreshed by `tests/auth/otp-login.spec.ts` |
 
 ## Fixtures
 

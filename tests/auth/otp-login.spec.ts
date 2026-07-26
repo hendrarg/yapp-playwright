@@ -11,6 +11,6 @@ test('user can sign in to Yapp using an emailed OTP', {
 
   await expect(page).toHaveURL(/\/explore/);
 
-  saveTokenToEnv(token);
+  saveTokenToEnv(token); // auto-routes to YAPP_TEST_ACCESS_TOKEN_2 (Sundanese)
 });
 });

@@ -110,7 +110,7 @@ Token mapping:
 - `YAPP_TEST_ACCESS_TOKEN` (token1) belongs to Hendra (`jendraljohn92`). Use it for Hendra-owned products and promotions.
 - `YAPP_TEST_ACCESS_TOKEN_2` (token2) belongs to Sundanese (`x7nv1.sdet`). Use it for creator-post seeding.
 
-If `YAPP_TEST_ACCESS_TOKEN` is expired, `authTest` and `creatorAuthTest` auto-refresh it through the OTP login flow, save the fresh token to `.env`, then inject it. With `PW_WORKERS > 1`, an expired token can cause multiple workers to attempt OTP login at once; refresh the token once first or use `PW_WORKERS=1`.
+If `YAPP_TEST_ACCESS_TOKEN` is expired or belongs to the wrong user, `authTest` / `creatorAuthTest` fail fast with a clear error. **OTP login uses the testmail Sundanese inbox** (`{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app`) and saves to `YAPP_TEST_ACCESS_TOKEN_2` only — it must not overwrite token1. Refresh Hendra (token1) manually. Run `npm run token:inspect` to verify mapping. With `PW_WORKERS > 1`, an expired token can cause multiple workers to fail at once; refresh token1 first or use `PW_WORKERS=1`.
 
 ## Environment Variables
 

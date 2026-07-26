@@ -7,8 +7,8 @@ import { baseURL, creatorsBaseURL } from '../config/env';
 import { loginWithToken } from '../src/helpers/auth/token-login';
 import { waitForAuthResponse } from '../src/helpers/auth/validate-token';
 import { isTokenExpired } from '../src/helpers/auth/token-utils';
-import { signInWithEmailOtp } from '../src/helpers/auth/otp-login';
-import { saveTokenToEnv } from '../src/helpers/auth/save-token';
+import { assertPrimaryTestToken } from '../src/helpers/auth/save-token';
+import { testAccounts } from '../src/test-data/users';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
 import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 import { creatorNavFixtures } from '../src/fixtures/creator-nav.fixture';
@@ -25,40 +25,26 @@ export const test = base.extend<MyFixtures>({
 });
 
 /**
- * Ensures YAPP_TEST_ACCESS_TOKEN is valid. If expired (JWT exp check), runs the
- * real OTP login flow on a temporary page, saves the fresh token to .env, and
- * returns it. Throws on failure (does not skip) so the user knows to refresh
- * manually if reCAPTCHA blocks the auto-refresh.
+ * Ensures YAPP_TEST_ACCESS_TOKEN is a valid Hendra token for authTest/creatorAuthTest.
  *
- * Note: OTP login runs on the buyer app (baseURL) — the resulting token is set
- * as a cookie on the apex domain (.yapp.ink), so it is valid for both buyer
- * and creator apps.
- *
- * Caveat: if run with PW_WORKERS > 1 while the token is expired, multiple
- * workers may trigger OTP login concurrently → wasted testmail.app quota and
- * a race on writing .env. Mitigation: run tests/auth/otp-login.spec.ts once
- * before parallel suites, or set PW_WORKERS=1.
+ * OTP login uses the testmail Sundanese inbox — it must NOT overwrite token1.
+ * Refresh Sundanese via tests/auth/otp-login.spec.ts (saves to YAPP_TEST_ACCESS_TOKEN_2).
+ * Refresh Hendra manually when token1 expires.
  */
-async function ensureFreshToken(context: BrowserContext): Promise<string> {
-  let token = process.env.YAPP_TEST_ACCESS_TOKEN;
+async function ensureFreshToken(_context: BrowserContext): Promise<string> {
+  const token = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
   if (!token) {
     throw new Error('YAPP_TEST_ACCESS_TOKEN must be set in .env to run this token-injection test');
   }
 
+  assertPrimaryTestToken(token);
+
   if (isTokenExpired(token)) {
-    const tempPage = await context.newPage();
-    try {
-      const result = await signInWithEmailOtp(tempPage, baseURL);
-      saveTokenToEnv(result.token);
-      token = result.token;
-    } catch (err) {
-      throw new Error(
-        `Auto-refresh failed: token expired and OTP login could not complete. ` +
-          `Run tests/auth/otp-login.spec.ts manually to refresh. Original error: ${err instanceof Error ? err.message : String(err)}`
-      );
-    } finally {
-      await tempPage.close();
-    }
+    throw new Error(
+      `YAPP_TEST_ACCESS_TOKEN (Hendra / ${testAccounts.hendra.username}) is expired. ` +
+        `OTP auto-login uses Sundanese (${testAccounts.sundanese.username}) and saves to ${testAccounts.sundanese.envVar} — it cannot refresh token1. ` +
+        `Refresh Hendra manually, or run tests/auth/otp-login.spec.ts to refresh token2 only.`,
+    );
   }
 
   return token;
