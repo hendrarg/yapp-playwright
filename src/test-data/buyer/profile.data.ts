@@ -1,4 +1,4 @@
-export const creatorProfileHandle = "hendrarg";
+export const creatorProfile = "hendrarg";
 
 export const profileTabs = {
   shops: "Shops",

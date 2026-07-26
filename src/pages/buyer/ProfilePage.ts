@@ -3,7 +3,7 @@ import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
 import {
-  creatorProfileHandle,
+  creatorProfile,
   profileTabs,
   profileLabels,
   type ProfileTab,
@@ -135,7 +135,7 @@ export class ProfilePage {
   }
 
   // ── Shops tab: product cards ──
-  readonly productCards = this.main.locator(`a[href^="/${creatorProfileHandle}/product/"]`);
+  readonly productCards = this.main.locator(`a[href^="/${creatorProfile}/product/"]`);
 
   async expectShopsTabContent() {
     await this.expectTabActive("shops");

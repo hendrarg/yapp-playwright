@@ -14,13 +14,12 @@ import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
 
-type MyFixtures = PageFixtures;
+type MyFixtures = PageFixtures & BuyerNavFixtures;
 
 export const test = base.extend<MyFixtures>({
   ...pageFixtures,
+  ...buyerNavFixtures,
 });
-
-type AuthFixtures = PageFixtures & BuyerNavFixtures;
 
 /**
  * Ensures YAPP_TEST_ACCESS_TOKEN is valid. If expired (JWT exp check), runs the
@@ -62,8 +61,7 @@ async function ensureFreshToken(context: BrowserContext): Promise<string> {
   return token;
 }
 
-export const authTest = test.extend<AuthFixtures>({
-  ...buyerNavFixtures,
+export const authTest = test.extend({
   context: [async ({ context }, use) => {
     const token = await ensureFreshToken(context);
     await loginWithToken(context, token, baseURL);

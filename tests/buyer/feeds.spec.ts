@@ -7,12 +7,11 @@ import { generatePostData, testImages, testVideos } from '@test-data/creator/pos
 test.describe('Buyer Feeds', () => {
 test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   tag: ['@AUT-FV-082', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
-}, async ({ buyerFeedsPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(90000);
 
   await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
+    await buyerNav.open('feeds');
     await buyerFeedsPage.expectAuthenticated();
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
     await buyerFeedsPage.expectCreatorsSectionVisible();
@@ -47,7 +46,7 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
 
 test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   tag: ['@AUT-FV-077', '@feeds', '@follow', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, buyerProfilePage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
   const sundaneseToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
   test.skip(!sundaneseToken, 'YAPP_TEST_ACCESS_TOKEN_2 for Sundanese is required to seed the creator post');
@@ -66,8 +65,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
     });
 
     await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await buyerFeedsPage.expectCreatorsSectionVisible();
@@ -78,9 +76,9 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
     });
 
     await test.step('Open creator profile from Following tab post', async () => {
-      await buyerFeedsPage.goto();
+      await buyerNav.goto('feeds');
       await buyerFeedsPage.openCreatorProfileFromFollowingTab();
-      await buyerProfilePage.expectLoaded();
+      await buyerNav.expectLoaded('profile');
     });
 
     await test.step('Verify Following state on creator profile', async () => {
@@ -99,7 +97,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
 
     await test.step('Click back button to return to feeds and verify followed state', async () => {
       await buyerProfilePage.clickBackButton();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.expectLoaded('feeds');
       await buyerFeedsPage.switchToTab('following');
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await expect(buyerFeedsPage.followingButtons.first()).toBeVisible({ timeout: 10000 });
@@ -115,7 +113,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
 
 test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
   tag: ['@AUT-FV-085', '@feeds', '@profile', '@like', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, buyerProfilePage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
 
   const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
@@ -134,8 +132,7 @@ test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
     });
 
     await test.step('Open feeds and verify seeded post', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.switchToTab('following');
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
@@ -151,19 +148,19 @@ test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
       await buyerFeedsPage.openPostDetail(postData.content);
       await buyerFeedsPage.expectLikedState();
       await buyerFeedsPage.clickBackFromPostDetail();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.expectLoaded('feeds');
     });
 
     await test.step('Navigate to creator profile from feeds post and unlike', async () => {
       await buyerFeedsPage.navigateToCreatorProfileFromPostContent(postData.content);
-      await buyerProfilePage.expectLoaded();
+      await buyerNav.expectLoaded('profile');
       await buyerProfilePage.switchToTab('feeds');
       await buyerProfilePage.unlikeCreatorPost(postData.content);
     });
 
     await test.step('Return to feeds and verify unliked state on post detail', async () => {
       await buyerProfilePage.clickBackButton();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.expectLoaded('feeds');
       await buyerFeedsPage.switchToTab('following');
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await buyerFeedsPage.expectPostUnlikedState(postData.content);
@@ -181,7 +178,7 @@ test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
 
 test('Buyer Comment on Post — Submit & Verify', {
   tag: ['@AUT-FV-087', '@feeds', '@comment', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
   const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
@@ -202,8 +199,7 @@ test('Buyer Comment on Post — Submit & Verify', {
     });
 
     await test.step('Open feeds and verify seeded post', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await buyerFeedsPage.expectPostVisible(postData.content);
@@ -229,7 +225,7 @@ test('Buyer Comment on Post — Submit & Verify', {
 
     await test.step('Click back to feeds and verify comment count increased', async () => {
       await buyerFeedsPage.clickBackFromPostDetail();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.expectLoaded('feeds');
       await buyerFeedsPage.expectPostCommentCountIncreased(postData.content, previousCommentCount);
     });
   } finally {
@@ -243,7 +239,7 @@ test('Buyer Comment on Post — Submit & Verify', {
 
 test('Buyer Comment CRUD — Create, Edit, Delete', {
   tag: ['@AUT-FV-086', '@feeds', '@comment', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
   const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
@@ -265,8 +261,7 @@ test('Buyer Comment CRUD — Create, Edit, Delete', {
     });
 
     await test.step('Open the seeded post and submit a comment', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await buyerFeedsPage.expectPostVisible(postData.content);
@@ -295,7 +290,7 @@ test('Buyer Comment CRUD — Create, Edit, Delete', {
 
 test('Buyer Exclusive Post — Unlock via PPV Payment', {
   tag: ['@AUT-E2E-003', '@feeds', '@payment', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, transactionPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
   const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
@@ -318,8 +313,7 @@ test('Buyer Exclusive Post — Unlock via PPV Payment', {
     });
 
     await test.step('Open feeds and verify locked post indicators', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await buyerFeedsPage.expectLockedPostVisible(postData.content);
@@ -361,7 +355,7 @@ test('Buyer Exclusive Post — Unlock via PPV Payment', {
 
 test('Buyer Media Preview — Image Gallery & Video Playback', {
   tag: ['@AUT-FV-083', '@feeds', '@media', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
   const token = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -397,8 +391,7 @@ test('Buyer Media Preview — Image Gallery & Video Playback', {
     });
 
     await test.step('Open Your Post feed and verify uploaded media descriptions', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.switchToTab('yourPost');
       await buyerFeedsPage.expectTabActive(feedsTabs.yourPost);
@@ -434,11 +427,11 @@ test('Buyer Media Preview — Image Gallery & Video Playback', {
 
 guestTest('Guest user blocked — Following tab requires login', {
   tag: ['@AUT-FV-077', '@feeds', '@auth', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
   await test.step('Open feeds as guest and verify page content', async () => {
-    await buyerFeedsPage.goto();
+    await buyerNav.goto('feeds');
     await expect(page).toHaveURL(/\/feeds/);
     await expect(page.getByText("You're not following anyone yet")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Follow creators to see their latest posts here')).toBeVisible({ timeout: 10000 });
@@ -459,12 +452,11 @@ guestTest('Guest user blocked — Following tab requires login', {
 
 test('Free post — No monetization indicator on public content', {
   tag: ['@AUT-FV-078', '@feeds', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage }) => {
+}, async ({ buyerNav, buyerFeedsPage }) => {
   test.setTimeout(60000);
 
   await test.step('Open feeds and verify public post visible without Member Only badge', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
+    await buyerNav.open('feeds');
     await buyerFeedsPage.expectAuthenticated();
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
   });
@@ -477,12 +469,11 @@ test('Free post — No monetization indicator on public content', {
 
 test('Member-Only badge display — Consistent indicator across feed and profile', {
   tag: ['@AUT-FV-078', '@feeds', '@profile', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, buyerProfilePage }) => {
+}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(60000);
 
   await test.step('Open feeds and verify Member Only badge on exclusive posts', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
+    await buyerNav.open('feeds');
     await buyerFeedsPage.expectAuthenticated();
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
     await buyerFeedsPage.expectMemberOnlyBadgeVisible();
@@ -490,7 +481,7 @@ test('Member-Only badge display — Consistent indicator across feed and profile
 
   await test.step('Navigate to creator profile and verify same badge on Feeds tab', async () => {
     await buyerFeedsPage.navigateToLockedPostCreatorProfile();
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.expectLoaded('profile');
     await buyerProfilePage.switchToTab('feeds');
     await buyerProfilePage.expectFeedsTabContent();
     await buyerProfilePage.toggleExclusiveOnly();
@@ -500,7 +491,7 @@ test('Member-Only badge display — Consistent indicator across feed and profile
 
 test('Like idempotency — Rapid tap prevention', {
   tag: ['@AUT-FV-085', '@feeds', '@like', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage, page }) => {
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
   const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
@@ -520,8 +511,7 @@ test('Like idempotency — Rapid tap prevention', {
     });
 
     await test.step('Open feeds and get seeded post initial like count', async () => {
-      await buyerFeedsPage.goto();
-      await buyerFeedsPage.expectLoaded();
+      await buyerNav.open('feeds');
       await buyerFeedsPage.expectAuthenticated();
       await buyerFeedsPage.expectTabActive(feedsTabs.following);
       await buyerFeedsPage.expectPostVisible(postData.content);
@@ -547,12 +537,11 @@ test('Like idempotency — Rapid tap prevention', {
 
 test('Locked exclusive media — Preview blocked before unlock', {
   tag: ['@AUT-FV-076','@feeds', '@buyer', '@regression'],
-}, async ({ buyerFeedsPage }) => {
+}, async ({ buyerNav, buyerFeedsPage }) => {
   test.setTimeout(60000);
 
   await test.step('Open feeds and verify locked post with blur and lock icon', async () => {
-    await buyerFeedsPage.goto();
-    await buyerFeedsPage.expectLoaded();
+    await buyerNav.open('feeds');
     await buyerFeedsPage.expectAuthenticated();
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
     await buyerFeedsPage.expectMemberOnlyBadgeVisible();

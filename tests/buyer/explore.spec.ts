@@ -4,13 +4,12 @@ import { exploreData } from '@test-data/buyer/explore.data';
 test.describe('Buyer Explore', () => {
 test('Explore Page: Search & Creator Discovery', {
   tag: ['@AUT-FV-055', '@explore', '@buyer', '@smoke', '@regression'],
-}, async ({ explorePage }) => {
+}, async ({ buyerNav, explorePage }) => {
   const data = exploreData.creatorDiscovery;
   let matchingCreatorHrefs: string[] = [];
 
   await test.step('Open Explore and validate creator Search', async () => {
-    await explorePage.goto();
-    await explorePage.expectLoaded();
+    await buyerNav.open('explore');
     await explorePage.expectAuthenticated();
     await explorePage.expectSearchVisible();
   });
@@ -51,14 +50,13 @@ test('Explore Page: Search & Creator Discovery', {
 
 test('Explore Page: Popular & Recommended Product Discovery', {
   tag: ['@AUT-FV-056', '@explore', '@buyer', '@regression'],
-}, async ({ explorePage }) => {
+}, async ({ buyerNav, explorePage }) => {
   test.setTimeout(90000);
 
   let products!: Awaited<ReturnType<typeof explorePage.getVisibleProducts>>;
 
   await test.step('Open Explore as Buyer', async () => {
-    await explorePage.goto();
-    await explorePage.expectLoaded();
+    await buyerNav.open('explore');
     await explorePage.expectAuthenticated();
   });
 
@@ -92,12 +90,11 @@ test('Explore Page: Popular & Recommended Product Discovery', {
 
 test('Explore Page: Recent Product Recommendations', {
   tag: ['@AUT-FV-057', '@explore', '@buyer', '@regression'],
-}, async ({ explorePage }) => {
+}, async ({ buyerNav, explorePage }) => {
   let recommendations!: Awaited<ReturnType<typeof explorePage.getRecommendedProducts>>;
 
   await test.step('Open Explore and validate populated recommendations', async () => {
-    await explorePage.goto();
-    await explorePage.expectLoaded();
+    await buyerNav.open('explore');
     await explorePage.expectAuthenticated();
     await explorePage.expectRecommendedSectionPopulated();
   });
@@ -122,12 +119,11 @@ test('Explore Page: Recent Product Recommendations', {
 
 test('Explore Page: Navigate to full creator and product lists using See More', {
   tag: ['@AUT-FV-059', '@explore', '@buyer', '@smoke', '@regression'],
-}, async ({ explorePage }) => {
+}, async ({ buyerNav, explorePage }) => {
   const data = exploreData.seeMoreNavigation;
 
   await test.step('Open Explore as an authenticated buyer', async () => {
-    await explorePage.goto();
-    await explorePage.expectLoaded();
+    await buyerNav.open('explore');
     await explorePage.expectAuthenticated();
   });
 

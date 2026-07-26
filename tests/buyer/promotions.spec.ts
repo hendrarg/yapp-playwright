@@ -17,7 +17,7 @@ function getPromotionId(response: unknown): string {
 test.describe('Guest promotion redemption', () => {
   test('Promotion: Redeem valid voucher before payment', {
     tag: ['@AUT-FV-247', '@promotions', '@buyer', '@smoke', '@regression'],
-  }, async ({ productPurchasePage, page }) => {
+  }, async ({ buyerNav, productPurchasePage, page }) => {
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
     if (!hendraToken) return;
@@ -30,7 +30,7 @@ test.describe('Guest promotion redemption', () => {
       });
 
       await test.step('Open eligible direct purchase detail as guest', async () => {
-        await productPurchasePage.openPurchase(promotionData.eligibleProduct);
+        await buyerNav.open('productPurchase', { product: promotionData.eligibleProduct });
       });
 
       await test.step('Apply active promotion and verify acceptance', async () => {
@@ -45,7 +45,7 @@ test.describe('Guest promotion redemption', () => {
 
   test('Promotion: Validate order summary and reject invalid vouchers', {
     tag: ['@AUT-FV-248', '@promotions', '@buyer', '@regression'],
-  }, async ({ productPurchasePage, page }) => {
+  }, async ({ buyerNav, productPurchasePage, page }) => {
     test.setTimeout(60_000);
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
@@ -60,7 +60,7 @@ test.describe('Guest promotion redemption', () => {
       });
 
       await test.step('Apply active promotion and validate updated totals', async () => {
-        await productPurchasePage.openPurchase(promotionData.eligibleProduct);
+        await buyerNav.open('productPurchase', { product: promotionData.eligibleProduct });
         const before = await productPurchasePage.getOrderSummary();
         await productPurchasePage.applyPromotion(promotion.code);
         await productPurchasePage.expectActiveDiscount(before, 11);
@@ -68,7 +68,7 @@ test.describe('Guest promotion redemption', () => {
 
       for (const invalidPromotion of promotionData.invalid) {
         await test.step(`Reject ${invalidPromotion.label} promotion without changing totals`, async () => {
-          await productPurchasePage.openPurchase(promotionData.eligibleProduct);
+          await buyerNav.open('productPurchase', { product: promotionData.eligibleProduct });
           const before = await productPurchasePage.getOrderSummary();
           await productPurchasePage.applyPromotion(invalidPromotion.code);
           await productPurchasePage.expectRejectedPromotion(before);
@@ -76,7 +76,7 @@ test.describe('Guest promotion redemption', () => {
       }
 
       await test.step('Reject hendrarg promotion for another creator product', async () => {
-        await productPurchasePage.openPurchase(promotionData.creatorIneligibleProduct);
+        await buyerNav.open('productPurchase', { product: promotionData.creatorIneligibleProduct });
         const before = await productPurchasePage.getOrderSummary();
         await productPurchasePage.applyPromotion(promotionData.creatorIneligible.code);
         await productPurchasePage.expectRejectedPromotion(before, promotionData.creatorIneligible.error);

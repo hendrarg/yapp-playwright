@@ -1,15 +1,14 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
-import { creatorProfileHandle, profileLabels, tipAmountBoundary, tipCheckoutData } from '@test-data/buyer/profile.data';
+import { creatorProfile, profileLabels, tipAmountBoundary, tipCheckoutData } from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
   tag: ['@AUT-FV-091', '@profile', '@buyer', '@smoke', '@regression'],
-}, async ({ buyerProfilePage }) => {
+}, async ({ buyerNav, buyerProfilePage }) => {
   test.setTimeout(90000);
 
   await test.step('Open creator profile', async () => {
-    await buyerProfilePage.goto(creatorProfileHandle);
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
   });
 
@@ -59,14 +58,13 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
 
 test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
   tag: ['@AUT-E2E-014','@profile', '@tip', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, tipPage, transactionPage, page }) => {
+}, async ({ buyerNav, buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
   let orderId = '';
 
   await test.step('Open profile and verify tip form', async () => {
-    await buyerProfilePage.goto(creatorProfileHandle);
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
     await buyerProfilePage.expectSupportSectionVisible();
     await buyerProfilePage.expectSendTipDisabled();
@@ -106,14 +104,14 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
 
 test('Tipping: Checkout, Payment & Transaction', {
   tag: ['@AUT-FV-287', '@tip', '@buyer', '@smoke', '@regression'],
-}, async ({ tipPage, transactionPage, page }) => {
+}, async ({ buyerNav, tipPage, transactionPage, page }) => {
   test.setTimeout(120000);
 
   let orderId = '';
   let reviewTotal = '';
 
   await test.step('View and select an available payment method', async () => {
-    await tipPage.goto(creatorProfileHandle);
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
     await tipPage.expectFormAutoFilled();
     await tipPage.fillAmount(tipCheckoutData.amount);
@@ -161,13 +159,13 @@ test('Tipping: Checkout, Payment & Transaction', {
 
 test('Tipping: Payment & Transaction Summary', {
   tag: ['@AUT-FV-288', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ tipPage, transactionPage }) => {
+}, async ({ buyerNav, tipPage, transactionPage }) => {
   test.setTimeout(120000);
 
   let reviewTotal = '';
 
   await test.step('Prepare the tip with the selected amount and payment method', async () => {
-    await tipPage.goto(creatorProfileHandle);
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
     await tipPage.expectFormAutoFilled();
     await tipPage.fillAmount(tipCheckoutData.amount);
@@ -191,11 +189,11 @@ test('Tipping: Payment & Transaction Summary', {
 
 test('Tipping: Agreement Selected by Default', {
   tag: ['@AUT-FV-289', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ tipPage }) => {
+}, async ({ buyerNav, tipPage }) => {
   test.setTimeout(120000);
 
   await test.step('Open the tip review state with a valid amount and payment method', async () => {
-    await tipPage.goto(creatorProfileHandle);
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
     await tipPage.expectFormAutoFilled();
     await tipPage.fillAmount(tipCheckoutData.amount);
@@ -212,11 +210,11 @@ test('Tipping: Agreement Selected by Default', {
 
 test('Tip: IDR Minimum Amount Boundary', {
   tag: ['@AUT-FV-291', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ tipPage }) => {
+}, async ({ buyerNav, tipPage }) => {
   test.setTimeout(90000);
 
   await test.step('Select IDR and open the tip amount form', async () => {
-    await tipPage.goto(creatorProfileHandle);
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
     await tipPage.expectFormAutoFilled();
     await tipPage.selectCurrency(tipCheckoutData.currency);
@@ -235,10 +233,10 @@ test('Tip: IDR Minimum Amount Boundary', {
 
 test('Tip: Validation & Boundary', {
   tag: ['@AUT-FV-286', '@profile', '@buyer', '@regression'],
-}, async ({ tipPage }) => {
+}, async ({ buyerNav, tipPage }) => {
 
   await test.step('Verify buyer name and email are prefilled', async () => {
-    await tipPage.goto(creatorProfileHandle);
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
     await tipPage.expectFormAutoFilled();
   });
@@ -270,11 +268,11 @@ test('Tip: Validation & Boundary', {
 
 guestTest('Tip validation — Name and Email are required', {
   tag: ['@AUT-FV-285', '@profile', '@tip', '@buyer', '@regression'],
-}, async ({ tipPage }) => {
+}, async ({ buyerNav, tipPage }) => {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open tip page and enter a valid amount', async () => {
-    await tipPage.goto(creatorProfileHandle);
+    await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.expectPageLoaded();
     await tipPage.fillAmount('50000');
   });
@@ -298,13 +296,12 @@ guestTest('Tip validation — Name and Email are required', {
 
 test('Buyer View Membership Plans — Browse & Select Tier', {
   tag: ['@AUT-FV-128', '@profile', '@membership', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
+}, async ({ buyerNav, buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
   test.setTimeout(120000);
   const creatorHandle = 'davidalfasunarna';
 
   await test.step('Open creator profile and verify membership section', async () => {
-    await buyerProfilePage.goto(creatorHandle);
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.open('profile', { handle: creatorHandle });
     await buyerProfilePage.expectAuthenticated();
     await expect(buyerProfilePage.page.locator('main img').first()).toBeVisible({ timeout: 10000 });
     await buyerProfilePage.expectMembershipSectionVisible();
@@ -327,11 +324,11 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
 
 guestTest('Guest user blocked — Like action requires login', {
   tag: ['@AUT-FV-085', '@profile', '@auth', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, page }) => {
+}, async ({ buyerNav, buyerProfilePage, page }) => {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
-    await buyerProfilePage.goto('hendrarg');
+    await buyerNav.goto('profile', { handle: 'hendrarg' });
     await expect(page.locator('main').getByRole('button', { name: 'Feeds', exact: true })).toBeVisible({ timeout: 5000 });
   });
 
@@ -356,11 +353,11 @@ guestTest('Guest user blocked — Like action requires login', {
 
 guestTest('Guest user blocked — Comment action requires login', {
   tag: ['@AUT-FV-087', '@profile', '@auth', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, page }) => {
+}, async ({ buyerNav, buyerProfilePage, page }) => {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
-    await buyerProfilePage.goto('hendrarg');
+    await buyerNav.goto('profile', { handle: 'hendrarg' });
     await expect(page.locator('main').getByRole('button', { name: 'Feeds', exact: true })).toBeVisible({ timeout: 5000 });
   });
 
@@ -391,12 +388,11 @@ guestTest('Guest user blocked — Comment action requires login', {
 
 test('Tip validation — Invalid amount rejected', {
   tag: ['@AUT-FV-284', '@profile', '@tip', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, tipPage }) => {
+}, async ({ buyerNav, buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
   await test.step('Open profile, verify support section and Send Tip disabled', async () => {
-    await buyerProfilePage.goto(creatorProfileHandle);
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
     await buyerProfilePage.expectSupportSectionVisible();
     await buyerProfilePage.expectSendTipDisabled();
@@ -422,12 +418,11 @@ test('Tip validation — Invalid amount rejected', {
 
 test('Tip validation — Currency switch to USD', {
   tag: ['@AUT-FV-284', '@profile', '@tip', '@buyer', '@regression'],
-}, async ({ buyerProfilePage, tipPage }) => {
+}, async ({ buyerNav, buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
   await test.step('Open profile, verify support section with currency selector', async () => {
-    await buyerProfilePage.goto(creatorProfileHandle);
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
     await buyerProfilePage.expectSupportSectionVisible();
     await buyerProfilePage.expectSendTipDisabled();
@@ -448,12 +443,11 @@ test('Tip validation — Currency switch to USD', {
 
 test('Share creator profile — Share button displays options', {
   tag: ['@AUT-FV-232', '@profile', '@buyer', '@regression'],
-}, async ({ buyerProfilePage }) => {
+}, async ({ buyerNav, buyerProfilePage }) => {
   test.setTimeout(60000);
 
   await test.step('Open creator profile and verify Share button', async () => {
-    await buyerProfilePage.goto(creatorProfileHandle);
-    await buyerProfilePage.expectLoaded();
+    await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
     await expect(buyerProfilePage.shareButton).toBeVisible({ timeout: 5000 });
   });
