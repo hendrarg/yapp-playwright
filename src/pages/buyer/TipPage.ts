@@ -12,6 +12,12 @@ type TipReviewData = {
   privateNote: string;
 };
 
+type TipCheckoutPrep = {
+  amount: string;
+  votingOption: string;
+  paymentMethod: string;
+};
+
 export class TipPage {
   constructor(public readonly page: Page, private readonly baseURL: string) {}
 
@@ -56,6 +62,18 @@ export class TipPage {
     expect((await this.emailInput.inputValue()).length).toBeGreaterThan(0);
     await expect(this.anonymousCheckbox).toBeVisible({ timeout: 5000 }).catch(() => {});
     await expect(this.paymentMethod).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectTipFormReady() {
+    await this.expectPageLoaded();
+    await this.expectFormAutoFilled();
+  }
+
+  async prepareCheckout(data: TipCheckoutPrep) {
+    await this.expectTipFormReady();
+    await this.fillAmount(data.amount);
+    await this.selectVotingOptionIfPresent(data.votingOption);
+    await this.expectPaymentMethodAvailableAndSelect(data.paymentMethod);
   }
 
   async clearName() {

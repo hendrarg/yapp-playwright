@@ -1,5 +1,12 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
-import { creatorProfile, profileLabels, tipAmountBoundary, tipCheckoutData } from '@test-data/buyer/profile.data';
+import { depositWebhook } from '@helpers/api/webhook';
+import {
+  creatorProfile,
+  membershipCreatorProfile,
+  profileLabels,
+  tipAmountBoundary,
+  tipCheckoutData,
+} from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
 test('Buyer Creator Profile — Navigate Tabs & View Content', {
@@ -66,8 +73,7 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
   await test.step('Open profile and verify tip form', async () => {
     await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
-    await buyerProfilePage.expectSupportSectionVisible();
-    await buyerProfilePage.expectSendTipDisabled();
+    await buyerProfilePage.expectSupportTipFormInitialState();
   });
 
   await test.step('Select IDR currency', async () => {
@@ -92,9 +98,7 @@ test('Buyer Support Creator — Complete IDR Tip Payment Journey', {
   });
 
   await test.step('Post transaction via webhook API', async () => {
-    const { depositWebhook } = await import('@helpers/api/webhook');
     await depositWebhook(page.request, orderId);
-    await page.waitForTimeout(2500);
   });
 
   await test.step('Verify Payment Successful', async () => {
@@ -112,11 +116,7 @@ test('Tipping: Checkout, Payment & Transaction', {
 
   await test.step('View and select an available payment method', async () => {
     await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.expectFormAutoFilled();
-    await tipPage.fillAmount(tipCheckoutData.amount);
-    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
-    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+    await tipPage.prepareCheckout(tipCheckoutData);
   });
 
   await test.step('Block payment until the support agreement is accepted', async () => {
@@ -142,7 +142,6 @@ test('Tipping: Checkout, Payment & Transaction', {
   });
 
   await test.step('Post transaction via webhook API', async () => {
-    const { depositWebhook } = await import('@helpers/api/webhook');
     await depositWebhook(page.request, orderId);
   });
 
@@ -166,11 +165,7 @@ test('Tipping: Payment & Transaction Summary', {
 
   await test.step('Prepare the tip with the selected amount and payment method', async () => {
     await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.expectFormAutoFilled();
-    await tipPage.fillAmount(tipCheckoutData.amount);
-    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
-    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+    await tipPage.prepareCheckout(tipCheckoutData);
     await tipPage.acceptSupportAgreement();
     await tipPage.fillNotes(tipCheckoutData.publicNote, tipCheckoutData.privateNote);
     reviewTotal = await tipPage.expectReviewInformation(tipCheckoutData);
@@ -194,11 +189,7 @@ test('Tipping: Agreement Selected by Default', {
 
   await test.step('Open the tip review state with a valid amount and payment method', async () => {
     await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.expectFormAutoFilled();
-    await tipPage.fillAmount(tipCheckoutData.amount);
-    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
-    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+    await tipPage.prepareCheckout(tipCheckoutData);
   });
 
   await test.step('Verify the agreement is selected by default and Send Tip is visible', async () => {
@@ -215,8 +206,7 @@ test('Tip: IDR Minimum Amount Boundary', {
 
   await test.step('Select IDR and open the tip amount form', async () => {
     await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.expectFormAutoFilled();
+    await tipPage.expectTipFormReady();
     await tipPage.selectCurrency(tipCheckoutData.currency);
   });
 
@@ -237,8 +227,7 @@ test('Tip: Validation & Boundary', {
 
   await test.step('Verify buyer name and email are prefilled', async () => {
     await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.expectFormAutoFilled();
+    await tipPage.expectTipFormReady();
   });
 
   await test.step('Validate required name on blur', async () => {
@@ -298,16 +287,11 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
   tag: ['@AUT-FV-128', '@profile', '@membership', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
   test.setTimeout(120000);
-  const creatorHandle = 'davidalfasunarna';
 
   await test.step('Open creator profile and verify membership section', async () => {
-    await buyerNav.open('profile', { handle: creatorHandle });
+    await buyerNav.open('profile', { handle: membershipCreatorProfile });
     await buyerProfilePage.expectAuthenticated();
     await expect(buyerProfilePage.page.locator('main img').first()).toBeVisible({ timeout: 10000 });
-    await buyerProfilePage.expectMembershipSectionVisible();
-  });
-
-  await test.step('Verify membership tier cards with price and Show More', async () => {
     await buyerProfilePage.expectMembershipSectionVisible();
   });
 
@@ -328,7 +312,7 @@ guestTest('Guest user blocked — Like action requires login', {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
-    await buyerNav.goto('profile', { handle: 'hendrarg' });
+    await buyerNav.goto('profile', { handle: creatorProfile });
     await expect(page.locator('main').getByRole('button', { name: 'Feeds', exact: true })).toBeVisible({ timeout: 5000 });
   });
 
@@ -345,7 +329,7 @@ guestTest('Guest user blocked — Like action requires login', {
     await expect(dialog.getByRole('button', { name: 'Sign in now!' })).toBeVisible();
   });
 
-  await test.step('Click Sign in now and verify redirected to login', async () => {
+  await guestTest.step('Click Sign in now and verify redirected to login', async () => {
     await page.getByRole('button', { name: 'Sign in now!' }).click();
     await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
@@ -357,7 +341,7 @@ guestTest('Guest user blocked — Comment action requires login', {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
-    await buyerNav.goto('profile', { handle: 'hendrarg' });
+    await buyerNav.goto('profile', { handle: creatorProfile });
     await expect(page.locator('main').getByRole('button', { name: 'Feeds', exact: true })).toBeVisible({ timeout: 5000 });
   });
 
@@ -394,8 +378,7 @@ test('Tip validation — Invalid amount rejected', {
   await test.step('Open profile, verify support section and Send Tip disabled', async () => {
     await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
-    await buyerProfilePage.expectSupportSectionVisible();
-    await buyerProfilePage.expectSendTipDisabled();
+    await buyerProfilePage.expectSupportTipFormInitialState();
   });
 
   await test.step('Enter 0 amount, verify button enabled and navigate to tip page', async () => {
@@ -417,15 +400,14 @@ test('Tip validation — Invalid amount rejected', {
 });
 
 test('Tip validation — Currency switch to USD', {
-  tag: ['@AUT-FV-284', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-290', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, tipPage }) => {
   test.setTimeout(60000);
 
   await test.step('Open profile, verify support section with currency selector', async () => {
     await buyerNav.open('profile', { handle: creatorProfile });
     await buyerProfilePage.expectAuthenticated();
-    await buyerProfilePage.expectSupportSectionVisible();
-    await buyerProfilePage.expectSendTipDisabled();
+    await buyerProfilePage.expectSupportTipFormInitialState();
   });
 
   await test.step('Select USDT currency and verify', async () => {

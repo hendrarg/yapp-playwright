@@ -180,6 +180,11 @@ export class ProfilePage {
     await expect(this.sendTipButton).toBeDisabled({ timeout: 5000 });
   }
 
+  async expectSupportTipFormInitialState() {
+    await this.expectSupportSectionVisible();
+    await this.expectSendTipDisabled();
+  }
+
   async selectTipSuggestion(amountLabel: string = profileLabels.tipSuggestion.idr[1]) {
     await safeClick(this.main.getByRole("button", { name: amountLabel, exact: true }));
     await this.page.waitForTimeout(500);

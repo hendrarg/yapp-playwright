@@ -1,5 +1,8 @@
 export const creatorProfile = "hendrarg";
 
+/** Creator with membership tiers for @AUT-FV-128 */
+export const membershipCreatorProfile = "davidalfasunarna";
+
 export const profileTabs = {
   shops: "Shops",
   links: "Links",
