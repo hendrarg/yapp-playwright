@@ -1,5 +1,6 @@
 import type { PageFixtures } from '../src/fixtures/page.fixtures';
 import type { BuyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
+import type { CreatorNavFixtures } from '../src/fixtures/creator-nav.fixture';
 import type { BrowserContext } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
@@ -10,15 +11,17 @@ import { signInWithEmailOtp } from '../src/helpers/auth/otp-login';
 import { saveTokenToEnv } from '../src/helpers/auth/save-token';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
 import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
+import { creatorNavFixtures } from '../src/fixtures/creator-nav.fixture';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
 
-type MyFixtures = PageFixtures & BuyerNavFixtures;
+type MyFixtures = PageFixtures & BuyerNavFixtures & CreatorNavFixtures;
 
 export const test = base.extend<MyFixtures>({
   ...pageFixtures,
   ...buyerNavFixtures,
+  ...creatorNavFixtures,
 });
 
 /**

@@ -24,6 +24,7 @@ Skill files live at `.agents/skills/{skill}/SKILL.md`.
 | Command | Purpose |
 |---------|---------|
 | `.agents/commands/automation.md` | Generate from `@AUT-ID` |
+| `.agents/commands/add-nav-route.md` | Register a new `buyerNav` or `creatorNav` route |
 | `.agents/commands/migrate-unmapped.md` | Assign `@AUT-*` to unmapped tests |
 | `.agents/commands/audit-tags.md` | Run tag audit |
 | `.agents/commands/audit-locators.md` | Run locator audit |

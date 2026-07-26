@@ -61,16 +61,33 @@ Use an extended planning or delegated workflow only when the user explicitly req
 ## Architecture
 
 ```text
-tests/test-base.ts      fixture entry: test, authTest, creatorAuthTest
+tests/test-base.ts      fixture entry: test, authTest, creatorAuthTest + buyerNav, creatorNav
 src/
   test-data/            static and factory test data
   pages/                page objects
-  fixtures/             Playwright fixture wiring
-  helpers/              auth, API, OTP, network helpers
+  fixtures/             Playwright fixture wiring (page, buyer-nav, creator-nav)
+  helpers/
+    buyer/nav.ts        buyerNav routes (authTest)
+    creator/nav.ts      creatorNav routes (creatorAuthTest)
   utils/                Playwright utilities and flaky/heal helpers
 config/env.ts           environment variable access
 .agents/                provider-neutral AI runtime, rules, commands, skills
 ```
+
+## Navigation fixtures
+
+| Fixture | Domain | Available on | Helper |
+|---------|--------|--------------|--------|
+| `buyerNav` | Buyer (`baseURL`) | `test`, `authTest` | `src/helpers/buyer/nav.ts` |
+| `creatorNav` | Creator (`creatorsBaseURL`) | `test`, `creatorAuthTest` | `src/helpers/creator/nav.ts` |
+
+Prefer `buyerNav.open('feeds')` / `creatorNav.open('products')` over raw `page.goto()` in specs.
+
+**Adding a new route:** follow the domain checklist in `.agents/rules/testing.md`:
+- Buyer → section **Buyer navigation** → **Adding a new buyer route**
+- Creator → section **Creator navigation** → **Adding a new creator route**
+
+Also see `.agents/skills/add-page-object/SKILL.md` step 6 when scaffolding a page object.
 
 ## Import Conventions
 

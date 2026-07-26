@@ -27,6 +27,15 @@ Use when asked to create a new page object for a buyer or creator page.
 
 5. Run `npx tsc --noEmit` to verify.
 
+6. **Register the route in domain navigation** (required for buyer/creator pages):
+   - **Buyer**: update `src/helpers/buyer/nav.ts` (`BuyerRoute`, `goto`, `expectLoaded`, params if needed) and `src/fixtures/buyer-nav.fixture.ts` (`BuyerNavDeps` + destructure). Append route to buyer list in `.agents/rules/testing.md`.
+   - **Creator**: update `src/helpers/creator/nav.ts` (`CreatorRoute`, `goto`, `expectLoaded`) and `src/fixtures/creator-nav.fixture.ts` (`CreatorNavDeps` + destructure). Append route to creator list in `.agents/rules/testing.md`.
+   - Run `npx playwright test --list` after fixture changes — broken destructuring hides tests from the Playwright panel.
+
+   Specs should navigate with `buyerNav.open('rewards')` or `creatorNav.open('rewards')`, not raw `rewardsPage.goto()` unless testing the page object itself.
+
+   Quick reference: `.agents/commands/add-nav-route.md`
+
 ## Locator scaffold
 
 ```typescript
@@ -60,3 +69,10 @@ For a new buyer page `rewards`:
 - Create `src/pages/buyer/RewardsPage.ts`
 - Fixture key: `rewardsPage`
 - Route: `/rewards`
+- Nav route key: `rewards` in `src/helpers/buyer/nav.ts`
+
+For a new creator page `rewards`:
+- Create `src/pages/creator/RewardsPage.ts`
+- Fixture key: `rewardsPage` (or distinct name if buyer already has one)
+- Route: `/rewards`
+- Nav route key: `rewards` in `src/helpers/creator/nav.ts`

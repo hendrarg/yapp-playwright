@@ -23,7 +23,7 @@ guestTest('guest/FV test...', ...)     // plain test for no-auth
 
 ### Buyer navigation (`buyerNav`)
 
-`authTest` includes a `buyerNav` fixture for route-based open/goto without repeating page-object boilerplate:
+`authTest` and guest `test` include a `buyerNav` fixture for route-based open/goto without repeating page-object boilerplate:
 
 ```typescript
 await buyerNav.open('feeds');
@@ -33,12 +33,66 @@ await buyerNav.goto('membership', { handle: 'hendrarg' });
 await buyerNav.expectLoaded('membership');
 ```
 
-Routes: `feeds`, `explore`, `cart`, `library`, `messages` (`direct`), `profile`, `tip` (`sendTip`), `membership`, `tierDetail`, `transaction`, `productPurchase`.
+**Routes:** `feeds`, `explore`, `cart`, `library`, `messages` (`direct`), `profile`, `tip` (`sendTip`), `membership`, `tierDetail`, `transaction`, `productPurchase`.
+
+**Params (`BuyerNavParams`):**
+
+| Route | Required params |
+|-------|-----------------|
+| `profile` | `handle?` — omit for buyer's own `/profile` |
+| `tip`, `sendTip` | `handle`, optional `amount` |
+| `membership` | `handle` |
+| `tierDetail` | `handle`, `tierId` |
+| `transaction` | `orderId` |
+| `productPurchase` | `product` (`PurchaseProduct`) |
+
+**Aliases** (via `normalizeRoute()` in `src/helpers/buyer/nav.ts`): `direct` → `messages`, `sendTip` → `tip`.
 
 Page-specific assertions (`expectAuthenticated`, tab checks, form interactions) stay on the page object fixture.
 
+#### Adding a new buyer route
+
+When scaffolding a new buyer page, wire it into `buyerNav` so specs use `buyerNav.open(...)` instead of raw `page.goto()`:
+
+1. `src/pages/buyer/{Page}.ts` — `goto()` + `expectLoaded()`
+2. `src/fixtures/page.fixtures.ts` — import, `PageFixtures` type, `buyerPage(...)` factory
+3. `src/helpers/buyer/nav.ts` — add to `BuyerRoute`; handle in `goto()` and `expectLoaded()`; extend `BuyerNavParams` if the route needs params
+4. `src/fixtures/buyer-nav.fixture.ts` — add page to `BuyerNavDeps` **and destructure it** in the fixture callback (Playwright requires explicit destructuring — missing deps break `playwright test --list`)
+5. Append the route name to the **Routes** list in this section
+6. Run `npx tsc --noEmit` and `npx playwright test --list`
+
+See also `.agents/skills/add-page-object/SKILL.md` step 6.
+
+### Creator navigation (`creatorNav`)
+
+`creatorAuthTest` includes a `creatorNav` fixture for route-based open/goto without repeating page-object boilerplate:
+
+```typescript
+await creatorNav.open('feeds');
+await creatorNav.open('products');
+await creatorNav.goto('wallet');
+await creatorNav.expectLoaded('settings');
+```
+
+**Routes:** `affiliate`, `analytics`, `campaigns`, `feeds`, `membership`, `messages` (`direct`), `orders`, `products`, `profile`, `promotions`, `referral`, `sessions` (`consultation`), `settings`, `streaming`, `wallet`.
+
+**Aliases** (via `normalizeRoute()` in `src/helpers/creator/nav.ts`): `direct` → `messages`, `consultation` → `sessions`.
+
+#### Adding a new creator route
+
+When scaffolding a new creator page, wire it into `creatorNav`:
+
+1. `src/pages/creator/{Page}.ts` — `goto()` + `expectLoaded()`
+2. `src/fixtures/page.fixtures.ts` — import, `PageFixtures` type, `creatorPage(...)` factory
+3. `src/helpers/creator/nav.ts` — add to `CreatorRoute`; handle in `goto()` and `expectLoaded()`; extend `CreatorNavParams` when params are needed
+4. `src/fixtures/creator-nav.fixture.ts` — add page to `CreatorNavDeps` **and destructure it** in the fixture callback
+5. Append the route name to the **Routes** list in this section
+6. Run `npx tsc --noEmit` and `npx playwright test --list`
+
+See also `.agents/skills/add-page-object/SKILL.md` step 6.
+
 ## Test Structure
-- Every test must use a page object fixture: `pageObject.goto()` + `pageObject.expectLoaded()`
+- Prefer `buyerNav.open(...)` / `creatorNav.open(...)` for route navigation; use page-object fixtures for assertions and interactions beyond load checks
 - Add meaningful interactions beyond navigation — see **Minimum test depth** below
 - Set `test.setTimeout()` only when needed (e.g. OTP flow = 90000ms)
 - **Step naming**: Use descriptive step names ONLY. Do **NOT** prefix with `Step N:`, `Step 1:`, etc. Playwright already numbers steps automatically.
