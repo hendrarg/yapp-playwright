@@ -61,6 +61,31 @@ export const profileLabels = {
   memberOnly: "Member Only",
   openPostMedia: "Open post media",
   tierPricePattern: "IDR",
+  share: "Share",
+  back: "Back",
+  follow: "Follow",
+  likePost: "Like post",
+  unlikePost: "Unlike post",
+  signInNow: "Sign in now!",
+  signInBeforeFollowing: "Sign in before following",
+  signIn: "Sign In",
+  noCommentsYet: "No comments yet.",
+  signInToComment: "Sign in to drop a comment!",
+  postImageModal: "Post image modal",
+} as const;
+
+export const tipLabels = {
+  sendTip: "Send Tip",
+  inputAmount: "Input Amount",
+  yourName: "Your Name or Nickname",
+  yourEmail: "Your Email",
+  sendAnonymous: "Send as Anonymous",
+  giveNotes: "Notes can be seen by public",
+  privateNotes: "Notes can only be seen by creator",
+  detailTransactions: "Detail Transactions",
+  subtotal: "Subtotal",
+  total: "Total",
+  agreementPrefix: "With this, I declare that this transaction",
 } as const;
 
 export const tipCheckoutData = {

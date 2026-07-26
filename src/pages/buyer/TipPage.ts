@@ -1,6 +1,7 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { smartClick } from "@utils/heal-utils";
+import { tipLabels } from "@test-data/buyer/profile.data";
+import { locatorChain, smartClick, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
 
 type TipReviewData = {
@@ -32,22 +33,62 @@ export class TipPage {
   }
 
   // ── Tip page form ──
-  readonly title = this.page.locator("span").filter({ hasText: "Send Tip" }).first();
-  readonly amountInput = this.page.getByRole("textbox", { name: "Input Amount" });
-  readonly paymentMethod = this.page.getByRole("combobox");
-  readonly nameInput = this.page.getByRole("textbox", { name: "Your Name or Nickname" });
-  readonly emailInput = this.page.getByRole("textbox", { name: "Your Email" });
+  readonly title = locatorChain(this.page, {
+    role: "heading",
+    name: tipLabels.sendTip,
+    text: tipLabels.sendTip,
+    selector: "span:has-text('Send Tip')",
+  });
+
+  readonly amountInput = locatorChain(this.page, {
+    role: "textbox",
+    name: tipLabels.inputAmount,
+    placeholder: tipLabels.inputAmount,
+  });
+
+  readonly paymentMethod = locatorChain(this.page, {
+    role: "combobox",
+    selector: 'button[role="combobox"]',
+  });
+
+  readonly nameInput = locatorChain(this.page, {
+    role: "textbox",
+    name: tipLabels.yourName,
+    label: tipLabels.yourName,
+  });
+
+  readonly emailInput = locatorChain(this.page, {
+    role: "textbox",
+    name: tipLabels.yourEmail,
+    label: tipLabels.yourEmail,
+  });
+
   readonly anonymousCheckbox = this.page
-    .getByText("Send as Anonymous", { exact: true })
-    .locator("xpath=../..")
-    .getByRole("checkbox");
-  readonly giveNotesInput = this.page.getByRole("textbox", { name: "Notes can be seen by public" });
-  readonly privateNotesInput = this.page.getByRole("textbox", { name: "Notes can only be seen by creator" });
-  readonly sendButton = this.page.getByRole("button", { name: "Send Tip" }).last();
+    .getByRole("checkbox")
+    .filter({ has: this.page.getByText(tipLabels.sendAnonymous, { exact: true }) })
+    .or(locatorChain(this.page, { role: "checkbox", name: tipLabels.sendAnonymous, text: tipLabels.sendAnonymous }));
+
+  readonly giveNotesInput = locatorChain(this.page, {
+    role: "textbox",
+    name: tipLabels.giveNotes,
+    label: tipLabels.giveNotes,
+  });
+
+  readonly privateNotesInput = locatorChain(this.page, {
+    role: "textbox",
+    name: tipLabels.privateNotes,
+    label: tipLabels.privateNotes,
+  });
+
+  readonly sendButton = locatorChain(this.page, {
+    role: "button",
+    name: tipLabels.sendTip,
+    text: tipLabels.sendTip,
+  }).last();
+
   readonly supportAgreementCheckbox = this.page
-    .getByText(/^With this, I declare that this transaction/)
-    .locator("xpath=../../..")
-    .getByRole("checkbox");
+    .getByRole("checkbox")
+    .filter({ has: this.page.getByText(new RegExp(tipLabels.agreementPrefix)) });
 
   async expectPageLoaded() {
     await expect(this.title).toBeVisible({ timeout: 10000 });
@@ -91,11 +132,11 @@ export class TipPage {
   }
 
   async expectNameError(message = "Name is required") {
-    await expect(this.page.getByText(message, { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(locatorChain(this.page, { text: message, role: "alert", name: message })).toBeVisible({ timeout: 5000 });
   }
 
   async expectEmailError(message = "Email is required") {
-    await expect(this.page.getByText(message, { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(locatorChain(this.page, { text: message, role: "alert", name: message })).toBeVisible({ timeout: 5000 });
   }
 
   async expectEmailDisabled() {
@@ -150,13 +191,13 @@ export class TipPage {
   }
 
   async selectCurrency(currency: string) {
-    const currencyTab = this.page.getByRole("tab", { name: currency, exact: true });
+    const currencyTab = locatorChain(this.page, { role: "tab", name: currency, text: currency });
     await safeClick(currencyTab);
     await expect(currencyTab).toHaveAttribute("aria-selected", "true");
   }
 
   async expectAmountError(message: string) {
-    await expect(this.page.getByText(message)).toBeVisible({ timeout: 5000 });
+    await expect(locatorChain(this.page, { text: message, role: "alert", name: message })).toBeVisible({ timeout: 5000 });
   }
 
   async selectVotingOptionIfPresent(optionName: string) {
@@ -189,7 +230,7 @@ export class TipPage {
 
   async uncheckSupportAgreement() {
     await expect(this.supportAgreementCheckbox).toBeVisible({ timeout: 5000 });
-    if (await this.supportAgreementCheckbox.getAttribute("aria-checked") === "true") {
+    if ((await this.supportAgreementCheckbox.getAttribute("aria-checked")) === "true") {
       await safeClick(this.supportAgreementCheckbox);
     }
     await expect(this.supportAgreementCheckbox).toHaveAttribute("aria-checked", "false");
@@ -200,7 +241,7 @@ export class TipPage {
   }
 
   async acceptSupportAgreement() {
-    if (await this.supportAgreementCheckbox.getAttribute("aria-checked") !== "true") {
+    if ((await this.supportAgreementCheckbox.getAttribute("aria-checked")) !== "true") {
       await safeClick(this.supportAgreementCheckbox);
     }
     await expect(this.supportAgreementCheckbox).toHaveAttribute("aria-checked", "true");
@@ -212,11 +253,10 @@ export class TipPage {
   }
 
   async expectReviewInformation(data: TipReviewData): Promise<string> {
-    await expect(this.page.getByText(data.creatorName, { exact: true })).toBeVisible();
-    await expect(this.page.getByRole("tab", { name: data.currency, exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expect(locatorChain(this.page, { text: data.creatorName, role: "heading", name: data.creatorName })).toBeVisible();
+    await expect(
+      locatorChain(this.page, { role: "tab", name: data.currency, text: data.currency }),
+    ).toHaveAttribute("aria-selected", "true");
     await expect(this.amountInput).toHaveValue(data.displayAmount);
     expect((await this.nameInput.inputValue()).length).toBeGreaterThan(0);
     expect((await this.emailInput.inputValue()).length).toBeGreaterThan(0);
@@ -225,17 +265,21 @@ export class TipPage {
     await expect(this.privateNotesInput).toHaveValue(data.privateNote);
     await expect(this.paymentMethod).toContainText(new RegExp(data.paymentMethod, "i"));
 
-    const subtotalLabel = this.page.getByText("Subtotal", { exact: true });
-    if (!await subtotalLabel.isVisible()) {
+    const subtotalLabel = locatorChain(this.page, {
+      text: tipLabels.subtotal,
+      role: "cell",
+      name: tipLabels.subtotal,
+    });
+    if (!(await subtotalLabel.isVisible())) {
       await smartClick(this.page, {
         role: "button",
-        name: "Detail Transactions",
-        text: "Detail Transactions",
+        name: tipLabels.detailTransactions,
+        text: tipLabels.detailTransactions,
       }, { timeout: 1500 });
     }
 
     const subtotalRow = subtotalLabel.locator("..");
-    const totalRow = this.page.getByText("Total", { exact: true }).locator("..");
+    const totalRow = locatorChain(this.page, { text: tipLabels.total, role: "cell", name: tipLabels.total }).locator("..");
     await expect(subtotalRow.getByText(data.displayAmount, { exact: true })).toBeVisible();
 
     const totalValue = totalRow.locator("span").filter({ hasText: /^Rp[\d.]+$/ });

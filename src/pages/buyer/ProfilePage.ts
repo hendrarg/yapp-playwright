@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
+import { locatorChain, smartLocator } from "@utils/heal-utils";
 import {
   profileTabs,
   profileLabels,
@@ -11,7 +12,7 @@ import {
 } from "@test-data/buyer/profile.data";
 
 const ACTIVE_TAB_CLASS = "primary-text-color";
-const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
+const POST_FALLBACK_SELECTOR = "main div.cursor-pointer.flex-row";
 const BUYER_APP_ROUTES = new Set([
   "feeds",
   "explore",
@@ -29,7 +30,7 @@ export class ProfilePage {
   constructor(public readonly page: Page, private readonly baseURL: string) {}
 
   private get main() {
-    return this.page.locator("main");
+    return this.page.getByRole("main").or(this.page.locator("main"));
   }
 
   private get creatorContext(): CreatorProfileContext {
@@ -54,8 +55,6 @@ export class ProfilePage {
   }
 
   // ── Navigation ──
-  // No-arg goto → buyer's own profile (/profile).
-  // Pass a creator handle to open a creator profile (/{handle}).
   async goto(handle?: string) {
     if (handle) {
       this.setCreator(handle);
@@ -79,7 +78,10 @@ export class ProfilePage {
 
   // ── Creator profile header ──
   private get profilePicture() {
-    return this.page.getByRole("img", { name: this.creatorContext.displayName });
+    return locatorChain(this.page, {
+      role: "img",
+      name: this.creatorContext.displayName,
+    });
   }
 
   async expectProfileHeaderVisible() {
@@ -89,8 +91,16 @@ export class ProfilePage {
     }
   }
 
+  async expectProfileAvatarVisible() {
+    await expect(this.main.locator("img").first()).toBeVisible({ timeout: 10000 });
+  }
+
   // ── Share profile ──
-  readonly shareButton = this.page.getByRole("button", { name: "Share" });
+  readonly shareButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.share,
+    text: profileLabels.share,
+  });
 
   async clickShare() {
     await safeClick(this.shareButton);
@@ -102,9 +112,13 @@ export class ProfilePage {
   }
 
   // ── Follow / Unfollow ──
-  readonly followButton = this.page.getByRole("button", { name: "Follow", exact: true });
+  readonly followButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.follow,
+    text: profileLabels.follow,
+  });
   readonly followingButton = this.page.getByRole("button", { name: /Following/ });
-  readonly unfollowDialog = this.page.getByRole("dialog");
+  readonly unfollowDialog = locatorChain(this.page, { role: "dialog" });
   readonly unfollowConfirmButton = this.unfollowDialog.getByRole("button", { name: "Unfollow" });
 
   async expectFollowingState() {
@@ -125,7 +139,7 @@ export class ProfilePage {
 
   async clickUnfollow() {
     await this.page.keyboard.press("Escape");
-    await expect(this.page.getByRole("dialog", { name: "Post image modal" })).toBeHidden({ timeout: 3000 }).catch(() => {});
+    await expect(this.postDetailDialog).toBeHidden({ timeout: 3000 }).catch(() => {});
     const btn = this.page.getByRole("button", { name: /Follow/ }).filter({ hasText: "Following" });
     await btn.scrollIntoViewIfNeeded();
     await btn.hover();
@@ -140,7 +154,11 @@ export class ProfilePage {
   }
 
   // ── Navigation ──
-  readonly backButton = this.page.getByRole("button", { name: "Back" });
+  readonly backButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.back,
+    text: profileLabels.back,
+  });
 
   async clickBackButton() {
     await safeClick(this.backButton);
@@ -185,7 +203,11 @@ export class ProfilePage {
 
   // ── Membership section (right column, visible on every tab) ──
   readonly membershipHeading = this.main.getByRole("paragraph").filter({ hasText: profileLabels.membership });
-  readonly showMoreButton = this.main.getByRole("button", { name: profileLabels.showMore, exact: true });
+  readonly showMoreButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.showMore,
+    text: profileLabels.showMore,
+  });
 
   private get tierCards() {
     const pattern = this.creator?.tierPricePattern ?? profileLabels.tierPricePattern;
@@ -206,11 +228,27 @@ export class ProfilePage {
   }
 
   readonly tipCurrencyGroup = this.main.getByRole("group", { name: "Tip currency" });
-  readonly idrButton = this.main.getByRole("button", { name: profileLabels.idr, exact: true });
-  readonly usdtButton = this.main.getByRole("button", { name: profileLabels.usdt, exact: true });
-  readonly tipInput = this.main.getByPlaceholder(profileLabels.inputTipPlaceholder);
+  readonly idrButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.idr,
+    text: profileLabels.idr,
+  });
+  readonly usdtButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.usdt,
+    text: profileLabels.usdt,
+  });
+  readonly tipInput = locatorChain(this.page, {
+    role: "textbox",
+    placeholder: profileLabels.inputTipPlaceholder,
+    name: profileLabels.inputTipPlaceholder,
+  });
   readonly tipSuggestions = this.main.getByRole("button", { name: /^Rp[\d.]+$/ });
-  readonly sendTipButton = this.main.getByRole("button", { name: profileLabels.sendTip, exact: true });
+  readonly sendTipButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.sendTip,
+    text: profileLabels.sendTip,
+  });
 
   async expectSupportSectionVisible() {
     await expect(this.supportSectionHeading).toBeVisible({ timeout: 10000 });
@@ -236,7 +274,7 @@ export class ProfilePage {
     if (!label) {
       throw new Error(`No IDR tip suggestion configured for creator "${this.creatorContext.handle}"`);
     }
-    await safeClick(this.main.getByRole("button", { name: label, exact: true }));
+    await safeClick(locatorChain(this.page, { role: "button", name: label, text: label }));
     await this.page.waitForTimeout(500);
   }
 
@@ -284,9 +322,28 @@ export class ProfilePage {
   }
 
   // ── Feeds tab (creator's posts) ──
-  readonly allFeedsToggle = this.main.getByRole("button", { name: profileLabels.allFeeds, exact: true });
-  readonly exclusiveOnlyToggle = this.main.getByRole("button", { name: profileLabels.exclusiveOnly, exact: true });
-  readonly creatorFeedPosts = this.main.locator(POST_SELECTOR);
+  readonly allFeedsToggle = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.allFeeds,
+    text: profileLabels.allFeeds,
+  });
+  readonly exclusiveOnlyToggle = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.exclusiveOnly,
+    text: profileLabels.exclusiveOnly,
+  });
+
+  private get creatorFeedPosts(): Locator {
+    const likeButton = locatorChain(this.page, {
+      role: "button",
+      name: profileLabels.likePost,
+      text: profileLabels.likePost,
+    });
+    return this.main
+      .locator("div")
+      .filter({ has: likeButton })
+      .or(locatorChain(this.page, { selector: POST_FALLBACK_SELECTOR, role: "button", name: profileLabels.likePost }));
+  }
 
   async expectFeedsTabContent() {
     await this.expectTabActive("feeds");
@@ -302,13 +359,21 @@ export class ProfilePage {
   }
 
   async expectExclusiveOnlyShowsLocked() {
-    await expect(this.main.getByText(profileLabels.memberOnly, { exact: true }).first()).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(this.memberOnlyLabel.first()).toBeVisible({ timeout: 10000 }).catch(() => {});
   }
 
   // ── Like / Unlike on creator feed posts ──
-  readonly creatorFirstUnlikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Unlike post" });
-  readonly creatorFirstLikeButton = this.creatorFeedPosts.first().getByRole("button", { name: "Like post" });
-  readonly creatorFirstLikeCount = this.creatorFeedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+  private get creatorFirstUnlikeButton() {
+    return this.creatorFeedPosts.first().getByRole("button", { name: profileLabels.unlikePost });
+  }
+
+  private get creatorFirstLikeButton() {
+    return this.creatorFeedPosts.first().getByRole("button", { name: profileLabels.likePost });
+  }
+
+  private get creatorFirstLikeCount() {
+    return this.creatorFeedPosts.first().locator("p").filter({ hasText: /^\d+$/ }).first();
+  }
 
   private creatorPostByContent(content: string): Locator {
     return this.creatorFeedPosts.filter({ hasText: content }).first();
@@ -333,17 +398,30 @@ export class ProfilePage {
 
   async unlikeCreatorPost(content: string) {
     const post = this.creatorPostByContent(content);
-    await safeClick(post.getByRole("button", { name: "Unlike post" }));
+    await safeClick(post.getByRole("button", { name: profileLabels.unlikePost }));
     await waitForLoaded(this.page);
-    await expect(post.getByRole("button", { name: "Like post" })).toBeVisible({ timeout: 10000 });
+    await expect(post.getByRole("button", { name: profileLabels.likePost })).toBeVisible({ timeout: 10000 });
   }
 
-  readonly memberOnlyLabel = this.main.getByText(profileLabels.memberOnly, { exact: true });
-  readonly publicImagePosts = this.main
-    .getByRole("button", { name: profileLabels.openPostMedia })
-    .locator("xpath=ancestor::div[contains(@class,'cursor-pointer')][1]")
-    .filter({ hasNot: this.memberOnlyLabel });
-  readonly postDetailDialog = this.page.getByRole("dialog", { name: "Post image modal" });
+  readonly memberOnlyLabel = locatorChain(this.page, {
+    text: profileLabels.memberOnly,
+    selector: `main :text-is("${profileLabels.memberOnly}")`,
+  });
+
+  private get publicImagePosts(): Locator {
+    const mediaButton = locatorChain(this.page, {
+      role: "button",
+      name: profileLabels.openPostMedia,
+      text: profileLabels.openPostMedia,
+    });
+    return this.creatorFeedPosts.filter({ has: mediaButton }).filter({ hasNot: this.memberOnlyLabel });
+  }
+
+  readonly postDetailDialog = locatorChain(this.page, {
+    role: "dialog",
+    name: profileLabels.postImageModal,
+    text: profileLabels.postImageModal,
+  });
 
   async openFirstPublicImagePost() {
     const mediaButton = this.publicImagePosts
@@ -365,5 +443,61 @@ export class ProfilePage {
     const blur = await image.evaluate((el) => (globalThis as any).getComputedStyle(el).filter).catch(() => "none");
     expect(blur === "none" || blur === "", `public image should not be blurred, filter="${blur}"`).toBe(true);
     await expect(this.postDetailDialog.getByText(profileLabels.memberOnly, { exact: true })).toBeHidden({ timeout: 5000 }).catch(() => {});
+  }
+
+  // ── Guest auth prompts (Feeds tab) ──
+  readonly firstLikeButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.likePost,
+    text: profileLabels.likePost,
+  }).first();
+
+  readonly signInNowButton = locatorChain(this.page, {
+    role: "button",
+    name: profileLabels.signInNow,
+    text: profileLabels.signInNow,
+  });
+
+  readonly signInBeforeFollowingDialog = locatorChain(this.page, {
+    role: "dialog",
+    name: profileLabels.signInBeforeFollowing,
+    text: profileLabels.signInBeforeFollowing,
+  });
+
+  async expectFeedsTabVisibleOnProfile() {
+    await expect(this.tabButton(profileTabs.feeds)).toBeVisible({ timeout: 5000 });
+  }
+
+  async clickFirstLikePostAsGuest() {
+    await safeClick(this.firstLikeButton);
+  }
+
+  async expectLoveThisPostSignInDialog() {
+    const dialog = locatorChain(this.page, { role: "dialog" });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(/Love this post/)).toBeVisible();
+    await expect(dialog.getByRole("button", { name: profileLabels.signInNow })).toBeVisible();
+  }
+
+  async clickSignInNowFromDialog() {
+    await safeClick(this.signInNowButton);
+  }
+
+  async clickFirstCommentButtonOnFeed() {
+    await safeClick(this.main.getByRole("button", { name: /^\d+$/ }).first());
+  }
+
+  async expectGuestCommentPrompt() {
+    await expect(locatorChain(this.page, { text: profileLabels.noCommentsYet })).toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(locatorChain(this.page, { text: profileLabels.signInToComment })).toBeVisible({ timeout: 5000 });
+  }
+
+  async clickSignInOnComment() {
+    await safeClick(locatorChain(this.page, { role: "button", name: profileLabels.signIn, text: profileLabels.signIn }));
+  }
+
+  async expectSignInBeforeFollowingDialog() {
+    await expect(this.signInBeforeFollowingDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.signInBeforeFollowingDialog.getByRole("button", { name: profileLabels.signInNow })).toBeVisible();
   }
 }

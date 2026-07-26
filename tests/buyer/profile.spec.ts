@@ -290,7 +290,7 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
   await test.step('Open creator profile and verify membership section', async () => {
     await buyerNav.open('profile', { handle: membershipCreatorProfile });
     await buyerProfilePage.expectAuthenticated();
-    await expect(buyerProfilePage.page.locator('main img').first()).toBeVisible({ timeout: 10000 });
+    await buyerProfilePage.expectProfileAvatarVisible();
     await buyerProfilePage.expectMembershipSectionVisible();
   });
 
@@ -307,12 +307,12 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
 
 guestTest('Guest user blocked — Like action requires login', {
   tag: ['@AUT-FV-085', '@profile', '@auth', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerProfilePage, page }) => {
+}, async ({ buyerNav, buyerProfilePage }) => {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
     await buyerNav.goto('profile', { handle: creatorProfile });
-    await expect(page.locator('main').getByRole('button', { name: 'Feeds', exact: true })).toBeVisible({ timeout: 5000 });
+    await buyerProfilePage.expectFeedsTabVisibleOnProfile();
   });
 
   await guestTest.step('Switch to Feeds tab', async () => {
@@ -321,27 +321,24 @@ guestTest('Guest user blocked — Like action requires login', {
   });
 
   await guestTest.step('Click Like on post and verify sign in dialog', async () => {
-    await page.getByRole('button', { name: 'Like post' }).first().click();
-    const dialog = page.getByRole('dialog');
-    await expect(dialog).toBeVisible({ timeout: 10000 });
-    await expect(dialog.getByText(/Love this post/)).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Sign in now!' })).toBeVisible();
+    await buyerProfilePage.clickFirstLikePostAsGuest();
+    await buyerProfilePage.expectLoveThisPostSignInDialog();
   });
 
   await guestTest.step('Click Sign in now and verify redirected to login', async () => {
-    await page.getByRole('button', { name: 'Sign in now!' }).click();
-    await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
+    await buyerProfilePage.clickSignInNowFromDialog();
+    await expect(buyerProfilePage.page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
 
 guestTest('Guest user blocked — Comment action requires login', {
   tag: ['@AUT-FV-087', '@profile', '@auth', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerProfilePage, page }) => {
+}, async ({ buyerNav, buyerProfilePage }) => {
   guestTest.setTimeout(60000);
 
   await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
     await buyerNav.goto('profile', { handle: creatorProfile });
-    await expect(page.locator('main').getByRole('button', { name: 'Feeds', exact: true })).toBeVisible({ timeout: 5000 });
+    await buyerProfilePage.expectFeedsTabVisibleOnProfile();
   });
 
   await guestTest.step('Switch to Feeds tab and verify posts', async () => {
@@ -350,22 +347,18 @@ guestTest('Guest user blocked — Comment action requires login', {
   });
 
   await guestTest.step('Click comment button to open post detail', async () => {
-    const commentBtn = page.locator('main').getByRole('button', { name: /^\d+$/ }).first();
-    await commentBtn.click();
-    await expect(page.getByText('No comments yet.').first()).toBeVisible({ timeout: 5000 }).catch(() => {});
-    await expect(page.getByText('Sign in to drop a comment!').first()).toBeVisible({ timeout: 5000 });
+    await buyerProfilePage.clickFirstCommentButtonOnFeed();
+    await buyerProfilePage.expectGuestCommentPrompt();
   });
 
   await guestTest.step('Click Sign In and verify sign in dialog', async () => {
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Sign in before following' });
-    await expect(dialog).toBeVisible({ timeout: 10000 });
-    await expect(dialog.getByRole('button', { name: 'Sign in now!' })).toBeVisible();
+    await buyerProfilePage.clickSignInOnComment();
+    await buyerProfilePage.expectSignInBeforeFollowingDialog();
   });
 
   await guestTest.step('Click Sign in now and verify redirected to login', async () => {
-    await page.getByRole('button', { name: 'Sign in now!' }).click();
-    await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
+    await buyerProfilePage.clickSignInNowFromDialog();
+    await expect(buyerProfilePage.page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
 
