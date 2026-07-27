@@ -12,7 +12,7 @@ const tipTransactionSummary = {
 } as const;
 
 test.describe('Buyer Tip', () => {
-test('Tip Complete IDR Payment Journey', {
+test('Complete Tipping Journey from Creator Configuration to Wallet and Analytics', {
   tag: ['@AUT-E2E-014', '@tip', '@payment', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
@@ -56,7 +56,7 @@ test('Tip Complete IDR Payment Journey', {
   });
 });
 
-test('Tip Checkout, Payment & Transaction', {
+test('Complete Tip Payment and Verify Transaction Status', {
   tag: ['@AUT-FV-287', '@tip', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, tipPage, transactionPage, page }) => {
   test.setTimeout(120000);
@@ -103,7 +103,7 @@ test('Tip Checkout, Payment & Transaction', {
   });
 });
 
-test('Tip Payment & Transaction Summary', {
+test('Verify Tip Payment Method and Transaction Totals', {
   tag: ['@AUT-FV-288', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage, transactionPage }) => {
   test.setTimeout(120000);
@@ -125,7 +125,7 @@ test('Tip Payment & Transaction Summary', {
   });
 });
 
-test('Tip Agreement Selected by Default', {
+test('Select Tip Agreement by Default', {
   tag: ['@AUT-FV-289', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
   test.setTimeout(120000);
@@ -140,7 +140,7 @@ test('Tip Agreement Selected by Default', {
   });
 });
 
-test('Tip IDR Minimum Amount Boundary', {
+test('Enforce the Minimum IDR Tip Amount', {
   tag: ['@AUT-FV-291', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
   test.setTimeout(90000);
@@ -162,7 +162,7 @@ test('Tip IDR Minimum Amount Boundary', {
   });
 });
 
-test('Tip Validation & Amount Boundary', {
+test('Validate Buyer Tip Details and Notes', {
   tag: ['@AUT-FV-286', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
 
@@ -196,7 +196,7 @@ test('Tip Validation & Amount Boundary', {
   });
 });
 
-guestTest('Tip validation — Name and Email are required', {
+guestTest('Require Name and Email Before Sending a Tip', {
   tag: ['@AUT-FV-285', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
   guestTest.setTimeout(60000);
@@ -224,7 +224,7 @@ guestTest('Tip validation — Name and Email are required', {
   });
 });
 
-test('Tip validation — Invalid amount rejected', {
+test('Reject Empty and Invalid Tip Amounts', {
   tag: ['@AUT-FV-284', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
   test.setTimeout(60000);
@@ -251,7 +251,7 @@ test('Tip validation — Invalid amount rejected', {
   });
 });
 
-test('Tip validation — Currency switch to USDT', {
+test('Switch Currency and Continue with a Valid Tip Amount', {
   tag: ['@AUT-FV-290', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
   test.setTimeout(60000);

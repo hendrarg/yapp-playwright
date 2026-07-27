@@ -15,7 +15,7 @@ function getPromotionId(response: unknown): string {
 }
 
 test.describe('Guest promotion redemption', () => {
-  test('Promotion: Redeem valid voucher before payment', {
+  test('Verify Promotions Guest Voucher Redemption', {
     tag: ['@AUT-FV-247', '@promotions', '@buyer', '@smoke', '@regression'],
   }, async ({ buyerNav, productPurchasePage, page }) => {
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -43,7 +43,7 @@ test.describe('Guest promotion redemption', () => {
     }
   });
 
-  test('Promotion: Validate order summary and reject invalid vouchers', {
+  test('Verify Promotions Checkout Redemption Validation', {
     tag: ['@AUT-FV-248', '@promotions', '@buyer', '@regression'],
   }, async ({ buyerNav, productPurchasePage, page }) => {
     test.setTimeout(60_000);

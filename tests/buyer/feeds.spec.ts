@@ -5,7 +5,7 @@ import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 
 test.describe('Buyer Feeds', () => {
-test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
+test('Verify Feeds and Exclusive Buyer Feed Discovery & Content Preview', {
   tag: ['@AUT-FV-082', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(90000);
@@ -44,7 +44,7 @@ test('Buyer Explore Feed — Browse, View Tabs & Infinite Scroll', {
   });
 });
 
-test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
+test('Verify Feeds and Exclusive Followed Creator Feed', {
   tag: ['@AUT-FV-077', '@feeds', '@follow', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
@@ -111,7 +111,7 @@ test('Buyer Follow/Unfollow Creator — Full Cycle Across Entry Points', {
   }
 });
 
-test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
+test('Verify Feeds and Exclusive Like & Unlike Post', {
   tag: ['@AUT-FV-085', '@feeds', '@profile', '@like', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, buyerProfilePage, page }) => {
   test.setTimeout(120000);
@@ -176,8 +176,8 @@ test('Buyer Like/Unlike Post — Full Cycle Across Feed and Profile', {
   }
 });
 
-test('Buyer Comment on Post — Submit & Verify', {
-  tag: ['@AUT-FV-087', '@feeds', '@comment', '@buyer', '@regression'],
+test('Verify Feeds and Exclusive Comment Submission', {
+  tag: ['@AUT-FV-304', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(120000);
 
@@ -237,7 +237,7 @@ test('Buyer Comment on Post — Submit & Verify', {
   }
 });
 
-test('Buyer Comment CRUD — Create, Edit, Delete', {
+test('Verify Feeds and Exclusive Comment CRUD', {
   tag: ['@AUT-FV-086', '@feeds', '@comment', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(120000);
@@ -288,7 +288,7 @@ test('Buyer Comment CRUD — Create, Edit, Delete', {
   }
 });
 
-test('Buyer Exclusive Post — Unlock via PPV Payment', {
+test('Unlock Exclusive PPV Content and Verify Access', {
   tag: ['@AUT-E2E-003', '@feeds', '@payment', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, transactionPage, page }) => {
   test.setTimeout(180000);
@@ -353,7 +353,7 @@ test('Buyer Exclusive Post — Unlock via PPV Payment', {
     }}
 });
 
-test('Buyer Media Preview — Image Gallery & Video Playback', {
+test('Verify Feeds and Exclusive Buyer Media & Profile Interaction', {
   tag: ['@AUT-FV-083', '@feeds', '@media', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(120000);
@@ -425,8 +425,8 @@ test('Buyer Media Preview — Image Gallery & Video Playback', {
     }}
 });
 
-guestTest('Guest user blocked — Following tab requires login', {
-  tag: ['@AUT-FV-077', '@feeds', '@auth', '@buyer', '@regression'],
+guestTest('Verify Guest Follow Action Requires Sign In', {
+  tag: ['@AUT-FV-301', '@feeds', '@auth', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
   guestTest.setTimeout(60000);
 
@@ -447,7 +447,7 @@ guestTest('Guest user blocked — Following tab requires login', {
   });
 });
 
-test('Free post — No monetization indicator on public content', {
+test('Verify Feeds and Exclusive Display and Navigation', {
   tag: ['@AUT-FV-078', '@feeds', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage }) => {
   test.setTimeout(60000);
@@ -464,8 +464,8 @@ test('Free post — No monetization indicator on public content', {
   });
 });
 
-test('Member-Only badge display — Consistent indicator across feed and profile', {
-  tag: ['@AUT-FV-078', '@feeds', '@profile', '@buyer', '@regression'],
+test('Verify Feeds and Exclusive Creator Profile Navigation & Exclusive Preview', {
+  tag: ['@AUT-FV-305', '@feeds', '@profile', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(60000);
 
@@ -486,8 +486,8 @@ test('Member-Only badge display — Consistent indicator across feed and profile
   });
 });
 
-test('Like idempotency — Rapid tap prevention', {
-  tag: ['@AUT-FV-085', '@feeds', '@like', '@buyer', '@regression'],
+test('Verify Feeds and Exclusive Like Idempotency', {
+  tag: ['@AUT-FV-302', '@feeds', '@like', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
   test.setTimeout(60000);
 
@@ -532,7 +532,7 @@ test('Like idempotency — Rapid tap prevention', {
     }}
 });
 
-test('Locked exclusive media — Preview blocked before unlock', {
+test('Verify Feeds and Exclusive Buyer Content Discovery & Presentation', {
   tag: ['@AUT-FV-076','@feeds', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage }) => {
   test.setTimeout(60000);

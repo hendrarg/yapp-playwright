@@ -2,7 +2,7 @@ import { authTest as test } from '../test-base';
 import { exploreData } from '@test-data/buyer/explore.data';
 
 test.describe('Buyer Explore', () => {
-test('Explore Page: Search & Creator Discovery', {
+test('Verify Explore Global Search & Creator Discovery', {
   tag: ['@AUT-FV-055', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, explorePage }) => {
   const data = exploreData.creatorDiscovery;
@@ -48,7 +48,7 @@ test('Explore Page: Search & Creator Discovery', {
   });
 });
 
-test('Explore Page: Popular & Recommended Product Discovery', {
+test('Verify Explore Popular & Recommended Product Discovery', {
   tag: ['@AUT-FV-056', '@explore', '@buyer', '@regression'],
 }, async ({ buyerNav, explorePage }) => {
   test.setTimeout(90000);
@@ -88,7 +88,7 @@ test('Explore Page: Popular & Recommended Product Discovery', {
   });
 });
 
-test('Explore Page: Recent Product Recommendations', {
+test('Verify Explore Recent Product Recommendations', {
   tag: ['@AUT-FV-057', '@explore', '@buyer', '@regression'],
 }, async ({ buyerNav, explorePage }) => {
   let recommendations!: Awaited<ReturnType<typeof explorePage.getRecommendedProducts>>;
@@ -117,7 +117,7 @@ test('Explore Page: Recent Product Recommendations', {
   });
 });
 
-test('Explore Page: Navigate to full creator and product lists using See More', {
+test('Verify Explore See More Navigation', {
   tag: ['@AUT-FV-059', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, explorePage }) => {
   const data = exploreData.seeMoreNavigation;

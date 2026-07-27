@@ -5,7 +5,7 @@ import {
 } from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
-test('Buyer Creator Profile — Navigate Tabs & View Content', {
+test('Verify Feeds and Exclusive Creator Profile Navigation & Exclusive Preview', {
   tag: ['@AUT-FV-091', '@profile', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, buyerProfilePage }) => {
   test.setTimeout(90000);
@@ -59,7 +59,7 @@ test('Buyer Creator Profile — Navigate Tabs & View Content', {
   });
 });
 
-test('Buyer View Membership Plans — Browse & Select Tier', {
+test('Verify Membership Access, Entitlements, and Eligibility — Part 3', {
   tag: ['@AUT-FV-128', '@profile', '@membership', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, buyerMembershipPage, tierDetailPage }) => {
   test.setTimeout(120000);
@@ -82,8 +82,8 @@ test('Buyer View Membership Plans — Browse & Select Tier', {
   });
 });
 
-guestTest('Guest user blocked — Like action requires login', {
-  tag: ['@AUT-FV-085', '@profile', '@auth', '@buyer', '@regression'],
+guestTest('Verify Guest Like Action Requires Sign In', {
+  tag: ['@AUT-FV-303', '@profile', '@auth', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage }) => {
   guestTest.setTimeout(60000);
 
@@ -108,7 +108,7 @@ guestTest('Guest user blocked — Like action requires login', {
   });
 });
 
-guestTest('Guest user blocked — Comment action requires login', {
+guestTest('Validate Feeds and Exclusive Inputs and Boundary Conditions — Part 2', {
   tag: ['@AUT-FV-087', '@profile', '@auth', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage }) => {
   guestTest.setTimeout(60000);
@@ -139,7 +139,7 @@ guestTest('Guest user blocked — Comment action requires login', {
   });
 });
 
-test('Share creator profile — Share button displays options', {
+test('Upload and Manage Profile Media and Content — Part 6', {
   tag: ['@AUT-FV-232', '@profile', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage }) => {
   test.setTimeout(60000);
