@@ -12,8 +12,8 @@ const tipTransactionSummary = {
 } as const;
 
 test.describe('Buyer Tip', () => {
-test('Complete Tipping Journey from Creator Configuration to Wallet and Analytics', {
-  tag: ['@AUT-E2E-014', '@tip', '@payment', '@buyer', '@regression'],
+test('Open Tipping Page and Confirm Successful Tip', {
+  tag: ['@AUT-FV-283', '@tip', '@payment', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, tipPage, transactionPage, page }) => {
   test.setTimeout(180000);
 
