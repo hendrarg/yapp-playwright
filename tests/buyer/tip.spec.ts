@@ -6,6 +6,11 @@ import {
   tipCheckoutData,
 } from '@test-data/buyer/profile.data';
 
+const tipTransactionSummary = {
+  paymentMethod: tipCheckoutData.paymentMethod,
+  subtotal: tipCheckoutData.displayAmount,
+} as const;
+
 test.describe('Buyer Tip', () => {
 test('Tip Complete IDR Payment Journey', {
   tag: ['@AUT-E2E-014', '@tip', '@payment', '@buyer', '@regression'],
@@ -37,10 +42,7 @@ test('Tip Complete IDR Payment Journey', {
   });
 
   await test.step('Submit from tip page, verify transaction page', async () => {
-    await tipPage.fillAmount(tipCheckoutData.amount);
-    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
-    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
-    await tipPage.expectSendTipEnabled();
+    await tipPage.finalizeCheckout(tipCheckoutData);
     orderId = await tipPage.submit();
     await transactionPage.expectPageLoaded(tipCheckoutData.creatorName);
   });
@@ -74,19 +76,16 @@ test('Tip Checkout, Payment & Transaction', {
   });
 
   await test.step('Review the tip information and start payment', async () => {
-    await tipPage.acceptSupportAgreement();
-    await tipPage.fillNotes(tipCheckoutData.publicNote, tipCheckoutData.privateNote);
-    reviewTotal = await tipPage.expectReviewInformation(tipCheckoutData);
+    reviewTotal = await tipPage.completeReview(tipCheckoutData);
     orderId = await tipPage.submit();
   });
 
   await test.step('Follow the selected payment method instructions', async () => {
-    await transactionPage.expectPageLoaded(tipCheckoutData.creatorName, reviewTotal);
-    await transactionPage.expectTipPaymentInstructions({
-      paymentMethod: tipCheckoutData.paymentMethod,
-      subtotal: tipCheckoutData.displayAmount,
-      total: reviewTotal,
-    });
+    await transactionPage.expectTipCheckoutSummary(
+      tipCheckoutData.creatorName,
+      reviewTotal,
+      tipTransactionSummary,
+    );
   });
 
   await test.step('Post transaction via webhook API', async () => {
@@ -114,19 +113,15 @@ test('Tip Payment & Transaction Summary', {
   await test.step('Prepare the tip with the selected amount and payment method', async () => {
     await buyerNav.goto('tip', { handle: creatorProfile });
     await tipPage.prepareCheckout(tipCheckoutData);
-    await tipPage.acceptSupportAgreement();
-    await tipPage.fillNotes(tipCheckoutData.publicNote, tipCheckoutData.privateNote);
-    reviewTotal = await tipPage.expectReviewInformation(tipCheckoutData);
-    await tipPage.submit();
+    ({ reviewTotal } = await tipPage.completeReviewAndSubmit(tipCheckoutData));
   });
 
   await test.step('Open Detail Transactions and verify payment method, subtotal, and Total Amount', async () => {
-    await transactionPage.expectPageLoaded(tipCheckoutData.creatorName, reviewTotal);
-    await transactionPage.expectTipPaymentInstructions({
-      paymentMethod: tipCheckoutData.paymentMethod,
-      subtotal: tipCheckoutData.displayAmount,
-      total: reviewTotal,
-    });
+    await transactionPage.expectTipCheckoutSummary(
+      tipCheckoutData.creatorName,
+      reviewTotal,
+      tipTransactionSummary,
+    );
   });
 });
 
@@ -141,9 +136,7 @@ test('Tip Agreement Selected by Default', {
   });
 
   await test.step('Verify the agreement is selected by default and Send Tip is visible', async () => {
-    await expect(tipPage.supportAgreementCheckbox).toHaveAttribute('aria-checked', 'true');
-    await expect(tipPage.sendButton).toBeVisible();
-    await tipPage.expectSendTipEnabled();
+    await tipPage.expectAgreementSelectedByDefault();
   });
 });
 

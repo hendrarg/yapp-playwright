@@ -93,6 +93,19 @@ export class TransactionPage {
     await this.expectTipTransactionSummary(data.paymentMethod, data.subtotal, data.total);
   }
 
+  async expectTipCheckoutSummary(
+    creatorName: string,
+    reviewTotal: string,
+    summary: { paymentMethod: string; subtotal: string },
+  ) {
+    await this.expectPageLoaded(creatorName, reviewTotal);
+    await this.expectTipPaymentInstructions({
+      paymentMethod: summary.paymentMethod,
+      subtotal: summary.subtotal,
+      total: reviewTotal,
+    });
+  }
+
   async reload() {
     await this.page.reload({ waitUntil: "domcontentloaded" });
     await waitForLoaded(this.page);

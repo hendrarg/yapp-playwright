@@ -122,9 +122,33 @@ export class TipPage {
 
   async prepareCheckout(data: TipCheckoutPrep) {
     await this.expectTipFormReady();
+    await this.finalizeCheckout(data);
+  }
+
+  /** Amount, voting, and payment when the form is already on screen (e.g. after profile handoff). */
+  async finalizeCheckout(data: TipCheckoutPrep) {
     await this.fillAmount(data.amount);
     await this.selectVotingOptionIfPresent(data.votingOption);
     await this.expectPaymentMethodAvailableAndSelect(data.paymentMethod);
+    await this.expectSendTipEnabled();
+  }
+
+  async expectAgreementSelectedByDefault() {
+    await expect(this.supportAgreementCheckbox).toHaveAttribute("aria-checked", "true");
+    await expect(this.sendButton).toBeVisible();
+    await this.expectSendTipEnabled();
+  }
+
+  async completeReview(data: TipReviewData): Promise<string> {
+    await this.acceptSupportAgreement();
+    await this.fillNotes(data.publicNote, data.privateNote);
+    return this.expectReviewInformation(data);
+  }
+
+  async completeReviewAndSubmit(data: TipReviewData): Promise<{ orderId: string; reviewTotal: string }> {
+    const reviewTotal = await this.completeReview(data);
+    const orderId = await this.submit();
+    return { orderId, reviewTotal };
   }
 
   async clearName() {
