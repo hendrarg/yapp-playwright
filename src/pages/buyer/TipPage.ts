@@ -64,9 +64,9 @@ export class TipPage {
   });
 
   readonly anonymousCheckbox = this.page
-    .getByRole("checkbox")
-    .filter({ has: this.page.getByText(tipLabels.sendAnonymous, { exact: true }) })
-    .or(locatorChain(this.page, { role: "checkbox", name: tipLabels.sendAnonymous, text: tipLabels.sendAnonymous }));
+    .locator("div.flex.gap-2")
+    .filter({ hasText: new RegExp(`^${tipLabels.sendAnonymous}$`) })
+    .getByRole("checkbox");
 
   readonly giveNotesInput = locatorChain(this.page, {
     role: "textbox",
@@ -87,8 +87,9 @@ export class TipPage {
   }).last();
 
   readonly supportAgreementCheckbox = this.page
-    .getByRole("checkbox")
-    .filter({ has: this.page.getByText(new RegExp(tipLabels.agreementPrefix)) });
+    .locator("div.flex.gap-2")
+    .filter({ hasText: new RegExp(tipLabels.agreementPrefix) })
+    .getByRole("checkbox");
 
   async expectPageLoaded() {
     await expect(this.title).toBeVisible({ timeout: 10000 });
