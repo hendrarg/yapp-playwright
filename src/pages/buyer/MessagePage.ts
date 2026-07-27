@@ -9,7 +9,6 @@ export class MessagePage {
 
   async goto() {
     await this.page.goto(new URL("direct", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -21,3 +20,4 @@ export class MessagePage {
     await this.auth.expectValid();
   }
 }
+

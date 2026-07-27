@@ -6,7 +6,6 @@ export class StreamingPage {
 
   async goto() {
     await this.page.goto(new URL("streaming", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class StreamingPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

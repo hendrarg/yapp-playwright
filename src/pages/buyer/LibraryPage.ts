@@ -9,7 +9,6 @@ export class LibraryPage {
 
   async goto() {
     await this.page.goto(new URL("dashboard/library", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -21,3 +20,4 @@ export class LibraryPage {
     await this.auth.expectValid();
   }
 }
+

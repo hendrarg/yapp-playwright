@@ -6,7 +6,6 @@ export class AffiliatePage {
 
   async goto() {
     await this.page.goto(new URL("affiliate", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class AffiliatePage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

@@ -1,4 +1,5 @@
 import { type Locator, type Page, expect } from "@playwright/test";
+import { waitForLoaded } from "@utils/playwright.utils";
 
 /**
  * Retry a predicate-based check up to `retries` times with a delay.
@@ -118,10 +119,10 @@ export async function waitForLoadComplete(page: Page, spinnerSelector = '[data-t
 }
 
 /**
- * Wait for network idle (no network requests for 500ms).
+ * Wait for loading indicators to disappear after navigation or mutation.
  */
-export async function waitForNetworkIdle(page: Page, timeout = 15000) {
-  await page.waitForLoadState('networkidle', { timeout });
+export async function waitForNetworkIdle(page: Page) {
+  await waitForLoaded(page);
 }
 
 /**
@@ -134,7 +135,6 @@ export async function flakyGoto(page: Page, url: string, options?: { timeout?: n
   for (let i = 0; i < retries; i++) {
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
-      await page.waitForLoadState('networkidle', { timeout });
       return;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
@@ -163,3 +163,4 @@ export async function flakyExpectText(locator: Locator, expected: string | RegEx
   }
   throw lastError ?? new Error(`flakyExpectText: failed after ${retries} attempts`);
 }
+

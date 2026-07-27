@@ -6,7 +6,6 @@ export class SessionsPage {
 
   async goto() {
     await this.page.goto(new URL("consultation/sessions", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class SessionsPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

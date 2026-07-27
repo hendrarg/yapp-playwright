@@ -6,7 +6,6 @@ export class AnalyticsPage {
 
   async goto() {
     await this.page.goto(new URL("analytics", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class AnalyticsPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

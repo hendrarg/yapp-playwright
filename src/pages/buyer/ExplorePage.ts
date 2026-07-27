@@ -36,7 +36,6 @@ export class ExplorePage {
 
   async goto() {
     await this.page.goto(new URL('explore', this.baseURL).toString());
-    await this.page.waitForLoadState('networkidle');
   }
 
   async expectLoaded() {
@@ -266,3 +265,4 @@ export class ExplorePage {
     }));
   }
 }
+

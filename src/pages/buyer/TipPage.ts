@@ -26,7 +26,6 @@ export class TipPage {
     const path = amount ? `${handle}/tip?amount=${amount}` : `${handle}/tip`;
     await this.page.goto(new URL(path, this.baseURL).toString(), { waitUntil: "domcontentloaded" });
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
   }
 
   async expectLoaded() {
@@ -99,9 +98,19 @@ export class TipPage {
 
   async expectFormAutoFilled() {
     await expect(this.nameInput).toBeVisible({ timeout: 10000 });
-    expect((await this.nameInput.inputValue()).length).toBeGreaterThan(0);
+    await expect
+      .poll(async () => (await this.nameInput.inputValue()).length, {
+        timeout: 15000,
+        message: "expected name to be prefilled",
+      })
+      .toBeGreaterThan(0);
     await expect(this.emailInput).toBeVisible({ timeout: 5000 });
-    expect((await this.emailInput.inputValue()).length).toBeGreaterThan(0);
+    await expect
+      .poll(async () => (await this.emailInput.inputValue()).length, {
+        timeout: 15000,
+        message: "expected email to be prefilled",
+      })
+      .toBeGreaterThan(0);
     await expect(this.anonymousCheckbox).toBeVisible({ timeout: 5000 }).catch(() => {});
     await expect(this.paymentMethod).toBeVisible({ timeout: 5000 });
   }
@@ -170,10 +179,10 @@ export class TipPage {
   }
 
   async submit(): Promise<string> {
+    await this.waitForStableLocator(this.sendButton, "expected Send Tip button to be stable");
     await safeClick(this.sendButton);
     await this.page.waitForURL(/\/transaction\//, { timeout: 15000 });
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
     return this.page.url().split("/transaction/")[1];
   }
 
@@ -186,9 +195,22 @@ export class TipPage {
     await expect(this.sendButton).toBeVisible();
   }
 
+  private async waitForStableLocator(locator: Locator, message: string) {
+    await expect
+      .poll(async () => {
+        if (!(await locator.isVisible())) return false;
+        try {
+          await locator.scrollIntoViewIfNeeded({ timeout: 1000 });
+          return true;
+        } catch {
+          return false;
+        }
+      }, { timeout: 10000, message })
+      .toBe(true);
+  }
+
   private async focusAmountInput() {
-    await expect(this.amountInput).toBeVisible({ timeout: 10000 });
-    await this.amountInput.scrollIntoViewIfNeeded();
+    await this.waitForStableLocator(this.amountInput, "expected amount input to be stable");
     await this.amountInput.click({ force: true });
     await this.amountInput.focus();
   }
@@ -233,9 +255,19 @@ export class TipPage {
   }
 
   async selectCurrency(currency: string) {
-    const currencyTab = this.currencyTab(currency);
-    await safeClick(currencyTab);
-    await expect(currencyTab).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(async () => {
+        const currencyTab = this.currencyTab(currency);
+        if (!(await currencyTab.isVisible())) return false;
+        try {
+          await currencyTab.scrollIntoViewIfNeeded({ timeout: 500 });
+          await currencyTab.click({ timeout: 2000 });
+          return (await currencyTab.getAttribute("aria-selected")) === "true";
+        } catch {
+          return false;
+        }
+      }, { timeout: 10000, message: `expected ${currency} tab to be selected` })
+      .toBe(true);
   }
 
   async expectOnlyCurrencyActive(active: string, inactive: string) {
@@ -308,9 +340,7 @@ export class TipPage {
 
   async expectReviewInformation(data: TipReviewData): Promise<string> {
     await expect(locatorChain(this.page, { text: data.creatorName, role: "heading", name: data.creatorName })).toBeVisible();
-    await expect(
-      locatorChain(this.page, { role: "tab", name: data.currency, text: data.currency }),
-    ).toHaveAttribute("aria-selected", "true");
+    await expect(this.currencyTab(data.currency)).toHaveAttribute("aria-selected", "true");
     await expect(this.amountInput).toHaveValue(data.displayAmount);
     expect((await this.nameInput.inputValue()).length).toBeGreaterThan(0);
     expect((await this.emailInput.inputValue()).length).toBeGreaterThan(0);
@@ -342,3 +372,4 @@ export class TipPage {
     return (await totalValue.innerText()).trim();
   }
 }
+

@@ -6,7 +6,6 @@ export class FeedsPage {
 
   async goto() {
     await this.page.goto(new URL("feeds", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class FeedsPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

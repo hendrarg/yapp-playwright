@@ -7,7 +7,6 @@ export class MembershipPage {
 
   async goto(handle: string) {
     await this.page.goto(new URL(`${handle}/membership`, this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
     await waitForLoaded(this.page);
   }
 
@@ -32,6 +31,6 @@ export class MembershipPage {
     await safeClick(card);
     await this.page.waitForURL(/\/membership\/[a-f0-9-]+/, { timeout: 15000 });
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 }
+

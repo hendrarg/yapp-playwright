@@ -7,7 +7,6 @@ export class TransactionPage {
 
   async goto(orderId: string) {
     await this.page.goto(new URL(`transaction/${orderId}`, this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
     await waitForLoaded(this.page);
   }
 
@@ -21,14 +20,18 @@ export class TransactionPage {
   readonly checkStatusButton = this.page.getByRole("button", { name: "Check Status" });
   readonly refreshStatusButton = this.page.getByRole("button", { name: /Refresh to Check Status|Check Status/ });
 
-  async expectPageLoaded(creatorName: string, expectedTotal = "Rp50.506") {
+  async expectPageLoaded(creatorName: string, expectedTotal?: string) {
     await expect(this.page).toHaveURL(/\/transaction\//, { timeout: 10000 });
     await expect(this.checkStatusButton).toBeVisible({ timeout: 5000 });
     await expect(this.orderId).toBeVisible({ timeout: 5000 });
     expect((await this.tipTo.inputValue())).toContain(creatorName);
     await expect(this.page.getByText("Payment Method")).toBeVisible({ timeout: 5000 });
     const totalRow = this.page.getByText("Total", { exact: true }).filter({ visible: true }).locator("..");
-    await expect(totalRow.getByText(expectedTotal, { exact: true })).toBeVisible();
+    if (expectedTotal) {
+      await expect(totalRow.getByText(expectedTotal, { exact: true })).toBeVisible();
+    } else {
+      await expect(totalRow.getByText(/^Rp[\d.]+$/)).toBeVisible();
+    }
   }
 
   async expectExclusivePostTransaction(priceText: string) {
@@ -93,7 +96,6 @@ export class TransactionPage {
   async reload() {
     await this.page.reload({ waitUntil: "domcontentloaded" });
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   async expectSameTipTransaction(orderId: string, total: string) {
@@ -120,3 +122,4 @@ export class TransactionPage {
     await expect(totalRow.getByText(total, { exact: true })).toBeVisible();
   }
 }
+

@@ -9,7 +9,6 @@ export class CartPage {
 
   async goto() {
     await this.page.goto(new URL("cart", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -21,3 +20,4 @@ export class CartPage {
     await this.auth.expectValid();
   }
 }
+

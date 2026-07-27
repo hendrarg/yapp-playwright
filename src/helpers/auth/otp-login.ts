@@ -8,7 +8,6 @@ export async function signInWithEmailOtp(page: Page, baseURL: string) {
   const sentAtMs = markInboxStart();
 
   await page.goto(new URL('auth', baseURL).toString());
-  await page.waitForLoadState('networkidle');
   await page.getByPlaceholder('Enter your email').fill(inbox.email);
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
@@ -34,3 +33,4 @@ export async function logout(page: Page, baseURL: string) {
   await page.goto(new URL('logout', baseURL).toString());
   await page.waitForURL(/auth/, { timeout: 15000 });
 }
+

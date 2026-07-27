@@ -41,5 +41,6 @@ export async function waitForLoaded(page: Page, selector = '[data-testid="spinne
  */
 export async function navigateAndWait(page: Page, url: string, timeout = 30000) {
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout });
-  await page.waitForLoadState('networkidle', { timeout });
+  await waitForLoaded(page);
 }
+

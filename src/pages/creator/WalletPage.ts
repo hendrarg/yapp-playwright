@@ -6,7 +6,6 @@ export class WalletPage {
 
   async goto() {
     await this.page.goto(new URL("wallet", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class WalletPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

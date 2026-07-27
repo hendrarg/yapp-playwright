@@ -6,7 +6,6 @@ export class SettingsPage {
 
   async goto() {
     await this.page.goto(new URL("settings", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class SettingsPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+

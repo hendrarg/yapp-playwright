@@ -7,7 +7,6 @@ export class TierDetailPage {
 
   async goto(handle: string, tierId: string) {
     await this.page.goto(new URL(`${handle}/membership/${tierId}`, this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
     await waitForLoaded(this.page);
   }
 
@@ -29,3 +28,4 @@ export class TierDetailPage {
     await expect(this.subscribeButton).toBeVisible({ timeout: 5000 });
   }
 }
+

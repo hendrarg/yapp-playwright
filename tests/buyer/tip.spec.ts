@@ -37,6 +37,10 @@ test('Tip Complete IDR Payment Journey', {
   });
 
   await test.step('Submit from tip page, verify transaction page', async () => {
+    await tipPage.fillAmount(tipCheckoutData.amount);
+    await tipPage.selectVotingOptionIfPresent(tipCheckoutData.votingOption);
+    await tipPage.expectPaymentMethodAvailableAndSelect(tipCheckoutData.paymentMethod);
+    await tipPage.expectSendTipEnabled();
     orderId = await tipPage.submit();
     await transactionPage.expectPageLoaded(tipCheckoutData.creatorName);
   });

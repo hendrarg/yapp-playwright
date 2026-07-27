@@ -22,7 +22,6 @@ export class FeedsPage {
 
   private async waitForPageSettled() {
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
   }
 
   async goto() {
@@ -745,3 +744,4 @@ export class FeedsPage {
     ]);
   }
 }
+

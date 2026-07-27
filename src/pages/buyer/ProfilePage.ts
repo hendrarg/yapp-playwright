@@ -63,7 +63,6 @@ export class ProfilePage {
     }
     const path = handle ?? "profile";
     await this.page.goto(new URL(path, this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
     await waitForLoaded(this.page);
   }
 
@@ -134,7 +133,6 @@ export class ProfilePage {
   async clickFollow() {
     await safeClick(this.followButton);
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   async clickUnfollow() {
@@ -149,7 +147,6 @@ export class ProfilePage {
     if (dialogVisible) {
       await safeClick(this.unfollowConfirmButton);
       await waitForLoaded(this.page);
-      await this.page.waitForLoadState("networkidle").catch(() => {});
     }
   }
 
@@ -159,7 +156,6 @@ export class ProfilePage {
   async clickBackButton() {
     await safeClick(this.backButton);
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   // ── Tabs (within main; sidebar has same names — scope to main) ──
@@ -171,7 +167,6 @@ export class ProfilePage {
     const label = profileTabs[tab];
     await safeClick(this.tabButton(label));
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   async expectTabActive(tab: ProfileTab) {
@@ -278,7 +273,7 @@ export class ProfilePage {
     if (!label) {
       throw new Error(`No IDR tip suggestion configured for creator "${this.creatorContext.handle}"`);
     }
-    await safeClick(locatorChain(this.page, { role: "button", name: label, text: label }));
+    await safeClick(this.tipFormRoot.getByRole("button", { name: label, exact: true }));
     await this.page.waitForTimeout(500);
   }
 
@@ -305,7 +300,6 @@ export class ProfilePage {
     await safeClick(this.sendTipButton);
     await this.page.waitForURL(/\/tip/, { timeout: 15000 });
     await waitForLoaded(this.page);
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   // ── Links tab ──
@@ -418,7 +412,6 @@ export class ProfilePage {
       .first();
     await safeClick(mediaButton);
     await this.postDetailDialog.waitFor({ state: "visible", timeout: 15000 });
-    await this.page.waitForLoadState("networkidle").catch(() => {});
   }
 
   async expectPostDetailOpen() {
@@ -493,3 +486,4 @@ export class ProfilePage {
     await expect(this.signInBeforeFollowingDialog.getByRole("button", { name: profileLabels.signInNow })).toBeVisible();
   }
 }
+

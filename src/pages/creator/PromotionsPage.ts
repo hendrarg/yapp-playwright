@@ -6,7 +6,6 @@ export class PromotionsPage {
 
   async goto() {
     await this.page.goto(new URL("promotions", this.baseURL).toString());
-    await this.page.waitForLoadState("networkidle");
   }
 
   async expectLoaded() {
@@ -14,3 +13,4 @@ export class PromotionsPage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
+
