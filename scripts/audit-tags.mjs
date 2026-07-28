@@ -9,7 +9,7 @@ const FEATURE_TAGS = [
   '@cart', '@checkout', '@auth', '@membership', '@products', '@feeds', '@profile',
   '@messages', '@wallet', '@settings', '@analytics', '@campaigns', '@streaming',
   '@affiliate', '@referral', '@promotions', '@sessions', '@network-mock', '@payment',
-  '@explore', '@follow', '@library', '@chart', '@message', '@like', '@comment', '@media', '@tip',
+  '@explore', '@landing', '@follow', '@library', '@chart', '@message', '@like', '@comment', '@media', '@tip',
 ];
 const ROLE_TAGS = ['@buyer', '@creator'];
 const PRIORITY_TAGS = ['@smoke', '@regression', '@sanity'];

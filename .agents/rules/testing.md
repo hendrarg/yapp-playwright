@@ -33,7 +33,7 @@ await buyerNav.goto('membership', { handle: 'hendrarg' });
 await buyerNav.expectLoaded('membership');
 ```
 
-**Routes:** `feeds`, `explore`, `cart`, `library`, `messages` (`direct`), `profile`, `tip` (`sendTip`), `membership`, `tierDetail`, `transaction`, `productPurchase`.
+**Routes:** `feeds`, `explore`, `landing`, `cart`, `library`, `messages` (`direct`), `profile`, `tip` (`sendTip`), `membership`, `tierDetail`, `transaction`, `productPurchase`.
 
 **Params (`BuyerNavParams`):**
 
@@ -154,7 +154,7 @@ After adding or editing tests, run `npm run audit:tags`.
 | Category | Tags | Required |
 |----------|------|----------|
 | Automation ID | `@AUT-E2E-*`, `@AUT-FV-*` | Yes — only valid TC tag format |
-| Feature | `@cart`, `@checkout`, `@auth`, `@membership`, `@products`, `@feeds`, `@profile`, `@messages`, `@wallet`, `@settings`, `@analytics`, `@campaigns`, `@streaming`, `@affiliate`, `@referral`, `@promotions`, `@sessions`, `@network-mock`, `@payment` | Yes |
+| Feature | `@cart`, `@checkout`, `@auth`, `@membership`, `@products`, `@feeds`, `@profile`, `@messages`, `@wallet`, `@settings`, `@analytics`, `@campaigns`, `@streaming`, `@affiliate`, `@referral`, `@promotions`, `@sessions`, `@network-mock`, `@payment`, `@explore`, `@landing`, `@follow`, `@library`, `@chart`, `@message`, `@like`, `@comment`, `@media`, `@tip` | Yes |
 | Role | `@buyer`, `@creator` | Yes |
 | Priority | `@smoke`, `@regression`, `@sanity` | Yes |
 | Status | `@flaky`, `@slow` | Optional |

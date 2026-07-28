@@ -1,4 +1,5 @@
 import type { ExplorePage } from "@pages/buyer/ExplorePage";
+import type { LandingPage } from "@pages/buyer/LandingPage";
 import type { CartPage } from "@pages/buyer/CartPage";
 import type { FeedsPage } from "@pages/buyer/FeedsPage";
 import type { LibraryPage } from "@pages/buyer/LibraryPage";
@@ -14,6 +15,7 @@ import type { PurchaseProduct } from "@test-data/buyer/promotion.data";
 export type BuyerRoute =
   | "feeds"
   | "explore"
+  | "landing"
   | "cart"
   | "library"
   | "messages"
@@ -37,6 +39,7 @@ export type BuyerNavParams = {
 export type BuyerNavPages = {
   buyerFeedsPage: FeedsPage;
   explorePage: ExplorePage;
+  landingPage: LandingPage;
   cartPage: CartPage;
   libraryPage: LibraryPage;
   messagePage: MessagePage;
@@ -72,6 +75,9 @@ export function createBuyerNav(pages: BuyerNavPages) {
           return;
         case "explore":
           await pages.explorePage.goto();
+          return;
+        case "landing":
+          await pages.landingPage.goto();
           return;
         case "cart":
           await pages.cartPage.goto();
@@ -119,6 +125,9 @@ export function createBuyerNav(pages: BuyerNavPages) {
           return;
         case "explore":
           await pages.explorePage.expectLoaded();
+          return;
+        case "landing":
+          await pages.landingPage.expectLoaded();
           return;
         case "cart":
           await pages.cartPage.expectLoaded();

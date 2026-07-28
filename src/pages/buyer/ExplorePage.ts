@@ -47,6 +47,12 @@ export class ExplorePage {
     await this.auth.expectValid();
   }
 
+  async expectRecommendedSectionVisible() {
+    await expect(
+      this.recommendedHeading.or(this.page.getByRole('heading', { name: 'Recommended', exact: true })),
+    ).toBeVisible();
+  }
+
   async expectSearchVisible() {
     await expect(this.searchInput).toBeVisible();
   }

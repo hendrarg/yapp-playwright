@@ -9,6 +9,7 @@ type BuyerNavDeps = Pick<
   PageFixtures,
   | "buyerFeedsPage"
   | "explorePage"
+  | "landingPage"
   | "cartPage"
   | "libraryPage"
   | "messagePage"
@@ -25,6 +26,7 @@ export const buyerNavFixtures = {
     {
       buyerFeedsPage,
       explorePage,
+      landingPage,
       cartPage,
       libraryPage,
       messagePage,
@@ -41,6 +43,7 @@ export const buyerNavFixtures = {
       createBuyerNav({
         buyerFeedsPage,
         explorePage,
+        landingPage,
         cartPage,
         libraryPage,
         messagePage,

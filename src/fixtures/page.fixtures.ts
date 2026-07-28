@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { LoginPage } from "@pages/auth/LoginPage";
 import { ExplorePage } from "@pages/buyer/ExplorePage";
+import { LandingPage } from "@pages/buyer/LandingPage";
 import { CartPage } from "@pages/buyer/CartPage";
 import { ProductPurchasePage } from "@pages/buyer/ProductPurchasePage";
 import { FeedsPage as BuyerFeedsPage } from "@pages/buyer/FeedsPage";
@@ -46,6 +47,7 @@ function creatorPage<T>(PageClass: new (page: Page, baseURL: string) => T) {
 export type PageFixtures = {
   loginPage: LoginPage;
   explorePage: ExplorePage;
+  landingPage: LandingPage;
   cartPage: CartPage;
   productPurchasePage: ProductPurchasePage;
   buyerFeedsPage: BuyerFeedsPage;
@@ -79,6 +81,7 @@ export const pageFixtures = {
   },
 
   explorePage: buyerPage(ExplorePage),
+  landingPage: buyerPage(LandingPage),
   cartPage: buyerPage(CartPage),
   productPurchasePage: buyerPage(ProductPurchasePage),
   buyerFeedsPage: buyerPage(BuyerFeedsPage),
