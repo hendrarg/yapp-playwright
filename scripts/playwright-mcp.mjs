@@ -1,12 +1,15 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { config as loadEnv } from "dotenv";
 import { applyPlaywrightBrowsersPath } from "../config/playwright-browsers-path.mjs";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+loadEnv({ path: path.join(root, ".env") });
 
 // Ensure MCP uses the stable user browser cache, not Cursor sandbox Temp.
 applyPlaywrightBrowsersPath();
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const mcpCli = path.join(root, "node_modules", "@playwright", "mcp", "cli.js");
 
 const child = spawn(
