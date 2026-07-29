@@ -192,4 +192,37 @@ test.describe('Creator Products', () => {
       await productsPage.expectProductUrlCopied(productsHideFromProfileData.productPath);
     });
   });
+  
+  test('Unhide product and verify public availability', {
+    tag: ['@AUT-FV-217', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-PROD-C-036' }],
+  }, async ({ creatorNav, buyerNav, productsPage, buyerProfilePage, page }) => {
+    test.setTimeout(120000);
+
+    await setProductHideFromProfile(
+      page.request,
+      productsHideFromProfileData.productUuid,
+      true,
+    );
+
+    await test.step('Select Unhide for the hidden product', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.searchProducts(productsHideFromProfileData.productName);
+      await productsPage.expectProductVisible(productsHideFromProfileData.productName);
+      await productsPage.selectRestoreVisibilityAction(productsHideFromProfileData.productName);
+      await expectProductHideFromProfile(
+        page.request,
+        productsHideFromProfileData.productUuid,
+        false,
+      );
+    });
+
+    await test.step('Verify product is visible on the public creator profile Shops tab', async () => {
+      await buyerNav.open('profile', { handle: creatorProfile });
+      await buyerProfilePage.expectLoaded();
+      await buyerProfilePage.switchToTab('shops');
+      await buyerProfilePage.expectProductVisibleOnShops(productsHideFromProfileData.productTitle);
+    });
+  });
 });

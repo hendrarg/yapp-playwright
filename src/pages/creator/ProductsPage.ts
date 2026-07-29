@@ -314,7 +314,8 @@ export class ProductsPage {
     await safeClick(toggle);
     const response = await responsePromise;
     expect(response.ok(), await response.text()).toBeTruthy();
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await this.openProductActionsMenu(productName);
+    await expect(this.hideFromProfileSwitch()).toHaveAttribute("aria-checked", "false");
   }
 
   async expectDiscordMembershipCreateFlow() {
