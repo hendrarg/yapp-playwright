@@ -180,6 +180,18 @@ export class ProfilePage {
     ).toBe(true);
   }
 
+  async expectProductHiddenOnShops(productTitle: string) {
+    await expect(this.productCards.filter({ hasText: productTitle })).toHaveCount(0, {
+      timeout: 10000,
+    });
+  }
+
+  async expectProductVisibleOnShops(productTitle: string) {
+    await expect(this.productCards.filter({ hasText: productTitle }).first()).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
   // ── Shops tab: product cards ──
   private get productCards() {
     return this.main.locator(`a[href^="/${this.creatorContext.handle}/product/"]`);

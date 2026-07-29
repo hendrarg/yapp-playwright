@@ -1,7 +1,13 @@
 import { creatorAuthTest as test, expect } from '../test-base';
+import {
+  expectProductHideFromProfile,
+  setProductHideFromProfile,
+} from '@helpers/api/product';
 import { productsCreationData } from '@test-data/creator/products.creation.data';
+import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
+import { creatorProfile } from '@test-data/buyer/profile.data';
 
 test.describe('Creator Products', () => {
   test('Search, Filter, Sort, and Discover Products Data', {
@@ -83,5 +89,88 @@ test.describe('Creator Products', () => {
       await productsPage.selectProductType(discordType.buttonName);
       await productsPage.expectDiscordMembershipCreateFlow();
     });
+  });
+
+  test('Upload and Manage Products Media and Content', {
+    tag: ['@AUT-FV-215', '@products', '@creator', '@regression'],
+    annotation: [
+      { type: 'covers', description: 'TC-PROD-C-026' },
+      { type: 'covers', description: 'TC-PROD-C-027' },
+      { type: 'covers', description: 'TC-PROD-C-028' },
+      { type: 'covers', description: 'TC-PROD-C-029' },
+    ],
+  }, async ({
+    creatorNav,
+    buyerNav,
+    productsPage,
+    buyerProfilePage,
+    productPurchasePage,
+    page,
+  }) => {
+    test.setTimeout(120000);
+    let hiddenFromProfile = false;
+
+    try {
+      await test.step('Open actions menu and apply Hide from Profile', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProducts(productsHideFromProfileData.productName);
+        await productsPage.expectProductVisible(productsHideFromProfileData.productName);
+        await productsPage.expectHideFromProfileActionAvailable(productsHideFromProfileData.productName);
+        await productsPage.selectHideFromProfileAction(productsHideFromProfileData.productName);
+        hiddenFromProfile = true;
+        await expectProductHideFromProfile(
+          page.request,
+          productsHideFromProfileData.productUuid,
+          true,
+        );
+      });
+
+      await test.step('Verify product is hidden on public creator profile Shops tab', async () => {
+        await buyerNav.open('profile', { handle: creatorProfile });
+        await buyerProfilePage.expectLoaded();
+        await buyerProfilePage.switchToTab('shops');
+        await buyerProfilePage.expectProductHiddenOnShops(productsHideFromProfileData.productTitle);
+      });
+
+      await test.step('Verify direct product URL remains accessible to buyer', async () => {
+        await buyerNav.open('productPurchase', {
+          product: {
+            title: productsHideFromProfileData.productTitle,
+            path: productsHideFromProfileData.productPath,
+          },
+        });
+        await productPurchasePage.expectLoaded({
+          title: productsHideFromProfileData.productTitle,
+          path: productsHideFromProfileData.productPath,
+        });
+      });
+
+      await test.step('Restore visibility and verify product returns on profile Shops tab', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProducts(productsHideFromProfileData.productName);
+        await productsPage.selectRestoreVisibilityAction(productsHideFromProfileData.productName);
+        hiddenFromProfile = false;
+        await expectProductHideFromProfile(
+          page.request,
+          productsHideFromProfileData.productUuid,
+          false,
+        );
+
+        await buyerNav.open('profile', { handle: creatorProfile });
+        await buyerProfilePage.expectLoaded();
+        await buyerProfilePage.switchToTab('shops');
+        await buyerProfilePage.expectProductVisibleOnShops(productsHideFromProfileData.productTitle);
+      });
+    } finally {
+      if (hiddenFromProfile) {
+        await setProductHideFromProfile(
+          page.request,
+          productsHideFromProfileData.productUuid,
+          false,
+        );
+      }
+    }
   });
 });

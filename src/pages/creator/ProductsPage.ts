@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
+import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
@@ -70,6 +71,14 @@ export class ProductsPage {
 
   private productTypeButton(buttonName: RegExp): Locator {
     return this.addProductSheet().getByRole("button", { name: buttonName });
+  }
+
+  private productRow(productName: string): Locator {
+    return this.page.locator("tr").filter({ hasText: productName }).first();
+  }
+
+  private productActionsTrigger(productName: string): Locator {
+    return this.productRow(productName).getByRole("button").last();
   }
 
   private statusTab(status: ProductStatusTab): Locator {
@@ -202,6 +211,68 @@ export class ProductsPage {
 
   async selectProductType(buttonName: RegExp) {
     await safeClick(this.productTypeButton(buttonName));
+  }
+
+  private productActionMenu(): Locator {
+    return this.page.getByRole("menu");
+  }
+
+  private hideFromProfileSwitch(): Locator {
+    return this.productActionMenu().locator(
+      `#${productsHideFromProfileData.hideFromProfileButtonId}`,
+    );
+  }
+
+  async openProductActionsMenu(productName: string) {
+    await safeClick(this.productActionsTrigger(productName));
+    await expect(this.productActionMenu()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectHideFromProfileActionAvailable(productName: string) {
+    await this.openProductActionsMenu(productName);
+    await expect(
+      this.productActionMenu().getByText(
+        productsHideFromProfileData.hideFromProfileAction,
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(this.hideFromProfileSwitch()).toBeVisible({ timeout: 10000 });
+    await expect(this.hideFromProfileSwitch()).toHaveAttribute("role", "switch");
+    await this.page.keyboard.press("Escape");
+  }
+
+  async selectHideFromProfileAction(productName: string) {
+    await this.openProductActionsMenu(productName);
+    const toggle = this.hideFromProfileSwitch();
+    await expect(toggle).toBeVisible({ timeout: 10000 });
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/hide-from-profile") &&
+        response.request().method() === "PUT",
+      { timeout: 15000 },
+    );
+    await safeClick(toggle);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+  }
+
+  async selectRestoreVisibilityAction(productName: string) {
+    await this.openProductActionsMenu(productName);
+    const toggle = this.hideFromProfileSwitch();
+    await expect(toggle).toBeVisible({ timeout: 10000 });
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/hide-from-profile") &&
+        response.request().method() === "PUT",
+      { timeout: 15000 },
+    );
+    await safeClick(toggle);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
   }
 
   async expectDiscordMembershipCreateFlow() {
