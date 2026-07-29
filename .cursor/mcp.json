@@ -2,7 +2,7 @@
   "mcpServers": {
     "playwright": {
       "command": "node",
-      "args": ["scripts/playwright-mcp.mjs"]
+      "args": ["D:/yapp/scripts/playwright-mcp.mjs"]
     }
   }
 }
