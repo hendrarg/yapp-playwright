@@ -16,6 +16,8 @@ export {
 export { productTemplates, productEditData, generateProduct } from "./creator/product.data";
 export type { ProductInput } from "./creator/product.data";
 export { productsSearchData } from "./creator/products.search.data";
+export { productsStatusData } from "./creator/products.status.data";
+export type { ProductStatusTab } from "./creator/products.status.data";
 export { campaignTemplates, generateCampaign } from "./creator/campaign.data";
 export type { CampaignInput } from "./creator/campaign.data";
 export { membershipTemplates, generateMembershipTier } from "./creator/membership.data";

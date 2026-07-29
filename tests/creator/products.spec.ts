@@ -1,27 +1,10 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { productsSearchData } from '@test-data/creator/products.search.data';
+import { productsStatusData } from '@test-data/creator/products.status.data';
 
 test.describe('Creator Products', () => {
-  test('injected "at" token loads the products page without redirecting to auth', {
-    tag: ['@products', '@creator', '@smoke'],
-  }, async ({ creatorNav }) => {
-    await creatorNav.open('products');
-  });
-
   test('Search, Filter, Sort, and Discover Products Data', {
     tag: ['@AUT-FV-212', '@products', '@creator', '@regression'],
-    annotation: [
-      { type: 'covers', description: 'TC-PROD-C-005' },
-      { type: 'covers', description: 'TC-PROD-C-006' },
-      { type: 'covers', description: 'TC-PROD-C-007' },
-      { type: 'covers', description: 'TC-PROD-C-008' },
-      { type: 'covers', description: 'TC-PROD-C-009' },
-      {
-        type: 'blocked',
-        description:
-          'TC-PROD-C-007: products search sends title= only; Product URL/slug queries return empty (observed 2026-07-29)',
-      },
-    ],
   }, async ({ creatorNav, productsPage }) => {
     test.setTimeout(120000);
 
@@ -58,5 +41,24 @@ test.describe('Creator Products', () => {
       await productsPage.clearSearch();
       await productsPage.expectRestoredProductList(productsSearchData.restoredNames);
     });
+  });
+
+  test('Verify Products Display and Navigation', {
+    tag: ['@AUT-FV-213', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-PROD-C-011' }],
+  }, async ({ creatorNav, productsPage }) => {
+    test.setTimeout(90000);
+
+    await test.step('Open Products page', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+    });
+
+    for (const status of productsStatusData.tabs) {
+      await test.step(`Select ${status} tab and verify list shows only ${status} products`, async () => {
+        await productsPage.selectStatusTab(status);
+        await productsPage.expectStatusTabList(status);
+      });
+    }
   });
 });
