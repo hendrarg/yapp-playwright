@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
+import { productsCreationData } from "@test-data/creator/products.creation.data";
 import {
   productsStatusData,
   type ProductStatusTab,
@@ -44,6 +45,12 @@ export class ProductsPage {
     exact: true,
   });
 
+  readonly addNewProductHeading = locatorChain(this.page, {
+    role: "heading",
+    name: "Add New Product",
+    text: "Add New Product",
+  });
+
   // Keep smartLocator live for locator audit + interaction helpers
   private readonly searchAction = smartLocator(this.page, {
     role: "textbox",
@@ -56,6 +63,14 @@ export class ProductsPage {
     name: "Active",
     selector: 'button[role="tab"]',
   });
+
+  private addProductSheet(): Locator {
+    return this.page.getByRole("dialog", { name: "Add New Product" });
+  }
+
+  private productTypeButton(buttonName: RegExp): Locator {
+    return this.addProductSheet().getByRole("button", { name: buttonName });
+  }
 
   private statusTab(status: ProductStatusTab): Locator {
     const pattern = new RegExp(`^${status} \\(\\d+\\)$`);
@@ -170,6 +185,39 @@ export class ProductsPage {
     for (const status of statuses) {
       expect(status).toBe(rowStatus);
     }
+  }
+
+  async openAddProductSheet() {
+    await safeClick(this.addProductButton);
+    await expect(this.addNewProductHeading).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectProductTypesAvailable(
+    types: readonly (typeof productsCreationData.productTypes)[number][] = productsCreationData.productTypes,
+  ) {
+    for (const type of types) {
+      await expect(this.productTypeButton(type.buttonName)).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async selectProductType(buttonName: RegExp) {
+    await safeClick(this.productTypeButton(buttonName));
+  }
+
+  async expectDiscordMembershipCreateFlow() {
+    await expect(this.page).toHaveURL(productsCreationData.discordMembershipCreatePath);
+    await expect(this.page.getByRole("button", { name: "Next: Set Details" })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.page.getByText("Membership Information")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.page.getByText("Discord Set Up")).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.page.getByRole("textbox", { name: "Enter title" })).toBeVisible({
+      timeout: 10000,
+    });
   }
 
   async expectStatusTabList(status: ProductStatusTab) {

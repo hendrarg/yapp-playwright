@@ -1,4 +1,5 @@
 import { creatorAuthTest as test, expect } from '../test-base';
+import { productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
 
@@ -60,5 +61,27 @@ test.describe('Creator Products', () => {
         await productsPage.expectStatusTabList(status);
       });
     }
+  });
+
+  test('Verify Products Integrations and External Services', {
+    tag: ['@AUT-FV-214', '@products', '@creator', '@regression'],
+  }, async ({ creatorNav, productsPage }) => {
+    await test.step('Open Products and product type selection', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+    });
+
+    await test.step('Verify PRD product types are available', async () => {
+      await productsPage.expectProductTypesAvailable(productsCreationData.productTypes);
+    });
+
+    await test.step('Select Discord Membership and verify creation flow', async () => {
+      const discordType = productsCreationData.productTypes.find(
+        (type) => type.label === 'Discord Membership',
+      )!;
+      await productsPage.selectProductType(discordType.buttonName);
+      await productsPage.expectDiscordMembershipCreateFlow();
+    });
   });
 });
