@@ -1,7 +1,7 @@
 import type { APIRequestContext } from '@playwright/test';
 import { creatorsBaseURL } from '@config/env';
+import { apiUrl, getHeaders } from '@helpers/api/client';
 import { buildBrowserLikeHeaders } from './headers';
-import { apiUrl, getHeaders } from './post';
 
 export interface CreatePromotionOptions {
   name: string;
