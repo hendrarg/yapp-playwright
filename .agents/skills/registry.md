@@ -15,6 +15,7 @@ Use this registry to decide which workflow document to read for a task.
 | `network-mocking` | Mocking payment, email, analytics; composing mocks with `authTest` |
 | `resolve-flaky-tests` | Diagnosing and fixing flaky Playwright UI tests |
 | `reuse-patterns` | Looking for shared locators, steps, or helpers before adding new code |
+| `standard-commit-message` | Creating, reviewing, or standardizing git commit messages |
 | `tag-compliance` | Auditing or fixing required Playwright test tags (`npm run audit:tags`) |
 
 Skill files live at `.agents/skills/{skill}/SKILL.md`.
