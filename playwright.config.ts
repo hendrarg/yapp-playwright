@@ -32,6 +32,7 @@ export default defineConfig({
 
     /* Run headed or headless based on env vars PW_HEADLESS / PLAYWRIGHT_HEADLESS. */
     headless,
+    permissions: ['clipboard-read', 'clipboard-write'],
     viewport: null,
     launchOptions: {
       args: ['--start-maximized'],
