@@ -4,7 +4,10 @@ import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
-import { productsCreationData } from "@test-data/creator/products.creation.data";
+import {
+  digitalProductValidationData,
+  productsCreationData,
+} from "@test-data/creator/products.creation.data";
 import {
   productsStatusData,
   type ProductStatusTab,
@@ -52,6 +55,42 @@ export class ProductsPage {
     text: "Add New Product",
   });
 
+  readonly digitalProductTitleInput = locatorChain(this.page, {
+    role: "textbox",
+    name: "Enter title",
+    exact: true,
+    placeholder: "Enter title",
+    selector: 'input[placeholder="Enter title"]',
+  });
+
+  readonly embedLinkUrlInput = locatorChain(this.page, {
+    role: "textbox",
+    name: "https://placeyourlinkhere",
+    exact: true,
+    placeholder: "https://placeyourlinkhere",
+    selector: 'input[type="url"]',
+  });
+
+  readonly embedLinkLabelInput = locatorChain(this.page, {
+    role: "textbox",
+    name: "Get My Latest Product",
+    exact: true,
+    placeholder: "Get My Latest Product",
+    selector: 'input[placeholder="Get My Latest Product"]',
+  });
+
+  readonly embedLinkDoneButton = locatorChain(this.page, {
+    role: "button",
+    name: "Done",
+    text: "Done",
+    selector: 'button:has-text("Done")',
+  });
+
+  readonly contentDetailsHeading = locatorChain(this.page, {
+    text: "Content Details",
+    selector: 'text="Content Details"',
+  });
+
   // Keep smartLocator live for locator audit + interaction helpers
   private readonly searchAction = smartLocator(this.page, {
     role: "textbox",
@@ -97,12 +136,65 @@ export class ProductsPage {
     selector: '[role="menuitem"]:has-text("Set Inactive") [role="switch"]',
   });
 
+  private readonly nextSetDetailsAction = smartLocator(this.page, {
+    role: "button",
+    name: "Next: Set Details",
+    text: "Next: Set Details",
+    selector: 'button:has-text("Next: Set Details")',
+  });
+
+  private readonly linksContentTypeAction = smartLocator(this.page, {
+    text: "Links",
+    selector: "#content-type-links",
+  });
+
+  private readonly addEmbedLinkAction = smartLocator(this.page, {
+    role: "button",
+    name: "Add Link",
+    text: "Add Link",
+    selector: 'button:has-text("Add Link")',
+  });
+
+  private readonly embedLinkUrlAction = smartLocator(this.page, {
+    role: "textbox",
+    name: "https://placeyourlinkhere",
+    exact: true,
+    placeholder: "https://placeyourlinkhere",
+    selector: 'input[type="url"]',
+  });
+
+  private readonly embedLinkLabelAction = smartLocator(this.page, {
+    role: "textbox",
+    name: "Get My Latest Product",
+    exact: true,
+    placeholder: "Get My Latest Product",
+    selector: 'input[placeholder="Get My Latest Product"]',
+  });
+
   private addProductSheet(): Locator {
     return this.page.getByRole("dialog", { name: "Add New Product" });
   }
 
   private productTypeButton(buttonName: RegExp): Locator {
     return this.addProductSheet().getByRole("button", { name: buttonName });
+  }
+
+  private linksContentTypeCheckbox(): Locator {
+    return this.page.locator("#content-type-links");
+  }
+
+  private embedLinksSection(): Locator {
+    return locatorChain(this.page, {
+      text: "Embed Links",
+      selector: 'text="Embed Links"',
+    });
+  }
+
+  private textFeedback(message: string): Locator {
+    return locatorChain(this.page, {
+      text: message,
+      selector: `text="${message}"`,
+    });
   }
 
   private productRows(productName: string): Locator {
@@ -425,6 +517,72 @@ export class ProductsPage {
     await expect(this.page.getByRole("textbox", { name: "Enter title" })).toBeVisible({
       timeout: 10000,
     });
+  }
+
+  async expectDigitalProductCreateFlow() {
+    await expect(this.page).toHaveURL(productsCreationData.digitalProductCreatePath);
+    await expect(this.digitalProductTitleInput).toBeVisible({ timeout: 10000 });
+    await expect(this.contentDetailsHeading).toBeVisible({ timeout: 10000 });
+  }
+
+  async submitEmptyDigitalProductAddContent() {
+    await this.nextSetDetailsAction.click({ timeout: 10000 });
+  }
+
+  async expectDigitalProductRequiredFeedback() {
+    const { requiredErrors } = digitalProductValidationData;
+    await expect(this.textFeedback(requiredErrors.title)).toBeVisible({ timeout: 10000 });
+    await expect(this.textFeedback(requiredErrors.description)).toBeVisible({ timeout: 10000 });
+    await expect(this.textFeedback(requiredErrors.content)).toBeVisible({ timeout: 10000 });
+    await expect(this.textFeedback(requiredErrors.thumbnail)).toBeVisible({ timeout: 10000 });
+    await expect(this.textFeedback(requiredErrors.summary)).toBeVisible({ timeout: 10000 });
+  }
+
+  async enableLinksContentType() {
+    const checkbox = this.linksContentTypeCheckbox();
+    await this.linksContentTypeAction.click({ timeout: 10000 });
+
+    if ((await checkbox.getAttribute("aria-checked")) !== "true") {
+      await safeClick(this.page.locator("#content-type-links"));
+    }
+
+    await expect(checkbox).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    await expect(this.embedLinksSection()).toBeVisible({ timeout: 10000 });
+  }
+
+  async openEmbedLinkDialog() {
+    await this.addEmbedLinkAction.click({ timeout: 10000 });
+    await expect(this.embedLinkUrlInput).toBeVisible({ timeout: 10000 });
+    await expect(this.embedLinkLabelInput).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillEmbedLink(label: string, url: string) {
+    await this.embedLinkUrlAction.fill(url, { timeout: 10000 });
+    await this.embedLinkLabelAction.fill(label, { timeout: 10000 });
+  }
+
+  async expectInvalidEmbedLinkFeedback() {
+    const { linkValidation } = digitalProductValidationData;
+    await expect(this.textFeedback(linkValidation.invalidUrlError)).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.embedLinkLabelInput).toHaveValue(linkValidation.truncatedLongLabel);
+    await expect(this.textFeedback(linkValidation.maxLabelCounter)).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.embedLinkDoneButton).toBeDisabled();
+  }
+
+  async saveCurrentEmbedLink() {
+    await expect(this.embedLinkDoneButton).toBeEnabled({ timeout: 10000 });
+    await safeClick(this.embedLinkDoneButton);
+    await expect(this.embedLinkUrlInput).toBeHidden({ timeout: 10000 });
+  }
+
+  async expectEmbedLinksSaved(labels: readonly string[]) {
+    for (const label of labels) {
+      await expect(this.textFeedback(label)).toBeVisible({ timeout: 10000 });
+    }
   }
 
   async expectStatusTabList(status: ProductStatusTab) {

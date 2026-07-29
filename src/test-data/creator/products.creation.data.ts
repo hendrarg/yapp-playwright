@@ -33,7 +33,36 @@ export const productsCreationData = {
       buttonName: /Appointment Events and Tickets Ideal for webinars/i,
     },
   ] as const,
+  digitalProductCreatePath: /\/products\/create\/digital-downloads/,
   discordMembershipCreatePath: /\/products\/create\/discord-membership/,
+} as const;
+
+export const digitalProductValidationData = {
+  requiredErrors: {
+    title: "Title is required",
+    description: "Description is required",
+    content: "At least one of Upload Files or Embed Links is required",
+    thumbnail: "Thumbnail is required",
+    summary: "Please fill in all required fields before proceeding",
+  },
+  linkValidation: {
+    invalidUrl: "not-a-url",
+    invalidUrlError:
+      "Invalid URL format. Please include http:// or https:// (Example: https://yourlink.com)",
+    longLabel: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890LONG-LABEL",
+    truncatedLongLabel: "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890LONG",
+    maxLabelCounter: "40/40 characters",
+    validLinks: [
+      {
+        label: "Creator Guide",
+        url: "https://example.com/creator-guide",
+      },
+      {
+        label: "Bonus Resource",
+        url: "https://example.com/bonus-resource",
+      },
+    ],
+  },
 } as const;
 
 export function generateOnlineCourseProductData(

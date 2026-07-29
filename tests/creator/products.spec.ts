@@ -7,6 +7,7 @@ import {
   setProductHideFromProfile,
 } from '@helpers/api/product';
 import {
+  digitalProductValidationData,
   generateOnlineCourseProductData,
   productsCreationData,
 } from '@test-data/creator/products.creation.data';
@@ -163,6 +164,48 @@ test.describe('Creator Products', () => {
       )!;
       await productsPage.selectProductType(discordType.buttonName);
       await productsPage.expectDiscordMembershipCreateFlow();
+    });
+  });
+
+  test('Validate Digital Products Inputs and Boundary Conditions', {
+    tag: ['@AUT-FV-188', '@products', '@creator', '@regression'],
+  }, async ({ creatorNav, productsPage }) => {
+    await test.step('Open Digital Product creation flow', async () => {
+      const digitalProductType = productsCreationData.productTypes.find(
+        (type) => type.label === 'Digital Product',
+      )!;
+
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(digitalProductType.buttonName);
+      await productsPage.expectDigitalProductCreateFlow();
+    });
+
+    await test.step('Validate title and required Add Content fields cannot be empty', async () => {
+      await productsPage.submitEmptyDigitalProductAddContent();
+      await productsPage.expectDigitalProductRequiredFeedback();
+    });
+
+    await test.step('Validate link label boundary and invalid URL are blocked', async () => {
+      await productsPage.enableLinksContentType();
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(
+        digitalProductValidationData.linkValidation.longLabel,
+        digitalProductValidationData.linkValidation.invalidUrl,
+      );
+      await productsPage.expectInvalidEmbedLinkFeedback();
+    });
+
+    await test.step('Correct link data and save multiple valid embedded links', async () => {
+      const [firstLink, secondLink] = digitalProductValidationData.linkValidation.validLinks;
+
+      await productsPage.fillEmbedLink(firstLink.label, firstLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(secondLink.label, secondLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.expectEmbedLinksSaved([firstLink.label, secondLink.label]);
     });
   });
 
