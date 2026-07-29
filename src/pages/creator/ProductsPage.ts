@@ -65,6 +65,26 @@ export class ProductsPage {
     selector: 'button[role="tab"]',
   });
 
+  private readonly shareAction = smartLocator(this.page, {
+    role: "menuitem",
+    name: "Share",
+    text: "Share",
+    selector: '[role="menuitem"]',
+  });
+
+  private readonly shareDialog = smartLocator(this.page, {
+    role: "dialog",
+    text: "Share",
+    selector: '[role="dialog"]',
+  });
+
+  private readonly copyProductUrlAction = smartLocator(this.page, {
+    role: "button",
+    name: "Copy link",
+    selector: '[role="dialog"] input#link + button',
+  });
+
+
   private addProductSheet(): Locator {
     return this.page.getByRole("dialog", { name: "Add New Product" });
   }
@@ -226,6 +246,28 @@ export class ProductsPage {
   async openProductActionsMenu(productName: string) {
     await safeClick(this.productActionsTrigger(productName));
     await expect(this.productActionMenu()).toBeVisible({ timeout: 10000 });
+  }
+
+  async openShareDialog(productName: string) {
+    await this.openProductActionsMenu(productName);
+    await this.shareAction.click();
+  }
+
+  async expectShareDialogVisible() {
+    expect(await this.shareDialog.text()).toMatch(/share/i);
+  }
+
+  async copyProductUrl() {
+    await this.copyProductUrlAction.click({ timeout: 3000 });
+  }
+
+  async expectProductUrlCopied(expectedProductPath: string) {
+    const copiedUrl = await this.page.evaluate(() =>
+      (navigator as Navigator & { clipboard: { readText(): Promise<string> } }).clipboard.readText(),
+    );
+    const productSlug = expectedProductPath.split("/").pop();
+    expect(productSlug).toBeTruthy();
+    expect(copiedUrl).toContain(productSlug);
   }
 
   async expectHideFromProfileActionAvailable(productName: string) {

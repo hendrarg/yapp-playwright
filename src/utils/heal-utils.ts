@@ -191,7 +191,7 @@ export async function smartClick(page: Page, meta: StrategyMeta, options?: { tim
   for (let i = 0; i < allLocators.length; i++) {
     try {
       const loc = allLocators[i];
-      await loc.scrollIntoViewIfNeeded();
+      await loc.scrollIntoViewIfNeeded({ timeout: options?.timeout ?? 10000 });
       await expect(loc).toBeVisible({ timeout: options?.timeout ?? 10000 });
       await expect(loc).toBeEnabled({ timeout: options?.timeout ?? 10000 });
       await loc.click({ timeout: options?.timeout });

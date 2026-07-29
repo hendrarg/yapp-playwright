@@ -173,4 +173,23 @@ test.describe('Creator Products', () => {
       }
     }
   });
+
+  test('Share product and copy product URL', {
+    tag: ['@AUT-FV-216', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-PROD-C-033' }],
+  }, async ({ creatorNav, productsPage, page }) => {
+    await test.step('Open product actions menu and choose Share', async () => {
+      await creatorNav.open('products');
+      await productsPage.searchProducts(productsHideFromProfileData.productName);
+      await productsPage.expectProductVisible(productsHideFromProfileData.productName);
+      await productsPage.openShareDialog(productsHideFromProfileData.productName);
+      await productsPage.expectShareDialogVisible();
+    });
+
+    await test.step('Click Copy Product URL and verify clipboard content', async () => {
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      await productsPage.copyProductUrl();
+      await productsPage.expectProductUrlCopied(productsHideFromProfileData.productPath);
+    });
+  });
 });
