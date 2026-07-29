@@ -193,3 +193,17 @@ export async function expectProductHideFromProfile(
   const body = await response.json();
   expect(body.data.isHideFromProfile).toBe(isHideFromProfile);
 }
+
+export async function expectProductStatus(
+  request: APIRequestContext,
+  productUuid: string,
+  status: ProductStatus,
+  token?: string,
+) {
+  const response = await request.get(apiUrl(`/api/v1/shop/products/${productUuid}`), {
+    headers: getCreatorHeaders(token),
+  });
+  expect(response.ok(), await response.text()).toBeTruthy();
+  const body = await response.json();
+  expect(body.data.status).toBe(status);
+}

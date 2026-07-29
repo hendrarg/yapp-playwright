@@ -91,6 +91,12 @@ export class ProductsPage {
     selector: '[role="menuitem"]',
   });
 
+  private readonly setInactiveSwitchAction = smartLocator(this.page, {
+    role: "switch",
+    name: "Set Inactive",
+    selector: '[role="menuitem"]:has-text("Set Inactive") [role="switch"]',
+  });
+
   private addProductSheet(): Locator {
     return this.page.getByRole("dialog", { name: "Add New Product" });
   }
@@ -99,11 +105,14 @@ export class ProductsPage {
     return this.addProductSheet().getByRole("button", { name: buttonName });
   }
 
-  private productRow(productName: string): Locator {
+  private productRows(productName: string): Locator {
     return this.page
       .getByRole("row", { name: productName })
-      .or(this.page.locator("tr").filter({ hasText: productName }))
-      .first();
+      .or(this.page.locator("tr").filter({ hasText: productName }));
+  }
+
+  private productRow(productName: string): Locator {
+    return this.productRows(productName).first();
   }
 
   private productActionsTrigger(productName: string): Locator {
@@ -156,13 +165,13 @@ export class ProductsPage {
   }
 
   async expectProductVisible(productName: string) {
-    await expect(this.page.getByText(productName, { exact: true }).first()).toBeVisible({
+    await expect(this.productRow(productName)).toBeVisible({
       timeout: 10000,
     });
   }
 
   async expectProductHidden(productName: string) {
-    await expect(this.page.getByText(productName, { exact: true })).toHaveCount(0, {
+    await expect(this.productRows(productName)).toHaveCount(0, {
       timeout: 10000,
     });
   }
@@ -254,6 +263,14 @@ export class ProductsPage {
       .first();
   }
 
+  private statusChangeConfirmationDialog(): Locator {
+    return this.page
+      .getByRole("alertdialog")
+      .or(this.page.getByRole("dialog"))
+      .filter({ has: this.page.getByRole("button", { name: /confirm/i }) })
+      .first();
+  }
+
   private hideFromProfileSwitch(): Locator {
     return this.productActionMenu().locator(
       `#${productsHideFromProfileData.hideFromProfileButtonId}`,
@@ -298,6 +315,35 @@ export class ProductsPage {
     }
 
     await expect(dialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async setProductInactive(productName: string) {
+    await this.openProductActionsMenu(productName);
+
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/shop/products") &&
+        !response.url().includes("/hide-from-profile") &&
+        ["PATCH", "POST", "PUT"].includes(response.request().method()),
+      { timeout: 15000 },
+    );
+
+    await this.setInactiveSwitchAction.click({ timeout: 10000 });
+
+    const dialog = this.statusChangeConfirmationDialog();
+    if (await dialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const confirmButton = dialog
+        .getByRole("button", { name: /confirm|set inactive|yes/i })
+        .first();
+      await safeClick(confirmButton);
+      await expect(dialog).toBeHidden({ timeout: 10000 });
+    }
+
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    await this.page.keyboard.press("Escape");
+    await expect(this.productActionMenu()).toBeHidden({ timeout: 5000 }).catch(() => {});
+    await this.page.waitForTimeout(1200);
   }
 
   async expectShareDialogVisible() {

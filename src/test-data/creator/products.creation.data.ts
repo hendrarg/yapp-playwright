@@ -6,6 +6,7 @@ export interface OnlineCourseProductData {
   description: string;
   thumbnailImagePath: string;
   price: number;
+  status?: "active" | "inactive" | "draft";
 }
 
 /** PRD product types shown in the Add New Product sheet (TC-PROD-C-015). */

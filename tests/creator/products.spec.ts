@@ -3,6 +3,7 @@ import {
   createOnlineCourseProduct,
   deleteProduct,
   expectProductHideFromProfile,
+  expectProductStatus,
   setProductHideFromProfile,
 } from '@helpers/api/product';
 import {
@@ -15,6 +16,75 @@ import { productsStatusData } from '@test-data/creator/products.status.data';
 import { creatorProfile } from '@test-data/buyer/profile.data';
 
 test.describe('Creator Products', () => {
+  test('Verify Products Status Grouping', {
+    tag: ['@AUT-FV-210', '@products', '@creator', '@smoke'],
+    annotation: [{ type: 'covers', description: 'TC-PROD-C-003' }],
+  }, async ({ creatorNav, productsPage }) => {
+    test.setTimeout(90000);
+
+    await test.step('Open Products page', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+    });
+
+    for (const status of productsStatusData.tabs) {
+      await test.step(`Select ${status} tab and verify rows show ${status} status only`, async () => {
+        await productsPage.selectStatusTab(status);
+        await productsPage.expectStatusTabList(status);
+      });
+    }
+  });
+
+  test('Set Active Product Inactive and Verify Status Transition', {
+    tag: ['@AUT-FV-211', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-PROD-C-022' }],
+  }, async ({ creatorNav, productsPage, page }) => {
+    test.setTimeout(120000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed an active online course product for this test');
+    if (!seedToken) return;
+
+    const productData = generateOnlineCourseProductData({
+      title: `AUT-FV-211 ${Date.now()}`,
+      status: 'active',
+    });
+    let productUuid = '';
+
+    try {
+      await test.step('Create active online course product via API', async () => {
+        const product = await createOnlineCourseProduct(page.request, productData, seedToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+      });
+
+      await test.step('Set product inactive from the Active status group', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(productData.title);
+        await productsPage.expectProductVisible(productData.title);
+        await productsPage.setProductInactive(productData.title);
+        await expectProductStatus(page.request, productUuid, 'inactive', seedToken);
+      });
+
+      await test.step('Verify product appears in the Inactive status group', async () => {
+        await productsPage.clearSearch();
+        await productsPage.selectStatusTab('Inactive');
+        await productsPage.searchProducts(productData.title);
+        await productsPage.expectProductVisible(productData.title);
+        await productsPage.clearSearch();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(productData.title);
+        await productsPage.expectProductHidden(productData.title);
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, seedToken);
+      }
+    }
+  });
+
   test('Search, Filter, Sort, and Discover Products Data', {
     tag: ['@AUT-FV-212', '@products', '@creator', '@regression'],
   }, async ({ creatorNav, productsPage }) => {
