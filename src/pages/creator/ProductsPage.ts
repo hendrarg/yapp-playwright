@@ -84,6 +84,12 @@ export class ProductsPage {
     selector: '[role="dialog"] input#link + button',
   });
 
+  private readonly deleteProductAction = smartLocator(this.page, {
+    role: "menuitem",
+    name: "Delete",
+    text: "Delete",
+    selector: '[role="menuitem"]',
+  });
 
   private addProductSheet(): Locator {
     return this.page.getByRole("dialog", { name: "Add New Product" });
@@ -94,7 +100,10 @@ export class ProductsPage {
   }
 
   private productRow(productName: string): Locator {
-    return this.page.locator("tr").filter({ hasText: productName }).first();
+    return this.page
+      .getByRole("row", { name: productName })
+      .or(this.page.locator("tr").filter({ hasText: productName }))
+      .first();
   }
 
   private productActionsTrigger(productName: string): Locator {
@@ -237,6 +246,14 @@ export class ProductsPage {
     return this.page.getByRole("menu");
   }
 
+  private deleteConfirmationDialog(): Locator {
+    return this.page
+      .getByRole("alertdialog")
+      .or(this.page.getByRole("dialog"))
+      .filter({ hasText: /delete|hapus|confirm|confirmation/i })
+      .first();
+  }
+
   private hideFromProfileSwitch(): Locator {
     return this.productActionMenu().locator(
       `#${productsHideFromProfileData.hideFromProfileButtonId}`,
@@ -251,6 +268,36 @@ export class ProductsPage {
   async openShareDialog(productName: string) {
     await this.openProductActionsMenu(productName);
     await this.shareAction.click();
+  }
+
+  async openDeleteConfirmation(productName: string) {
+    await this.openProductActionsMenu(productName);
+    await this.deleteProductAction.click({ timeout: 10000 });
+    await expect(this.deleteConfirmationDialog()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectDeleteConfirmationVisible() {
+    const dialog = this.deleteConfirmationDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole("heading", { name: /delete product/i })).toBeVisible();
+    await expect(dialog).toContainText(/are you sure you want to delete this product\?/i);
+    await expect(dialog.getByRole("button", { name: /cancel/i })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: /confirm/i })).toBeVisible();
+  }
+
+  async dismissDeleteConfirmation() {
+    const dialog = this.deleteConfirmationDialog();
+    const cancelButton = dialog
+      .getByRole("button", { name: /cancel|batal|close|no/i })
+      .first();
+
+    if (await cancelButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await safeClick(cancelButton);
+    } else {
+      await this.page.keyboard.press("Escape");
+    }
+
+    await expect(dialog).toBeHidden({ timeout: 10000 });
   }
 
   async expectShareDialogVisible() {

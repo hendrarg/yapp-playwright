@@ -1,9 +1,14 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import {
+  createOnlineCourseProduct,
+  deleteProduct,
   expectProductHideFromProfile,
   setProductHideFromProfile,
 } from '@helpers/api/product';
-import { productsCreationData } from '@test-data/creator/products.creation.data';
+import {
+  generateOnlineCourseProductData,
+  productsCreationData,
+} from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -224,5 +229,42 @@ test.describe('Creator Products', () => {
       await buyerProfilePage.switchToTab('shops');
       await buyerProfilePage.expectProductVisibleOnShops(productsHideFromProfileData.productTitle);
     });
+  });
+
+  test('Verify Delete Product Confirmation Before Deletion', {
+    tag: ['@AUT-FV-218', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-PROD-C-037' }],
+  }, async ({ creatorNav, productsPage, page }) => {
+    test.setTimeout(120000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed an online course product for this test');
+    if (!seedToken) return;
+
+    const productData = generateOnlineCourseProductData();
+    let productUuid = '';
+
+    try {
+      await test.step('Create online course product via API', async () => {
+        const product = await createOnlineCourseProduct(page.request, productData, seedToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+      });
+
+      await test.step('Open Delete action and verify confirmation dialog before deletion', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProducts(productData.title);
+        await productsPage.expectProductVisible(productData.title);
+        await productsPage.openDeleteConfirmation(productData.title);
+        await productsPage.expectDeleteConfirmationVisible();
+        await productsPage.dismissDeleteConfirmation();
+        await productsPage.expectProductVisible(productData.title);
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, seedToken);
+      }
+    }
   });
 });
