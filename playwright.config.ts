@@ -1,8 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
+import { applyPlaywrightBrowsersPath } from './config/playwright-browsers-path.mjs';
 
 dotenv.config({ path: path.resolve(__dirname, '.env') });
+applyPlaywrightBrowsersPath();
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = process.env.CI ? true : headlessEnv?.toLowerCase() === 'true';

@@ -128,6 +128,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired or belongs to the wrong user, `authTest` 
 | `TESTMAIL_NAMESPACE` | For OTP tests | Do not commit |
 | `PW_HEADLESS` | No | Defaults to `false` |
 | `PW_WORKERS` | No | Defaults to 1 |
+| `YAPP_PLAYWRIGHT_BROWSERS_PATH` | No | Optional stable Playwright browser cache. Cursor sandboxes otherwise point at empty Temp paths and re-download Chromium. |
 
 ## Test Case Flow
 
