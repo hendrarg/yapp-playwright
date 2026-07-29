@@ -2,6 +2,7 @@ import { authTest as test, test as guestTest, expect } from '../test-base';
 import {
   creatorProfile,
   membershipCreatorProfile,
+  creatorProfiles,
 } from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
@@ -153,6 +154,34 @@ test('Upload and Manage Profile Media and Content — Part 6', {
   await test.step('Click Share and verify share options displayed', async () => {
     await buyerProfilePage.clickShare();
     await buyerProfilePage.expectShareOptionsVisible();
+  });
+});
+
+guestTest('Validate Profile Pricing, Vouchers, and Fees — Part 2', {
+  tag: ['@AUT-FV-233', '@profile', '@tip', '@buyer', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-B-013' },
+    { type: 'covers', description: 'TC-PRF-B-015' },
+    {
+      type: 'blocked',
+      description:
+        'TC-PRF-B-015: no env creator with tipping ON and Quick Amount OFF (QA Buyer Audit 2026-07-23)',
+    },
+  ],
+}, async ({ buyerNav, buyerProfilePage, tipPage }) => {
+  guestTest.setTimeout(90000);
+  const enabledTips = creatorProfiles.hendrarg.tipSuggestions.idr;
+
+  await guestTest.step('Open tipping flow with Quick Amount enabled and verify configured amounts', async () => {
+    await buyerNav.open('profile', { handle: creatorProfile });
+    await buyerProfilePage.expectQuickTipAmountsVisible(enabledTips);
+    await buyerNav.open('tip', { handle: creatorProfile });
+    await tipPage.expectQuickTipAmountsVisible(enabledTips);
+  });
+
+  await guestTest.step('Document blocked Quick Amount disabled case (TC-PRF-B-015)', async () => {
+    // Fixture contract reserved for when a disabled-Quick-Amount creator is provisioned.
+    expect(creatorProfiles.davidalfasunarna.tipSuggestions.idr).toEqual([]);
   });
 });
 });

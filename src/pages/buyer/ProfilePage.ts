@@ -281,6 +281,27 @@ export class ProfilePage {
     await expect(this.sendTipButton).toBeEnabled({ timeout: 5000 });
   }
 
+  /** Predefined Quick Tip amounts on the profile tip form (TC-PRF-B-013). */
+  async expectQuickTipAmountsVisible(amounts?: readonly string[]) {
+    const expected = amounts ?? this.creatorContext.tipSuggestions.idr;
+    expect(expected.length, "creator must have configured quick tip amounts").toBeGreaterThan(0);
+    await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 10000 });
+    await expect(this.tipInput).toBeVisible({ timeout: 10000 });
+    for (const amount of expected) {
+      await expect(this.tipFormRoot.getByRole("button", { name: amount, exact: true })).toBeVisible({
+        timeout: 10000,
+      });
+    }
+  }
+
+  /** Tip form remains usable but no Quick Tip amount chips (TC-PRF-B-015). */
+  async expectQuickTipAmountsHidden() {
+    await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 10000 });
+    await expect(this.tipInput).toBeVisible({ timeout: 10000 });
+    await expect(this.sendTipButton).toBeVisible({ timeout: 10000 });
+    await expect(this.tipFormRoot.getByRole("button", { name: /^Rp[\d.]+$/ })).toHaveCount(0);
+  }
+
   async selectIdrCurrency() {
     await safeClick(this.idrButton);
     await this.page.waitForTimeout(300);

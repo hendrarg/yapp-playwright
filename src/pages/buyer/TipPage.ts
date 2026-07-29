@@ -96,6 +96,30 @@ export class TipPage {
     await expect(this.paymentMethod).toBeVisible({ timeout: 5000 }).catch(() => {});
   }
 
+  private get quickAmountButtons() {
+    return this.page.getByRole("button", { name: /^Rp[\d.]+$/ });
+  }
+
+  async expectQuickTipAmountsVisible(amounts: readonly string[]) {
+    expect(amounts.length).toBeGreaterThan(0);
+    await this.expectPageLoaded();
+    for (const amount of amounts) {
+      await expect(
+        locatorChain(this.page, {
+          role: "button",
+          name: amount,
+          text: amount,
+          exact: true,
+        }),
+      ).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async expectQuickTipAmountsHidden() {
+    await this.expectPageLoaded();
+    await expect(this.quickAmountButtons).toHaveCount(0);
+  }
+
   async expectFormAutoFilled() {
     await expect(this.nameInput).toBeVisible({ timeout: 10000 });
     await expect
