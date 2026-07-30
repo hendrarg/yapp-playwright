@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import type { PromotionValidationFormData } from "@test-data/creator/promotions.validation.data";
+import { promotionsScopeData } from "@test-data/creator/promotions.scope.data";
 
 export type PromotionCreateResponse = {
   status: number;
@@ -70,11 +71,46 @@ export class PromotionsPage {
     selector: 'input[placeholder="Unlimited if not set"]',
   });
 
-  readonly productTypeCombobox = locatorChain(this.page, {
+  readonly productTypeCombobox = this.page.locator('label:has-text("Product Type") + button[role="combobox"]');
+
+  readonly findProductCombobox = locatorChain(this.page, {
     role: "combobox",
-    text: "All Product",
-    selector: 'label:has-text("Product Type") + button[role="combobox"]',
+    name: promotionsScopeData.findProductComboboxLabel,
+    text: promotionsScopeData.findProductComboboxLabel,
+    selector: 'button[role="combobox"]:has-text("Find Product")',
   });
+
+  private productTypeDropdown(): Locator {
+    return this.page.locator('[data-slot="select-content"]:visible');
+  }
+
+  private productScopePopover(): Locator {
+    return this.page.locator('[data-slot="popover-content"]:visible').last();
+  }
+
+  private productScopeSearchInput(): Locator {
+    return this.productScopePopover().locator(
+      `input[placeholder="${promotionsScopeData.searchPlaceholder}"]`,
+    );
+  }
+
+  private productScopeOption(productName: string): Locator {
+    return this.productScopePopover()
+      .getByRole("option", { name: new RegExp(productName) })
+      .or(
+        this.productScopePopover()
+          .locator('[cmdk-item], [data-slot="command-item"]')
+          .filter({ hasText: productName }),
+      )
+      .first();
+  }
+
+  private selectedProductChip(productName: string): Locator {
+    return this.page
+      .locator('label:has-text("Product Type")')
+      .locator("xpath=ancestor::div[contains(@class,'space')][1]")
+      .getByText(productName, { exact: true });
+  }
 
   readonly startDateTrigger = this.page.locator(
     'label:has-text("Start Date") + div[data-slot="popover-trigger"]',
@@ -171,5 +207,43 @@ export class PromotionsPage {
     const response = await responsePromise;
     expect(response.ok(), await response.text()).toBeTruthy();
     return (await response.json()) as PromotionCreateResponse;
+  }
+
+  async selectProductScope(scope: "all_product" | "selected_products") {
+    await safeClick(this.productTypeCombobox);
+    const dropdown = this.productTypeDropdown();
+    await expect(dropdown).toBeVisible({ timeout: 10000 });
+
+    if (scope === "selected_products") {
+      await safeClick(
+        dropdown.getByRole("option", { name: promotionsScopeData.productScopeOption, exact: true }),
+      );
+    } else {
+      await safeClick(dropdown.getByRole("option", { name: "All Product", exact: true }));
+    }
+  }
+
+  async selectSelectedProductsScope() {
+    await this.selectProductScope("selected_products");
+    await expect(this.findProductCombobox).toBeVisible({ timeout: 10000 });
+  }
+
+  async searchProductsInScope(query: string) {
+    await safeClick(this.findProductCombobox);
+    await expect(this.productScopePopover()).toBeVisible({ timeout: 10000 });
+    await safeFill(this.productScopeSearchInput(), query);
+  }
+
+  async selectProductInScope(productName: string) {
+    await safeClick(this.productScopeOption(productName));
+    await expect(this.selectedProductChip(productName)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectProductVisibleInScope(productName: string) {
+    await expect(this.productScopeOption(productName)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectProductSelectableInScope(productName: string) {
+    await expect(this.productScopeOption(productName)).toBeVisible({ timeout: 10000 });
   }
 }

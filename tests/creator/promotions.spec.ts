@@ -4,6 +4,7 @@ import {
   generatePromotionValidationData,
   promotionValidationData,
 } from "@test-data/creator/promotions.validation.data";
+import { promotionsScopeData } from "@test-data/creator/promotions.scope.data";
 
 function getPromotionId(response: { data?: { uuid?: string; id?: string } }): string {
   const id = response.data?.uuid ?? response.data?.id;
@@ -64,5 +65,27 @@ test.describe("Creator Promotions", () => {
         await deletePromotion(page.request, unlimitedPromotionId);
       }
     }
+  });
+
+  test("Search products across categories in product scope", {
+    tag: ["@AUT-FV-240", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage }) => {
+    test.setTimeout(120_000);
+
+    await test.step("Open create promotion form and choose Selected Products", async () => {
+      await creatorNav.open("promotions");
+      await promotionsPage.openCreatePromotionForm();
+      await promotionsPage.selectSelectedProductsScope();
+    });
+
+    await test.step("Search and select products from different categories", async () => {
+      await promotionsPage.searchProductsInScope(promotionsScopeData.products.telegram);
+      await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.telegram);
+      await promotionsPage.selectProductInScope(promotionsScopeData.products.telegram);
+
+      await promotionsPage.searchProductsInScope(promotionsScopeData.products.digitalDownload);
+      await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.digitalDownload);
+      await promotionsPage.selectProductInScope(promotionsScopeData.products.digitalDownload);
+    });
   });
 });
