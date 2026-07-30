@@ -12,6 +12,19 @@ export interface CreatePromotionOptions {
   periodStartAt: string;
   periodEndAt: string;
   isSetAffiliate: boolean;
+  productUUIDs?: string[];
+  maxUsed?: number | null;
+}
+
+export function getPromotionId(response: unknown): string {
+  const body = response as {
+    data?: { uuid?: string; id?: string };
+    uuid?: string;
+    id?: string;
+  };
+  const id = body.data?.uuid ?? body.data?.id ?? body.uuid ?? body.id;
+  if (!id) throw new Error("Create promotion response did not include an ID");
+  return id;
 }
 
 function promotionHeaders(token?: string) {
@@ -36,6 +49,24 @@ export async function createPromotion(
   }
 
   return response.json();
+}
+
+export async function setPromotionActiveStatus(
+  request: APIRequestContext,
+  promotionId: string,
+  isActive: boolean,
+  token?: string,
+): Promise<void> {
+  const response = await request.put(apiUrl(`/api/v1/promos/${encodeURIComponent(promotionId)}/status`), {
+    headers: promotionHeaders(token),
+    data: { isActive },
+  });
+
+  if (!response.ok()) {
+    throw new Error(
+      `Set promotion status failed: ${response.status()} ${await response.text()}`,
+    );
+  }
 }
 
 export async function deletePromotion(

@@ -1,5 +1,6 @@
 import { test } from '../test-base';
 import { createPromotion, deletePromotion } from '@helpers/api/promotion';
+import { openGuestCheckout } from '@helpers/buyer/promotion-checkout';
 import { promotionData } from '@test-data/buyer/promotion.data';
 import { generatePromotionData } from '@test-data/creator/promotion.data';
 
@@ -17,7 +18,7 @@ function getPromotionId(response: unknown): string {
 test.describe('Guest promotion redemption', () => {
   test('Verify Promotions Guest Voucher Redemption', {
     tag: ['@AUT-FV-247', '@promotions', '@buyer', '@smoke', '@regression'],
-  }, async ({ buyerNav, productPurchasePage, page }) => {
+  }, async ({ productPurchasePage, page }) => {
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
     if (!hendraToken) return;
@@ -30,7 +31,7 @@ test.describe('Guest promotion redemption', () => {
       });
 
       await test.step('Open eligible direct purchase detail as guest', async () => {
-        await buyerNav.open('productPurchase', { product: promotionData.eligibleProduct });
+        await openGuestCheckout(page, productPurchasePage, promotionData.eligibleProduct);
       });
 
       await test.step('Apply active promotion and verify acceptance', async () => {
@@ -45,8 +46,9 @@ test.describe('Guest promotion redemption', () => {
 
   test('Verify Promotions Checkout Redemption Validation', {
     tag: ['@AUT-FV-248', '@promotions', '@buyer', '@regression'],
-  }, async ({ buyerNav, productPurchasePage, page }) => {
-    test.setTimeout(60_000);
+    annotation: [{ type: 'covers', description: 'TC-PRM-C-030 (checkout)' }],
+  }, async ({ productPurchasePage, page }) => {
+    test.setTimeout(120_000);
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
     if (!hendraToken) return;
@@ -60,7 +62,7 @@ test.describe('Guest promotion redemption', () => {
       });
 
       await test.step('Apply active promotion and validate updated totals', async () => {
-        await buyerNav.open('productPurchase', { product: promotionData.eligibleProduct });
+        await openGuestCheckout(page, productPurchasePage, promotionData.eligibleProduct);
         const before = await productPurchasePage.getOrderSummary();
         await productPurchasePage.applyPromotion(promotion.code);
         await productPurchasePage.expectActiveDiscount(before, 11);
@@ -68,7 +70,7 @@ test.describe('Guest promotion redemption', () => {
 
       for (const invalidPromotion of promotionData.invalid) {
         await test.step(`Reject ${invalidPromotion.label} promotion without changing totals`, async () => {
-          await buyerNav.open('productPurchase', { product: promotionData.eligibleProduct });
+          await openGuestCheckout(page, productPurchasePage, promotionData.eligibleProduct);
           const before = await productPurchasePage.getOrderSummary();
           await productPurchasePage.applyPromotion(invalidPromotion.code);
           await productPurchasePage.expectRejectedPromotion(before);
@@ -76,10 +78,23 @@ test.describe('Guest promotion redemption', () => {
       }
 
       await test.step('Reject hendrarg promotion for another creator product', async () => {
-        await buyerNav.open('productPurchase', { product: promotionData.creatorIneligibleProduct });
+        await openGuestCheckout(page, productPurchasePage, promotionData.creatorIneligibleProduct);
         const before = await productPurchasePage.getOrderSummary();
         await productPurchasePage.applyPromotion(promotionData.creatorIneligible.code);
         await productPurchasePage.expectRejectedPromotion(before, promotionData.creatorIneligible.error);
+      });
+
+      await test.step('Reject deleted promotion code', async () => {
+        const deletedPromotion = generatePromotionData('active');
+        const deletedPromotionId = getPromotionId(
+          await createPromotion(page.request, deletedPromotion, hendraToken),
+        );
+        await deletePromotion(page.request, deletedPromotionId, hendraToken);
+
+        await openGuestCheckout(page, productPurchasePage, promotionData.eligibleProduct);
+        const before = await productPurchasePage.getOrderSummary();
+        await productPurchasePage.applyPromotion(deletedPromotion.code);
+        await productPurchasePage.expectRejectedPromotion(before);
       });
     } finally {
       if (promotionId) await deletePromotion(page.request, promotionId, hendraToken);

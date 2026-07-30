@@ -1,16 +1,14 @@
 import { creatorAuthTest as test, expect } from "../test-base";
-import { deletePromotion } from "@helpers/api/promotion";
+import { createPromotion, deletePromotion, getPromotionId } from "@helpers/api/promotion";
 import {
+  formatPromotionListDate,
   generatePromotionValidationData,
   promotionValidationData,
 } from "@test-data/creator/promotions.validation.data";
 import { promotionsScopeData } from "@test-data/creator/promotions.scope.data";
+import { generatePromotionData } from "@test-data/creator/promotion.data";
 
-function getPromotionId(response: { data?: { uuid?: string; id?: string } }): string {
-  const id = response.data?.uuid ?? response.data?.id;
-  if (!id) throw new Error("Create promotion response did not include an ID");
-  return id;
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 test.describe("Creator Promotions", () => {
   test("Validate Promotions Inputs and Boundary Conditions", {
@@ -87,5 +85,128 @@ test.describe("Creator Promotions", () => {
       await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.digitalDownload);
       await promotionsPage.selectProductInScope(promotionsScopeData.products.digitalDownload);
     });
+  });
+
+  test("Persist Promotions Changes and State", {
+    tag: ["@AUT-FV-241", "@promotions", "@creator", "@regression"],
+    annotation: [{ type: "covers", description: "TC-PRM-C-011" }],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const promotion = generatePromotionValidationData();
+    const selectedProducts = [
+      promotionsScopeData.products.telegram,
+      promotionsScopeData.products.digitalDownload,
+    ];
+    let promotionId = "";
+
+    try {
+      await test.step("Create promotion with selected products and save", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillSelectedProductsPromotion(promotion, selectedProducts);
+        const response = await promotionsPage.submitPromotionForm();
+        promotionId = getPromotionId(response);
+      });
+
+      await test.step("Reopen promotion edit and verify selected products are prepopulated", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.openPromotionEdit(promotion.code, promotion.name);
+        await promotionsPage.expectSelectedProductsOnEdit(selectedProducts);
+      });
+    } finally {
+      if (promotionId) {
+        await deletePromotion(page.request, promotionId);
+      }
+    }
+  });
+
+  test("Validate Promotions Scheduling, Availability, and Time Rules", {
+    tag: ["@AUT-FV-242", "@promotions", "@creator", "@regression"],
+    annotation: [{ type: "covers", description: "TC-PRM-C-012" }],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const startDate = new Date();
+    const endDate = new Date(Date.now() + DAY_MS);
+    const promotion = generatePromotionValidationData({
+      startDateDay: `${startDate.getMonth() + 1}/${startDate.getDate()}/${startDate.getFullYear()}`,
+      endDateDay: `${endDate.getMonth() + 1}/${endDate.getDate()}/${endDate.getFullYear()}`,
+    });
+    let promotionId = "";
+
+    try {
+      await test.step("Create promotion with start and end period then save", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillPromotionForm(promotion);
+        const response = await promotionsPage.submitPromotionForm();
+        promotionId = getPromotionId(response);
+      });
+
+      await test.step("Verify saved promotion period on management list", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.expectPromotionPeriodInList(
+          promotion.code,
+          formatPromotionListDate(startDate),
+          formatPromotionListDate(endDate),
+        );
+      });
+    } finally {
+      if (promotionId) {
+        await deletePromotion(page.request, promotionId);
+      }
+    }
+  });
+
+  test("Verify Promotions Access, Entitlements, and Eligibility", {
+    tag: ["@AUT-FV-243", "@promotions", "@creator", "@smoke", "@regression"],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
+    test.skip(!hendraToken, "YAPP_TEST_ACCESS_TOKEN for Hendra is required");
+    if (!hendraToken) return;
+
+    const listPromotion = generatePromotionData("active");
+    const deletePromotionData = generatePromotionData("active");
+
+    let listPromotionId = "";
+
+    try {
+      await test.step("TC-PRM-C-021: Display promotion list fields", async () => {
+        listPromotionId = getPromotionId(
+          await createPromotion(page.request, listPromotion, hendraToken),
+        );
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(listPromotion.code);
+        await promotionsPage.expectPromotionRowFields(listPromotion.code, {
+          name: listPromotion.name,
+          code: listPromotion.code,
+          discountLabel: `${listPromotion.discount}% off`,
+          status: "Active",
+          redeemCount: "0",
+        });
+        await promotionsPage.expectPromotionPeriodInList(
+          listPromotion.code,
+          formatPromotionListDate(new Date(listPromotion.periodStartAt)),
+          formatPromotionListDate(new Date(listPromotion.periodEndAt)),
+        );
+      });
+
+      await test.step("TC-PRM-C-030: Delete promotion from management list", async () => {
+        await createPromotion(page.request, deletePromotionData, hendraToken);
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(deletePromotionData.code);
+        await promotionsPage.deletePromotionFromList(deletePromotionData.code);
+        await promotionsPage.expectPromotionAbsent(deletePromotionData.code);
+      });
+    } finally {
+      if (listPromotionId) {
+        await deletePromotion(page.request, listPromotionId, hendraToken);
+      }
+    }
   });
 });

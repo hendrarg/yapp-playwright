@@ -45,7 +45,8 @@ export class ProductPurchasePage {
 
     // FLAKY_FIX: product hydration can also replace the primary purchase button.
     await flakyClick(this.page.getByRole('button', { name: /^(Get Product|Purchase)$/ }));
-    await safeClick(this.chooseVoucherButton);
+    // FLAKY_FIX: checkout hydration can replace the voucher entry button after purchase opens.
+    await flakyClick(this.chooseVoucherButton);
     await expect(this.voucherInput).toBeVisible();
   }
 

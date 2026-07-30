@@ -21,6 +21,12 @@ export function formatPromotionDateDay(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
 }
 
+export function formatPromotionListDate(date: Date): string {
+  const day = date.getDate();
+  const month = new Intl.DateTimeFormat("en-GB", { month: "long" }).format(date);
+  return `${day} ${month} ${date.getFullYear()}`;
+}
+
 export function generatePromotionValidationData(
   overrides: Partial<PromotionValidationFormData> = {},
 ): PromotionValidationFormData {

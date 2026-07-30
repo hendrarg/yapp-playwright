@@ -246,4 +246,139 @@ export class PromotionsPage {
   async expectProductSelectableInScope(productName: string) {
     await expect(this.productScopeOption(productName)).toBeVisible({ timeout: 10000 });
   }
+
+  async searchPromotions(query: string) {
+    await safeFill(this.searchInput, query);
+  }
+
+  private promotionRow(query: string): Locator {
+    return this.page.getByRole("row").filter({ hasText: query });
+  }
+
+  private promotionActionsTrigger(rowQuery: string): Locator {
+    return this.promotionRow(rowQuery).locator('[data-slot="dropdown-menu-trigger"]');
+  }
+
+  async openPromotionActions(rowQuery: string) {
+    await safeClick(this.promotionActionsTrigger(rowQuery));
+    await expect(this.page.getByRole("menu")).toBeVisible({ timeout: 10000 });
+  }
+
+  async openPromotionEdit(rowQuery: string, promotionName: string) {
+    await this.openPromotionActions(rowQuery);
+    await safeClick(this.page.getByRole("menuitem", { name: "Edit", exact: true }));
+    await expect(this.page).toHaveURL(/\/promotions\/[^/]+\/update/, { timeout: 15000 });
+    await expect(this.page.getByRole("heading", { name: promotionName, exact: true })).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(this.nameInput).toBeVisible({ timeout: 15000 });
+  }
+
+  async setPromotionInactive(rowQuery: string) {
+    await this.openPromotionActions(rowQuery);
+    const toggle = this.page.locator("#set-inactive");
+    await expect(toggle).toBeVisible({ timeout: 10000 });
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/promos/") &&
+        response.url().includes("/status") &&
+        response.request().method() === "PUT",
+      { timeout: 15000 },
+    );
+    await safeClick(toggle);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    await this.page.keyboard.press("Escape");
+  }
+
+  async setPromotionActive(rowQuery: string) {
+    await this.openPromotionActions(rowQuery);
+    const toggle = this.page.locator("#set-inactive");
+    await expect(toggle).toBeVisible({ timeout: 10000 });
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/promos/") &&
+        response.url().includes("/status") &&
+        response.request().method() === "PUT",
+      { timeout: 15000 },
+    );
+    await safeClick(toggle);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await this.page.keyboard.press("Escape");
+  }
+
+  async deletePromotionFromList(rowQuery: string) {
+    await this.openPromotionActions(rowQuery);
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "DELETE" && response.url().includes("/promos/"),
+      { timeout: 15000 },
+    );
+    await safeClick(this.page.getByRole("menuitem", { name: "Delete", exact: true }));
+    await safeClick(this.page.getByRole("button", { name: "Confirm", exact: true }));
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+  }
+
+  async expectPromotionRowFields(
+    rowQuery: string,
+    fields: {
+      name: string;
+      code: string;
+      discountLabel: string;
+      status: string;
+      redeemCount: string;
+    },
+  ) {
+    const row = this.promotionRow(rowQuery);
+    await expect(row).toBeVisible({ timeout: 10000 });
+    await expect(row).toContainText(fields.name);
+    await expect(row).toContainText(fields.code);
+    await expect(row).toContainText(fields.discountLabel);
+    await expect(row).toContainText(fields.status);
+    await expect(row).toContainText(fields.redeemCount);
+  }
+
+  async expectPromotionPeriodInList(rowQuery: string, startDate: string, endDate: string) {
+    const row = this.promotionRow(rowQuery);
+    await expect(row).toContainText(startDate);
+    await expect(row).toContainText(endDate);
+  }
+
+  async expectPromotionStatus(rowQuery: string, status: string) {
+    await expect(this.promotionRow(rowQuery)).toContainText(status, { timeout: 10000 });
+  }
+
+  async expectPromotionAbsent(rowQuery: string) {
+    await expect(this.promotionRow(rowQuery)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectSelectedProductsOnEdit(productNames: readonly string[]) {
+    for (const productName of productNames) {
+      await expect(this.selectedProductChip(productName)).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async fillSelectedProductsPromotion(
+    input: PromotionValidationFormData,
+    productNames: readonly string[],
+  ) {
+    await this.selectSelectedProductsScope();
+    for (const productName of productNames) {
+      await this.searchProductsInScope(productName);
+      await this.selectProductInScope(productName);
+    }
+    await safeFill(this.nameInput, input.name);
+    await safeFill(this.discountAmountInput, String(input.discount));
+    await safeFill(this.discountCodeInput, input.code);
+    if (typeof input.maximumUsage === "number") {
+      await safeFill(this.maximumUsageInput, String(input.maximumUsage));
+    }
+    await this.selectDate(this.startDateTrigger, input.startDateDay);
+    await this.selectDate(this.endDateTrigger, input.endDateDay);
+  }
 }
