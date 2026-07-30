@@ -24,6 +24,12 @@ export { membershipTemplates, generateMembershipTier } from "./creator/membershi
 export type { MembershipTier } from "./creator/membership.data";
 export { generatePostData, testImages } from "./creator/post.data";
 export type { PostData, PostVisibility } from "./creator/post.data";
+export {
+  formatPromotionDateDay,
+  generatePromotionValidationData,
+  promotionValidationData,
+  type PromotionValidationFormData,
+} from "./creator/promotions.validation.data";
 export { ordersFilterData } from "./creator/orders.data";
 export { paymentMock, paymentHeaders } from "./mocks/payment.data";
 export { emailMock } from "./mocks/email.data";
