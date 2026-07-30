@@ -13,4 +13,3 @@ export class AffiliatePage {
     expect(this.page.url()).not.toContain("/auth");
   }
 }
-

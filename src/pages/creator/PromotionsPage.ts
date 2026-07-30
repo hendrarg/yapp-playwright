@@ -13,6 +13,11 @@ export type PromotionCreateResponse = {
     id?: string;
     name: string;
     maxUsed: number | null;
+    isSetAffiliate?: boolean;
+    affiliatorCommissionPercentage?: number;
+    affiliator?: {
+      username?: string;
+    };
   };
 };
 
@@ -71,7 +76,23 @@ export class PromotionsPage {
     selector: 'input[placeholder="Unlimited if not set"]',
   });
 
-  readonly productTypeCombobox = this.page.locator('label:has-text("Product Type") + button[role="combobox"]');
+  readonly productTypeCombobox = locatorChain(this.page, {
+    role: "combobox",
+    name: "Product Type",
+    selector: 'label:has-text("Product Type") + button[role="combobox"]',
+  });
+
+  readonly affiliateSwitch = locatorChain(this.page, {
+    role: "switch",
+    selector: 'button[role="switch"]',
+  });
+
+  readonly findCreatorCombobox = locatorChain(this.page, {
+    role: "combobox",
+    name: "Find Creator",
+    text: "Find Creator",
+    selector: 'button[role="combobox"]:has-text("Find Creator")',
+  });
 
   readonly findProductCombobox = locatorChain(this.page, {
     role: "combobox",
@@ -226,6 +247,60 @@ export class PromotionsPage {
   async selectSelectedProductsScope() {
     await this.selectProductScope("selected_products");
     await expect(this.findProductCombobox).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectDefaultAllProductsScope() {
+    await expect(this.productTypeCombobox).toContainText("All Product", { timeout: 10000 });
+    await expect(this.findProductCombobox).toBeHidden({ timeout: 5000 });
+  }
+
+  private affiliateCommissionInput(): Locator {
+    return this.page
+      .locator('label:has-text("Affiliate Commission")')
+      .locator("xpath=following::input[1]");
+  }
+
+  private creatorAssignmentPopover(): Locator {
+    return this.page.locator('[data-slot="popover-content"]:visible').last();
+  }
+
+  async enableAffiliateCommission(percent: number) {
+    if ((await this.affiliateSwitch.getAttribute("aria-checked")) !== "true") {
+      await safeClick(this.affiliateSwitch);
+    }
+    await expect(this.affiliateCommissionInput()).toBeVisible({ timeout: 10000 });
+    await safeFill(this.affiliateCommissionInput(), String(percent));
+    await expect(this.findCreatorCombobox).toBeVisible({ timeout: 10000 });
+  }
+
+  async assignAffiliateCreator(searchTerm: string) {
+    await safeClick(this.findCreatorCombobox);
+    const popover = this.creatorAssignmentPopover();
+    await expect(popover).toBeVisible({ timeout: 10000 });
+    await safeFill(popover.locator("input").first(), searchTerm);
+    const option = popover
+      .getByRole("option", { name: new RegExp(searchTerm) })
+      .or(popover.locator('[cmdk-item], [data-slot="command-item"]').filter({ hasText: searchTerm }))
+      .first();
+    await expect(option).toBeVisible({ timeout: 15000 });
+    await safeClick(option);
+  }
+
+  async expectAssignedAffiliateCreator(handle: string) {
+    await expect(this.page.getByText(`@${handle}`, { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  expectAffiliateAssignmentSaved(
+    response: PromotionCreateResponse,
+    expected: { commission: number; username: string },
+  ) {
+    expect(response.data.isSetAffiliate).toBe(true);
+    expect(response.data.affiliatorCommissionPercentage).toBe(expected.commission);
+    expect(response.data.affiliator?.username).toBe(expected.username);
+  }
+
+  async expectAffiliateBadgeInList(rowQuery: string) {
+    await expect(this.promotionRow(rowQuery)).toContainText("Affiliate", { timeout: 10000 });
   }
 
   async searchProductsInScope(query: string) {

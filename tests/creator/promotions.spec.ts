@@ -6,6 +6,7 @@ import {
   promotionValidationData,
 } from "@test-data/creator/promotions.validation.data";
 import { promotionsScopeData } from "@test-data/creator/promotions.scope.data";
+import { promotionsAffiliateData } from "@test-data/creator/promotions.affiliate.data";
 import { generatePromotionData } from "@test-data/creator/promotion.data";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,6 +64,61 @@ test.describe("Creator Promotions", () => {
         await deletePromotion(page.request, unlimitedPromotionId);
       }
     }
+  });
+
+  test("Verify Core Promotions Behavior", {
+    tag: ["@AUT-FV-238", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    await test.step("TC-PRM-C-008: Verify default All Products scope on create form", async () => {
+      await creatorNav.open("promotions");
+      await promotionsPage.openCreatePromotionForm();
+      await promotionsPage.expectDefaultAllProductsScope();
+    });
+
+    const promotion = generatePromotionValidationData();
+    let promotionId = "";
+
+    try {
+      await test.step("TC-PRM-C-017: Enable affiliate commission and assign creator", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillPromotionForm(promotion);
+        await promotionsPage.enableAffiliateCommission(promotionsAffiliateData.commission);
+        await promotionsPage.assignAffiliateCreator(promotionsAffiliateData.assigneeSearch);
+        await promotionsPage.expectAssignedAffiliateCreator(promotionsAffiliateData.assigneeHandle);
+      });
+
+      await test.step("TC-PRM-C-017: Save and verify affiliate assignment is stored", async () => {
+        const response = await promotionsPage.submitPromotionForm();
+        promotionId = getPromotionId(response);
+        promotionsPage.expectAffiliateAssignmentSaved(response, {
+          commission: promotionsAffiliateData.commission,
+          username: promotionsAffiliateData.assigneeHandle,
+        });
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.expectAffiliateBadgeInList(promotion.code);
+      });
+    } finally {
+      if (promotionId) {
+        await deletePromotion(page.request, promotionId);
+      }}
+  });
+
+  test("Select selected-products scope", {
+    tag: ["@AUT-FV-239", "@promotions", "@creator", "@regression"],
+    annotation: [{ type: "covers", description: "TC-PRM-C-009" }],
+  }, async ({ creatorNav, promotionsPage }) => {
+    await test.step("Open create promotion form", async () => {
+      await creatorNav.open("promotions");
+      await promotionsPage.openCreatePromotionForm();
+    });
+
+    await test.step("Choose Selected Products and verify product selector", async () => {
+      await promotionsPage.selectSelectedProductsScope();
+    });
   });
 
   test("Search products across categories in product scope", {
