@@ -5,6 +5,7 @@ import { productsHideFromProfileData } from "@test-data/creator/products.hide-fr
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
 import { consultationMediaData } from "@test-data/creator/consultation.media.data";
+import { consultationNavigationData } from "@test-data/creator/consultation.navigation.data";
 import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
 import {
   digitalProductValidationData,
@@ -150,6 +151,13 @@ export class ProductsPage {
     name: "Next: Set Availability",
     text: "Next: Set Availability",
     selector: 'button:has-text("Next: Set Availability")',
+  });
+
+  private readonly consultationBackAction = smartLocator(this.page, {
+    role: "button",
+    name: "Back",
+    text: "Back",
+    selector: 'button:has-text("Back")',
   });
 
   private readonly addQuestionsAction = smartLocator(this.page, {
@@ -966,5 +974,56 @@ export class ProductsPage {
     await expect(dialog).toContainText(sharePath);
     await expect(dialog.getByRole("button", { name: "View Product Page" })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /Copy Link/i }).first()).toBeVisible();
+  }
+
+  private visibleConsultationNextCta(): Locator {
+    return this.page
+      .getByRole("button", { name: consultationNavigationData.nextCtaName, exact: true })
+      .filter({ visible: true })
+      .first();
+  }
+
+  async useConsultationMobileViewport() {
+    await this.page.setViewportSize(consultationNavigationData.mobileViewport);
+  }
+
+  async makeConsultationUnsavedChanges(title: string, description: string) {
+    await this.fillConsultationTitle(title);
+    await this.fillConsultationDescription(description);
+  }
+
+  async expectConsultationNextCtaStickyAfterScroll() {
+    const next = this.visibleConsultationNextCta();
+    await expect(next).toBeVisible({ timeout: 10000 });
+    const before = await next.boundingBox();
+    expect(before, "expected Next CTA box before scroll").toBeTruthy();
+
+    await this.page.evaluate(() => {
+      const w = globalThis as unknown as { scrollBy: (x: number, y: number) => void };
+      w.scrollBy(0, 1500);
+    });
+    await this.page.waitForTimeout(400);
+
+    await expect(next).toBeVisible({ timeout: 10000 });
+    const after = await next.boundingBox();
+    expect(after, "expected Next CTA box after scroll").toBeTruthy();
+    expect(after!.y).toBeGreaterThanOrEqual(0);
+    expect(after!.y).toBeLessThan(consultationNavigationData.mobileViewport.height);
+    // Sticky bottom CTA should stay near the same viewport Y after scroll.
+    expect(Math.abs(after!.y - before!.y)).toBeLessThan(40);
+  }
+
+  async navigateAwayFromConsultationViaBack() {
+    await this.consultationBackAction.click({ timeout: 10000 });
+  }
+
+  async expectConsultationUnsavedChangesDialog() {
+    const dialog = this.page
+      .getByRole("alertdialog")
+      .or(this.page.getByRole("dialog"))
+      .filter({ hasText: consultationNavigationData.unsavedDialogPattern })
+      .first();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(this.page).toHaveURL(productsCreationData.consultationCreatePath);
   }
 }

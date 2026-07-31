@@ -5,11 +5,13 @@ import {
   consultationMediaData,
   generateConsultationTitle,
 } from '@test-data/creator/consultation.media.data';
+import { consultationNavigationData } from '@test-data/creator/consultation.navigation.data';
 import { consultationValidationData } from '@test-data/creator/consultation.validation.data';
 import {
   digitalProductValidationData,
   productsCreationData,
 } from '@test-data/creator/products.creation.data';
+import { faker } from '@faker-js/faker';
 
 test.describe('Creator Sessions', () => {
   test('Validate Consultation Inputs and Boundary Conditions', {
@@ -169,5 +171,38 @@ test.describe('Creator Sessions', () => {
         await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
       }
     }
+  });
+
+  test('Validate Consultation Navigation and Unsaved Warning', {
+    tag: ['@AUT-FV-019', '@sessions', '@creator', '@smoke', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-CON-C-003' }],
+  }, async ({ creatorNav, productsPage }) => {
+    const consultationType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Consultation',
+    )!;
+    const title = `${consultationNavigationData.unsavedTitlePrefix} ${faker.string.alphanumeric(8)}`;
+
+    await test.step('Open Consultation create with unsaved changes', async () => {
+      // Establish history so Back returns to Products instead of about:blank.
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.useConsultationMobileViewport();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(consultationType.buttonName);
+      await productsPage.expectConsultationCreateFlow();
+      await productsPage.makeConsultationUnsavedChanges(
+        title,
+        consultationNavigationData.unsavedDescription,
+      );
+    });
+
+    await test.step('Scroll and verify Next: Set Availability stays sticky', async () => {
+      await productsPage.expectConsultationNextCtaStickyAfterScroll();
+    });
+
+    await test.step('Navigate away and review unsaved confirmation dialog', async () => {
+      await productsPage.navigateAwayFromConsultationViaBack();
+      await productsPage.expectConsultationUnsavedChangesDialog();
+    });
   });
 });
