@@ -5,7 +5,26 @@ export type PromotionStatus = 'expired' | 'active' | 'inactive';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const generatedCodes = new Set<string>();
-let promotionNameCounter = 0;
+const generatedNames = new Set<string>();
+/** Spread names across runs so staging is not flooded with duplicate promo001 rows. */
+let promotionNameCounter = Math.floor(Date.now() / 1000) % 900;
+
+/** Reset in-process name/code counters (optional test isolation). */
+export function resetPromotionDataCounters(): void {
+  promotionNameCounter = Math.floor(Date.now() / 1000) % 900;
+  generatedCodes.clear();
+  generatedNames.clear();
+}
+
+function generatePromotionName(): string {
+  let name: string;
+  do {
+    name = `promo${String(++promotionNameCounter).padStart(3, '0')}`;
+  } while (generatedNames.has(name));
+
+  generatedNames.add(name);
+  return name;
+}
 
 function generatePromotionCode(): string {
   let code: string;
@@ -25,7 +44,7 @@ export function generatePromotionData(
 ): CreatePromotionOptions {
   const now = Date.now();
   const code = generatePromotionCode();
-  const name = `promo${String(++promotionNameCounter).padStart(3, '0')}`;
+  const name = generatePromotionName();
   const periodStartAt = status === 'expired'
     ? new Date(now - 14 * DAY_MS)
     : status === 'inactive'

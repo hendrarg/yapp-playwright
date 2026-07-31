@@ -410,25 +410,39 @@ export class PromotionsPage {
     await expect(this.productScopeOption(productName)).toBeVisible({ timeout: 10000 });
   }
 
-  async searchPromotions(query: string) {
+  /** Creator list search filters by promotion name; promo code disambiguates duplicate names. */
+  async searchPromotions(promotionName: string, promoCode?: string) {
     await this.searchInput.clear();
-    await safeFill(this.searchInput, query);
-    await expect(this.promotionRow(query)).toBeVisible({ timeout: 30000 });
+    await safeFill(this.searchInput, promotionName);
+    await expect(this.promotionRow(promoCode ?? promotionName)).toBeVisible({ timeout: 30000 });
   }
 
-  private promotionRow(query: string): Locator {
-    return this.page.getByRole("row").filter({ hasText: query });
+  private promotionRow(rowQuery: string): Locator {
+    return this.page.getByRole("row").filter({ hasText: rowQuery });
   }
 
   private promotionActionsTrigger(rowQuery: string): Locator {
     return this.promotionRow(rowQuery).locator('[data-slot="dropdown-menu-trigger"]');
   }
 
+  private promotionActionCell(rowQuery: string): Locator {
+    return this.promotionRow(rowQuery).locator("td").last();
+  }
+
   private promotionCopyButton(rowQuery: string): Locator {
-    return this.promotionRow(rowQuery)
-      .locator("td")
-      .last()
-      .locator("button:has(svg.lucide-copy)");
+    return this.promotionActionCell(rowQuery).locator("button:has(svg.lucide-copy)");
+  }
+
+  private promotionCopyConfirmationIcon(rowQuery: string): Locator {
+    return this.promotionActionCell(rowQuery).locator("svg.lucide-circle-check");
+  }
+
+  private deleteConfirmationDialog(): Locator {
+    return this.page
+      .getByRole("alertdialog")
+      .or(this.page.getByRole("dialog"))
+      .filter({ hasText: /delete|hapus|confirm|confirmation/i })
+      .first();
   }
 
   async openPromotionActions(rowQuery: string) {
@@ -493,15 +507,39 @@ export class PromotionsPage {
     await this.page.keyboard.press("Escape");
   }
 
-  async deletePromotionFromList(rowQuery: string) {
+  async openDeleteConfirmation(rowQuery: string) {
     await this.openPromotionActions(rowQuery);
+    await safeClick(this.page.getByRole("menuitem", { name: "Delete", exact: true }));
+    await expect(this.deleteConfirmationDialog()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectDeleteConfirmationVisible() {
+    const dialog = this.deleteConfirmationDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole("heading", { name: /delete promotion/i })).toBeVisible();
+    await expect(dialog).toContainText(/are you sure you want to delete this promotion\?/i);
+    await expect(dialog.getByRole("button", { name: /cancel/i })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: /confirm/i })).toBeVisible();
+  }
+
+  async dismissDeleteConfirmation() {
+    const dialog = this.deleteConfirmationDialog();
+    await safeClick(dialog.getByRole("button", { name: "Cancel", exact: true }));
+    await expect(dialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async confirmDeletePromotion() {
+    await safeClick(this.deleteConfirmationDialog().getByRole("button", { name: /confirm/i }));
+  }
+
+  async deletePromotionFromList(rowQuery: string) {
+    await this.openDeleteConfirmation(rowQuery);
     const responsePromise = this.page.waitForResponse(
       (response) =>
         response.request().method() === "DELETE" && response.url().includes("/promos/"),
       { timeout: 15000 },
     );
-    await safeClick(this.page.getByRole("menuitem", { name: "Delete", exact: true }));
-    await safeClick(this.page.getByRole("button", { name: "Confirm", exact: true }));
+    await this.confirmDeletePromotion();
     const response = await responsePromise;
     expect(response.ok(), await response.text()).toBeTruthy();
   }
@@ -552,6 +590,10 @@ export class PromotionsPage {
       (navigator as Navigator & { clipboard: { readText(): Promise<string> } }).clipboard.readText(),
     );
     expect(copiedCode).toBe(expectedCode);
+  }
+
+  async expectCopyConfirmationFeedback(rowQuery: string) {
+    await expect(this.promotionCopyConfirmationIcon(rowQuery)).toBeVisible({ timeout: 5000 });
   }
 
   async expectPromotionFormPrefilled(input: PromotionValidationFormData) {

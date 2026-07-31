@@ -160,7 +160,7 @@ test.describe("Creator Promotions", () => {
           username: promotionsAffiliateData.assigneeHandle,
         });
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.expectAffiliateBadgeInList(promotion.code);
       });
     } finally {
@@ -190,7 +190,7 @@ test.describe("Creator Promotions", () => {
         expect(response.data.code).toBeTruthy();
 
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.expectPromotionRowFields(promotion.code, {
           name: promotion.name,
           code: promotion.code,
@@ -209,7 +209,7 @@ test.describe("Creator Promotions", () => {
       await test.step("Display promotion in management list", async () => {
         await creatorNav.open("promotions");
         await promotionsPage.expectLoaded();
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.expectPromotionListed(promotion.code);
       });
     } finally {
@@ -240,7 +240,7 @@ test.describe("Creator Promotions", () => {
         await promotionsPage.fillPromotionForm(promotion);
         promotionId = getPromotionId(await promotionsPage.submitPromotionForm());
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
       });
 
       await test.step("Edit prepopulates existing configuration", async () => {
@@ -254,14 +254,14 @@ test.describe("Creator Promotions", () => {
         expect(response.data.discount).toBe(promotionsLifecycleData.updatedDiscount);
 
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.openPromotionEdit(promotion.code, promotion.name);
         await promotionsPage.expectPromotionFormPrefilled({
           ...promotion,
           discount: promotionsLifecycleData.updatedDiscount,
         });
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.expectPromotionRowFields(promotion.code, {
           name: promotion.name,
           code: promotion.code,
@@ -273,6 +273,64 @@ test.describe("Creator Promotions", () => {
     } finally {
       if (promotionId) {
         await deletePromotion(page.request, promotionId);
+      }
+    }
+  });
+
+  test("Verify Promotion Copy Feedback and Delete Confirmation", {
+    tag: ["@AUT-FV-246", "@promotions", "@creator", "@smoke", "@regression"],
+    annotation: [{ type: "covers", description: "TC-PRM-C-022, TC-PRM-C-029" }],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
+    test.skip(!hendraToken, "YAPP_TEST_ACCESS_TOKEN for Hendra is required");
+    if (!hendraToken) return;
+
+    const copyPromotion = generatePromotionValidationData({
+      discount: promotionsLifecycleData.initialDiscount,
+    });
+    const deletePromotionData = generatePromotionData("active");
+
+    let copyPromotionId = "";
+    let deletePromotionId = "";
+
+    try {
+      await test.step("Seed live promotion for copy feedback", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillPromotionForm(copyPromotion);
+        copyPromotionId = getPromotionId(await promotionsPage.submitPromotionForm());
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(copyPromotion.name, copyPromotion.code);
+      });
+
+      await test.step("Copy promotion code and verify confirmation feedback", async () => {
+        await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+        await promotionsPage.copyPromotionCode(copyPromotion.code);
+        await promotionsPage.expectCopyConfirmationFeedback(copyPromotion.code);
+        await promotionsPage.expectPromotionCodeCopied(copyPromotion.code);
+      });
+
+      await test.step("Open delete action and verify confirmation dialog before deletion", async () => {
+        deletePromotionId = getPromotionId(
+          await createPromotion(page.request, deletePromotionData, hendraToken),
+        );
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
+        await promotionsPage.openDeleteConfirmation(deletePromotionData.code);
+        await promotionsPage.expectDeleteConfirmationVisible();
+        await promotionsPage.dismissDeleteConfirmation();
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
+        await promotionsPage.expectPromotionListed(deletePromotionData.code);
+      });
+    } finally {
+      if (copyPromotionId) {
+        await deletePromotion(page.request, copyPromotionId, hendraToken);
+      }
+      if (deletePromotionId) {
+        await deletePromotion(page.request, deletePromotionId, hendraToken);
       }
     }
   });
@@ -337,7 +395,7 @@ test.describe("Creator Promotions", () => {
 
       await test.step("Reopen promotion edit and verify selected products are prepopulated", async () => {
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.openPromotionEdit(promotion.code, promotion.name);
         await promotionsPage.expectSelectedProductsOnEdit(selectedProducts);
       });
@@ -373,7 +431,7 @@ test.describe("Creator Promotions", () => {
 
       await test.step("Verify saved promotion period on management list", async () => {
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.code);
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
         await promotionsPage.expectPromotionPeriodInList(
           promotion.code,
           formatPromotionListDate(startDate),
@@ -407,7 +465,7 @@ test.describe("Creator Promotions", () => {
           await createPromotion(page.request, listPromotion, hendraToken),
         );
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(listPromotion.code);
+        await promotionsPage.searchPromotions(listPromotion.name, listPromotion.code);
         await promotionsPage.expectPromotionRowFields(listPromotion.code, {
           name: listPromotion.name,
           code: listPromotion.code,
@@ -425,7 +483,7 @@ test.describe("Creator Promotions", () => {
       await test.step("Delete promotion from management list", async () => {
         await createPromotion(page.request, deletePromotionData, hendraToken);
         await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(deletePromotionData.code);
+        await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
         await promotionsPage.deletePromotionFromList(deletePromotionData.code);
         await promotionsPage.expectPromotionAbsent(deletePromotionData.code);
       });
