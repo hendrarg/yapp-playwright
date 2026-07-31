@@ -336,6 +336,12 @@ export class PromotionsPage {
     await expect(this.findProductCombobox).toBeHidden({ timeout: 5000 });
   }
 
+  async expectDefaultAffiliateDisabled() {
+    await expect(this.affiliateSwitch).toHaveAttribute("aria-checked", "false", { timeout: 10000 });
+    await expect(this.affiliateCommissionInput()).toBeHidden({ timeout: 5000 });
+    await expect(this.findCreatorCombobox).toBeHidden({ timeout: 5000 });
+  }
+
   private affiliateCommissionInput(): Locator {
     return this.page
       .locator('label:has-text("Affiliate Commission")')
@@ -418,6 +424,13 @@ export class PromotionsPage {
     return this.promotionRow(rowQuery).locator('[data-slot="dropdown-menu-trigger"]');
   }
 
+  private promotionCopyButton(rowQuery: string): Locator {
+    return this.promotionRow(rowQuery)
+      .locator("td")
+      .last()
+      .locator("button:has(svg.lucide-copy)");
+  }
+
   async openPromotionActions(rowQuery: string) {
     await safeClick(this.promotionActionsTrigger(rowQuery));
     await expect(this.page.getByRole("menu")).toBeVisible({ timeout: 10000 });
@@ -449,6 +462,16 @@ export class PromotionsPage {
     expect(response.ok(), await response.text()).toBeTruthy();
     await expect(toggle).toHaveAttribute("aria-checked", "true");
     await this.page.keyboard.press("Escape");
+  }
+
+  async trySetPromotionInactive(rowQuery: string): Promise<boolean> {
+    try {
+      await this.setPromotionInactive(rowQuery);
+      return true;
+    } catch {
+      await this.page.keyboard.press("Escape").catch(() => undefined);
+      return false;
+    }
   }
 
   async setPromotionActive(rowQuery: string) {
@@ -514,6 +537,43 @@ export class PromotionsPage {
 
   async expectPromotionAbsent(rowQuery: string) {
     await expect(this.promotionRow(rowQuery)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectPromotionListed(rowQuery: string) {
+    await expect(this.promotionRow(rowQuery)).toBeVisible({ timeout: 30000 });
+  }
+
+  async copyPromotionCode(rowQuery: string) {
+    await safeClick(this.promotionCopyButton(rowQuery));
+  }
+
+  async expectPromotionCodeCopied(expectedCode: string) {
+    const copiedCode = await this.page.evaluate(() =>
+      (navigator as Navigator & { clipboard: { readText(): Promise<string> } }).clipboard.readText(),
+    );
+    expect(copiedCode).toBe(expectedCode);
+  }
+
+  async expectPromotionFormPrefilled(input: PromotionValidationFormData) {
+    await expect(this.nameInput).toHaveValue(input.name);
+    await expect(this.discountAmountInput).toHaveValue(String(input.discount));
+    await expect(this.discountCodeInput).toHaveValue(input.code);
+  }
+
+  async updatePromotionDiscount(discount: number) {
+    await safeFill(this.discountAmountInput, String(discount));
+  }
+
+  async savePromotionEdit(): Promise<PromotionCreateResponse> {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/promos/") && response.request().method() === "PUT",
+      { timeout: 15000 },
+    );
+    await safeClick(this.page.getByRole("button", { name: "Save" }));
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    return (await response.json()) as PromotionCreateResponse;
   }
 
   async expectSelectedProductsOnEdit(productNames: readonly string[]) {

@@ -95,13 +95,17 @@ See also `.agents/skills/add-page-object/SKILL.md` step 6.
 - Prefer `buyerNav.open(...)` / `creatorNav.open(...)` for route navigation; use page-object fixtures for assertions and interactions beyond load checks
 - Add meaningful interactions beyond navigation — see **Minimum test depth** below
 - Set `test.setTimeout()` only when needed (e.g. OTP flow = 90000ms)
-- **Step naming**: Use descriptive step names ONLY. Do **NOT** prefix with `Step N:`, `Step 1:`, etc. Playwright already numbers steps automatically.
+- **Step naming**: Use descriptive step names ONLY. Do **NOT** prefix with `Step N:`, manual TC IDs such as `TC-PRM-C-018:`, or any `@AUT-*` ID. Put source TC traceability in the test's `annotation: [{ type: 'covers', description: '...' }]` (or `@AUT-E2E-*` journey annotations), not in `test.step()` titles. Playwright already numbers steps automatically.
   ```typescript
   // ✅ Good
-  test.step('Open feeds and verify Following tab', async () => { ... });
-  
+  test.step('Publish promotion and verify live status', async () => { ... });
+  test('...', {
+    annotation: [{ type: 'covers', description: 'TC-PRM-C-018' }],
+  }, async () => { ... });
+
   // ❌ Forbidden
   test.step('Step 1: Open feeds and verify Following tab', async () => { ... });
+  test.step('TC-PRM-C-018: Publish promotion and verify live status', async () => { ... });
   ```
 
 ## Minimum test depth
