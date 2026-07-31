@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
+import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
+import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
 import { flakyClick } from '@utils/flaky-utils';
 import { safeClick, safeFill, waitForLoaded } from '@utils/playwright.utils';
 
@@ -81,6 +83,62 @@ export class ProductPurchasePage {
       return;
     }
     await expect.poll(() => this.getOrderSummary()).toEqual(before);
+  }
+
+  async gotoSharePath(sharePath: string) {
+    const normalized = sharePath.startsWith('/') ? sharePath.slice(1) : sharePath;
+    await this.page.goto(new URL(normalized, this.baseURL).toString(), {
+      waitUntil: 'domcontentloaded',
+    });
+    await waitForLoaded(this.page);
+  }
+
+  async expectConsultationProductLoaded(title: string) {
+    await expect(this.page.getByText(title, { exact: false }).filter({ visible: true })).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      this.page.getByRole('heading', { name: 'Consultation Detail' }).filter({ visible: true }),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
+  async expectConsultationNotBookable() {
+    await expect(
+      this.page.getByText(consultationLifecycleData.noSessionsCopy).filter({ visible: true }).first(),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+  }
+
+  async expectConsultationBookable() {
+    await expect(this.page.getByText(consultationLifecycleData.noSessionsCopy)).toHaveCount(0, {
+      timeout: 30000,
+    });
+    await expect(
+      this.page
+        .getByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+/ })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page.getByRole('button', { name: /^\d{2}:\d{2}$/ }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+  }
+
+  async readFirstConsultationDayLabel(): Promise<string> {
+    const dayButton = this.page
+      .getByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+/ })
+      .filter({ visible: true })
+      .first();
+    await expect(dayButton).toBeVisible({ timeout: 15000 });
+    return (await dayButton.innerText()).replace(/\s+/g, ' ').trim();
+  }
+
+  async readFirstConsultationDayDate(reference = new Date()): Promise<Date> {
+    const label = await this.readFirstConsultationDayLabel();
+    return parseConsultationDayButtonLabel(label, reference);
   }
 
   private async readMoney(label: string, fallback?: number): Promise<number> {

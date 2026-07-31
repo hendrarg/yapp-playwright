@@ -4,8 +4,10 @@ import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
+import { consultationLifecycleData, consultationWeekdayLabel } from "@test-data/creator/consultation.lifecycle.data";
 import { consultationMediaData } from "@test-data/creator/consultation.media.data";
 import { consultationNavigationData } from "@test-data/creator/consultation.navigation.data";
+import { consultationPricingData } from "@test-data/creator/consultation.pricing.data";
 import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
 import {
   digitalProductValidationData,
@@ -186,6 +188,13 @@ export class ProductsPage {
     name: "Save and Publish",
     text: "Save and Publish",
     selector: 'button:has-text("Save and Publish")',
+  });
+
+  private readonly saveAsDraftAction = smartLocator(this.page, {
+    role: "button",
+    name: "Save as Draft",
+    text: "Save as Draft",
+    selector: 'button:has-text("Save as Draft")',
   });
 
   private readonly editProductAction = smartLocator(this.page, {
@@ -964,7 +973,12 @@ export class ProductsPage {
   }
 
   async saveAndPublishConsultation() {
-    await this.saveAndPublishAction.click({ timeout: 10000 });
+    await this.expectConsultationPublishReady();
+    const publish = this.page
+      .getByRole("button", { name: /Save and Publish|Create Consultation/i })
+      .filter({ visible: true })
+      .first();
+    await safeClick(publish);
   }
 
   async expectConsultationLiveModalWithSharePath(sharePath: string) {
@@ -1025,5 +1039,292 @@ export class ProductsPage {
       .first();
     await expect(dialog).toBeVisible({ timeout: 10000 });
     await expect(this.page).toHaveURL(productsCreationData.consultationCreatePath);
+  }
+
+  async fillConsultationPrice(amount: string) {
+    await safeFill(this.consultationPriceInput(), amount);
+  }
+
+  private consultationPricingSwitch(): Locator {
+    return this.page
+      .getByRole("switch", { name: "Add Pricing" })
+      .or(this.page.locator("#enable-pricing"));
+  }
+
+  private consultationPriceInput(): Locator {
+    return locatorChain(this.page, {
+      placeholder: "10,000",
+      selector: 'input[placeholder="10,000"]',
+    });
+  }
+
+  private consultationLivePreviewCard(): Locator {
+    return this.page.getByRole("heading", { level: 3 }).locator("xpath=..");
+  }
+
+  async setConsultationPricingEnabled(enabled: boolean) {
+    const toggle = this.consultationPricingSwitch();
+    const checked = await toggle.getAttribute("aria-checked");
+    if ((checked === "true") !== enabled) {
+      await safeClick(toggle);
+    }
+    await expect(toggle).toHaveAttribute("aria-checked", enabled ? "true" : "false", {
+      timeout: 10000,
+    });
+  }
+
+  async expectConsultationPreviewWithoutPaidPrice() {
+    const preview = this.consultationLivePreviewCard();
+    await expect(preview).toBeVisible({ timeout: 10000 });
+    await expect(preview.getByText(/Rp[\d.,]+/)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectConsultationPreviewPaidPrice(pattern: RegExp) {
+    const preview = this.consultationLivePreviewCard();
+    await expect(preview).toBeVisible({ timeout: 10000 });
+    await expect(preview.getByText(pattern)).toBeVisible({ timeout: 10000 });
+  }
+
+  async prepareConsultationDetailsWithoutSubmit(title: string, description: string) {
+    await this.fillConsultationTitle(title);
+    await this.fillConsultationDescription(description);
+    await this.uploadConsultationHero(consultationMediaData.heroImagePath);
+    await this.uploadConsultationGallery(consultationMediaData.additionalImagePaths);
+  }
+
+  async expectConsultationZeroPriceRejected() {
+    await expect(this.page).toHaveURL(productsCreationData.consultationCreatePath);
+    await expect(this.page.getByRole("heading", { name: "Availability*" })).toHaveCount(0, {
+      timeout: 10000,
+    });
+    const error = this.page.getByText(consultationPricingData.zeroPriceErrorPattern);
+    if (await error.isVisible().catch(() => false)) {
+      await expect(error).toBeVisible();
+      return;
+    }
+    await expect(this.consultationPriceInput()).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByRole("button", { name: "Next: Set Availability" }),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  async configureConsultationWeekdaySlotRange(day: string, startTime: string, endTime: string) {
+    const starts = this.page
+      .getByRole("combobox", { name: `Start time for ${day}` })
+      .filter({ visible: true });
+    if ((await starts.count()) === 0) {
+      await this.addConsultationWeekdayTimeSlot(day);
+    }
+
+    const start = starts.first();
+    await start.click({ timeout: 10000 });
+    await this.page.getByRole("option", { name: startTime, exact: true }).click();
+
+    const end = this.page
+      .getByRole("combobox", { name: `End time for ${day}` })
+      .filter({ visible: true })
+      .first();
+    await end.click({ timeout: 10000 });
+    await this.page.getByRole("option", { name: endTime, exact: true }).click();
+  }
+
+  async publishConsultationWithMinimumNotice(
+    title: string,
+    description: string,
+    options: {
+      minimumNoticeHours: number;
+      price?: string;
+      pricingEnabled?: boolean;
+      weekday?: string;
+      startTime?: string;
+      endTime?: string;
+    },
+  ): Promise<string> {
+    await this.prepareConsultationDetailsWithoutSubmit(title, description);
+
+    if (options.pricingEnabled === false) {
+      await this.setConsultationPricingEnabled(false);
+    } else {
+      await this.setConsultationPricingEnabled(true);
+      await this.fillConsultationPrice(options.price ?? consultationPricingData.validPrice);
+    }
+
+    await this.submitConsultationDetails();
+    await this.expectConsultationAvailabilityStep();
+    await this.setConsultationMinimumNoticeHours(options.minimumNoticeHours);
+
+    const weekday = options.weekday ?? consultationWeekdayLabel();
+    await this.configureConsultationWeekdaySlotRange(
+      weekday,
+      options.startTime ?? consultationPricingData.slotStartTime,
+      options.endTime ?? consultationPricingData.slotEndTime,
+    );
+    await this.saveAndPublishConsultation();
+    await this.expectProductCompleteModal();
+    const sharePath = await this.readProductCompleteSharePath();
+    await this.closeProductCompleteModal();
+    return sharePath;
+  }
+
+  async prepareConsultationDetailsForAvailability(title: string, description: string) {
+    await this.fillConsultationTitle(title);
+    await this.fillConsultationDescription(description);
+    await this.uploadConsultationHero(consultationMediaData.heroImagePath);
+    await this.uploadConsultationGallery(consultationMediaData.additionalImagePaths);
+    await this.fillConsultationPrice(consultationLifecycleData.price);
+    await this.submitConsultationDetails();
+    await this.expectConsultationAvailabilityStep();
+  }
+
+  async setConsultationMinimumNoticeHours(hours: number) {
+    const notice = this.page
+      .getByLabel("Minimum notice value")
+      .or(this.page.getByRole("spinbutton", { name: /Minimum notice/i }))
+      .filter({ visible: true })
+      .first();
+    await safeFill(notice, String(hours));
+  }
+
+  async configureConsultationWeekdaySlot(day: string) {
+    const starts = this.page
+      .getByRole("combobox", { name: `Start time for ${day}` })
+      .filter({ visible: true });
+    if ((await starts.count()) === 0) {
+      await this.addConsultationWeekdayTimeSlot(day);
+    }
+
+    const start = this.page
+      .getByRole("combobox", { name: `Start time for ${day}` })
+      .filter({ visible: true })
+      .first();
+    await start.click({ timeout: 10000 });
+    await this.page.getByRole("option").first().click();
+
+    const end = this.page
+      .getByRole("combobox", { name: `End time for ${day}` })
+      .filter({ visible: true })
+      .first();
+    await end.click({ timeout: 10000 });
+    await this.page.getByRole("option").last().click();
+  }
+
+  async expectConsultationPublishReady() {
+    const publish = this.page
+      .getByRole("button", { name: /Save and Publish|Create Consultation/i })
+      .filter({ visible: true })
+      .first();
+    await expect(publish).toBeEnabled({ timeout: 15000 });
+  }
+
+  async saveConsultationAsDraft() {
+    await safeClick(this.page.getByRole("button", { name: "Save as Draft", exact: true }));
+    await expect(this.page).toHaveURL(/\/products(?:\?|$)/, { timeout: 60000 });
+    await this.expectLoaded();
+  }
+
+  async expectProductRowStatus(
+    productName: string,
+    status: "ACTIVE" | "INACTIVE" | "DRAFT",
+  ) {
+    await expect(this.productRow(productName).getByText(status, { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async readProductSharePath(productName: string): Promise<string> {
+    const link = this.productRow(productName).getByRole("link", { name: /\/s\// });
+    await expect(link).toBeVisible({ timeout: 10000 });
+    const href = await link.getAttribute("href");
+    expect(href, "expected product share URL").toMatch(/\/s\//);
+    const match = href!.match(/\/s\/[A-Za-z0-9_-]+/);
+    expect(match?.[0], "expected share path").toBeTruthy();
+    return match![0];
+  }
+
+  async openConsultationEditTab(tab: "Details" | "Availability") {
+    await this.page.getByRole("tab", { name: tab }).click({ timeout: 10000 });
+    await expect(this.page.getByRole("tab", { name: tab })).toHaveAttribute(
+      "aria-selected",
+      "true",
+      { timeout: 10000 },
+    );
+  }
+
+  async expectConsultationTitleValue(title: string) {
+    await expect(this.page.getByRole("textbox", { name: "Enter title", exact: true }).first()).toHaveValue(
+      title,
+      { timeout: 10000 },
+    );
+  }
+
+  async expectConsultationDescriptionContains(text: string) {
+    await expect(this.consultationDescriptionEditor()).toContainText(text, { timeout: 10000 });
+  }
+
+  async expectConsultationWeekdaySlotConfigured(day: string) {
+    await expect(
+      this.page.getByRole("combobox", { name: `Start time for ${day}` }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("combobox", { name: `End time for ${day}` })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async reloadConsultationEditor() {
+    await this.page.reload({ waitUntil: "domcontentloaded" });
+    await expect(this.page).toHaveURL(/\/products\/(?:create|update)\/consultation|\/products\/update\/appointment\//, {
+      timeout: 30000,
+    });
+    await expect(this.page.getByRole("textbox", { name: "Enter title", exact: true }).first()).toBeVisible({
+      timeout: 30000,
+    });
+  }
+
+  private afterSalesCustomizeSwitch(): Locator {
+    return this.page
+      .getByLabel("Details")
+      .getByText("Customize Message")
+      .locator("xpath=preceding::*[@role='switch'][1]");
+  }
+
+  private afterSalesMessageEditor(): Locator {
+    return this.page
+      .getByLabel("Details")
+      .locator('[contenteditable="true"][role="textbox"]')
+      .nth(1);
+  }
+
+  async enableConsultationAfterSalesMessage() {
+    const toggle = this.afterSalesCustomizeSwitch();
+    if ((await toggle.getAttribute("aria-checked")) !== "true") {
+      await toggle.click({ timeout: 10000 });
+    }
+    await expect(this.afterSalesMessageEditor()).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillConsultationAfterSalesMessage(message: string) {
+    await this.enableConsultationAfterSalesMessage();
+    const editor = this.afterSalesMessageEditor();
+    await editor.scrollIntoViewIfNeeded();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.insertText(message);
+  }
+
+  async expectConsultationAfterSalesMessage(message: string) {
+    await this.openConsultationEditTab("Details");
+    await this.enableConsultationAfterSalesMessage();
+    await expect(this.afterSalesMessageEditor()).toContainText(message, { timeout: 10000 });
+  }
+
+  async saveAndPublishConsultationFromEdit() {
+    await this.saveAndPublishConsultation();
+    const dialog = this.productCompleteDialog();
+    if (await dialog.isVisible().catch(() => false)) {
+      await this.closeProductCompleteModal();
+    }
+    await expect(this.page).toHaveURL(/\/products(?:\?|$)|\/products\/update\/appointment\//, {
+      timeout: 30000,
+    });
   }
 }
