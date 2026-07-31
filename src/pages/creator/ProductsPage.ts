@@ -4,6 +4,8 @@ import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
+import { consultationMediaData } from "@test-data/creator/consultation.media.data";
+import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
 import {
   digitalProductValidationData,
   productsCreationData,
@@ -141,6 +143,48 @@ export class ProductsPage {
     name: "Next: Set Details",
     text: "Next: Set Details",
     selector: 'button:has-text("Next: Set Details")',
+  });
+
+  private readonly nextSetAvailabilityAction = smartLocator(this.page, {
+    role: "button",
+    name: "Next: Set Availability",
+    text: "Next: Set Availability",
+    selector: 'button:has-text("Next: Set Availability")',
+  });
+
+  private readonly addQuestionsAction = smartLocator(this.page, {
+    role: "button",
+    name: "Add Questions",
+    text: "Add Questions",
+    selector: 'button:has-text("Add Questions")',
+  });
+
+  private readonly createQuestionAction = smartLocator(this.page, {
+    role: "button",
+    name: "Create Question",
+    text: "Create Question",
+    selector: 'button:has-text("Create Question")',
+  });
+
+  private readonly createConsultationAction = smartLocator(this.page, {
+    role: "button",
+    name: "Create Consultation",
+    text: "Create Consultation",
+    selector: 'button:has-text("Create Consultation")',
+  });
+
+  private readonly saveAndPublishAction = smartLocator(this.page, {
+    role: "button",
+    name: "Save and Publish",
+    text: "Save and Publish",
+    selector: 'button:has-text("Save and Publish")',
+  });
+
+  private readonly editProductAction = smartLocator(this.page, {
+    role: "menuitem",
+    name: "Edit",
+    text: "Edit",
+    selector: '[role="menuitem"]:has-text("Edit")',
   });
 
   private readonly linksContentTypeAction = smartLocator(this.page, {
@@ -597,5 +641,330 @@ export class ProductsPage {
       if (other === status) continue;
       await this.expectProductHidden(productsStatusData.sampleProductByTab[other]);
     }
+  }
+
+  private consultationDescriptionEditor(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "editable markdown",
+      selector: '[contenteditable="true"][role="textbox"]',
+    }).first();
+  }
+
+  private addQuestionDialog(): Locator {
+    return this.page.getByRole("dialog", { name: "Add New Question" });
+  }
+
+  private questionLabelInput(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "Question Label",
+      placeholder: "Enter your question...",
+      selector: '[role="dialog"] input[placeholder="Enter your question..."]',
+    });
+  }
+
+  private afterSalesLinksCheckbox(): Locator {
+    return this.page
+      .getByText(consultationValidationData.afterSalesLinksLabel)
+      .locator("xpath=preceding::*[@role='checkbox'][1]");
+  }
+
+  async expectConsultationCreateFlow() {
+    await expect(this.page).toHaveURL(productsCreationData.consultationCreatePath);
+    await expect(this.digitalProductTitleInput).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByRole("button", { name: "Next: Set Availability" }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText("Buyer Form")).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillConsultationDescription(text: string) {
+    const editor = this.consultationDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    await this.page.keyboard.insertText(text);
+  }
+
+  async appendConsultationDescription(text: string) {
+    const editor = this.consultationDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("End");
+    await this.page.keyboard.insertText(text);
+  }
+
+  async expectConsultationDescriptionCounter(expected: string) {
+    await expect(
+      locatorChain(this.page, {
+        text: expected,
+        selector: `p:has-text("${expected}")`,
+      }),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  async submitConsultationDetails() {
+    await this.nextSetAvailabilityAction.click({ timeout: 10000 });
+  }
+
+  async expectConsultationTitleRequired() {
+    await expect(this.textFeedback(consultationValidationData.titleRequiredError)).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async expectMandatoryBuyerFieldsProtected() {
+    for (const label of consultationValidationData.mandatoryFields) {
+      await expect(this.page.getByText(label, { exact: false }).first()).toBeVisible({
+        timeout: 10000,
+      });
+    }
+    await expect(this.page.getByText("Mandatory", { exact: true })).toHaveCount(3, {
+      timeout: 10000,
+    });
+
+    for (const label of consultationValidationData.mandatoryFields) {
+      const row = this.page.getByText(label, { exact: false }).first().locator("xpath=ancestor::div[2]");
+      await expect(row.getByRole("button", { name: "Remove" })).toHaveCount(0);
+    }
+  }
+
+  async addCustomBuyerQuestion(label: string) {
+    await this.addQuestionsAction.click({ timeout: 10000 });
+    const dialog = this.addQuestionDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await safeFill(this.questionLabelInput(), label);
+    await this.createQuestionAction.click({ timeout: 10000 });
+    await expect(dialog).toBeHidden({ timeout: 10000 });
+    await expect(this.page.getByText(label, { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectAddQuestionsEnabled() {
+    await expect(this.page.getByRole("button", { name: "Add Questions" })).toBeEnabled({
+      timeout: 10000,
+    });
+  }
+
+  async expectAddQuestionsDisabled() {
+    await expect(this.page.getByRole("button", { name: "Add Questions" })).toBeDisabled({
+      timeout: 10000,
+    });
+  }
+
+  async removeCustomBuyerQuestion(label: string) {
+    const questionCard = this.page
+      .locator("div")
+      .filter({ has: this.page.getByText(label, { exact: true }) })
+      .filter({ has: this.page.getByRole("button", { name: "Remove", exact: true }) })
+      .last();
+    const removeButton = questionCard.getByRole("button", { name: "Remove", exact: true });
+    await removeButton.scrollIntoViewIfNeeded();
+    await expect(removeButton).toBeVisible({ timeout: 10000 });
+    await removeButton.click({ timeout: 10000, force: true });
+
+    const confirm = this.page
+      .getByRole("alertdialog")
+      .or(this.page.getByRole("dialog"))
+      .filter({ hasText: /delete|remove|sure/i })
+      .first();
+    if (await confirm.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await safeClick(
+        confirm.getByRole("button", { name: /confirm|delete|remove|yes/i }).last(),
+      );
+    }
+
+    await expect(this.page.getByText(label, { exact: true })).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async enableAfterSalesLinks() {
+    const checkbox = this.afterSalesLinksCheckbox();
+    await this.page
+      .getByText(consultationValidationData.afterSalesLinksLabel)
+      .scrollIntoViewIfNeeded();
+    if ((await checkbox.getAttribute("aria-checked")) !== "true") {
+      await safeClick(checkbox);
+    }
+    await expect(checkbox).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    await expect(this.page.getByRole("button", { name: "Add Link" })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  private consultationHeroInput(): Locator {
+    return this.page.locator('input[type="file"][accept*="image/jpeg"]:not([multiple])');
+  }
+
+  private consultationGalleryInput(): Locator {
+    return this.page.locator('input[type="file"][multiple]');
+  }
+
+  private productCompleteDialog(): Locator {
+    return this.page.getByRole("dialog").filter({ hasText: /Product Complete|consultation is live/i });
+  }
+
+  async fillConsultationTitle(title: string) {
+    await safeFill(
+      this.page.getByRole("textbox", { name: "Enter title", exact: true }).first(),
+      title,
+    );
+  }
+
+  async applyConsultationRichTextFormatting(text: string) {
+    const editor = this.consultationDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    await this.page.keyboard.insertText(text);
+    await this.page.keyboard.press("Control+A");
+    await this.page.getByRole("radio", { name: "Bold" }).first().click();
+    await this.page.getByRole("radio", { name: "Italic" }).first().click();
+    await this.page.getByRole("radio", { name: "Underline" }).first().click();
+    await expect(editor.locator("strong")).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("radio", { name: "Remove italic" })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(this.page.getByRole("radio", { name: "Remove underline" })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async expectConsultationHeroRequired() {
+    await expect(this.textFeedback(consultationMediaData.errors.heroRequired)).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async chooseConsultationHeroFile(filePath: string) {
+    await this.consultationHeroInput().setInputFiles(filePath);
+  }
+
+  async chooseConsultationGalleryFiles(filePaths: readonly string[]) {
+    await this.consultationGalleryInput().setInputFiles([...filePaths]);
+  }
+
+  async uploadConsultationHero(filePath: string) {
+    await this.chooseConsultationHeroFile(filePath);
+    await expect(
+      this.page.getByRole("button", { name: /Uploaded image Thumbnail/i }),
+    ).toBeVisible({ timeout: 30000 });
+  }
+
+  async uploadConsultationGallery(filePaths: readonly string[]) {
+    await this.chooseConsultationGalleryFiles(filePaths);
+    await expect(
+      this.page.getByRole("button", { name: "Uploaded image 1", exact: true }),
+    ).toBeVisible({ timeout: 60000 });
+  }
+
+  async expectConsultationHeroNotUploaded() {
+    await expect(
+      this.page.getByRole("button", { name: /Uploaded image Thumbnail/i }),
+    ).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectConsultationGalleryCount(count: number) {
+    for (let i = 1; i <= count; i++) {
+      await expect(
+        this.page.getByRole("button", { name: `Uploaded image ${i}`, exact: true }),
+      ).toBeVisible({ timeout: 15000 });
+    }
+    await expect(this.page.getByText("No Image")).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectConsultationGalleryInputUnavailable() {
+    await expect(this.consultationGalleryInput()).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectConsultationImageTooSmall(fileName: string) {
+    const pattern = new RegExp(
+      `${fileName.replace(".", "\\.")} is too small\\. Image must be at least 500 × 500 pixels\\.`,
+      "i",
+    );
+    await expect(this.page.getByText(pattern)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectConsultationImageTooLarge() {
+    await expect(this.page.getByText(consultationMediaData.errors.tooLarge)).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async expectConsultationAvailabilityStep() {
+    await expect(this.page.getByRole("heading", { name: "Availability*" })).toBeVisible({
+      timeout: 30000,
+    });
+    await expect(this.page.getByRole("button", { name: "Create Consultation" })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async addConsultationWeekdayTimeSlot(day: string = "Mon") {
+    await this.page.getByRole("button", { name: `Add time slot for ${day}` }).click();
+    await expect(this.page.getByRole("combobox", { name: `Start time for ${day}` })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async createConsultation() {
+    await this.createConsultationAction.click({ timeout: 10000 });
+  }
+
+  async expectProductCompleteModal() {
+    const dialog = this.productCompleteDialog();
+    await expect(dialog).toBeVisible({ timeout: 60000 });
+    await expect(dialog.getByRole("heading", { name: /Product Complete|live/i })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "View Product Page" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: /Copy Link/i }).first()).toBeVisible();
+    await expect(dialog.getByRole("img", { name: /Product Complete|consultation/i }).first()).toBeVisible();
+  }
+
+  async readProductCompleteSharePath(): Promise<string> {
+    const dialog = this.productCompleteDialog();
+    await expect(dialog).toBeVisible({ timeout: 60000 });
+    const text = await dialog.innerText();
+    const match = text.match(/\/s\/[A-Za-z0-9_-]+/);
+    expect(match?.[0], "expected share path in Product Complete modal").toBeTruthy();
+    return match![0];
+  }
+
+  async copyProductCompleteLink(): Promise<string> {
+    const dialog = this.productCompleteDialog();
+    await dialog.getByRole("button", { name: /Copy Link/i }).first().click();
+    const copied = await this.page.evaluate(() =>
+      (navigator as Navigator & { clipboard: { readText(): Promise<string> } }).clipboard.readText(),
+    );
+    expect(copied).toMatch(/\/s\/[A-Za-z0-9_-]+/);
+    return copied;
+  }
+
+  async closeProductCompleteModal() {
+    const dialog = this.productCompleteDialog();
+    await safeClick(dialog.getByRole("button", { name: "Close" }));
+    await expect(dialog).toBeHidden({ timeout: 15000 });
+  }
+
+  async openEditProduct(productName: string) {
+    await this.openProductActionsMenu(productName);
+    await this.editProductAction.click({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/products\/update\/appointment\//, { timeout: 30000 });
+  }
+
+  async readAppointmentProductUuidFromUrl(): Promise<string> {
+    const match = this.page.url().match(/\/products\/update\/appointment\/([^/?#]+)/);
+    expect(match?.[1], "expected appointment product uuid in URL").toBeTruthy();
+    return match![1];
+  }
+
+  async saveAndPublishConsultation() {
+    await this.saveAndPublishAction.click({ timeout: 10000 });
+  }
+
+  async expectConsultationLiveModalWithSharePath(sharePath: string) {
+    const dialog = this.productCompleteDialog();
+    await expect(dialog).toBeVisible({ timeout: 60000 });
+    await expect(dialog).toContainText(consultationMediaData.republishLiveHeading);
+    await expect(dialog).toContainText(sharePath);
+    await expect(dialog.getByRole("button", { name: "View Product Page" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: /Copy Link/i }).first()).toBeVisible();
   }
 }

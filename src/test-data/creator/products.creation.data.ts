@@ -35,6 +35,7 @@ export const productsCreationData = {
   ] as const,
   digitalProductCreatePath: /\/products\/create\/digital-downloads/,
   discordMembershipCreatePath: /\/products\/create\/discord-membership/,
+  consultationCreatePath: /\/products\/create\/consultation/,
 } as const;
 
 export const digitalProductValidationData = {
@@ -69,7 +70,7 @@ export function generateOnlineCourseProductData(
   overrides?: Partial<OnlineCourseProductData>,
 ): OnlineCourseProductData {
   return {
-    title: `AUT-FV-218 ${Date.now()} ${faker.string.alphanumeric(6)}`,
+    title: `AUT-FV-218 ${faker.string.alphanumeric(8)}`,
     description: faker.lorem.sentence(),
     thumbnailImagePath: testImages.hermes,
     price: 0,

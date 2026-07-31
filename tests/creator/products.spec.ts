@@ -6,6 +6,7 @@ import {
   expectProductStatus,
   setProductHideFromProfile,
 } from '@helpers/api/product';
+import { faker } from '@faker-js/faker';
 import {
   digitalProductValidationData,
   generateOnlineCourseProductData,
@@ -47,7 +48,7 @@ test.describe('Creator Products', () => {
     if (!seedToken) return;
 
     const productData = generateOnlineCourseProductData({
-      title: `AUT-FV-211 ${Date.now()}`,
+      title: `AUT-FV-211 ${faker.string.alphanumeric(8)}`,
       status: 'active',
     });
     let productUuid = '';
