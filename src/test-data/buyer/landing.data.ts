@@ -1,3 +1,5 @@
+import { faker } from '@faker-js/faker';
+
 export const landingCopy = {
   heroHeadline: 'Your All In One Creator Platform',
   heroSupporting:
@@ -42,6 +44,6 @@ export const landingCopy = {
   placeholderForbidden: ['lorem ipsum', 'TODO', 'placeholder', 'TBD'] as const,
 };
 
-export function generateGetYappUsername(prefix = 'autfv307') {
-  return `${prefix}${Date.now()}`;
+export function generateGetYappUsername(): string {
+  return `${faker.string.alphanumeric({ length: 8, casing: 'lower' })}${faker.string.numeric(4)}`;
 }

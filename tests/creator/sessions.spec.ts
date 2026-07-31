@@ -3,16 +3,23 @@ import { deleteProduct } from '@helpers/api/product';
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import {
   consultationMediaData,
+  generateConsultationDescription,
   generateConsultationTitle,
 } from '@test-data/creator/consultation.media.data';
 import {
   consultationLifecycleData,
   consultationWeekdayLabel,
+  generateConsultationAfterSalesMessage,
+  generateConsultationLifecycleDescription,
   generateConsultationLifecycleTitle,
 } from '@test-data/creator/consultation.lifecycle.data';
-import { consultationNavigationData } from '@test-data/creator/consultation.navigation.data';
+import {
+  generateConsultationNavigationDescription,
+  generateConsultationNavigationTitle,
+} from '@test-data/creator/consultation.navigation.data';
 import {
   consultationPricingData,
+  generateConsultationPricingDescription,
   generateConsultationPricingTitle,
 } from '@test-data/creator/consultation.pricing.data';
 import { consultationValidationData } from '@test-data/creator/consultation.validation.data';
@@ -20,7 +27,6 @@ import {
   digitalProductValidationData,
   productsCreationData,
 } from '@test-data/creator/products.creation.data';
-import { faker } from '@faker-js/faker';
 
 test.describe('Creator Sessions', () => {
   test('Validate Consultation Inputs and Boundary Conditions', {
@@ -99,7 +105,9 @@ test.describe('Creator Sessions', () => {
       (type) => type.label === 'Consultation',
     )!;
     const title = generateConsultationTitle();
-    const editedTitle = `${title} edited`;
+    const description = generateConsultationDescription();
+    const editedTitle = generateConsultationTitle();
+    const updatedDescription = generateConsultationDescription();
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     let productUuid = '';
     let sharePath = '';
@@ -115,7 +123,7 @@ test.describe('Creator Sessions', () => {
 
       await test.step('Apply rich text formatting in description', async () => {
         await productsPage.fillConsultationTitle(title);
-        await productsPage.applyConsultationRichTextFormatting(consultationMediaData.description);
+        await productsPage.applyConsultationRichTextFormatting(description);
       });
 
       await test.step('Reject missing hero, undersized, and oversized images', async () => {
@@ -171,7 +179,7 @@ test.describe('Creator Sessions', () => {
         productUuid = await productsPage.readAppointmentProductUuidFromUrl();
 
         await productsPage.fillConsultationTitle(editedTitle);
-        await productsPage.fillConsultationDescription(consultationMediaData.updatedDescription);
+        await productsPage.fillConsultationDescription(updatedDescription);
         await productsPage.saveAndPublishConsultation();
         await productsPage.expectConsultationLiveModalWithSharePath(sharePath);
       });
@@ -189,7 +197,7 @@ test.describe('Creator Sessions', () => {
     const consultationType = productsCreationData.productTypes.find(
       (type) => type.label === 'Consultation',
     )!;
-    const title = `${consultationNavigationData.unsavedTitlePrefix} ${faker.string.alphanumeric(8)}`;
+    const title = generateConsultationNavigationTitle();
 
     await test.step('Open Consultation create with unsaved changes', async () => {
       // Establish history so Back returns to Products instead of about:blank.
@@ -201,7 +209,7 @@ test.describe('Creator Sessions', () => {
       await productsPage.expectConsultationCreateFlow();
       await productsPage.makeConsultationUnsavedChanges(
         title,
-        consultationNavigationData.unsavedDescription,
+        generateConsultationNavigationDescription(),
       );
     });
 
@@ -224,7 +232,11 @@ test.describe('Creator Sessions', () => {
       (type) => type.label === 'Consultation',
     )!;
     const title = generateConsultationLifecycleTitle();
+    const description = generateConsultationLifecycleDescription();
     const savedTitle = `${title}${consultationLifecycleData.savedTitleSuffix}`;
+    const savedDescription = generateConsultationLifecycleDescription();
+    const afterSalesMessageV1 = generateConsultationAfterSalesMessage();
+    const afterSalesMessageV2 = generateConsultationAfterSalesMessage();
     const weekday = consultationWeekdayLabel();
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
     let productUuid = '';
@@ -239,7 +251,7 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectConsultationCreateFlow();
         await productsPage.prepareConsultationDetailsForAvailability(
           title,
-          consultationLifecycleData.description,
+          description,
         );
         await productsPage.addConsultationWeekdayTimeSlot(weekday);
         await productsPage.saveConsultationAsDraft();
@@ -263,9 +275,7 @@ test.describe('Creator Sessions', () => {
         await productsPage.openEditProduct(title);
         productUuid = await productsPage.readAppointmentProductUuidFromUrl();
         await productsPage.expectConsultationTitleValue(title);
-        await productsPage.expectConsultationDescriptionContains(
-          consultationLifecycleData.description,
-        );
+        await productsPage.expectConsultationDescriptionContains(description);
         await productsPage.openConsultationEditTab('Availability');
         await productsPage.expectConsultationWeekdaySlotConfigured(weekday);
         await productsPage.openConsultationEditTab('Details');
@@ -281,10 +291,8 @@ test.describe('Creator Sessions', () => {
 
       await test.step('Persist saved detail and after-sales message changes', async () => {
         await productsPage.fillConsultationTitle(savedTitle);
-        await productsPage.fillConsultationDescription(consultationLifecycleData.savedDescription);
-        await productsPage.fillConsultationAfterSalesMessage(
-          consultationLifecycleData.afterSalesMessageV1,
-        );
+        await productsPage.fillConsultationDescription(savedDescription);
+        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV1);
         await productsPage.openConsultationEditTab('Availability');
         await productsPage.setConsultationMinimumNoticeHours(
           consultationLifecycleData.minimumNoticeHours,
@@ -302,21 +310,15 @@ test.describe('Creator Sessions', () => {
         await productsPage.selectStatusTab('Active');
         await productsPage.searchProducts(savedTitle);
         await productsPage.openEditProduct(savedTitle);
-        await productsPage.expectConsultationAfterSalesMessage(
-          consultationLifecycleData.afterSalesMessageV1,
-        );
-        await productsPage.fillConsultationAfterSalesMessage(
-          consultationLifecycleData.afterSalesMessageV2,
-        );
+        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV1);
+        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV2);
         await productsPage.openConsultationEditTab('Availability');
         await productsPage.expectConsultationPublishReady();
         await productsPage.saveAndPublishConsultationFromEdit();
         await creatorNav.open('products');
         await productsPage.searchProducts(savedTitle);
         await productsPage.openEditProduct(savedTitle);
-        await productsPage.expectConsultationAfterSalesMessage(
-          consultationLifecycleData.afterSalesMessageV2,
-        );
+        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV2);
       });
 
       await test.step('Review available booking slots on active consultation', async () => {
@@ -381,7 +383,7 @@ test.describe('Creator Sessions', () => {
         const zeroTitle = generateConsultationPricingTitle();
         await productsPage.prepareConsultationDetailsWithoutSubmit(
           zeroTitle,
-          consultationPricingData.description,
+          generateConsultationPricingDescription(),
         );
         await productsPage.setConsultationPricingEnabled(true);
         await productsPage.fillConsultationPrice(consultationPricingData.zeroPrice);
@@ -390,8 +392,8 @@ test.describe('Creator Sessions', () => {
       });
 
       await test.step('Push first bookable day later with longer minimum notice', async () => {
-        const shortTitle = `${generateConsultationPricingTitle()} short`;
-        const longTitle = `${generateConsultationPricingTitle()} long`;
+        const shortTitle = generateConsultationPricingTitle();
+        const longTitle = generateConsultationPricingTitle();
 
         await creatorNav.open('products');
         await productsPage.expectLoaded();
@@ -400,7 +402,7 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectConsultationCreateFlow();
         shortSharePath = await productsPage.publishConsultationWithMinimumNotice(
           shortTitle,
-          consultationPricingData.description,
+          generateConsultationPricingDescription(),
           {
             minimumNoticeHours: consultationPricingData.minimumNoticeHoursShort,
             weekday,
@@ -415,7 +417,7 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectConsultationCreateFlow();
         longSharePath = await productsPage.publishConsultationWithMinimumNotice(
           longTitle,
-          consultationPricingData.description,
+          generateConsultationPricingDescription(),
           {
             minimumNoticeHours: consultationPricingData.minimumNoticeHoursLong,
             weekday,

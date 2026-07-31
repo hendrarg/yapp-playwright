@@ -3,8 +3,6 @@ import { testImages } from "@test-data/creator/post.data";
 
 /** Media / publish data for consultation create (AUT-FV-018). */
 export const consultationMediaData = {
-  description: "Formatted consultation media description",
-  updatedDescription: "Updated consultation description after republish",
   heroImagePath: testImages.claude,
   additionalImagePaths: [
     testImages.claude,
@@ -34,6 +32,10 @@ export const consultationMediaData = {
   maxAdditionalImages: 10,
 } as const;
 
-export function generateConsultationTitle(prefix = "AUT-FV-018"): string {
-  return `${prefix} ${faker.string.alphanumeric(8)}`;
+export function generateConsultationTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateConsultationDescription(): string {
+  return faker.lorem.sentence();
 }

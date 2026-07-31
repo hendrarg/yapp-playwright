@@ -1,3 +1,5 @@
+import { faker } from "@faker-js/faker";
+
 export type CreatorProfileContext = {
   handle: string;
   displayName: string;
@@ -90,19 +92,23 @@ export const tipLabels = {
   agreementPrefix: "With this, I declare that this transaction",
 } as const;
 
-export const tipCheckoutData = {
-  amount: "50000",
-  displayAmount: "Rp50.000",
-  currency: "IDR",
-  usdtCurrency: "USDT",
-  usdtAmount: "50",
-  usdtDisplayAmount: "USD 50",
-  creatorName: "Hendra Rizal",
-  paymentMethod: "QRIS",
-  publicNote: "AUT-FV-287 public note",
-  privateNote: "AUT-FV-287 private note",
-  votingOption: "Item A",
-} as const;
+export function generateTipCheckoutData() {
+  return {
+    amount: "50000",
+    displayAmount: "Rp50.000",
+    currency: "IDR",
+    usdtCurrency: "USDT",
+    usdtAmount: "50",
+    usdtDisplayAmount: "USD 50",
+    creatorName: "Hendra Rizal",
+    paymentMethod: "QRIS",
+    publicNote: faker.lorem.sentence(),
+    privateNote: faker.lorem.sentence(),
+    votingOption: "Item A",
+  };
+}
+
+export const tipCheckoutData = generateTipCheckoutData();
 
 export const tipAmountBoundary = {
   belowMinimum: "9999",

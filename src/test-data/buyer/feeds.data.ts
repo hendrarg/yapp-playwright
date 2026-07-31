@@ -31,5 +31,5 @@ export const scrollRounds = 3;
 export const scrollDelayMs = 1200;
 
 export function generateComment(): string {
-  return `Test ${faker.lorem.sentence(3)} ${faker.string.alphanumeric(6)}`;
+  return faker.lorem.sentence();
 }

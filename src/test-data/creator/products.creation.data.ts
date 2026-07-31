@@ -70,7 +70,7 @@ export function generateOnlineCourseProductData(
   overrides?: Partial<OnlineCourseProductData>,
 ): OnlineCourseProductData {
   return {
-    title: `AUT-FV-218 ${faker.string.alphanumeric(8)}`,
+    title: faker.commerce.productName(),
     description: faker.lorem.sentence(),
     thumbnailImagePath: testImages.hermes,
     price: 0,

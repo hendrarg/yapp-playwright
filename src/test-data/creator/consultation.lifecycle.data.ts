@@ -2,13 +2,8 @@ import { faker } from "@faker-js/faker";
 
 /** Lifecycle / CRUD data for consultation (AUT-FV-024). */
 export const consultationLifecycleData = {
-  titlePrefix: "AUT-FV-024",
-  description: "Consultation lifecycle draft description",
-  savedDescription: "Consultation lifecycle saved description",
-  unsavedTitleSuffix: " unsaved-edit",
-  savedTitleSuffix: " saved-edit",
-  afterSalesMessageV1: "After sales message for future bookings v1",
-  afterSalesMessageV2: "After sales message for future bookings v2",
+  unsavedTitleSuffix: " u",
+  savedTitleSuffix: " s",
   price: "10000",
   /** UI validation requires at least 1 hour; 0 keeps Save and Publish disabled. */
   minimumNoticeHours: 1,
@@ -16,10 +11,16 @@ export const consultationLifecycleData = {
   noSessionsCopy: /No sessions available right now/i,
 } as const;
 
-export function generateConsultationLifecycleTitle(
-  prefix = consultationLifecycleData.titlePrefix,
-): string {
-  return `${prefix} ${faker.string.alphanumeric(8)}`;
+export function generateConsultationLifecycleTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateConsultationLifecycleDescription(): string {
+  return faker.lorem.sentence();
+}
+
+export function generateConsultationAfterSalesMessage(): string {
+  return faker.lorem.sentence();
 }
 
 export function consultationWeekdayLabel(date = new Date()): string {

@@ -56,7 +56,8 @@ read .agents/skills/add-page-object/SKILL.md
 ## Step 4: Create or reuse test data
 
 - Check `src/test-data/{domain}/` first.
-- If needed, create `src/test-data/{domain}/{feature}.data.ts`.
+- If needed, create `src/test-data/{domain}/{feature}.data.ts` (feature slice, not per AUT ID).
+- Free-text inputs (title, description, notes, comments) **must** use faker factories — see `.agents/rules/testing.md` → **Free-text input factories**. Never prefix values with `@AUT-*` / `AUT-FV-*`.
 - Update `src/test-data/index.ts`.
 
 ## Step 4b: API seeding and cleanup (when pre-created data is required)

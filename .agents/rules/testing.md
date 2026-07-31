@@ -175,17 +175,41 @@ npx playwright test --grep "(?=.*@smoke)(?=.*@cart)"
 - Store all test data in `src/test-data/` — never hardcode business values in test specs
 - Use `@test-data/` path alias for imports
 - Use **factory functions** (`generateProduct()`, etc.) for unique data per run
-- Use **static templates** for fixed reference data (expected values, form defaults)
+- Use **static templates** for fixed reference data (expected values, form defaults, UI copy, error messages)
+- Organize by **feature slice** under `src/test-data/{domain}/` (e.g. `consultation.pricing.data.ts`, `promotions.validation.data.ts`), not one file per AUT ID
 - When adding a new feature, create corresponding data file in `src/test-data/{domain}/`
 
+### Free-text input factories (required)
+
+User-entered free text (product/consultation **title**, **description**, comments, tip notes, usernames typed into forms) **must** come from `@faker-js/faker` factories in `@test-data/`. Do not invent long labels or bake Automation IDs into the value.
+
+| Kind | Preferred factory |
+|------|-------------------|
+| Product / consultation title / name | `faker.commerce.productName()` |
+| Description / notes / messages | `faker.lorem.sentence()` |
+| Comment body | `faker.lorem.sentence()` (or dedicated `generateComment()`) |
+| Promo name / code | Existing short factory (e.g. `generatePromotionData()`) |
+| Username typed into a form | Short faker alphanumeric / username — no `AUT-FV-*` prefix |
+
 ```typescript
-// ✅ Good
+// ✅ Good — faker factory in test-data
+export function generateConsultationPricingTitle(): string {
+  return faker.commerce.productName();
+}
+export function generateConsultationPricingDescription(): string {
+  return faker.lorem.sentence();
+}
+
 import { generateProduct } from '@test-data/creator/product.data';
 const product = generateProduct({ category: 'digital' });
 
-// ❌ Avoid — hardcoded in test
+// ❌ Avoid — AUT id / long hardcoded free text
+const title = `AUT-FV-020 ${faker.string.alphanumeric(8)}`;
+const description = 'Consultation pricing and minimum notice validation';
 const product = { name: 'E-Book', price: 29.99 };
 ```
+
+Keep Automation IDs in test **tags** / annotations only (`@AUT-FV-020`), never as prefixes on seeded UI names. Static templates remain correct for fixed UI copy (error strings, button labels, currency amounts under assertion).
 
 ## Single-pass Verification
 

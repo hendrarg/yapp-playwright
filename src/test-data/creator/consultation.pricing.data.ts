@@ -2,8 +2,6 @@ import { faker } from "@faker-js/faker";
 
 /** Pricing / notice data for consultation (AUT-FV-020). */
 export const consultationPricingData = {
-  titlePrefix: "AUT-FV-020",
-  description: "Consultation pricing and minimum notice validation",
   validPrice: "12000",
   zeroPrice: "0",
   previewPaidPricePattern: /Rp12\.000,00/,
@@ -18,10 +16,12 @@ export const consultationPricingData = {
   buyerFreeLabel: "Free",
 } as const;
 
-export function generateConsultationPricingTitle(
-  prefix = consultationPricingData.titlePrefix,
-): string {
-  return `${prefix} ${faker.string.alphanumeric(8)}`;
+export function generateConsultationPricingTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateConsultationPricingDescription(): string {
+  return faker.lorem.sentence();
 }
 
 const monthIndex: Record<string, number> = {
