@@ -158,16 +158,7 @@ test('Upload and Manage Profile Media and Content — Part 6', {
 });
 
 guestTest('Validate Profile Pricing, Vouchers, and Fees — Part 2', {
-  tag: ['@AUT-FV-233', '@profile', '@tip', '@buyer', '@regression'],
-  annotation: [
-    { type: 'covers', description: 'TC-PRF-B-013' },
-    { type: 'covers', description: 'TC-PRF-B-015' },
-    {
-      type: 'blocked',
-      description:
-        'TC-PRF-B-015: no env creator with tipping ON and Quick Amount OFF (QA Buyer Audit 2026-07-23)',
-    },
-  ],
+  tag: ['@AUT-FV-233', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, tipPage }) => {
   guestTest.setTimeout(90000);
   const enabledTips = creatorProfiles.hendrarg.tipSuggestions.idr;

@@ -171,7 +171,6 @@ test.describe("Creator Promotions", () => {
 
   test("Publish & Share Promotions", {
     tag: ["@AUT-FV-244", "@promotions", "@creator", "@regression"],
-    annotation: [{ type: "covers", description: "TC-PRM-C-018, TC-PRM-C-019, TC-PRM-C-020" }],
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 
@@ -221,10 +220,6 @@ test.describe("Creator Promotions", () => {
 
   test("Edit Promotions Lifecycle", {
     tag: ["@AUT-FV-245", "@promotions", "@creator", "@regression"],
-    annotation: [
-      { type: "covers", description: "TC-PRM-C-027, TC-PRM-C-028" },
-      { type: "deferred", description: "TC-PRM-C-028 buyer redemption checks omitted (creator-side save verification only)" },
-    ],
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 
@@ -279,7 +274,6 @@ test.describe("Creator Promotions", () => {
 
   test("Verify Promotion Copy Feedback and Delete Confirmation", {
     tag: ["@AUT-FV-246", "@promotions", "@creator", "@smoke", "@regression"],
-    annotation: [{ type: "covers", description: "TC-PRM-C-022, TC-PRM-C-029" }],
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 
@@ -337,7 +331,6 @@ test.describe("Creator Promotions", () => {
 
   test("Select selected-products scope", {
     tag: ["@AUT-FV-239", "@promotions", "@creator", "@regression"],
-    annotation: [{ type: "covers", description: "TC-PRM-C-009" }],
   }, async ({ creatorNav, promotionsPage }) => {
     await test.step("Open create promotion form", async () => {
       await creatorNav.open("promotions");
@@ -373,7 +366,6 @@ test.describe("Creator Promotions", () => {
 
   test("Persist Promotions Changes and State", {
     tag: ["@AUT-FV-241", "@promotions", "@creator", "@regression"],
-    annotation: [{ type: "covers", description: "TC-PRM-C-011" }],
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 
@@ -408,7 +400,6 @@ test.describe("Creator Promotions", () => {
 
   test("Validate Promotions Scheduling, Availability, and Time Rules", {
     tag: ["@AUT-FV-242", "@promotions", "@creator", "@regression"],
-    annotation: [{ type: "covers", description: "TC-PRM-C-012" }],
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 

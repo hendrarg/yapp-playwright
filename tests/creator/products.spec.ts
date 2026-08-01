@@ -18,8 +18,7 @@ import { creatorProfile } from '@test-data/buyer/profile.data';
 
 test.describe('Creator Products', () => {
   test('Verify Products Status Grouping', {
-    tag: ['@AUT-FV-210', '@products', '@creator', '@smoke'],
-    annotation: [{ type: 'covers', description: 'TC-PROD-C-003' }],
+    tag: ['@AUT-FV-210', '@products', '@creator', '@smoke'],
   }, async ({ creatorNav, productsPage }) => {
     test.setTimeout(90000);
 
@@ -37,8 +36,7 @@ test.describe('Creator Products', () => {
   });
 
   test('Set Active Product Inactive and Verify Status Transition', {
-    tag: ['@AUT-FV-211', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-PROD-C-022' }],
+    tag: ['@AUT-FV-211', '@products', '@creator', '@regression'],
   }, async ({ creatorNav, productsPage, page }) => {
     test.setTimeout(120000);
 
@@ -126,8 +124,7 @@ test.describe('Creator Products', () => {
   });
 
   test('Verify Products Display and Navigation', {
-    tag: ['@AUT-FV-213', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-PROD-C-011' }],
+    tag: ['@AUT-FV-213', '@products', '@creator', '@regression'],
   }, async ({ creatorNav, productsPage }) => {
     test.setTimeout(90000);
 
@@ -209,13 +206,7 @@ test.describe('Creator Products', () => {
   });
 
   test('Upload and Manage Products Media and Content', {
-    tag: ['@AUT-FV-215', '@products', '@creator', '@regression'],
-    annotation: [
-      { type: 'covers', description: 'TC-PROD-C-026' },
-      { type: 'covers', description: 'TC-PROD-C-027' },
-      { type: 'covers', description: 'TC-PROD-C-028' },
-      { type: 'covers', description: 'TC-PROD-C-029' },
-    ],
+    tag: ['@AUT-FV-215', '@products', '@creator', '@regression'],
   }, async ({
     creatorNav,
     buyerNav,
@@ -292,8 +283,7 @@ test.describe('Creator Products', () => {
   });
 
   test('Share product and copy product URL', {
-    tag: ['@AUT-FV-216', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-PROD-C-033' }],
+    tag: ['@AUT-FV-216', '@products', '@creator', '@regression'],
   }, async ({ creatorNav, productsPage, page }) => {
     await test.step('Open product actions menu and choose Share', async () => {
       await creatorNav.open('products');
@@ -311,8 +301,7 @@ test.describe('Creator Products', () => {
   });
   
   test('Unhide product and verify public availability', {
-    tag: ['@AUT-FV-217', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-PROD-C-036' }],
+    tag: ['@AUT-FV-217', '@products', '@creator', '@regression'],
   }, async ({ creatorNav, buyerNav, productsPage, buyerProfilePage, page }) => {
     test.setTimeout(120000);
 
@@ -344,8 +333,7 @@ test.describe('Creator Products', () => {
   });
 
   test('Verify Delete Product Confirmation Before Deletion', {
-    tag: ['@AUT-FV-218', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-PROD-C-037' }],
+    tag: ['@AUT-FV-218', '@products', '@creator', '@regression'],
   }, async ({ creatorNav, productsPage, page }) => {
     test.setTimeout(120000);
 

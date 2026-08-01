@@ -46,7 +46,6 @@ test.describe('Guest promotion redemption', () => {
 
   test('Verify Promotions Checkout Redemption Validation', {
     tag: ['@AUT-FV-248', '@promotions', '@buyer', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-PRM-C-030 (checkout)' }],
   }, async ({ productPurchasePage, page }) => {
     test.setTimeout(120_000);
     const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');

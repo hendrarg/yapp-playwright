@@ -6,7 +6,6 @@ import { consultationMediaData } from '@test-data/creator/consultation.media.dat
 test.describe('Buyer Consultation', () => {
   test('Validate Consultation Pricing, Vouchers, and Fees — Part 2', {
     tag: ['@AUT-FV-027', '@sessions', '@buyer', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-CON-B-001' }],
   }, async ({ productPurchasePage, page }) => {
     test.setTimeout(180000);
 
@@ -60,7 +59,6 @@ test.describe('Buyer Consultation', () => {
 
   test('Preview Consultation Media and Verify Navigation', {
     tag: ['@AUT-FV-028', '@sessions', '@buyer', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-CON-B-002' }],
   }, async ({ productPurchasePage, page }) => {
     test.setTimeout(180000);
 

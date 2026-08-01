@@ -12,11 +12,6 @@ import { digitalProductValidationData, productsCreationData } from '@test-data/c
 test.describe('Creator Sessions', () => {
   test('Validate Consultation Inputs and Boundary Conditions', {
     tag: ['@AUT-FV-017', '@sessions', '@creator', '@regression'],
-    annotation: [
-      { type: 'covers', description: 'TC-CON-C-001' },
-      { type: 'covers', description: 'TC-CON-C-009' },
-      { type: 'covers', description: 'TC-CON-C-025' },
-    ],
   }, async ({ creatorNav, productsPage }) => {
     test.setTimeout(120000);
 
@@ -173,7 +168,6 @@ test.describe('Creator Sessions', () => {
 
   test('Validate Consultation Navigation and Unsaved Warning', {
     tag: ['@AUT-FV-019', '@sessions', '@creator', '@smoke', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-CON-C-003' }],
   }, async ({ creatorNav, productsPage }) => {
     const consultationType = productsCreationData.productTypes.find(
       (type) => type.label === 'Consultation',
@@ -431,7 +425,6 @@ test.describe('Creator Sessions', () => {
 
   test('Configure and Customize Consultation', {
     tag: ['@AUT-FV-025', '@sessions', '@creator', '@regression'],
-    annotation: [{ type: 'covers', description: 'TC-CON-C-026' }],
   }, async ({ creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
