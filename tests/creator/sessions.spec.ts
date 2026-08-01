@@ -1,32 +1,13 @@
 import { creatorAuthTest as test, expect } from '../test-base';
-import { deleteProduct } from '@helpers/api/product';
+import { createConsultationProduct, deleteProduct, expectProductStatus } from '@helpers/api/product';
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
-import {
-  consultationMediaData,
-  generateConsultationDescription,
-  generateConsultationTitle,
-} from '@test-data/creator/consultation.media.data';
-import {
-  consultationLifecycleData,
-  consultationWeekdayLabel,
-  generateConsultationAfterSalesMessage,
-  generateConsultationLifecycleDescription,
-  generateConsultationLifecycleTitle,
-} from '@test-data/creator/consultation.lifecycle.data';
-import {
-  generateConsultationNavigationDescription,
-  generateConsultationNavigationTitle,
-} from '@test-data/creator/consultation.navigation.data';
-import {
-  consultationPricingData,
-  generateConsultationPricingDescription,
-  generateConsultationPricingTitle,
-} from '@test-data/creator/consultation.pricing.data';
+import { consultationConfigData, generateConsultationAfterSalesLink, generateConsultationAfterSalesPreviewMessage, generateConsultationConfigDescription, generateConsultationConfigTitle } from '@test-data/creator/consultation.config.data';
+import { consultationMediaData, generateConsultationDescription, generateConsultationTitle } from '@test-data/creator/consultation.media.data';
+import { consultationLifecycleData, consultationWeekdayLabel, generateConsultationAfterSalesMessage, generateConsultationLifecycleDescription, generateConsultationLifecycleTitle } from '@test-data/creator/consultation.lifecycle.data';
+import { generateConsultationNavigationDescription, generateConsultationNavigationTitle } from '@test-data/creator/consultation.navigation.data';
+import { consultationPricingData, generateConsultationPricingDescription, generateConsultationPricingTitle } from '@test-data/creator/consultation.pricing.data';
 import { consultationValidationData } from '@test-data/creator/consultation.validation.data';
-import {
-  digitalProductValidationData,
-  productsCreationData,
-} from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 
 test.describe('Creator Sessions', () => {
   test('Validate Consultation Inputs and Boundary Conditions', {
@@ -444,6 +425,121 @@ test.describe('Creator Sessions', () => {
         for (const productUuid of productUuids) {
           await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
         }
+      }
+    }
+  });
+
+  test('Configure and Customize Consultation', {
+    tag: ['@AUT-FV-025', '@sessions', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-CON-C-026' }],
+  }, async ({ creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed consultation product');
+    if (!seedToken) return;
+
+    const title = generateConsultationConfigTitle();
+    const description = generateConsultationConfigDescription();
+    const afterSalesMessage = generateConsultationAfterSalesPreviewMessage();
+    const afterSalesLink = generateConsultationAfterSalesLink();
+    let productUuid = '';
+
+    try {
+      await test.step('Seed consultation and open editor with staged after-sales content', async () => {
+        const product = await createConsultationProduct(
+          page.request,
+          {
+            title,
+            description,
+            thumbnailImagePath: consultationMediaData.heroImagePath,
+            productImagePaths: [...consultationMediaData.additionalImagePaths],
+            price: consultationConfigData.price,
+          },
+          seedToken,
+        );
+        productUuid = product.productUuid;
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessage);
+        await productsPage.enableAfterSalesLinks();
+        await productsPage.openEmbedLinkDialog();
+        await productsPage.fillEmbedLink(afterSalesLink.label, afterSalesLink.url);
+        await productsPage.saveCurrentEmbedLink();
+        await productsPage.expectEmbedLinksSaved([afterSalesLink.label]);
+      });
+
+      await test.step('Open Preview and review staged content as read-only', async () => {
+        await productsPage.openConsultationAfterSalesPreview();
+        await productsPage.expectConsultationAfterSalesPreviewReadOnly({
+          message: afterSalesMessage,
+          linkLabel: afterSalesLink.label,
+        });
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Verify Consultation Access, Entitlements, and Eligibility', {
+    tag: ['@AUT-FV-026', '@sessions', '@creator', '@smoke', '@regression'],
+  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
+    test.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed consultation product');
+    if (!seedToken) return;
+
+    const title = generateConsultationConfigTitle();
+    const description = generateConsultationConfigDescription();
+    let productUuid = '';
+    let sharePath = '';
+
+    try {
+      await test.step('Seed active consultation', async () => {
+        const product = await createConsultationProduct(
+          page.request,
+          {
+            title,
+            description,
+            thumbnailImagePath: consultationMediaData.heroImagePath,
+            productImagePaths: [...consultationMediaData.additionalImagePaths],
+            price: consultationConfigData.price,
+          },
+          seedToken,
+        );
+        productUuid = product.productUuid;
+        sharePath = product.sharePath;
+        await expectProductStatus(page.request, productUuid, 'active', seedToken);
+      });
+
+      await test.step('Set consultation inactive and verify status', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.expectProductVisible(title);
+        await productsPage.setProductInactive(title);
+        await expectProductStatus(page.request, productUuid, 'inactive', seedToken);
+        await productsPage.selectStatusTab('Inactive');
+        await productsPage.searchProducts(title);
+        await productsPage.expectProductVisible(title);
+        await productsPage.expectProductRowStatus(title, 'INACTIVE');
+      });
+
+      await test.step('Block new bookings on buyer page while inactive', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectConsultationProductLoaded(title);
+        await productPurchasePage.expectConsultationNotBookable();
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
       }
     }
   });

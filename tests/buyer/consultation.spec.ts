@@ -1,10 +1,6 @@
 import { authTest as test } from '../test-base';
 import { createConsultationProduct, deleteProduct } from '@helpers/api/product';
-import {
-  consultationBuyerDetailData,
-  generateConsultationBuyerDescription,
-  generateConsultationBuyerTitle,
-} from '@test-data/buyer/consultation.detail.data';
+import { consultationBuyerDetailData, generateConsultationBuyerDescription, generateConsultationBuyerTitle } from '@test-data/buyer/consultation.detail.data';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
 
 test.describe('Buyer Consultation', () => {

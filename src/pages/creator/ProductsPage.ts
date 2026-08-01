@@ -4,6 +4,7 @@ import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
+import { consultationConfigData } from "@test-data/creator/consultation.config.data";
 import { consultationLifecycleData, consultationWeekdayLabel } from "@test-data/creator/consultation.lifecycle.data";
 import { consultationMediaData } from "@test-data/creator/consultation.media.data";
 import { consultationNavigationData } from "@test-data/creator/consultation.navigation.data";
@@ -681,9 +682,15 @@ export class ProductsPage {
     });
   }
 
+  private afterSalesSection(): Locator {
+    const details = this.page.getByLabel("Details");
+    return details.or(this.page.locator("body"));
+  }
+
   private afterSalesLinksCheckbox(): Locator {
-    return this.page
+    return this.afterSalesSection()
       .getByText(consultationValidationData.afterSalesLinksLabel)
+      .first()
       .locator("xpath=preceding::*[@role='checkbox'][1]");
   }
 
@@ -795,16 +802,61 @@ export class ProductsPage {
 
   async enableAfterSalesLinks() {
     const checkbox = this.afterSalesLinksCheckbox();
-    await this.page
+    await this.afterSalesSection()
       .getByText(consultationValidationData.afterSalesLinksLabel)
+      .first()
       .scrollIntoViewIfNeeded();
     if ((await checkbox.getAttribute("aria-checked")) !== "true") {
       await safeClick(checkbox);
     }
     await expect(checkbox).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
-    await expect(this.page.getByRole("button", { name: "Add Link" })).toBeVisible({
+    await expect(
+      this.afterSalesSection().getByRole("button", { name: "Add Link" }).first(),
+    ).toBeVisible({
       timeout: 10000,
     });
+  }
+
+  private consultationAfterSalesPreviewButton(): Locator {
+    return this.afterSalesSection()
+      .getByRole("button", { name: "Preview", exact: true })
+      .or(this.page.getByRole("button", { name: "Preview", exact: true }))
+      .filter({ visible: true })
+      .first();
+  }
+
+  private consultationAfterSalesPreviewDialog(): Locator {
+    return this.page
+      .getByRole("dialog")
+      .filter({ hasText: consultationConfigData.previewDialogHeadingPattern })
+      .or(this.page.getByRole("dialog").filter({ hasText: /Links/i }))
+      .last();
+  }
+
+  async openConsultationAfterSalesPreview() {
+    const preview = this.consultationAfterSalesPreviewButton();
+    await expect(preview).toBeEnabled({ timeout: 10000 });
+    await safeClick(preview);
+    await expect(this.consultationAfterSalesPreviewDialog()).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectConsultationAfterSalesPreviewReadOnly(options: {
+    message: string;
+    linkLabel: string;
+  }) {
+    const dialog = this.consultationAfterSalesPreviewDialog();
+    await expect(dialog).toBeVisible({ timeout: 15000 });
+    await expect(dialog.getByText(options.message, { exact: false })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      dialog
+        .getByRole("link", { name: options.linkLabel })
+        .or(dialog.getByText(options.linkLabel, { exact: true }))
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(dialog.locator('[contenteditable="true"]')).toHaveCount(0, { timeout: 10000 });
+    await expect(dialog.getByRole("textbox")).toHaveCount(0, { timeout: 10000 });
   }
 
   private consultationHeroInput(): Locator {
