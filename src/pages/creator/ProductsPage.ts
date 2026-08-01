@@ -215,6 +215,13 @@ export class ProductsPage {
     selector: 'button:has-text("Next: Publish")',
   });
 
+  private readonly discordMembershipSaveChangesAction = smartLocator(this.page, {
+    role: "button",
+    name: "Save Changes",
+    text: "Save Changes",
+    selector: 'button:has-text("Save Changes")',
+  });
+
   private readonly consultationPricingSwitchAction = smartLocator(this.page, {
     role: "switch",
     name: "Add Pricing",
@@ -665,6 +672,24 @@ export class ProductsPage {
     await this.discordMembershipTitleInput.fill(title, { timeout: 10000 });
   }
 
+  async prepareDiscordMembershipDetails(options: {
+    title: string;
+    description: string;
+    serverName: string;
+    roleName: string;
+    durationValue?: string;
+    durationUnit?: string;
+  }) {
+    const durationValue = options.durationValue ?? "1";
+    const durationUnit = options.durationUnit ?? "Month";
+    await this.fillDiscordMembershipTitle(options.title);
+    await this.fillDiscordMembershipDescription(options.description);
+    await this.selectDiscordMembershipDuration(durationValue, durationUnit, durationUnit);
+    await this.selectDiscordMembershipServer(options.serverName);
+    await this.selectDiscordMembershipRole(options.roleName);
+    await this.continueToDiscordMembershipDetails();
+  }
+
   async fillDiscordMembershipDescription(text: string) {
     await this.discordMembershipDescriptionEditor.click({ timeout: 10000 });
     await this.page.keyboard.press("Control+A");
@@ -768,6 +793,17 @@ export class ProductsPage {
     await expect(await selectedRole.text()).toContain(roleName);
   }
 
+  async expectDiscordMembershipEditorValues(options: {
+    title: string;
+    description: string;
+    serverName: string;
+    roleName: string;
+  }) {
+    await this.expectConsultationTitleValue(options.title);
+    await this.expectConsultationDescriptionContains(options.description);
+    await this.expectDiscordMembershipServerAndRole(options.serverName, options.roleName);
+  }
+
   async continueToDiscordMembershipDetails() {
     await this.nextSetDetailsAction.click({ timeout: 10000 });
     await this.discordMembershipNextPublishAction.text();
@@ -779,6 +815,12 @@ export class ProductsPage {
 
   async submitDiscordMembershipPricing() {
     await this.discordMembershipNextPublishAction.click({ timeout: 10000 });
+  }
+
+  async publishDiscordMembershipAndReadSharePath(): Promise<string> {
+    await this.submitDiscordMembershipPricing();
+    await this.expectProductCompleteModal();
+    return this.readProductCompleteSharePath();
   }
 
   async isDiscordMembershipZeroPriceRejected(): Promise<boolean> {
@@ -829,6 +871,12 @@ export class ProductsPage {
     });
     const dialogText = await dialog.text();
     expect(dialogText).toMatch(/unsaved|leave|discard|lose your changes|are you sure/i);
+  }
+
+  async saveDiscordMembershipChangesFromUnsavedDialog() {
+    await this.discordMembershipSaveChangesAction.click({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/products(?:\?|$)/, { timeout: 60000 });
+    await this.expectLoaded();
   }
 
   async expectDigitalProductCreateFlow() {
@@ -1265,12 +1313,21 @@ export class ProductsPage {
   async openEditProduct(productName: string) {
     await this.openProductActionsMenu(productName);
     await this.editProductAction.click({ timeout: 10000 });
-    await expect(this.page).toHaveURL(/\/products\/update\/appointment\//, { timeout: 30000 });
+    await expect(this.page).toHaveURL(
+      /\/products\/update\/(?:appointment|discord-membership)\//,
+      { timeout: 30000 },
+    );
   }
 
   async readAppointmentProductUuidFromUrl(): Promise<string> {
     const match = this.page.url().match(/\/products\/update\/appointment\/([^/?#]+)/);
     expect(match?.[1], "expected appointment product uuid in URL").toBeTruthy();
+    return match![1];
+  }
+
+  async readDiscordMembershipProductUuidFromUrl(): Promise<string> {
+    const match = this.page.url().match(/\/products\/update\/discord-membership\/([^/?#]+)/);
+    expect(match?.[1], "expected Discord Membership product uuid in URL").toBeTruthy();
     return match![1];
   }
 

@@ -252,18 +252,12 @@ test.describe('Creator Products', () => {
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
       await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.fillDiscordMembershipTitle(generateDiscordMembershipTitle());
-      await productsPage.fillDiscordMembershipDescription(
-        generateDiscordMembershipDescription(),
-      );
-      await productsPage.selectDiscordMembershipDuration('1', 'Month', 'Month');
-      await productsPage.selectDiscordMembershipServer(
-        discordMembershipValidationData.serverName,
-      );
-      await productsPage.selectDiscordMembershipRole(
-        discordMembershipValidationData.roleName,
-      );
-      await productsPage.continueToDiscordMembershipDetails();
+      await productsPage.prepareDiscordMembershipDetails({
+        title: generateDiscordMembershipTitle(),
+        description: generateDiscordMembershipDescription(),
+        serverName: discordMembershipValidationData.serverName,
+        roleName: discordMembershipValidationData.roleName,
+      });
     };
 
     await test.step('Upload eleven thumbnails and enforce the maximum', async () => {
@@ -314,18 +308,12 @@ test.describe('Creator Products', () => {
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
       await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.fillDiscordMembershipTitle(generateDiscordMembershipTitle());
-      await productsPage.fillDiscordMembershipDescription(
-        generateDiscordMembershipDescription(),
-      );
-      await productsPage.selectDiscordMembershipDuration('1', 'Month', 'Month');
-      await productsPage.selectDiscordMembershipServer(
-        discordMembershipValidationData.serverName,
-      );
-      await productsPage.selectDiscordMembershipRole(
-        discordMembershipValidationData.roleName,
-      );
-      await productsPage.continueToDiscordMembershipDetails();
+      await productsPage.prepareDiscordMembershipDetails({
+        title: generateDiscordMembershipTitle(),
+        description: generateDiscordMembershipDescription(),
+        serverName: discordMembershipValidationData.serverName,
+        roleName: discordMembershipValidationData.roleName,
+      });
     });
 
     await test.step('Verify free pricing and accept a positive paid price', async () => {
@@ -351,6 +339,131 @@ test.describe('Creator Products', () => {
         'Discord Membership pricing validation gap: pricing defaults to paid or accepts zero price',
       );
     });
+  });
+
+  test('Validate Discord Membership Draft, Publish, Edit, and Republish Lifecycle', {
+    tag: ['@AUT-FV-042', '@membership', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-DM-C-019, TC-DM-C-020, TC-DM-C-026, TC-DM-C-029' }],
+  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
+    test.setTimeout(300000);
+
+    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!accessToken, 'YAPP_TEST_ACCESS_TOKEN is required to clean up Discord Membership lifecycle data');
+    if (!accessToken) return;
+
+    const discordType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Discord Membership',
+    )!;
+    const title = generateDiscordMembershipTitle();
+    const description = generateDiscordMembershipDescription();
+    const editedTitle = generateDiscordMembershipTitle();
+    const editedDescription = generateDiscordMembershipDescription();
+    const republishedTitle = generateDiscordMembershipTitle();
+    const republishedDescription = generateDiscordMembershipDescription();
+    let productUuid = '';
+    let sharePath = '';
+    let draftPubliclyPurchasable = false;
+
+    const openDiscordMembershipCreate = async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(discordType.buttonName);
+      await productsPage.expectDiscordMembershipCreateFlow();
+      await productsPage.prepareDiscordMembershipDetails({
+        title,
+        description,
+        serverName: discordMembershipValidationData.serverName,
+        roleName: discordMembershipValidationData.roleName,
+      });
+      await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
+      await productsPage.fillConsultationPrice(discordMembershipPricingData.validPrice);
+    };
+
+    try {
+      await test.step('Publish a valid Discord Membership', async () => {
+        await openDiscordMembershipCreate();
+        sharePath = await productsPage.publishDiscordMembershipAndReadSharePath();
+        const copied = await productsPage.copyProductCompleteLink();
+        expect(copied).toContain(sharePath);
+        await productsPage.closeProductCompleteModal();
+      });
+
+      await test.step('Edit the published product and save changes as a draft', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        productUuid = await productsPage.readDiscordMembershipProductUuidFromUrl();
+        await productsPage.expectDiscordMembershipEditorValues({
+          title,
+          description,
+          serverName: discordMembershipValidationData.serverName,
+          roleName: discordMembershipValidationData.roleName,
+        });
+        await productsPage.fillDiscordMembershipTitle(editedTitle);
+        await productsPage.fillDiscordMembershipDescription(editedDescription);
+        await productsPage.navigateAwayFromDiscordMembershipViaBack();
+        await productsPage.expectDiscordMembershipUnsavedChangesDialog();
+        await productsPage.saveDiscordMembershipChangesFromUnsavedDialog();
+        await productsPage.selectStatusTab('Draft');
+        await productsPage.searchProducts(editedTitle);
+        await productsPage.expectProductVisible(editedTitle);
+        await productsPage.expectProductRowStatus(editedTitle, 'DRAFT');
+        expect(await productsPage.readProductSharePath(editedTitle)).toBe(sharePath);
+      });
+
+      await test.step('Verify the draft is not publicly displayed or purchasable', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        draftPubliclyPurchasable = await productPurchasePage.isProductPubliclyPurchasable();
+        expect.soft(
+          draftPubliclyPurchasable,
+          'A Discord Membership saved as draft should not be publicly purchasable',
+        ).toBe(false);
+        test.fail(
+          draftPubliclyPurchasable,
+          'Discord Membership draft visibility gap detected after Back → Save Changes',
+        );
+      });
+
+      await test.step('Open the pre-populated draft editor and publish it', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Draft');
+        await productsPage.searchProducts(editedTitle);
+        await productsPage.openEditProduct(editedTitle);
+        expect(await productsPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
+        await productsPage.expectDiscordMembershipEditorValues({
+          title: editedTitle,
+          description: editedDescription,
+          serverName: discordMembershipValidationData.serverName,
+          roleName: discordMembershipValidationData.roleName,
+        });
+        await productsPage.submitDiscordMembershipDetails();
+        expect(await productsPage.publishDiscordMembershipAndReadSharePath()).toBe(sharePath);
+        await productsPage.closeProductCompleteModal();
+      });
+
+      await test.step('Edit and republish while preserving the share URL', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(editedTitle);
+        await productsPage.openEditProduct(editedTitle);
+        expect(await productsPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
+        await productsPage.fillDiscordMembershipTitle(republishedTitle);
+        await productsPage.fillDiscordMembershipDescription(republishedDescription);
+        await productsPage.submitDiscordMembershipDetails();
+        expect(await productsPage.publishDiscordMembershipAndReadSharePath()).toBe(sharePath);
+        await productsPage.closeProductCompleteModal();
+      });
+
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
+      }
+    }
   });
 
   test('Validate Digital Products Inputs and Boundary Conditions', {

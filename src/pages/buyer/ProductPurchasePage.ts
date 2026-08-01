@@ -8,7 +8,7 @@ import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
 import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
 import { flakyClick } from '@utils/flaky-utils';
-import { locatorChain, smartClick } from '@utils/heal-utils';
+import { locatorChain, smartClick, smartLocator } from '@utils/heal-utils';
 import { safeClick, safeFill, waitForLoaded } from '@utils/playwright.utils';
 
 export type OrderSummary = {
@@ -21,6 +21,12 @@ export class ProductPurchasePage {
   readonly voucherInput: Locator;
   readonly chooseVoucherButton: Locator;
   readonly applyVoucherButton: Locator;
+  private readonly purchaseAction = smartLocator(this.page, {
+    role: 'button',
+    name: 'Purchase',
+    text: 'Purchase',
+    selector: 'button:has-text("Purchase")',
+  });
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.voucherInput = page.getByRole('textbox', { name: 'Redeem Voucher' });
@@ -97,6 +103,15 @@ export class ProductPurchasePage {
       waitUntil: 'domcontentloaded',
     });
     await waitForLoaded(this.page);
+  }
+
+  async isProductPubliclyPurchasable(): Promise<boolean> {
+    try {
+      await this.purchaseAction.text({ timeout: 1500 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async expectConsultationProductLoaded(title: string) {
