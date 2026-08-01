@@ -30,6 +30,29 @@ export const membershipTemplates = {
   },
 } as const;
 
+export const discordMembershipValidationData = {
+  requiredErrors: ["Title is required", "Description is required", "Duration is required"] as const,
+  descriptionLimit: "500 / 500",
+  descriptionOverflowWord: " overflow",
+  durationUnits: ["Days", "Month", "Years"] as const,
+  serverName: "Hendra's server",
+  roleName: "Boss",
+  linkedServerOption: "Hendra's server",
+  connectServerOption: "+ Connect new server",
+} as const;
+
+export function generateDiscordMembershipTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateDiscordMembershipDescription(): string {
+  return faker.lorem.sentence();
+}
+
+export function generateDiscordMembershipLimitDescription(): string {
+  return Array.from({ length: 500 }, (_, index) => `w${index}`).join(" ");
+}
+
 // ── Factory ──────────────────────────────────────────────────────
 
 export function generateMembershipTier(overrides?: Partial<MembershipTier>): MembershipTier {

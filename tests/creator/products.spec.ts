@@ -1,24 +1,16 @@
 import { creatorAuthTest as test, expect } from '../test-base';
-import {
-  createOnlineCourseProduct,
-  deleteProduct,
-  expectProductHideFromProfile,
-  expectProductStatus,
-  setProductHideFromProfile,
-} from '@helpers/api/product';
-import {
-  digitalProductValidationData,
-  generateOnlineCourseProductData,
-  productsCreationData,
-} from '@test-data/creator/products.creation.data';
+import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile, expectProductStatus, setProductHideFromProfile } from '@helpers/api/product';
+import { digitalProductValidationData, generateOnlineCourseProductData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
 import { creatorProfile } from '@test-data/buyer/profile.data';
+import { discordMembershipValidationData, generateDiscordMembershipDescription, generateDiscordMembershipLimitDescription, generateDiscordMembershipTitle } from '@test-data/creator/membership.data';
 
 test.describe('Creator Products', () => {
   test('Verify Products Status Grouping', {
-    tag: ['@AUT-FV-210', '@products', '@creator', '@smoke'],
+    tag: ['@AUT-FV-210', '@products', '@creator', '@smoke'],
+
   }, async ({ creatorNav, productsPage }) => {
     test.setTimeout(90000);
 
@@ -36,7 +28,8 @@ test.describe('Creator Products', () => {
   });
 
   test('Set Active Product Inactive and Verify Status Transition', {
-    tag: ['@AUT-FV-211', '@products', '@creator', '@regression'],
+    tag: ['@AUT-FV-211', '@products', '@creator', '@regression'],
+
   }, async ({ creatorNav, productsPage, page }) => {
     test.setTimeout(120000);
 
@@ -124,7 +117,8 @@ test.describe('Creator Products', () => {
   });
 
   test('Verify Products Display and Navigation', {
-    tag: ['@AUT-FV-213', '@products', '@creator', '@regression'],
+    tag: ['@AUT-FV-213', '@products', '@creator', '@regression'],
+
   }, async ({ creatorNav, productsPage }) => {
     test.setTimeout(90000);
 
@@ -160,6 +154,83 @@ test.describe('Creator Products', () => {
       )!;
       await productsPage.selectProductType(discordType.buttonName);
       await productsPage.expectDiscordMembershipCreateFlow();
+    });
+  });
+
+  test('Validate Creator Discord Membership Basic Details and Discord Access Setup', {
+    tag: ['@AUT-FV-039', '@membership', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-DM-C-001, TC-DM-C-002, TC-DM-C-003, TC-DM-C-004, TC-DM-C-005, TC-DM-C-006, TC-DM-C-007',
+    }],
+  }, async ({ creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const discordType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Discord Membership',
+    )!;
+    const title = generateDiscordMembershipTitle();
+    let currentDurationUnit = 'Month';
+
+    await test.step('Open Discord Membership creation with empty required fields', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(discordType.buttonName);
+      await productsPage.expectDiscordMembershipCreateFlow();
+      await productsPage.submitDiscordMembershipDetails();
+      await productsPage.expectDiscordMembershipRequiredFeedback();
+    });
+
+    await test.step('Format the description and enforce the 500-word limit', async () => {
+      await productsPage.fillDiscordMembershipTitle(title);
+      await productsPage.fillDiscordMembershipDescription(
+        generateDiscordMembershipDescription(),
+      );
+      await productsPage.fillDiscordMembershipDescription(
+        generateDiscordMembershipLimitDescription(),
+      );
+      await productsPage.applyDiscordMembershipDescriptionFormatting();
+      await productsPage.expectDiscordMembershipDescriptionCounter();
+      await productsPage.appendDiscordMembershipDescription(
+        discordMembershipValidationData.descriptionOverflowWord,
+      );
+      await productsPage.expectDiscordMembershipDescriptionCounter();
+    });
+
+    await test.step('Accept valid duration values for days, months, and years', async () => {
+      for (const unit of discordMembershipValidationData.durationUnits) {
+        await productsPage.selectDiscordMembershipDuration('1', currentDurationUnit, unit);
+        currentDurationUnit = unit;
+      }
+    });
+
+    await test.step('Review navigation and unsaved-change protection', async () => {
+      await productsPage.navigateAwayFromDiscordMembershipViaBack();
+      await productsPage.expectDiscordMembershipUnsavedChangesDialog();
+      await page.keyboard.press('Escape');
+    });
+
+    await test.step('Expose the connected Discord account and server setup controls', async () => {
+      await productsPage.expectDiscordMembershipConnectionControl();
+    });
+
+    await test.step('Require a server before a Discord role can be selected', async () => {
+      await productsPage.expectDiscordMembershipServerRequirement();
+    });
+
+    await test.step('Select a Discord server and role and continue to publish details', async () => {
+      await productsPage.selectDiscordMembershipServer(
+        discordMembershipValidationData.serverName,
+      );
+      await productsPage.selectDiscordMembershipRole(
+        discordMembershipValidationData.roleName,
+      );
+      await productsPage.expectDiscordMembershipServerAndRole(
+        discordMembershipValidationData.serverName,
+        discordMembershipValidationData.roleName,
+      );
+      await productsPage.continueToDiscordMembershipDetails();
     });
   });
 
@@ -206,7 +277,8 @@ test.describe('Creator Products', () => {
   });
 
   test('Upload and Manage Products Media and Content', {
-    tag: ['@AUT-FV-215', '@products', '@creator', '@regression'],
+    tag: ['@AUT-FV-215', '@products', '@creator', '@regression'],
+
   }, async ({
     creatorNav,
     buyerNav,
@@ -283,7 +355,8 @@ test.describe('Creator Products', () => {
   });
 
   test('Share product and copy product URL', {
-    tag: ['@AUT-FV-216', '@products', '@creator', '@regression'],
+    tag: ['@AUT-FV-216', '@products', '@creator', '@regression'],
+
   }, async ({ creatorNav, productsPage, page }) => {
     await test.step('Open product actions menu and choose Share', async () => {
       await creatorNav.open('products');
@@ -301,7 +374,8 @@ test.describe('Creator Products', () => {
   });
   
   test('Unhide product and verify public availability', {
-    tag: ['@AUT-FV-217', '@products', '@creator', '@regression'],
+    tag: ['@AUT-FV-217', '@products', '@creator', '@regression'],
+
   }, async ({ creatorNav, buyerNav, productsPage, buyerProfilePage, page }) => {
     test.setTimeout(120000);
 
@@ -333,7 +407,8 @@ test.describe('Creator Products', () => {
   });
 
   test('Verify Delete Product Confirmation Before Deletion', {
-    tag: ['@AUT-FV-218', '@products', '@creator', '@regression'],
+    tag: ['@AUT-FV-218', '@products', '@creator', '@regression'],
+
   }, async ({ creatorNav, productsPage, page }) => {
     test.setTimeout(120000);
 

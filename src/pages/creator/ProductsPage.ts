@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { locatorChain, smartLocator } from "@utils/heal-utils";
+import { locatorChain, smartClick, smartLocator } from "@utils/heal-utils";
 import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
@@ -10,6 +10,7 @@ import { consultationMediaData } from "@test-data/creator/consultation.media.dat
 import { consultationNavigationData } from "@test-data/creator/consultation.navigation.data";
 import { consultationPricingData } from "@test-data/creator/consultation.pricing.data";
 import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
+import { discordMembershipValidationData } from "@test-data/creator/membership.data";
 import {
   digitalProductValidationData,
   productsCreationData,
@@ -147,6 +148,74 @@ export class ProductsPage {
     name: "Next: Set Details",
     text: "Next: Set Details",
     selector: 'button:has-text("Next: Set Details")',
+  });
+
+  private readonly discordMembershipTitleInput = smartLocator(this.page, {
+    role: "textbox",
+    name: "Enter title",
+    placeholder: "Enter title",
+    selector: 'input[placeholder="Enter title"]',
+  });
+
+  private readonly discordMembershipDescriptionEditor = smartLocator(this.page, {
+    role: "textbox",
+    name: "editable markdown",
+    selector: '[contenteditable="true"][role="textbox"]',
+  });
+
+  private readonly discordMembershipDurationValueInput = smartLocator(this.page, {
+    role: "textbox",
+    placeholder: "0",
+    selector: 'input[placeholder="0"]',
+  });
+
+  private readonly discordMembershipServerSelect = smartLocator(this.page, {
+    role: "combobox",
+    text: "Select a server",
+    selector: 'button[role="combobox"]:has-text("Select a server")',
+  });
+
+  private readonly discordMembershipRoleSelect = smartLocator(this.page, {
+    role: "combobox",
+    text: "Select a role",
+    selector: 'button[role="combobox"]:has-text("Select a role")',
+  });
+
+  private readonly discordMembershipBoldAction = smartLocator(this.page, {
+    role: "radio",
+    name: "Bold",
+    selector: '[role="radio"][aria-label="Bold"]',
+  });
+
+  private readonly discordMembershipItalicAction = smartLocator(this.page, {
+    role: "radio",
+    name: "Italic",
+    selector: '[role="radio"][aria-label="Italic"]',
+  });
+
+  private readonly discordMembershipUnderlineAction = smartLocator(this.page, {
+    role: "radio",
+    name: "Underline",
+    selector: '[role="radio"][aria-label="Underline"]',
+  });
+
+  private readonly discordMembershipItalicApplied = smartLocator(this.page, {
+    role: "radio",
+    name: "Remove italic",
+    selector: '[role="radio"][aria-label="Remove italic"]',
+  });
+
+  private readonly discordMembershipUnderlineApplied = smartLocator(this.page, {
+    role: "radio",
+    name: "Remove underline",
+    selector: '[role="radio"][aria-label="Remove underline"]',
+  });
+
+  private readonly discordMembershipNextPublishAction = smartLocator(this.page, {
+    role: "button",
+    name: "Next: Publish",
+    text: "Next: Publish",
+    selector: 'button:has-text("Next: Publish")',
   });
 
   private readonly nextSetAvailabilityAction = smartLocator(this.page, {
@@ -567,18 +636,167 @@ export class ProductsPage {
 
   async expectDiscordMembershipCreateFlow() {
     await expect(this.page).toHaveURL(productsCreationData.discordMembershipCreatePath);
-    await expect(this.page.getByRole("button", { name: "Next: Set Details" })).toBeVisible({
-      timeout: 10000,
+    await this.nextSetDetailsAction.text();
+    await smartLocator(this.page, {
+      text: "Membership Information",
+      selector: 'text="Membership Information"',
+    }).text();
+    await smartLocator(this.page, {
+      text: "Discord Set Up",
+      selector: 'text="Discord Set Up"',
+    }).text();
+    await this.discordMembershipTitleInput.text();
+  }
+
+  async submitDiscordMembershipDetails() {
+    await this.nextSetDetailsAction.click({ timeout: 10000 });
+  }
+
+  async expectDiscordMembershipRequiredFeedback() {
+    for (const error of discordMembershipValidationData.requiredErrors) {
+      await expect(this.textFeedback(error)).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async fillDiscordMembershipTitle(title: string) {
+    await this.discordMembershipTitleInput.fill(title, { timeout: 10000 });
+  }
+
+  async fillDiscordMembershipDescription(text: string) {
+    await this.discordMembershipDescriptionEditor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    await this.page.keyboard.insertText(text);
+  }
+
+  async appendDiscordMembershipDescription(text: string) {
+    await this.discordMembershipDescriptionEditor.click({ timeout: 10000 });
+    await this.page.keyboard.press("End");
+    await this.page.keyboard.insertText(text);
+  }
+
+  async applyDiscordMembershipDescriptionFormatting() {
+    await this.discordMembershipDescriptionEditor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.discordMembershipBoldAction.click({ timeout: 10000 });
+    await this.discordMembershipItalicAction.click({ timeout: 10000 });
+    await this.discordMembershipUnderlineAction.click({ timeout: 10000 });
+    await this.discordMembershipItalicApplied.text();
+    await this.discordMembershipUnderlineApplied.text();
+  }
+
+  async expectDiscordMembershipDescriptionCounter(expected = discordMembershipValidationData.descriptionLimit) {
+    const counter = smartLocator(this.page, {
+      text: expected,
+      selector: `p:has-text("${expected}")`,
     });
-    await expect(this.page.getByText("Membership Information")).toBeVisible({
-      timeout: 10000,
+    await expect(await counter.text()).toBe(expected);
+  }
+
+  async selectDiscordMembershipDuration(value: string, currentUnit: string, unit: string) {
+    await this.discordMembershipDurationValueInput.fill(value, { timeout: 10000 });
+    await smartClick(this.page, {
+      text: currentUnit,
+      selector: 'button[role="combobox"]',
     });
-    await expect(this.page.getByText("Discord Set Up")).toBeVisible({
-      timeout: 10000,
+    await smartClick(this.page, {
+      role: "option",
+      name: unit,
+      text: unit,
+      selector: '[role="option"]',
     });
-    await expect(this.page.getByRole("textbox", { name: "Enter title" })).toBeVisible({
-      timeout: 10000,
+    const selectedUnit = smartLocator(this.page, {
+      text: unit,
+      selector: 'button[role="combobox"]',
     });
+    await expect(await selectedUnit.text()).toContain(unit);
+  }
+
+  async expectDiscordMembershipServerRequirement() {
+    const requirement = smartLocator(this.page, {
+      text: "Select a server first",
+      selector: 'button[role="combobox"]',
+    });
+    await expect(await requirement.text()).toContain("Select a server first");
+  }
+
+  async expectDiscordMembershipConnectionControl() {
+    await this.discordMembershipServerSelect.click({ timeout: 10000 });
+    const connectOption = smartLocator(this.page, {
+      text: "+ Connect new server",
+      selector: '[role="option"]',
+    });
+    await expect(await connectOption.text()).toContain(
+      discordMembershipValidationData.connectServerOption,
+    );
+    await this.page.keyboard.press("Escape");
+  }
+
+  async selectDiscordMembershipServer(serverName: string) {
+    await this.discordMembershipServerSelect.click({ timeout: 10000 });
+    await smartClick(this.page, {
+      role: "option",
+      name: serverName,
+      text: serverName,
+      selector: '[role="option"]',
+    });
+  }
+
+  async selectDiscordMembershipRole(roleName: string) {
+    await this.discordMembershipRoleSelect.click({ timeout: 10000 });
+    await smartClick(this.page, {
+      role: "option",
+      name: roleName,
+      text: roleName,
+      selector: '[role="option"]',
+    });
+  }
+
+  async expectDiscordMembershipServerAndRole(serverName: string, roleName: string) {
+    const selectedServer = smartLocator(this.page, {
+      text: serverName,
+      selector: 'button[role="combobox"]',
+    });
+    const selectedRole = smartLocator(this.page, {
+      text: roleName,
+      selector: 'button[role="combobox"]',
+    });
+    await expect(await selectedServer.text()).toContain(serverName);
+    await expect(await selectedRole.text()).toContain(roleName);
+  }
+
+  async continueToDiscordMembershipDetails() {
+    await this.nextSetDetailsAction.click({ timeout: 10000 });
+    await this.discordMembershipNextPublishAction.text();
+  }
+
+  async navigateAwayFromDiscordMembershipViaBack() {
+    await this.page.evaluate(() => {
+      const root = globalThis as unknown as {
+        document: {
+          querySelectorAll: (selector: string) => ArrayLike<{
+            textContent?: string;
+            click: () => void;
+          }>;
+        };
+      };
+      const backButton = Array.from(root.document.querySelectorAll("button"))
+        .find((button) => button.textContent?.trim() === "Back");
+      if (!backButton) {
+        throw new Error("Discord Membership Back button was not found");
+      }
+      backButton.click();
+    });
+  }
+
+  async expectDiscordMembershipUnsavedChangesDialog() {
+    const dialog = smartLocator(this.page, {
+      role: "dialog",
+      text: "Unsaved changes",
+      selector: '[role="dialog"]',
+    });
+    const dialogText = await dialog.text();
+    expect(dialogText).toMatch(/unsaved|leave|discard|lose your changes|are you sure/i);
   }
 
   async expectDigitalProductCreateFlow() {
