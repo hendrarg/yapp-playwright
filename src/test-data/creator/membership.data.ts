@@ -41,6 +41,13 @@ export const discordMembershipValidationData = {
   connectServerOption: "+ Connect new server",
 } as const;
 
+export const discordMembershipPricingData = {
+  validPrice: "12000",
+  zeroPrice: "0",
+  previewPaidPricePattern: /IDR 12,000/,
+  freePricingLabel: "Free",
+} as const;
+
 export function generateDiscordMembershipTitle(): string {
   return faker.commerce.productName();
 }

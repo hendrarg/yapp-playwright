@@ -300,6 +300,29 @@ export class SmartHealable {
   async text(options?: { timeout?: number }): Promise<string> {
     return smartGetText(this.page, this.strategies, options);
   }
+
+  async getAttribute(name: string, options?: { timeout?: number }): Promise<string | null> {
+    const { primary, fallbacks, primaryDesc } = buildStrategyChain(this.page, this.strategies);
+    const allLocators = [primary, ...fallbacks];
+
+    for (let i = 0; i < allLocators.length; i++) {
+      try {
+        const locator = allLocators[i];
+        await locator.waitFor({ state: "visible", timeout: options?.timeout ?? 10000 });
+        const value = await locator.getAttribute(name);
+        if (i > 0) {
+          monitor.log({ action: "getText", primary: primaryDesc, healed: describeLocator(locator), timestamp: new Date().toISOString() });
+        }
+        return value;
+      } catch {
+        if (i === allLocators.length - 1) {
+          throw new Error(`smartGetAttribute: all ${allLocators.length} strategies failed for "${primaryDesc}"`);
+        }
+      }
+    }
+
+    return null;
+  }
 }
 
 /** Convenience alias for `new SmartHealable(page, meta)` */

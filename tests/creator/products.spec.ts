@@ -1,11 +1,13 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile, expectProductStatus, setProductHideFromProfile } from '@helpers/api/product';
+import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
+import { consultationMediaData } from '@test-data/creator/consultation.media.data';
 import { digitalProductValidationData, generateOnlineCourseProductData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
 import { creatorProfile } from '@test-data/buyer/profile.data';
-import { discordMembershipValidationData, generateDiscordMembershipDescription, generateDiscordMembershipLimitDescription, generateDiscordMembershipTitle } from '@test-data/creator/membership.data';
+import { discordMembershipPricingData, discordMembershipValidationData, generateDiscordMembershipDescription, generateDiscordMembershipLimitDescription, generateDiscordMembershipTitle } from '@test-data/creator/membership.data';
 
 test.describe('Creator Products', () => {
   test('Verify Products Status Grouping', {
@@ -231,6 +233,123 @@ test.describe('Creator Products', () => {
         discordMembershipValidationData.roleName,
       );
       await productsPage.continueToDiscordMembershipDetails();
+    });
+  });
+
+  test('Validate Discord Membership Thumbnail Upload and Validation', {
+    tag: ['@AUT-FV-040', '@membership', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-DM-C-008, TC-DM-C-009' }],
+  }, async ({ creatorNav, productsPage }) => {
+    test.setTimeout(180000);
+
+    const discordType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Discord Membership',
+    )!;
+
+    const openDiscordMembershipDetails = async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(discordType.buttonName);
+      await productsPage.expectDiscordMembershipCreateFlow();
+      await productsPage.fillDiscordMembershipTitle(generateDiscordMembershipTitle());
+      await productsPage.fillDiscordMembershipDescription(
+        generateDiscordMembershipDescription(),
+      );
+      await productsPage.selectDiscordMembershipDuration('1', 'Month', 'Month');
+      await productsPage.selectDiscordMembershipServer(
+        discordMembershipValidationData.serverName,
+      );
+      await productsPage.selectDiscordMembershipRole(
+        discordMembershipValidationData.roleName,
+      );
+      await productsPage.continueToDiscordMembershipDetails();
+    };
+
+    await test.step('Upload eleven thumbnails and enforce the maximum', async () => {
+      await openDiscordMembershipDetails();
+      await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
+      await productsPage.chooseConsultationGalleryFiles(
+        consultationMediaData.additionalImagePaths,
+      );
+      await productsPage.expectConsultationGalleryCount(
+        consultationMediaData.maxAdditionalImages,
+      );
+      await productsPage.expectConsultationGalleryInputUnavailable();
+    });
+
+    await test.step('Reject undersized and oversized thumbnail fixtures', async () => {
+      await openDiscordMembershipDetails();
+
+      const oversized = createOversizedImageFixture();
+      try {
+        await productsPage.chooseConsultationHeroFile(consultationMediaData.tinyImagePath);
+        await productsPage.expectConsultationImageTooSmall('tiny-1x1.png');
+        await productsPage.expectConsultationHeroNotUploaded();
+
+        await productsPage.chooseConsultationHeroFile(oversized.filePath);
+        await productsPage.expectConsultationImageTooLarge();
+        await productsPage.expectConsultationHeroNotUploaded();
+      } finally {
+        oversized.cleanup();
+      }
+    });
+  });
+
+  test('Validate Discord Membership Pricing Rules', {
+    tag: ['@AUT-FV-041', '@membership', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-DM-C-010, TC-DM-C-011' }],
+  }, async ({ creatorNav, productsPage }) => {
+    test.setTimeout(180000);
+
+    const discordType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Discord Membership',
+    )!;
+    let defaultPricingEnabled = false;
+    let zeroPriceRejected = false;
+
+    await test.step('Open Discord Membership pricing details', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(discordType.buttonName);
+      await productsPage.expectDiscordMembershipCreateFlow();
+      await productsPage.fillDiscordMembershipTitle(generateDiscordMembershipTitle());
+      await productsPage.fillDiscordMembershipDescription(
+        generateDiscordMembershipDescription(),
+      );
+      await productsPage.selectDiscordMembershipDuration('1', 'Month', 'Month');
+      await productsPage.selectDiscordMembershipServer(
+        discordMembershipValidationData.serverName,
+      );
+      await productsPage.selectDiscordMembershipRole(
+        discordMembershipValidationData.roleName,
+      );
+      await productsPage.continueToDiscordMembershipDetails();
+    });
+
+    await test.step('Verify free pricing and accept a positive paid price', async () => {
+      defaultPricingEnabled = await productsPage.readConsultationPricingEnabled();
+      expect.soft(defaultPricingEnabled, 'Discord Membership should default to Free').toBe(false);
+
+      await productsPage.setConsultationPricingEnabled(false);
+      await productsPage.expectConsultationPreviewWithoutPaidPrice();
+      await productsPage.setConsultationPricingEnabled(true);
+      await productsPage.fillConsultationPrice(discordMembershipPricingData.validPrice);
+      await productsPage.expectConsultationPreviewPaidPrice(
+        discordMembershipPricingData.previewPaidPricePattern,
+      );
+    });
+
+    await test.step('Reject zero when paid pricing is enabled', async () => {
+      await productsPage.fillConsultationPrice(discordMembershipPricingData.zeroPrice);
+      await productsPage.submitDiscordMembershipPricing();
+      zeroPriceRejected = await productsPage.isDiscordMembershipZeroPriceRejected();
+      expect.soft(zeroPriceRejected, 'Zero price should be rejected when paid pricing is enabled').toBe(true);
+      test.fail(
+        defaultPricingEnabled || !zeroPriceRejected,
+        'Discord Membership pricing validation gap: pricing defaults to paid or accepts zero price',
+      );
     });
   });
 

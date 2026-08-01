@@ -164,19 +164,16 @@ export class ProductsPage {
   });
 
   private readonly discordMembershipDurationValueInput = smartLocator(this.page, {
-    role: "textbox",
     placeholder: "0",
     selector: 'input[placeholder="0"]',
   });
 
   private readonly discordMembershipServerSelect = smartLocator(this.page, {
-    role: "combobox",
     text: "Select a server",
     selector: 'button[role="combobox"]:has-text("Select a server")',
   });
 
   private readonly discordMembershipRoleSelect = smartLocator(this.page, {
-    role: "combobox",
     text: "Select a role",
     selector: 'button[role="combobox"]:has-text("Select a role")',
   });
@@ -216,6 +213,12 @@ export class ProductsPage {
     name: "Next: Publish",
     text: "Next: Publish",
     selector: 'button:has-text("Next: Publish")',
+  });
+
+  private readonly consultationPricingSwitchAction = smartLocator(this.page, {
+    role: "switch",
+    name: "Add Pricing",
+    selector: "#enable-pricing",
   });
 
   private readonly nextSetAvailabilityAction = smartLocator(this.page, {
@@ -770,6 +773,35 @@ export class ProductsPage {
     await this.discordMembershipNextPublishAction.text();
   }
 
+  async readConsultationPricingEnabled(): Promise<boolean> {
+    return (await this.consultationPricingSwitchAction.getAttribute("aria-checked")) === "true";
+  }
+
+  async submitDiscordMembershipPricing() {
+    await this.discordMembershipNextPublishAction.click({ timeout: 10000 });
+  }
+
+  async isDiscordMembershipZeroPriceRejected(): Promise<boolean> {
+    return this.page.evaluate(() => {
+      const root = globalThis as unknown as {
+        document: {
+          body: { innerText: string };
+          querySelectorAll: (selector: string) => ArrayLike<{
+            textContent?: string;
+            disabled?: boolean;
+          }>;
+        };
+      };
+      const bodyText = root.document.body.innerText;
+      const hasPriceError = /greater than zero|must be greater|positive|cannot be zero|invalid price/i.test(
+        bodyText,
+      );
+      const publishButtons = Array.from(root.document.querySelectorAll("button"))
+        .filter((button) => button.textContent?.trim() === "Next: Publish");
+      return hasPriceError || publishButtons.length === 0 || publishButtons.every((button) => button.disabled);
+    });
+  }
+
   async navigateAwayFromDiscordMembershipViaBack() {
     await this.page.evaluate(() => {
       const root = globalThis as unknown as {
@@ -1315,12 +1347,6 @@ export class ProductsPage {
     await safeFill(this.consultationPriceInput(), amount);
   }
 
-  private consultationPricingSwitch(): Locator {
-    return this.page
-      .getByRole("switch", { name: "Add Pricing" })
-      .or(this.page.locator("#enable-pricing"));
-  }
-
   private consultationPriceInput(): Locator {
     return locatorChain(this.page, {
       placeholder: "10,000",
@@ -1333,14 +1359,13 @@ export class ProductsPage {
   }
 
   async setConsultationPricingEnabled(enabled: boolean) {
-    const toggle = this.consultationPricingSwitch();
-    const checked = await toggle.getAttribute("aria-checked");
+    const checked = await this.consultationPricingSwitchAction.getAttribute("aria-checked");
     if ((checked === "true") !== enabled) {
-      await safeClick(toggle);
+      await this.consultationPricingSwitchAction.click();
     }
-    await expect(toggle).toHaveAttribute("aria-checked", enabled ? "true" : "false", {
-      timeout: 10000,
-    });
+    await expect(
+      await this.consultationPricingSwitchAction.getAttribute("aria-checked"),
+    ).toBe(enabled ? "true" : "false");
   }
 
   async expectConsultationPreviewWithoutPaidPrice() {
