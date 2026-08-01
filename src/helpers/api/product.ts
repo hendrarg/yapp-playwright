@@ -79,6 +79,159 @@ function productUuidFromBody(body: any): string | undefined {
   return body.data?.uuid ?? body.data?.product?.uuid ?? body.uuid ?? body.product?.uuid;
 }
 
+export interface CreateConsultationProductOptions {
+  title: string;
+  description: string;
+  thumbnailImagePath: string;
+  /** Additional gallery image paths (buyer carousel). Defaults to 10 copies of the thumbnail. */
+  productImagePaths?: string[];
+  price?: number;
+  status?: ProductStatus;
+  minimumNoticeValue?: number;
+  minimumNoticeUnit?: 'hours' | 'days';
+  appointmentDurationValue?: number;
+  appointmentDurationUnit?: 'minutes' | 'hours';
+  timezone?: string;
+  availabilityRangeValue?: number;
+  availabilityRangeUnit?: 'months' | 'weeks';
+  /** Lowercase weekday, e.g. `monday`. Defaults to today. */
+  dayOfWeek?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface CreatedConsultationProduct extends CreatedProduct {
+  shortUrl: string;
+  sharePath: string;
+}
+
+const WEEKDAY_NAMES = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
+
+export async function createConsultationProduct(
+  request: APIRequestContext,
+  options: CreateConsultationProductOptions,
+  token?: string,
+): Promise<CreatedConsultationProduct> {
+  const headers = getCreatorHeaders(token);
+  const thumbnail = await uploadFile(request, {
+    filePath: options.thumbnailImagePath,
+    token,
+    headers,
+  });
+
+  const galleryPaths =
+    options.productImagePaths ??
+    Array.from({ length: 10 }, () => options.thumbnailImagePath);
+  const galleryUploads: { uploadId: string }[] = [];
+  for (const filePath of galleryPaths) {
+    galleryUploads.push(
+      await uploadFile(request, {
+        filePath,
+        token,
+        headers,
+      }),
+    );
+  }
+
+  const dayOfWeek = options.dayOfWeek ?? WEEKDAY_NAMES[new Date().getDay()];
+  const response = await request.post(apiUrl('/api/v1/shop/products'), {
+    headers,
+    data: {
+      title: options.title,
+      description: options.description,
+      shortUrl: '',
+      thumbnailImage: thumbnail.uploadId,
+      productImages: galleryUploads.map((upload) => ({
+        title: '',
+        description: '',
+        feedAssetType: 'image',
+        url: upload.uploadId,
+        uuid: '',
+      })),
+      isSetPrice: true,
+      price: options.price ?? 15000,
+      isSetDiscount: false,
+      discount: 0,
+      discountType: '',
+      isFlexiblePrice: false,
+      minimumFlexiblePrice: 0,
+      status: options.status ?? 'active',
+      consultationConfig: {
+        appointmentDurationValue: options.appointmentDurationValue ?? 60,
+        appointmentDurationUnit: options.appointmentDurationUnit ?? 'minutes',
+        minimumNoticeValue: options.minimumNoticeValue ?? 1,
+        minimumNoticeUnit: options.minimumNoticeUnit ?? 'hours',
+        isBufferTimeEnabled: false,
+        bufferTimeBeforeValue: 0,
+        bufferTimeBeforeUnit: 'minutes',
+        bufferTimeAfterValue: 0,
+        bufferTimeAfterUnit: 'minutes',
+        isLimitBookingFrequencyEnabled: false,
+        limitBookingFrequencyValue: 1,
+        limitBookingFrequencyUnit: 'perday',
+        timezone: options.timezone ?? 'Asia/Jakarta',
+        availabilityRangeValue: options.availabilityRangeValue ?? 3,
+        availabilityRangeUnit: options.availabilityRangeUnit ?? 'months',
+        allowReschedule: false,
+      },
+      consultationWeeklyRules: {
+        availability: [
+          {
+            dayOfWeek,
+            timeSlots: [
+              {
+                startTime: options.startTime ?? '09:00',
+                endTime: options.endTime ?? '17:00',
+              },
+            ],
+          },
+        ],
+      },
+      isAllowCustomerChooseQuantity: false,
+      isLimitProductSales: false,
+      isSchedulePublish: false,
+      isAvailability: false,
+      additionalQuestions: [],
+      thankYouNote: '',
+      salesLinks: [],
+      maximumFlexiblePrice: null,
+      productType: 'appointment',
+    },
+  });
+  if (!response.ok()) {
+    throw new Error(`Create consultation product failed: ${response.status()} ${await response.text()}`);
+  }
+
+  const body = await response.json();
+  const productUuid = productUuidFromBody(body);
+  if (!productUuid) {
+    throw new Error(`Create consultation product response did not include product uuid: ${JSON.stringify(body)}`);
+  }
+
+  const shortUrl =
+    body.data?.shortUrl ?? body.data?.product?.shortUrl ?? body.shortUrl;
+  if (!shortUrl || typeof shortUrl !== 'string') {
+    throw new Error(`Create consultation product response did not include shortUrl: ${JSON.stringify(body)}`);
+  }
+
+  return {
+    productUuid,
+    uploadId: thumbnail.uploadId,
+    key: thumbnail.key,
+    body,
+    shortUrl,
+    sharePath: `/s/${shortUrl}`,
+  };
+}
+
 export async function createOnlineCourseProduct(
   request: APIRequestContext,
   options: CreateOnlineCourseProductOptions,

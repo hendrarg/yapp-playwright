@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { consultationBuyerDetailData } from '@test-data/buyer/consultation.detail.data';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
 import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
@@ -139,6 +140,145 @@ export class ProductPurchasePage {
   async readFirstConsultationDayDate(reference = new Date()): Promise<Date> {
     const label = await this.readFirstConsultationDayLabel();
     return parseConsultationDayButtonLabel(label, reference);
+  }
+
+  private consultationNextSlideButton(): Locator {
+    return this.page
+      .getByRole('button', { name: consultationBuyerDetailData.nextSlideName, exact: true })
+      .or(this.page.locator('[data-slot="carousel-next"]'))
+      .filter({ visible: true })
+      .first();
+  }
+
+  private consultationPreviousSlideButton(): Locator {
+    return this.page
+      .getByRole('button', { name: consultationBuyerDetailData.previousSlideName, exact: true })
+      .or(this.page.locator('[data-slot="carousel-previous"]'))
+      .filter({ visible: true })
+      .first();
+  }
+
+  private consultationSlideDot(index: number): Locator {
+    const name = consultationBuyerDetailData.slideButtonName(index);
+    return this.page.getByRole('button', { name, exact: true }).filter({ visible: true });
+  }
+
+  async expectConsultationProductDetails(options: {
+    title: string;
+    description: string;
+    pricePattern?: RegExp;
+    creatorHandle?: string;
+  }) {
+    await this.expectConsultationProductLoaded(options.title);
+    await expect(
+      this.page.getByText(options.description, { exact: false }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page
+        .getByText(options.pricePattern ?? consultationBuyerDetailData.priceDisplayPattern)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page
+        .getByText(consultationBuyerDetailData.productBadge, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page
+        .getByRole('link', {
+          name: options.creatorHandle ?? consultationBuyerDetailData.creatorHandle,
+        })
+        .or(
+          this.page.getByText(
+            options.creatorHandle ?? consultationBuyerDetailData.creatorHandle,
+            { exact: true },
+          ),
+        )
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page.getByRole('tab', { name: consultationBuyerDetailData.overviewTab }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByRole('tab', { name: consultationBuyerDetailData.aboutCreatorTab }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page
+        .getByText(consultationBuyerDetailData.availableSessionLabel, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page.getByText(consultationBuyerDetailData.meetingLinkHint).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(this.consultationNextSlideButton()).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByRole('button', { name: /^Go to slide \d+$/ }),
+    ).toHaveCount(consultationBuyerDetailData.expectedSlideCount, { timeout: 15000 });
+  }
+
+  async expectConsultationOverviewAndAboutCreatorTabs() {
+    const overview = this.page.getByRole('tab', { name: consultationBuyerDetailData.overviewTab });
+    const about = this.page.getByRole('tab', { name: consultationBuyerDetailData.aboutCreatorTab });
+    await overview.click({ timeout: 10000 });
+    await expect(overview).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+    await about.click({ timeout: 10000 });
+    await expect(about).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+    await expect(
+      this.page
+        .getByText(consultationBuyerDetailData.creatorHandle, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectConsultationSlideActive(index: number) {
+    const slide = this.consultationSlideDot(index);
+    await expect(slide).toBeVisible({ timeout: 10000 });
+    await expect
+      .poll(async () => (await slide.getAttribute('class')) ?? '', { timeout: 10000 })
+      .toMatch(consultationBuyerDetailData.activeSlideClassPattern);
+    await expect(slide).not.toHaveClass(consultationBuyerDetailData.inactiveSlideClassPattern);
+  }
+
+  async goToConsultationNextSlide() {
+    await safeClick(this.consultationNextSlideButton());
+  }
+
+  async goToConsultationPreviousSlide() {
+    await safeClick(this.consultationPreviousSlideButton());
+  }
+
+  async goToConsultationSlide(index: number) {
+    await safeClick(this.consultationSlideDot(index));
+  }
+
+  async expectConsultationSlideStripCount(count = consultationBuyerDetailData.expectedSlideCount) {
+    await expect(this.page.getByRole('button', { name: /^Go to slide \d+$/ })).toHaveCount(count, {
+      timeout: 15000,
+    });
+  }
+
+  async expectConsultationCarouselNavigable() {
+    await this.expectConsultationSlideStripCount();
+    await this.expectConsultationSlideActive(1);
+    await this.goToConsultationNextSlide();
+    await this.expectConsultationSlideActive(2);
+    await expect(this.consultationPreviousSlideButton()).toBeVisible({ timeout: 10000 });
+
+    await this.goToConsultationSlide(3);
+    await this.expectConsultationSlideActive(3);
+
+    await this.goToConsultationPreviousSlide();
+    await this.expectConsultationSlideActive(2);
+
+    for (let index = 1; index <= consultationBuyerDetailData.expectedSlideCount; index++) {
+      await this.goToConsultationSlide(index);
+      await this.expectConsultationSlideActive(index);
+    }
   }
 
   private async readMoney(label: string, fallback?: number): Promise<number> {
