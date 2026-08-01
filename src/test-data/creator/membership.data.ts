@@ -48,12 +48,25 @@ export const discordMembershipPricingData = {
   freePricingLabel: "Free",
 } as const;
 
+export const discordMembershipSettingsData = {
+  updatedPrice: "13000",
+  hideFromExplore: true,
+} as const;
+
 export function generateDiscordMembershipTitle(): string {
   return faker.commerce.productName();
 }
 
 export function generateDiscordMembershipDescription(): string {
   return faker.lorem.sentence();
+}
+
+export function generateDiscordMembershipSettingsNote(): string {
+  return faker.lorem.sentence();
+}
+
+export function generateDiscordMembershipBuyerQuestion(): string {
+  return faker.lorem.words(3);
 }
 
 export function generateDiscordMembershipLimitDescription(): string {

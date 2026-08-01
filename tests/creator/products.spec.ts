@@ -7,7 +7,7 @@ import { productsHideFromProfileData } from '@test-data/creator/products.hide-fr
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
 import { creatorProfile } from '@test-data/buyer/profile.data';
-import { discordMembershipPricingData, discordMembershipValidationData, generateDiscordMembershipDescription, generateDiscordMembershipLimitDescription, generateDiscordMembershipTitle } from '@test-data/creator/membership.data';
+import { discordMembershipPricingData, discordMembershipSettingsData, discordMembershipValidationData, generateDiscordMembershipBuyerQuestion, generateDiscordMembershipDescription, generateDiscordMembershipLimitDescription, generateDiscordMembershipSettingsNote, generateDiscordMembershipTitle } from '@test-data/creator/membership.data';
 
 test.describe('Creator Products', () => {
   test('Verify Products Status Grouping', {
@@ -339,6 +339,108 @@ test.describe('Creator Products', () => {
         'Discord Membership pricing validation gap: pricing defaults to paid or accepts zero price',
       );
     });
+  });
+
+  test('Validate Discord Membership Product Settings Edit', {
+    tag: ['@AUT-FV-045', '@membership', '@creator', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-DM-C-027, TC-DM-C-028' }],
+  }, async ({ creatorNav, productsPage, page }) => {
+    test.setTimeout(300000);
+
+    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!accessToken, 'YAPP_TEST_ACCESS_TOKEN is required to clean up Discord Membership settings data');
+    if (!accessToken) return;
+
+    const discordType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Discord Membership',
+    )!;
+    const title = generateDiscordMembershipTitle();
+    const description = generateDiscordMembershipDescription();
+    const settingsNote = generateDiscordMembershipSettingsNote();
+    const buyerQuestion = generateDiscordMembershipBuyerQuestion();
+    let productUuid = '';
+
+    const openDiscordMembershipCreate = async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(discordType.buttonName);
+      await productsPage.expectDiscordMembershipCreateFlow();
+      await productsPage.prepareDiscordMembershipDetails({
+        title,
+        description,
+        serverName: discordMembershipValidationData.serverName,
+        roleName: discordMembershipValidationData.roleName,
+      });
+      await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
+      await productsPage.fillConsultationPrice(discordMembershipPricingData.validPrice);
+      await productsPage.submitDiscordMembershipPricing();
+      await productsPage.expectProductCompleteModal();
+      await productsPage.closeProductCompleteModal();
+    };
+
+    try {
+      await test.step('Create and publish a Discord Membership baseline', async () => {
+        await openDiscordMembershipCreate();
+      });
+
+      await test.step('Change Discord server and role explicitly', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        productUuid = await productsPage.readDiscordMembershipProductUuidFromUrl();
+        await productsPage.selectDiscordMembershipServer(discordMembershipValidationData.serverName);
+        await productsPage.selectDiscordMembershipRole(discordMembershipValidationData.roleName);
+        await productsPage.expectDiscordMembershipServerAndRole(
+          discordMembershipValidationData.serverName,
+          discordMembershipValidationData.roleName,
+        );
+      });
+
+      await test.step('Save Discord configuration and edit pricing, notes, advanced settings, benefits, and buyer form', async () => {
+        await productsPage.continueToDiscordMembershipDetails();
+        await productsPage.expectDiscordMembershipSettingsSections();
+        await productsPage.fillDiscordMembershipSettingsPrice(discordMembershipSettingsData.updatedPrice);
+        await productsPage.fillDiscordMembershipAfterSalesMessage(settingsNote);
+        await productsPage.setDiscordMembershipHideFromExplore(discordMembershipSettingsData.hideFromExplore);
+        await productsPage.addDiscordMembershipBuyerQuestion(buyerQuestion);
+        await productsPage.submitDiscordMembershipPricing();
+        await productsPage.expectProductCompleteModal();
+        await productsPage.closeProductCompleteModal();
+      });
+
+      await test.step('Reopen the editor and verify saved settings', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        expect(await productsPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
+        await productsPage.expectDiscordMembershipServerAndRole(
+          discordMembershipValidationData.serverName,
+          discordMembershipValidationData.roleName,
+        );
+        await productsPage.continueToDiscordMembershipDetails();
+        await productsPage.expectDiscordMembershipSettingsPrice(discordMembershipSettingsData.updatedPrice);
+        await productsPage.expectDiscordMembershipAfterSalesMessage(settingsNote);
+        await productsPage.expectDiscordMembershipHideFromExplore(discordMembershipSettingsData.hideFromExplore);
+        const buyerQuestionPersisted = await productsPage.isDiscordMembershipBuyerQuestionVisible(buyerQuestion);
+        expect.soft(
+          buyerQuestionPersisted,
+          'A saved Discord Membership buyer question should persist when the editor is reopened',
+        ).toBe(true);
+        test.fail(
+          !buyerQuestionPersisted,
+          'Discord Membership buyer-form question persistence gap detected',
+        );
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
+      }
+    }
   });
 
   test('Validate Discord Membership Draft, Publish, Edit, and Republish Lifecycle', {

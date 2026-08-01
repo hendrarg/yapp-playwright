@@ -222,6 +222,45 @@ export class ProductsPage {
     selector: 'button:has-text("Save Changes")',
   });
 
+  private readonly discordMembershipSettingsPriceInput = smartLocator(this.page, {
+    placeholder: "10,000",
+    selector: 'input[placeholder="10,000"]',
+  });
+
+  private readonly discordMembershipCustomizeMessageSwitch = smartLocator(this.page, {
+    role: "switch",
+    name: "Customize Message",
+    selector: 'button[role="switch"]:has(+ label:has-text("Customize Message"))',
+  });
+
+  private readonly discordMembershipAfterSalesEditor = smartLocator(this.page, {
+    role: "textbox",
+    name: "editable markdown",
+    selector: '[contenteditable="true"][role="textbox"]',
+  });
+
+  private readonly discordMembershipHideFromExploreSwitch = smartLocator(this.page, {
+    role: "switch",
+    name: "Hide from Explore",
+    selector: "#hide-from-explore",
+  });
+
+  private readonly discordMembershipAdvancedSettingsHeading = smartLocator(this.page, {
+    role: "heading",
+    name: "Advanced Settings",
+    text: "Advanced Settings",
+  });
+
+  private readonly discordMembershipBuyerFormHeading = smartLocator(this.page, {
+    text: "Buyer form",
+    selector: 'text="Buyer form"',
+  });
+
+  private readonly discordMembershipAfterSalesHeading = smartLocator(this.page, {
+    text: "After Sales",
+    selector: 'text="After Sales"',
+  });
+
   private readonly consultationPricingSwitchAction = smartLocator(this.page, {
     role: "switch",
     name: "Add Pricing",
@@ -761,7 +800,15 @@ export class ProductsPage {
   }
 
   async selectDiscordMembershipServer(serverName: string) {
-    await this.discordMembershipServerSelect.click({ timeout: 10000 });
+    const serverSelect = smartLocator(this.page, {
+      text: serverName,
+      selector: 'button[role="combobox"]',
+    });
+    try {
+      await serverSelect.click({ timeout: 1500 });
+    } catch {
+      await this.discordMembershipServerSelect.click({ timeout: 10000 });
+    }
     await smartClick(this.page, {
       role: "option",
       name: serverName,
@@ -771,7 +818,15 @@ export class ProductsPage {
   }
 
   async selectDiscordMembershipRole(roleName: string) {
-    await this.discordMembershipRoleSelect.click({ timeout: 10000 });
+    const roleSelect = smartLocator(this.page, {
+      text: roleName,
+      selector: 'button[role="combobox"]',
+    });
+    try {
+      await roleSelect.click({ timeout: 1500 });
+    } catch {
+      await this.discordMembershipRoleSelect.click({ timeout: 10000 });
+    }
     await smartClick(this.page, {
       role: "option",
       name: roleName,
@@ -815,6 +870,65 @@ export class ProductsPage {
 
   async submitDiscordMembershipPricing() {
     await this.discordMembershipNextPublishAction.click({ timeout: 10000 });
+  }
+
+  async fillDiscordMembershipSettingsPrice(amount: string) {
+    await this.discordMembershipSettingsPriceInput.fill(amount, { timeout: 10000 });
+  }
+
+  async expectDiscordMembershipSettingsPrice(amount: string) {
+    const value = await this.discordMembershipSettingsPriceInput.getAttribute("value");
+    expect(value?.replace(/,/g, "")).toBe(amount);
+  }
+
+  async fillDiscordMembershipAfterSalesMessage(message: string) {
+    if ((await this.discordMembershipCustomizeMessageSwitch.getAttribute("aria-checked")) !== "true") {
+      await this.discordMembershipCustomizeMessageSwitch.click({ timeout: 10000 });
+    }
+    await this.discordMembershipAfterSalesEditor.text({ timeout: 10000 });
+    await this.discordMembershipAfterSalesEditor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.insertText(message);
+  }
+
+  async expectDiscordMembershipAfterSalesMessage(message: string) {
+    expect(await this.discordMembershipCustomizeMessageSwitch.getAttribute("aria-checked")).toBe("true");
+    expect(await this.discordMembershipAfterSalesEditor.text()).toContain(message);
+  }
+
+  async setDiscordMembershipHideFromExplore(enabled: boolean) {
+    const switchState = this.discordMembershipHideFromExploreSwitch;
+    if ((await switchState.getAttribute("aria-checked")) !== String(enabled)) {
+      await switchState.click({ timeout: 10000 });
+    }
+    expect(await switchState.getAttribute("aria-checked")).toBe(String(enabled));
+  }
+
+  async expectDiscordMembershipHideFromExplore(enabled: boolean) {
+    expect(await this.discordMembershipHideFromExploreSwitch.getAttribute("aria-checked")).toBe(String(enabled));
+  }
+
+  async expectDiscordMembershipSettingsSections() {
+    expect(await this.discordMembershipAdvancedSettingsHeading.text()).toContain("Advanced Settings");
+    expect(await this.discordMembershipBuyerFormHeading.text()).toContain("Buyer form");
+    expect(await this.discordMembershipAfterSalesHeading.text()).toContain("After Sales");
+  }
+
+  async addDiscordMembershipBuyerQuestion(label: string) {
+    await this.addCustomBuyerQuestion(label);
+  }
+
+  async isDiscordMembershipBuyerQuestionVisible(label: string): Promise<boolean> {
+    const question = smartLocator(this.page, {
+      text: label,
+      selector: `[role="main"] >> text="${label}"`,
+    });
+    try {
+      await question.text({ timeout: 1500 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async publishDiscordMembershipAndReadSharePath(): Promise<string> {
