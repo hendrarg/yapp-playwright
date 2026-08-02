@@ -3,7 +3,7 @@ import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile,
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -1240,6 +1240,112 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.submitPublish();
         await productsPage.expectProductCompleteModal();
         await productsPage.closeProductCompleteModal();
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Validate Online Course After Sales Configuration and Future Delivery', {
+    tag: ['@AUT-FV-167', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-027, TC-OC-C-028, TC-OC-C-029, TC-OC-C-030, TC-OC-C-031',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage, page }) => {
+    test.setTimeout(300000);
+
+    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!accessToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed an Online Course for After Sales validation');
+    if (!accessToken) return;
+
+    const courseData = generateOnlineCourseProductData();
+    const firstMessage = generateOnlineCourseAfterSalesMessage();
+    const updatedMessage = generateOnlineCourseAfterSalesMessage();
+    const afterSalesLink = generateOnlineCourseAfterSalesLink();
+    let productUuid = '';
+
+    try {
+      await test.step('Seed and open an existing Online Course After Sales settings page', async () => {
+        const product = await createOnlineCourseProduct(page.request, courseData, accessToken);
+        productUuid = product.productUuid;
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(courseData.title);
+        await productsPage.openEditProduct(courseData.title);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
+        await onlineCoursePage.expectAfterSalesLoaded();
+      });
+
+      await test.step('Persist the default After Sales toggle state and explanatory copy', async () => {
+        const defaultEnabled = await onlineCoursePage.readAfterSalesMessageEnabled();
+        expect(defaultEnabled, 'After Sales Customize Message should default OFF').toBe(false);
+        await onlineCoursePage.expectAfterSalesDisabledCopy();
+        await onlineCoursePage.setAfterSalesMessageEnabled(false);
+        await productsPage.saveAsDraft();
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Draft', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(courseData.title);
+        await productsPage.openEditProduct(courseData.title);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
+        expect(await onlineCoursePage.readAfterSalesMessageEnabled()).toBe(false);
+      });
+
+      await test.step('Format optional custom After Sales message and save empty configuration', async () => {
+        await onlineCoursePage.applyAfterSalesMessageFormatting(firstMessage);
+        await onlineCoursePage.expectAfterSalesMessage(firstMessage);
+        await onlineCoursePage.fillAfterSalesMessage('');
+        await productsPage.saveAsDraft();
+      });
+
+      await test.step('Add valid After Sales links and validate invalid fields', async () => {
+        await onlineCoursePage.fillAfterSalesMessage(firstMessage);
+        await onlineCoursePage.enableAfterSalesLinks();
+        await productsPage.openEmbedLinkDialog();
+        await productsPage.fillEmbedLink(
+          digitalProductValidationData.linkValidation.longLabel,
+          digitalProductValidationData.linkValidation.invalidUrl,
+        );
+        await productsPage.expectInvalidEmbedLinkFeedback();
+        await productsPage.fillEmbedLink(afterSalesLink.label, afterSalesLink.url);
+        await productsPage.saveCurrentEmbedLink();
+        await productsPage.expectEmbedLinksSaved([afterSalesLink.label]);
+      });
+
+      await test.step('Preview staged After Sales content as read-only', async () => {
+        await onlineCoursePage.openAfterSalesPreview();
+        await onlineCoursePage.expectAfterSalesPreviewReadOnly(firstMessage, afterSalesLink.label);
+        await onlineCoursePage.closeAfterSalesPreview();
+      });
+
+      await test.step('Persist the updated After Sales configuration for future delivery', async () => {
+        await onlineCoursePage.submitPublish();
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(courseData.title);
+        await productsPage.openEditProduct(courseData.title);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
+        await onlineCoursePage.fillAfterSalesMessage(updatedMessage);
+        await onlineCoursePage.submitPublish();
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(courseData.title);
+        await productsPage.openEditProduct(courseData.title);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
+        await onlineCoursePage.expectAfterSalesMessage(updatedMessage);
       });
     } finally {
       if (productUuid) {

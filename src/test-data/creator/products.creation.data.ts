@@ -103,6 +103,22 @@ export const onlineCoursePricingData = {
   invalidPriceErrorPattern: /Price must be either 0 or at least Rp10\.000/i,
 } as const;
 
+export const onlineCourseAfterSalesData = {
+  defaultOffCopyPattern: /turn this on|default.*email|email.*default/i,
+  previewDialogPattern: /after sales|preview|links/i,
+} as const;
+
+export function generateOnlineCourseAfterSalesMessage(): string {
+  return faker.lorem.sentence();
+}
+
+export function generateOnlineCourseAfterSalesLink() {
+  return {
+    label: faker.commerce.productAdjective(),
+    url: `https://example.com/${faker.string.alphanumeric({ length: 8, casing: "lower" })}`,
+  };
+}
+
 export const digitalProductValidationData = {
   requiredErrors: {
     title: "Title is required",

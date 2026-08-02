@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
 import {
   onlineCourseStructureData,
+  onlineCourseAfterSalesData,
   onlineCoursePricingData,
   onlineCourseValidationData,
   productsCreationData,
@@ -95,6 +96,48 @@ export class OnlineCoursePage {
     selector: 'button:has-text("Save Changes")',
   });
 
+  private readonly afterSalesHeading = smartLocator(this.page, {
+    text: "After Sales",
+    selector: 'p:has-text("After Sales")',
+  });
+
+  private readonly afterSalesCustomizeSwitch = smartLocator(this.page, {
+    role: "switch",
+    selector: 'button[role="switch"]:has(+ label:has-text("Customize Message"))',
+  });
+
+  private readonly afterSalesMessageEditor = smartLocator(this.page, {
+    role: "textbox",
+    name: "editable markdown",
+    selector: '[contenteditable="true"][role="textbox"]',
+  });
+
+  private readonly afterSalesLinksCheckbox = smartLocator(this.page, {
+    role: "checkbox",
+    text: "Links",
+    selector: 'button[role="checkbox"]',
+  });
+
+  private readonly afterSalesAddLinkButton = smartLocator(this.page, {
+    role: "button",
+    name: "Add Link",
+    text: "Add Link",
+    selector: 'button:has-text("Add Link")',
+  });
+
+  private readonly afterSalesPreviewButton = smartLocator(this.page, {
+    role: "button",
+    name: "Preview",
+    text: "Preview",
+    selector: 'div:has(> p:has-text("After Sales")) button:has-text("Preview")',
+  });
+
+  private readonly afterSalesPreviewDialog = smartLocator(this.page, {
+    role: "dialog",
+    text: "After Sales",
+    selector: '[role="dialog"]:has-text("After Sales")',
+  });
+
   private readonly videoFileInput = smartLocator(this.page, {
     text: "Upload Video",
     selector: 'div:has(> label:has-text("Video")) input[type="file"][accept*="video/mp4"]:visible',
@@ -133,23 +176,14 @@ export class OnlineCoursePage {
   });
 
   readonly boldButton = smartLocator(this.page, {
-    role: "button",
-    name: "Bold",
-    text: "Bold",
     selector: 'button[aria-label="Bold"]:visible',
   });
 
   readonly italicButton = smartLocator(this.page, {
-    role: "button",
-    name: "Italic",
-    text: "Italic",
     selector: 'button[aria-label="Italic"]:visible',
   });
 
   readonly underlineButton = smartLocator(this.page, {
-    role: "button",
-    name: "Underline",
-    text: "Underline",
     selector: 'button[aria-label="Underline"]:visible',
   });
 
@@ -559,6 +593,100 @@ export class OnlineCoursePage {
 
   async isOnlineCourseBelowMinimumPriceRejected(): Promise<boolean> {
     return onlineCoursePricingData.invalidPriceErrorPattern.test(await this.readBodyText());
+  }
+
+  async expectAfterSalesLoaded() {
+    await this.afterSalesHeading.text({ timeout: 15000 });
+  }
+
+  async readAfterSalesMessageEnabled(): Promise<boolean> {
+    return (await this.afterSalesCustomizeSwitch.getAttribute("aria-checked")) === "true";
+  }
+
+  async setAfterSalesMessageEnabled(enabled: boolean) {
+    if ((await this.readAfterSalesMessageEnabled()) !== enabled) {
+      await this.afterSalesCustomizeSwitch.click({ timeout: 10000 });
+    }
+    await expect.poll(() => this.afterSalesCustomizeSwitch.getAttribute("aria-checked"), { timeout: 10000 })
+      .toBe(enabled ? "true" : "false");
+  }
+
+  async expectAfterSalesDisabledCopy() {
+    await expect.poll(() => this.readBodyText(), { timeout: 10000 })
+      .toMatch(onlineCourseAfterSalesData.defaultOffCopyPattern);
+  }
+
+  async fillAfterSalesMessage(message: string) {
+    await this.setAfterSalesMessageEnabled(true);
+    await this.afterSalesMessageEditor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    if (message) await this.page.keyboard.insertText(message);
+  }
+
+  async expectAfterSalesMessage(message: string) {
+    await expect(this.afterSalesMessageEditor.text({ timeout: 10000 })).resolves.toContain(message);
+  }
+
+  async applyAfterSalesMessageFormatting(message: string) {
+    await this.fillAfterSalesMessage(message);
+    await this.page.keyboard.press("Control+A");
+    await this.boldButton.click({ timeout: 10000 });
+    await this.italicButton.click({ timeout: 10000 });
+    await this.underlineButton.click({ timeout: 10000 });
+    await expect.poll(() => this.readVisibleEditorHtml(), { timeout: 10000 })
+      .toMatch(/strong|em|u/i);
+  }
+
+  async attemptAfterSalesPublish() {
+    await this.publishButton.click({ timeout: 15000 });
+  }
+
+  async enableAfterSalesLinks() {
+    if ((await this.afterSalesLinksCheckbox.getAttribute("aria-checked")) !== "true") {
+      await this.afterSalesLinksCheckbox.click({ timeout: 10000 });
+    }
+    await expect.poll(() => this.afterSalesLinksCheckbox.getAttribute("aria-checked"), { timeout: 10000 })
+      .toBe("true");
+    await this.afterSalesAddLinkButton.text({ timeout: 10000 });
+  }
+
+  async openAfterSalesPreview() {
+    await this.afterSalesPreviewButton.click({ timeout: 10000 });
+    await expect.poll(() => this.readBodyText(), { timeout: 10000 })
+      .toMatch(onlineCourseAfterSalesData.previewDialogPattern);
+  }
+
+  async expectAfterSalesPreviewReadOnly(message: string, linkLabel: string) {
+    const preview = await this.page.evaluate(({ message: expectedMessage, linkLabel: expectedLink }) => {
+      type Dialog = {
+        textContent?: string | null;
+        querySelectorAll: (selector: string) => { length: number };
+      };
+      const root = globalThis as unknown as {
+        document: { querySelectorAll: (selector: string) => ArrayLike<Dialog> };
+      };
+      const dialog = Array.from(root.document.querySelectorAll('[role="dialog"]'))
+        .find((element) => /after sales|preview|links/i.test(element.textContent ?? ""));
+      return {
+        text: dialog?.textContent ?? "",
+        editableCount: dialog?.querySelectorAll('[contenteditable="true"]').length ?? 0,
+        textboxCount: dialog?.querySelectorAll('input, textarea, [role="textbox"]').length ?? 0,
+        messageFound: (dialog?.textContent ?? "").includes(expectedMessage),
+        linkFound: (dialog?.textContent ?? "").includes(expectedLink),
+      };
+    }, { message, linkLabel });
+
+    expect(preview.messageFound, "After Sales preview should contain the staged message").toBe(true);
+    expect(preview.linkFound, "After Sales preview should contain the staged link").toBe(true);
+    expect(preview.editableCount, "After Sales preview should be read-only").toBe(0);
+    expect(preview.textboxCount, "After Sales preview should not expose input controls").toBe(0);
+  }
+
+  async closeAfterSalesPreview() {
+    await this.page.keyboard.press("Escape");
+    await expect.poll(() => this.afterSalesPreviewDialog.visibleCount(), { timeout: 10000 })
+      .toBe(0);
   }
 
   async expectFreeTextContent(text: string) {
