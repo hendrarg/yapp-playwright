@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
 import {
   onlineCourseStructureData,
+  onlineCoursePricingData,
   onlineCourseValidationData,
   productsCreationData,
   type OnlineCourseContentType,
@@ -67,10 +68,10 @@ export class OnlineCoursePage {
   });
 
   private readonly priceInput = smartLocator(this.page, {
-    role: "spinbutton",
+    role: "textbox",
     name: "Price",
-    placeholder: "0",
-    selector: 'input[type="number"]:visible',
+    placeholder: "10,000",
+    selector: 'input[placeholder="10,000"]:visible',
   });
 
   readonly publishButton = smartLocator(this.page, {
@@ -78,6 +79,20 @@ export class OnlineCoursePage {
     name: "Publish",
     text: "Publish",
     selector: 'button:has-text("Publish"):visible',
+  });
+
+  private readonly membershipBenefitsHeading = smartLocator(this.page, {
+    role: "heading",
+    name: "Membership Benefits",
+    text: "Membership Benefits",
+    selector: 'text="Membership Benefits"',
+  });
+
+  private readonly saveChangesButton = smartLocator(this.page, {
+    role: "button",
+    name: "Save Changes",
+    text: "Save Changes",
+    selector: 'button:has-text("Save Changes")',
   });
 
   private readonly videoFileInput = smartLocator(this.page, {
@@ -511,49 +526,39 @@ export class OnlineCoursePage {
   }
 
   async fillOnlineCoursePrice(price: string) {
-    await this.priceInput.fill(price, { timeout: 10000 });
+    await this.priceInput.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.insertText(price);
   }
 
-  async isOnlineCoursePriceInputEnabled(): Promise<boolean> {
-    return this.page.evaluate(() => {
-      type Input = { disabled?: boolean; getAttribute: (name: string) => string | null };
-      const root = globalThis as unknown as {
-        document: { querySelector: (selector: string) => Input | null };
-      };
-      const input = root.document.querySelector('input[placeholder="0"]');
-      return input !== null
-        && input.disabled !== true
-        && input.getAttribute("aria-disabled") !== "true";
-    });
+  async expectOnlineCourseFreePreview() {
+    await expect.poll(() => this.readBodyText(), { timeout: 10000 })
+      .toMatch(/\bIDR\s*0\b/i);
   }
 
   async expectOnlineCoursePrice(price: string) {
-    await expect.poll(() => this.priceInput.getAttribute("value"), { timeout: 10000 })
+    await expect.poll(() => this.readOnlineCoursePrice(), { timeout: 10000 })
       .toBe(price);
+  }
+
+  private async readOnlineCoursePrice(): Promise<string> {
+    return this.page.evaluate(() => {
+      type Input = { value: string; offsetParent: unknown };
+      const root = globalThis as unknown as {
+        document: { querySelectorAll: (selector: string) => ArrayLike<Input> };
+      };
+      const inputs = Array.from(root.document.querySelectorAll('input[placeholder="10,000"]'));
+      return ((inputs.find((input) => input.offsetParent !== null) ?? inputs[0])?.value ?? "")
+        .replace(/,/g, "");
+    });
   }
 
   async attemptOnlineCoursePricingContinue() {
     await this.nextPublishButton.click({ timeout: 10000 });
   }
 
-  async isOnlineCourseZeroPriceRejected(): Promise<boolean> {
-    return this.page.evaluate(() => {
-      type Button = { textContent?: string | null; disabled?: boolean };
-      const root = globalThis as unknown as {
-        document: {
-          body: { innerText: string };
-          querySelectorAll: (selector: string) => ArrayLike<Button>;
-        };
-      };
-      const hasPriceError = /greater than zero|must be greater|positive|cannot be zero|invalid price/i.test(
-        root.document.body.innerText,
-      );
-      const nextPublishButtons = Array.from(root.document.querySelectorAll("button"))
-        .filter((button) => button.textContent?.trim() === "Next: Publish");
-      return hasPriceError
-        || nextPublishButtons.length === 0
-        || nextPublishButtons.every((button) => button.disabled);
-    });
+  async isOnlineCourseBelowMinimumPriceRejected(): Promise<boolean> {
+    return onlineCoursePricingData.invalidPriceErrorPattern.test(await this.readBodyText());
   }
 
   async expectFreeTextContent(text: string) {
@@ -572,6 +577,24 @@ export class OnlineCoursePage {
   async expectEpisodeRichTextContent(text: string) {
     await this.expectFreeTextContent(text);
     await expect.poll(() => this.readVisibleEditorHtml()).toMatch(/strong|em|u/i);
+  }
+
+  async expectOnlineCourseMembershipBenefitsState() {
+    await this.membershipBenefitsHeading.text({ timeout: 15000 });
+    await expect.poll(() => this.readBodyText(), { timeout: 15000 })
+      .toMatch(/Membership tiers are still loading\. You can enable this once the data is ready\.|Choose benefits for specific membership tiers\./i);
+  }
+
+  async expectTitleValue(title: string) {
+    await expect(this.detailsTitleInput()).toHaveValue(title, { timeout: 10000 });
+  }
+
+  async expectDescriptionContains(text: string) {
+    await expect(this.detailsDescriptionEditor()).toContainText(text, { timeout: 10000 });
+  }
+
+  async saveOnlineCourseChanges() {
+    await this.saveChangesButton.click({ timeout: 15000 });
   }
 
   /** Reorder a chapter one position via the dnd-kit keyboard sensor. */

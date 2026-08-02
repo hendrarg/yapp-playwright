@@ -97,9 +97,10 @@ export const onlineCourseMediaData = {
 } as const;
 
 export const onlineCoursePricingData = {
-  validPrice: "12000",
+  validPrice: "10000",
   zeroPrice: "0",
-  zeroPriceErrorPattern: /greater than zero|must be greater|positive|cannot be zero|invalid price/i,
+  belowMinimumPrice: "9999",
+  invalidPriceErrorPattern: /Price must be either 0 or at least Rp10\.000/i,
 } as const;
 
 export const digitalProductValidationData = {

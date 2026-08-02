@@ -1156,7 +1156,7 @@ test.describe('Creator Products', () => {
     )!;
     let defaultPricingEnabled = false;
     let priceInputReady = false;
-    let zeroPriceRejected = false;
+    let belowMinimumPriceRejected = false;
 
     await test.step('Open Online Course details before pricing validation', async () => {
       await creatorNav.open('products');
@@ -1170,30 +1170,81 @@ test.describe('Creator Products', () => {
       await onlineCoursePage.submitContentDetails();
     });
 
-    await test.step('Verify Free default and accept a positive paid price', async () => {
+    await test.step('Verify Free default at zero and accept a positive paid price', async () => {
       defaultPricingEnabled = await onlineCoursePage.readOnlineCoursePricingEnabled();
-      expect.soft(defaultPricingEnabled, 'Online Course pricing should default to Free').toBe(false);
-      await onlineCoursePage.disableOnlineCoursePricing();
+      expect.soft(defaultPricingEnabled, 'Online Course pricing should default enabled for the Free price state').toBe(true);
+      await onlineCoursePage.expectOnlineCourseFreePreview();
       await onlineCoursePage.enableOnlineCoursePricing();
-      priceInputReady = await onlineCoursePage.isOnlineCoursePriceInputEnabled();
+      await onlineCoursePage.fillOnlineCoursePrice(onlineCoursePricingData.validPrice);
+      await onlineCoursePage.expectOnlineCoursePrice(onlineCoursePricingData.validPrice);
+      priceInputReady = true;
       expect.soft(priceInputReady, 'Online Course price input should be enabled when pricing is active').toBe(true);
-      if (priceInputReady) {
-        await onlineCoursePage.fillOnlineCoursePrice(onlineCoursePricingData.validPrice);
-        await onlineCoursePage.expectOnlineCoursePrice(onlineCoursePricingData.validPrice);
-      }
     });
 
-    await test.step('Reject zero price when paid pricing is enabled', async () => {
+    await test.step('Reject prices below Rp10.000 while keeping zero valid for Free', async () => {
       if (priceInputReady) {
-        await onlineCoursePage.fillOnlineCoursePrice(onlineCoursePricingData.zeroPrice);
+        await onlineCoursePage.fillOnlineCoursePrice(onlineCoursePricingData.belowMinimumPrice);
         await onlineCoursePage.attemptOnlineCoursePricingContinue();
-        zeroPriceRejected = await onlineCoursePage.isOnlineCourseZeroPriceRejected();
+        belowMinimumPriceRejected = await onlineCoursePage.isOnlineCourseBelowMinimumPriceRejected();
       }
-      expect.soft(zeroPriceRejected, 'Zero price should be rejected when paid pricing is enabled').toBe(true);
-      test.fail(
-        defaultPricingEnabled || !priceInputReady || !zeroPriceRejected,
-        'Online Course pricing validation gap: pricing defaults to paid, price input stays disabled, or accepts zero price',
-      );
+      expect(defaultPricingEnabled, 'Online Course pricing should default enabled for Free').toBe(true);
+      expect(priceInputReady, 'Online Course price input should be available after focusing it').toBe(true);
+      expect(belowMinimumPriceRejected, 'Prices below Rp10.000 should be rejected').toBe(true);
     });
+  });
+
+  test('Validate Online Course Settings and Existing Course Edit', {
+    tag: ['@AUT-FV-168', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-022, TC-OC-C-023, TC-OC-C-032, TC-OC-C-034',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage, page }) => {
+    test.setTimeout(300000);
+
+    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!accessToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed an existing Online Course');
+    if (!accessToken) return;
+
+    const courseData = generateOnlineCourseProductData();
+    const updatedQuestion = generateOnlineCourseEpisodeContent();
+    let productUuid = '';
+
+    try {
+      await test.step('Seed and open an existing Online Course for editing', async () => {
+        const product = await createOnlineCourseProduct(page.request, courseData, accessToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(courseData.title);
+        await productsPage.openEditProduct(courseData.title);
+        await onlineCoursePage.expectLoaded();
+      });
+
+      await test.step('Verify existing course values and membership tier availability', async () => {
+        await onlineCoursePage.expectTitleValue(courseData.title);
+        await onlineCoursePage.expectDescriptionContains(courseData.description);
+        await onlineCoursePage.submitContentDetails();
+        await onlineCoursePage.expectOnlineCourseMembershipBenefitsState();
+      });
+
+      await test.step('Verify mandatory buyer fields remain protected', async () => {
+        await productsPage.expectMandatoryBuyerFieldsProtected();
+      });
+
+      await test.step('Add a buyer question and save the existing course settings', async () => {
+        await productsPage.addCustomBuyerQuestion(updatedQuestion);
+        await onlineCoursePage.submitPublish();
+        await productsPage.expectProductCompleteModal();
+        await productsPage.closeProductCompleteModal();
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
+      }
+    }
   });
 });
