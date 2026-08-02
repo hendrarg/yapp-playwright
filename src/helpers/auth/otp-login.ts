@@ -1,10 +1,21 @@
 import type { Page } from '@playwright/test';
+import { testAccounts, type TestAccount } from '@test-data/users';
 import { testmailConfig, markInboxStart, fetchOtpCode } from '../otp/testmail';
 import { extractAccessToken } from './save-token';
 
+export type OtpLoginResult = {
+  email: string;
+  token: string;
+  account: TestAccount;
+};
+
 /** Signs in through the real OTP UI flow and lands on /explore. */
-export async function signInWithEmailOtp(page: Page, baseURL: string) {
-  const inbox = testmailConfig();
+export async function signInWithEmailOtp(
+  page: Page,
+  baseURL: string,
+  account: TestAccount = testAccounts.qa,
+): Promise<OtpLoginResult> {
+  const inbox = testmailConfig(account);
   const sentAtMs = markInboxStart();
 
   await page.goto(new URL('auth', baseURL).toString());
@@ -25,7 +36,7 @@ export async function signInWithEmailOtp(page: Page, baseURL: string) {
   await page.waitForURL(/\/explore/);
 
   const token = await extractAccessToken(page.context());
-  return { email: inbox.email, token };
+  return { email: inbox.email, token, account };
 }
 
 /** Logs out by navigating to /logout and waiting for redirect. */
@@ -33,4 +44,3 @@ export async function logout(page: Page, baseURL: string) {
   await page.goto(new URL('logout', baseURL).toString());
   await page.waitForURL(/auth/, { timeout: 15000 });
 }
-

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { BrowserContext } from '@playwright/test';
 import { testAccounts, type TestTokenEnvVar } from '@test-data/users';
-import { getTokenUsername } from './token-utils';
+import { getTokenUsername, isTokenExpired } from './token-utils';
 
 /** Extracts the `at` cookie from the browser context after login. */
 export async function extractAccessToken(context: BrowserContext): Promise<string> {
@@ -19,31 +19,41 @@ export function resolveTokenEnvVar(token: string): TestTokenEnvVar {
   const username = getTokenUsername(token);
   if (!username) {
     throw new Error(
-      'Could not read username from JWT. Save the token manually to YAPP_TEST_ACCESS_TOKEN (Hendra) or YAPP_TEST_ACCESS_TOKEN_2 (Sundanese).',
+      'Could not read username from JWT. Pass envVar explicitly to saveTokenToEnv ' +
+        `(${testAccounts.qa.envVar} for QA Tester or ${testAccounts.sundanese.envVar} for Sundanese).`,
     );
   }
-  if (username === testAccounts.hendra.username) {
-    return testAccounts.hendra.envVar;
+  if (username === testAccounts.qa.username) {
+    return testAccounts.qa.envVar;
   }
   if (username === testAccounts.sundanese.username) {
     return testAccounts.sundanese.envVar;
   }
   throw new Error(
-    `Unknown JWT username "${username}". Expected Hendra (${testAccounts.hendra.username}) or Sundanese (${testAccounts.sundanese.username}).`,
+    `Unknown JWT username "${username}". Expected QA Tester (${testAccounts.qa.username}) or Sundanese (${testAccounts.sundanese.username}).`,
   );
 }
 
-/** Ensures YAPP_TEST_ACCESS_TOKEN belongs to Hendra — catches swapped .env values early. */
+/** True when token1 is missing, expired, or clearly belongs to another mapped username. */
+export function primaryTokenNeedsRefresh(token: string | undefined): boolean {
+  if (!token) return true;
+  if (isTokenExpired(token)) return true;
+  const username = getTokenUsername(token);
+  if (username && username !== testAccounts.qa.username) return true;
+  return false;
+}
+
+/** Ensures YAPP_TEST_ACCESS_TOKEN belongs to QA Tester when the JWT exposes a username. */
 export function assertPrimaryTestToken(token: string): void {
   const username = getTokenUsername(token);
   if (!username) {
     return;
   }
-  if (username !== testAccounts.hendra.username) {
+  if (username !== testAccounts.qa.username) {
     throw new Error(
-      `YAPP_TEST_ACCESS_TOKEN belongs to "${username}", expected Hendra (${testAccounts.hendra.username}). ` +
-        `OTP login uses testmail (${testAccounts.sundanese.username}) and saves to ${testAccounts.sundanese.envVar}. ` +
-        'Restore Hendra in YAPP_TEST_ACCESS_TOKEN and Sundanese in YAPP_TEST_ACCESS_TOKEN_2.',
+      `YAPP_TEST_ACCESS_TOKEN belongs to "${username}", expected QA Tester (${testAccounts.qa.username}). ` +
+        `OTP login for token1 uses testmail tag "${testAccounts.qa.testmailTag}" and saves to ${testAccounts.qa.envVar}. ` +
+        `Sundanese OTP saves to ${testAccounts.sundanese.envVar}.`,
     );
   }
 }

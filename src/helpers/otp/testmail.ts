@@ -1,4 +1,5 @@
 import { testmailEnv } from '../../../config/env';
+import { testAccounts, type TestAccount } from '@test-data/users';
 
 export interface TestmailInbox {
   apiKey: string;
@@ -19,9 +20,10 @@ interface TestmailResponse {
   emails?: TestmailEmail[];
 }
 
-export function testmailConfig(): TestmailInbox {
+/** Builds a testmail inbox for the given account (default: primary QA / token1). */
+export function testmailConfig(account: TestAccount = testAccounts.qa): TestmailInbox {
   const { apiKey, namespace } = testmailEnv();
-  const tag = 'sdet';
+  const tag = account.testmailTag;
   return {
     apiKey,
     namespace,

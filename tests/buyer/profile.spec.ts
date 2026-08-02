@@ -1,9 +1,5 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
-import {
-  creatorProfile,
-  membershipCreatorProfile,
-  creatorProfiles,
-} from '@test-data/buyer/profile.data';
+import { creatorProfile, membershipCreatorProfile, creatorProfiles } from '@test-data/buyer/profile.data';
 
 test.describe('Buyer Profile', () => {
 test('Verify Feeds and Exclusive Creator Profile Navigation & Exclusive Preview', {
@@ -158,7 +154,7 @@ test('Upload and Manage Profile Media and Content — Part 6', {
 });
 
 guestTest('Validate Profile Pricing, Vouchers, and Fees — Part 2', {
-  tag: ['@AUT-FV-233', '@profile', '@tip', '@buyer', '@regression'],
+  tag: ['@AUT-FV-233', '@profile', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerProfilePage, tipPage }) => {
   guestTest.setTimeout(90000);
   const enabledTips = creatorProfiles.hendrarg.tipSuggestions.idr;

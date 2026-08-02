@@ -1,11 +1,15 @@
 import type { Page } from "@playwright/test";
-import { signInWithEmailOtp } from "@helpers/auth/otp-login";
+import { signInWithEmailOtp, type OtpLoginResult } from "@helpers/auth/otp-login";
+import { testAccounts, type TestAccount } from "@test-data/users";
 
 export class LoginPage {
   constructor(public readonly page: Page) {}
 
-  async loginViaOtp(baseURL: string): Promise<{ email: string; token: string }> {
-    return signInWithEmailOtp(this.page, baseURL);
+  async loginViaOtp(
+    baseURL: string,
+    account: TestAccount = testAccounts.qa,
+  ): Promise<OtpLoginResult> {
+    return signInWithEmailOtp(this.page, baseURL, account);
   }
 
   async logout(baseURL: string) {

@@ -107,10 +107,10 @@ Token injection sets the cookie on the apex domain so one token can serve buyer 
 
 Token mapping:
 
-- `YAPP_TEST_ACCESS_TOKEN` (token1) belongs to Hendra (`jendraljohn92`). Use it for Hendra-owned products and promotions.
+- `YAPP_TEST_ACCESS_TOKEN` (token1) belongs to QA Tester (`x7nv1.qa`). Use it for `authTest` / `creatorAuthTest` and primary API seeding (products, promotions).
 - `YAPP_TEST_ACCESS_TOKEN_2` (token2) belongs to Sundanese (`x7nv1.sdet`). Use it for creator-post seeding.
 
-If `YAPP_TEST_ACCESS_TOKEN` is expired or belongs to the wrong user, `authTest` / `creatorAuthTest` fail fast with a clear error. **OTP login uses the testmail Sundanese inbox** (`{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app`) and saves to `YAPP_TEST_ACCESS_TOKEN_2` only — it must not overwrite token1. Refresh Hendra (token1) manually. Run `npm run token:inspect` to verify mapping. With `PW_WORKERS > 1`, an expired token can cause multiple workers to fail at once; refresh token1 first or use `PW_WORKERS=1`.
+If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, `authTest` / `creatorAuthTest` refresh it via conventional OTP login using the testmail QA inbox (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`) and save back to token1. Sundanese OTP uses `{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app` → token2. Run `npm run token:inspect` to verify mapping. Prefer `PW_WORKERS=1` when a refresh may run so workers do not race the same OTP inbox.
 
 ## Environment Variables
 
@@ -119,8 +119,8 @@ If `YAPP_TEST_ACCESS_TOKEN` is expired or belongs to the wrong user, `authTest` 
 | `YAPP_BASE_URL` | Yes | Buyer app |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app |
 | `YAPP_API_BASE_URL` | Yes | API base URL |
-| `YAPP_TEST_ACCESS_TOKEN` | For Hendra auth/API setup | Do not commit |
-| `YAPP_TEST_ACCESS_TOKEN_2` | Optional Sundanese token | Used to seed creator posts for E2E tests |
+| `YAPP_TEST_ACCESS_TOKEN` | For QA Tester auth/API setup | Auto-refreshed via OTP (`*.qa@inbox.testmail.app`); do not commit |
+| `YAPP_TEST_ACCESS_TOKEN_2` | Optional Sundanese token | Used to seed creator posts for E2E tests (`*.sdet@inbox.testmail.app`) |
 | `YAPP_AUTOMATION_SHEET_ID` | For `/automation` | Google Spreadsheet ID |
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
 | `YAPP_AUTOMATION_CLARIFICATIONS_SHEET` | No | Defaults to `Automation Clarifications` |

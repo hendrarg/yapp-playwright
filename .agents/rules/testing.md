@@ -129,8 +129,8 @@ Use API helpers when the UI depends on data not reliably present in the environm
 
 | Token | Env var | Use for |
 |-------|---------|---------|
-| Hendra | `YAPP_TEST_ACCESS_TOKEN` | Hendra-owned products, promotions, buyer media seeding |
-| Sundanese | `YAPP_TEST_ACCESS_TOKEN_2` | Creator-post seeding for buyer tests |
+| QA Tester (`x7nv1.qa`) | `YAPP_TEST_ACCESS_TOKEN` | Primary auth + products/promotions/media seeding (OTP: `*.qa@inbox.testmail.app`) |
+| Sundanese (`x7nv1.sdet`) | `YAPP_TEST_ACCESS_TOKEN_2` | Creator-post seeding for buyer tests (OTP: `*.sdet@inbox.testmail.app`) |
 
 - Search `@helpers/api/` before writing new seed logic.
 - Seed in `test.step()`, clean up in `finally` when delete helpers exist.

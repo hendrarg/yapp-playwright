@@ -1,6 +1,6 @@
 import { creatorProfile } from "@test-data/buyer/profile.data";
 
-/** Hide from Profile flow for Hendra-owned active product (AUT-FV-215). */
+/** Hide from Profile flow for a known active product on the creator profile (AUT-FV-215). */
 export const productsHideFromProfileData = {
   creatorHandle: creatorProfile,
   productName: "Sikancil",

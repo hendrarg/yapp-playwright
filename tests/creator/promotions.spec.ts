@@ -1,10 +1,6 @@
 import { creatorAuthTest as test, expect } from "../test-base";
 import { createPromotion, deletePromotion, getPromotionId } from "@helpers/api/promotion";
-import {
-  formatPromotionListDate,
-  generatePromotionValidationData,
-  promotionValidationData,
-} from "@test-data/creator/promotions.validation.data";
+import { formatPromotionListDate, generatePromotionValidationData, promotionValidationData } from "@test-data/creator/promotions.validation.data";
 import { promotionsScopeData } from "@test-data/creator/promotions.scope.data";
 import { promotionsAffiliateData } from "@test-data/creator/promotions.affiliate.data";
 import { promotionsPricingData } from "@test-data/creator/promotions.pricing.data";
@@ -277,9 +273,9 @@ test.describe("Creator Promotions", () => {
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 
-    const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
-    test.skip(!hendraToken, "YAPP_TEST_ACCESS_TOKEN for Hendra is required");
-    if (!hendraToken) return;
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
+    test.skip(!seedToken, "YAPP_TEST_ACCESS_TOKEN for QA Tester is required");
+    if (!seedToken) return;
 
     const copyPromotion = generatePromotionValidationData({
       discount: promotionsLifecycleData.initialDiscount,
@@ -308,7 +304,7 @@ test.describe("Creator Promotions", () => {
 
       await test.step("Open delete action and verify confirmation dialog before deletion", async () => {
         deletePromotionId = getPromotionId(
-          await createPromotion(page.request, deletePromotionData, hendraToken),
+          await createPromotion(page.request, deletePromotionData, seedToken),
         );
         await creatorNav.open("promotions");
         await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
@@ -321,10 +317,10 @@ test.describe("Creator Promotions", () => {
       });
     } finally {
       if (copyPromotionId) {
-        await deletePromotion(page.request, copyPromotionId, hendraToken);
+        await deletePromotion(page.request, copyPromotionId, seedToken);
       }
       if (deletePromotionId) {
-        await deletePromotion(page.request, deletePromotionId, hendraToken);
+        await deletePromotion(page.request, deletePromotionId, seedToken);
       }
     }
   });
@@ -441,9 +437,9 @@ test.describe("Creator Promotions", () => {
   }, async ({ creatorNav, promotionsPage, page }) => {
     test.setTimeout(120_000);
 
-    const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
-    test.skip(!hendraToken, "YAPP_TEST_ACCESS_TOKEN for Hendra is required");
-    if (!hendraToken) return;
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
+    test.skip(!seedToken, "YAPP_TEST_ACCESS_TOKEN for QA Tester is required");
+    if (!seedToken) return;
 
     const listPromotion = generatePromotionData("active");
     const deletePromotionData = generatePromotionData("active");
@@ -453,7 +449,7 @@ test.describe("Creator Promotions", () => {
     try {
       await test.step("Display promotion list fields", async () => {
         listPromotionId = getPromotionId(
-          await createPromotion(page.request, listPromotion, hendraToken),
+          await createPromotion(page.request, listPromotion, seedToken),
         );
         await creatorNav.open("promotions");
         await promotionsPage.searchPromotions(listPromotion.name, listPromotion.code);
@@ -472,7 +468,7 @@ test.describe("Creator Promotions", () => {
       });
 
       await test.step("Delete promotion from management list", async () => {
-        await createPromotion(page.request, deletePromotionData, hendraToken);
+        await createPromotion(page.request, deletePromotionData, seedToken);
         await creatorNav.open("promotions");
         await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
         await promotionsPage.deletePromotionFromList(deletePromotionData.code);
@@ -480,7 +476,7 @@ test.describe("Creator Promotions", () => {
       });
     } finally {
       if (listPromotionId) {
-        await deletePromotion(page.request, listPromotionId, hendraToken);
+        await deletePromotion(page.request, listPromotionId, seedToken);
       }
     }
   });

@@ -2,12 +2,7 @@ import { authTest as test, test as guestTest } from '../test-base';
 import { baseURL } from '@config/env';
 import { createConsultationProduct, deleteProduct } from '@helpers/api/product';
 import { loginWithToken } from '@helpers/auth/token-login';
-import {
-  consultationBuyerDetailData,
-  consultationBuyerSchedulingData,
-  generateConsultationBuyerDescription,
-  generateConsultationBuyerTitle,
-} from '@test-data/buyer/consultation.detail.data';
+import { consultationBuyerDetailData, consultationBuyerSchedulingData, generateConsultationBuyerDescription, generateConsultationBuyerTitle } from '@test-data/buyer/consultation.detail.data';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
 
 test.describe('Buyer Consultation', () => {

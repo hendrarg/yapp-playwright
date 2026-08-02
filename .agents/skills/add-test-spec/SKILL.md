@@ -70,7 +70,7 @@ rg "createPost|deletePost|depositWebhook|createPromotion" src/helpers/api tests/
 
 | Token | Env var | Owner | Use for |
 |-------|---------|-------|---------|
-| token1 | `YAPP_TEST_ACCESS_TOKEN` | Hendra (`jendraljohn92`) | Hendra-owned products, promotions, buyer media seeding |
+| token1 | `YAPP_TEST_ACCESS_TOKEN` | QA Tester (`x7nv1.qa`) | Primary auth + products, promotions, buyer media seeding (auto OTP refresh when expired) |
 | token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding consumed by buyer tests |
 
 **When to seed via API:** the UI under test depends on data that does not exist reliably in the environment (new post, promotion, exclusive content, order state).

@@ -6,8 +6,8 @@ import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
 import { loginWithToken } from '../src/helpers/auth/token-login';
 import { waitForAuthResponse } from '../src/helpers/auth/validate-token';
-import { isTokenExpired } from '../src/helpers/auth/token-utils';
-import { assertPrimaryTestToken } from '../src/helpers/auth/save-token';
+import { primaryTokenNeedsRefresh, assertPrimaryTestToken } from '../src/helpers/auth/save-token';
+import { refreshAccountTokenViaOtp } from '../src/helpers/auth/refresh-token-otp';
 import { testAccounts } from '../src/test-data/users';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
 import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
@@ -25,28 +25,26 @@ export const test = base.extend<MyFixtures>({
 });
 
 /**
- * Ensures YAPP_TEST_ACCESS_TOKEN is a valid Hendra token for authTest/creatorAuthTest.
+ * Ensures YAPP_TEST_ACCESS_TOKEN is a valid QA Tester token for authTest/creatorAuthTest.
  *
- * OTP login uses the testmail Sundanese inbox — it must NOT overwrite token1.
- * Refresh Sundanese via tests/auth/otp-login.spec.ts (saves to YAPP_TEST_ACCESS_TOKEN_2).
- * Refresh Hendra manually when token1 expires.
+ * When token1 is missing, expired, or mapped to another username, refreshes via conventional
+ * OTP login (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`) and saves back to token1.
+ * Sundanese (`token2`) still uses its own OTP inbox / `otpUserSundanese`.
  */
-async function ensureFreshToken(_context: BrowserContext): Promise<string> {
-  const token = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
-  if (!token) {
-    throw new Error('YAPP_TEST_ACCESS_TOKEN must be set in .env to run this token-injection test');
+async function ensureFreshToken(context: BrowserContext): Promise<string> {
+  let token = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+
+  if (primaryTokenNeedsRefresh(token)) {
+    token = await refreshAccountTokenViaOtp(context, testAccounts.qa, baseURL);
   }
 
-  assertPrimaryTestToken(token);
-
-  if (isTokenExpired(token)) {
+  if (!token) {
     throw new Error(
-      `YAPP_TEST_ACCESS_TOKEN (Hendra / ${testAccounts.hendra.username}) is expired. ` +
-        `OTP auto-login uses Sundanese (${testAccounts.sundanese.username}) and saves to ${testAccounts.sundanese.envVar} — it cannot refresh token1. ` +
-        `Refresh Hendra manually, or run tests/auth/otp-login.spec.ts to refresh token2 only.`,
+      `Failed to obtain ${testAccounts.qa.envVar} for ${testAccounts.qa.displayName} (${testAccounts.qa.username}).`,
     );
   }
 
+  assertPrimaryTestToken(token);
   return token;
 }
 
@@ -55,13 +53,13 @@ export const authTest = test.extend({
     const token = await ensureFreshToken(context);
     await loginWithToken(context, token, baseURL);
     await use(context);
-  }, { scope: 'test', timeout: 90000 }],
+  }, { scope: 'test', timeout: 120000 }],
   page: [async ({ page }, use) => {
     const authCheck = waitForAuthResponse(page);
     await page.goto(baseURL, { timeout: 60000, waitUntil: 'domcontentloaded' });
     await authCheck;
     await use(page);
-  }, { scope: 'test', timeout: 90000 }],
+  }, { scope: 'test', timeout: 120000 }],
 });
 
 export const creatorAuthTest = test.extend({
@@ -69,13 +67,13 @@ export const creatorAuthTest = test.extend({
     const token = await ensureFreshToken(context);
     await loginWithToken(context, token, creatorsBaseURL);
     await use(context);
-  }, { scope: 'test', timeout: 90000 }],
+  }, { scope: 'test', timeout: 120000 }],
   page: [async ({ page }, use) => {
     const authCheck = waitForAuthResponse(page);
     await page.goto(creatorsBaseURL, { timeout: 60000, waitUntil: 'domcontentloaded' });
     await authCheck;
     await use(page);
-  }, { scope: 'test', timeout: 90000 }],
+  }, { scope: 'test', timeout: 120000 }],
 });
 
 test.afterEach(async ({ page }) => {

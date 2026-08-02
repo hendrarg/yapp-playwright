@@ -1,10 +1,6 @@
 import { authTest as test, test as guestTest, expect } from '../test-base';
 import { depositWebhook } from '@helpers/api/webhook';
-import {
-  creatorProfile,
-  tipAmountBoundary,
-  tipCheckoutData,
-} from '@test-data/buyer/profile.data';
+import { creatorProfile, tipAmountBoundary, tipCheckoutData } from '@test-data/buyer/profile.data';
 
 const tipTransactionSummary = {
   paymentMethod: tipCheckoutData.paymentMethod,

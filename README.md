@@ -107,12 +107,12 @@ test('explore page loads without auth redirect', { tag: ['@explore', '@buyer', '
 
 Token injection sets the cookie on the apex domain so one token works for both buyer and creator subdomains.
 
-**Important:** OTP login uses the testmail Sundanese inbox (`{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app`) and saves to `YAPP_TEST_ACCESS_TOKEN_2` only. It must **not** overwrite `YAPP_TEST_ACCESS_TOKEN` (Hendra). If token1 is expired or swapped, auth fixtures fail fast — refresh Hendra manually. Run `npm run token:inspect` to verify which user each env var holds.
+**Important:** Primary OTP login uses the testmail QA inbox (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`) and saves to `YAPP_TEST_ACCESS_TOKEN`. When token1 is missing/expired/wrong user, `authTest` / `creatorAuthTest` refresh it via that OTP flow. Sundanese uses `{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app` → `YAPP_TEST_ACCESS_TOKEN_2`. Run `npm run token:inspect` to verify which user each env var holds.
 
 | Token | Env var | Owner | Use for |
 |-------|---------|-------|---------|
-| token1 | `YAPP_TEST_ACCESS_TOKEN` | Hendra (`jendraljohn92`) | `authTest`, `creatorAuthTest`, Hendra-owned products and promotions |
-| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding; refreshed by `tests/auth/otp-login.spec.ts` |
+| token1 | `YAPP_TEST_ACCESS_TOKEN` | QA Tester (`x7nv1.qa`) | `authTest`, `creatorAuthTest`, primary products/promotions seeding |
+| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding |
 
 ## Fixtures
 
@@ -162,7 +162,7 @@ npm run automation:context -- AUT-E2E-002   # Build automation context from Goog
 | `YAPP_BASE_URL` | Yes | Buyer app URL |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app URL |
 | `YAPP_API_BASE_URL` | Yes | API base URL |
-| `YAPP_TEST_ACCESS_TOKEN` | For auth tests | Hendra auth token (do not commit) |
+| `YAPP_TEST_ACCESS_TOKEN` | For auth tests | QA Tester auth token (do not commit) |
 | `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Sundanese token for creator-post seeding |
 | `TESTMAIL_API_KEY` | For OTP tests | testmail.app API key |
 | `TESTMAIL_NAMESPACE` | For OTP tests | testmail.app namespace |

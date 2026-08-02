@@ -19,15 +19,15 @@ test.describe('Guest promotion redemption', () => {
   test('Verify Promotions Guest Voucher Redemption', {
     tag: ['@AUT-FV-247', '@promotions', '@buyer', '@smoke', '@regression'],
   }, async ({ productPurchasePage, page }) => {
-    const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
-    test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
-    if (!hendraToken) return;
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN for QA Tester is required to create the promotion');
+    if (!seedToken) return;
 
     const promotion = generatePromotionData('active');
     let promotionId = '';
     try {
       await test.step('Create Hendra promotion via API', async () => {
-        promotionId = getPromotionId(await createPromotion(page.request, promotion, hendraToken));
+        promotionId = getPromotionId(await createPromotion(page.request, promotion, seedToken));
       });
 
       await test.step('Open eligible direct purchase detail as guest', async () => {
@@ -40,7 +40,7 @@ test.describe('Guest promotion redemption', () => {
         await productPurchasePage.expectActiveDiscount(before, 11);
       });
     } finally {
-      if (promotionId) await deletePromotion(page.request, promotionId, hendraToken);
+      if (promotionId) await deletePromotion(page.request, promotionId, seedToken);
     }
   });
 
@@ -48,16 +48,16 @@ test.describe('Guest promotion redemption', () => {
     tag: ['@AUT-FV-248', '@promotions', '@buyer', '@regression'],
   }, async ({ productPurchasePage, page }) => {
     test.setTimeout(120_000);
-    const hendraToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
-    test.skip(!hendraToken, 'YAPP_TEST_ACCESS_TOKEN for Hendra is required to create the promotion');
-    if (!hendraToken) return;
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN for QA Tester is required to create the promotion');
+    if (!seedToken) return;
 
     const promotion = generatePromotionData('active');
     let promotionId = '';
 
     try {
       await test.step('Create Hendra promotion via API', async () => {
-        promotionId = getPromotionId(await createPromotion(page.request, promotion, hendraToken));
+        promotionId = getPromotionId(await createPromotion(page.request, promotion, seedToken));
       });
 
       await test.step('Apply active promotion and validate updated totals', async () => {
@@ -86,9 +86,9 @@ test.describe('Guest promotion redemption', () => {
       await test.step('Reject deleted promotion code', async () => {
         const deletedPromotion = generatePromotionData('active');
         const deletedPromotionId = getPromotionId(
-          await createPromotion(page.request, deletedPromotion, hendraToken),
+          await createPromotion(page.request, deletedPromotion, seedToken),
         );
-        await deletePromotion(page.request, deletedPromotionId, hendraToken);
+        await deletePromotion(page.request, deletedPromotionId, seedToken);
 
         await openGuestCheckout(page, productPurchasePage, promotionData.eligibleProduct);
         const before = await productPurchasePage.getOrderSummary();
@@ -96,7 +96,7 @@ test.describe('Guest promotion redemption', () => {
         await productPurchasePage.expectRejectedPromotion(before);
       });
     } finally {
-      if (promotionId) await deletePromotion(page.request, promotionId, hendraToken);
+      if (promotionId) await deletePromotion(page.request, promotionId, seedToken);
     }
   });
 });

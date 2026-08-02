@@ -8,6 +8,20 @@
 - Use path aliases: `@pages/`, `@fixtures/`, `@utils/`, `@helpers/`, `@config/`
 - Test specs import from `../test-base` (relative), never from `@fixtures/base.fixture` directly
 - Do not use deep relative imports (`../../src/...`) where path aliases work
+- **Inline named imports** — keep each `import { ... } from '...'` on **one line**. Do not wrap/brace-break named import lists across multiple lines in `tests/**/*.spec.ts` (or when adding imports elsewhere in this repo).
+
+```typescript
+// ✅ Good — inline
+import { authTest as test, test as guestTest, expect } from '../test-base';
+import { creatorProfile, tipAmountBoundary, tipCheckoutData } from '@test-data/buyer/profile.data';
+
+// ❌ Forbidden — wrapped / multi-line named import
+import {
+  creatorProfile,
+  tipAmountBoundary,
+  tipCheckoutData,
+} from '@test-data/buyer/profile.data';
+```
 
 ## Page Objects
 - Constructor: `(page: Page, baseURL: string)` — buyer pages get `baseURL`, creator pages get `creatorsBaseURL`
