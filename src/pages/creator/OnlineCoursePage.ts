@@ -59,6 +59,20 @@ export class OnlineCoursePage {
     selector: 'button:has-text("Next: Publish")',
   });
 
+  private readonly addPricingSwitch = smartLocator(this.page, {
+    role: "switch",
+    name: "Add Pricing",
+    text: "Add Pricing",
+    selector: "#enable-pricing",
+  });
+
+  private readonly priceInput = smartLocator(this.page, {
+    role: "spinbutton",
+    name: "Price",
+    placeholder: "0",
+    selector: 'input[type="number"]:visible',
+  });
+
   readonly publishButton = smartLocator(this.page, {
     role: "button",
     name: "Publish",
@@ -473,6 +487,73 @@ export class OnlineCoursePage {
   async expectThumbnailTooLarge() {
     await expect.poll(() => this.readBodyText(), { timeout: 15000 })
       .toMatch(/larger than 524288000|500 MB/i);
+  }
+
+  async readOnlineCoursePricingEnabled(): Promise<boolean> {
+    return (await this.addPricingSwitch.getAttribute("aria-checked")) === "true";
+  }
+
+  async enableOnlineCoursePricing() {
+    if (!(await this.readOnlineCoursePricingEnabled())) {
+      await this.addPricingSwitch.click({ timeout: 10000 });
+    }
+    await expect.poll(() => this.addPricingSwitch.getAttribute("aria-checked"), { timeout: 10000 })
+      .toBe("true");
+    await this.priceInput.text({ timeout: 10000 });
+  }
+
+  async disableOnlineCoursePricing() {
+    if (await this.readOnlineCoursePricingEnabled()) {
+      await this.addPricingSwitch.click({ timeout: 10000 });
+    }
+    await expect.poll(() => this.addPricingSwitch.getAttribute("aria-checked"), { timeout: 10000 })
+      .toBe("false");
+  }
+
+  async fillOnlineCoursePrice(price: string) {
+    await this.priceInput.fill(price, { timeout: 10000 });
+  }
+
+  async isOnlineCoursePriceInputEnabled(): Promise<boolean> {
+    return this.page.evaluate(() => {
+      type Input = { disabled?: boolean; getAttribute: (name: string) => string | null };
+      const root = globalThis as unknown as {
+        document: { querySelector: (selector: string) => Input | null };
+      };
+      const input = root.document.querySelector('input[placeholder="0"]');
+      return input !== null
+        && input.disabled !== true
+        && input.getAttribute("aria-disabled") !== "true";
+    });
+  }
+
+  async expectOnlineCoursePrice(price: string) {
+    await expect.poll(() => this.priceInput.getAttribute("value"), { timeout: 10000 })
+      .toBe(price);
+  }
+
+  async attemptOnlineCoursePricingContinue() {
+    await this.nextPublishButton.click({ timeout: 10000 });
+  }
+
+  async isOnlineCourseZeroPriceRejected(): Promise<boolean> {
+    return this.page.evaluate(() => {
+      type Button = { textContent?: string | null; disabled?: boolean };
+      const root = globalThis as unknown as {
+        document: {
+          body: { innerText: string };
+          querySelectorAll: (selector: string) => ArrayLike<Button>;
+        };
+      };
+      const hasPriceError = /greater than zero|must be greater|positive|cannot be zero|invalid price/i.test(
+        root.document.body.innerText,
+      );
+      const nextPublishButtons = Array.from(root.document.querySelectorAll("button"))
+        .filter((button) => button.textContent?.trim() === "Next: Publish");
+      return hasPriceError
+        || nextPublishButtons.length === 0
+        || nextPublishButtons.every((button) => button.disabled);
+    });
   }
 
   async expectFreeTextContent(text: string) {

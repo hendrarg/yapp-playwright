@@ -96,6 +96,12 @@ export const onlineCourseMediaData = {
   tinyThumbnailPath: "src/test-data/assets/tiny-1x1.png",
 } as const;
 
+export const onlineCoursePricingData = {
+  validPrice: "12000",
+  zeroPrice: "0",
+  zeroPriceErrorPattern: /greater than zero|must be greater|positive|cannot be zero|invalid price/i,
+} as const;
+
 export const digitalProductValidationData = {
   requiredErrors: {
     title: "Title is required",

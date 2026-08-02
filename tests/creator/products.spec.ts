@@ -3,7 +3,7 @@ import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile,
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -1140,5 +1140,60 @@ test.describe('Creator Products', () => {
     } finally {
       lessonFixtures.cleanup();
     }
+  });
+
+  test('Validate Online Course Pricing Rules', {
+    tag: ['@AUT-FV-166', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-020, TC-OC-C-021',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    test.setTimeout(60000);
+
+    const onlineCourseType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Online Course',
+    )!;
+    let defaultPricingEnabled = false;
+    let priceInputReady = false;
+    let zeroPriceRejected = false;
+
+    await test.step('Open Online Course details before pricing validation', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(onlineCourseType.buttonName);
+      await onlineCoursePage.expectLoaded();
+      await onlineCoursePage.fillTitle(generateOnlineCourseChapterTitle());
+      await onlineCoursePage.fillDescription(generateOnlineCourseEpisodeContent());
+      await onlineCoursePage.uploadThumbnailForValidation(onlineCourseMediaData.thumbnailPaths[0]);
+      await onlineCoursePage.submitContentDetails();
+    });
+
+    await test.step('Verify Free default and accept a positive paid price', async () => {
+      defaultPricingEnabled = await onlineCoursePage.readOnlineCoursePricingEnabled();
+      expect.soft(defaultPricingEnabled, 'Online Course pricing should default to Free').toBe(false);
+      await onlineCoursePage.disableOnlineCoursePricing();
+      await onlineCoursePage.enableOnlineCoursePricing();
+      priceInputReady = await onlineCoursePage.isOnlineCoursePriceInputEnabled();
+      expect.soft(priceInputReady, 'Online Course price input should be enabled when pricing is active').toBe(true);
+      if (priceInputReady) {
+        await onlineCoursePage.fillOnlineCoursePrice(onlineCoursePricingData.validPrice);
+        await onlineCoursePage.expectOnlineCoursePrice(onlineCoursePricingData.validPrice);
+      }
+    });
+
+    await test.step('Reject zero price when paid pricing is enabled', async () => {
+      if (priceInputReady) {
+        await onlineCoursePage.fillOnlineCoursePrice(onlineCoursePricingData.zeroPrice);
+        await onlineCoursePage.attemptOnlineCoursePricingContinue();
+        zeroPriceRejected = await onlineCoursePage.isOnlineCourseZeroPriceRejected();
+      }
+      expect.soft(zeroPriceRejected, 'Zero price should be rejected when paid pricing is enabled').toBe(true);
+      test.fail(
+        defaultPricingEnabled || !priceInputReady || !zeroPriceRejected,
+        'Online Course pricing validation gap: pricing defaults to paid, price input stays disabled, or accepts zero price',
+      );
+    });
   });
 });
