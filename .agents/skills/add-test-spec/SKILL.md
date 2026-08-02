@@ -105,9 +105,10 @@ try {
 - Use factory data from `@test-data/` — never hardcode business payloads in specs.
 - Prefer existing helpers in `@helpers/api/` over raw `page.request` calls.
 
-## Step 5: Append the mapped automation to its feature spec
+## Step 5: Insert the mapped automation into its feature spec (ascending AUT order)
 
-- Append to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
+- Add to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
+- **Insert the new `test()` in ascending `@AUT-*` order** inside the describe block (`@AUT-E2E-*` before `@AUT-FV-*`, then by numeric ID). Do not append out of order at the bottom — see `.agents/rules/testing.md` → **Ascending AUT order**.
 - Import test data with `@test-data/{domain}/{feature}.data`.
 - Use the exact `@<AUT-ID>`, one feature tag, `@buyer` or `@creator`, and one priority tag.
 - Use the descriptive automation title as the test title; keep the Automation ID in the tag.

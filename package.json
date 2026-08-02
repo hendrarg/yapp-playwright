@@ -11,6 +11,7 @@
     "automation:context": "node scripts/automation-context.mjs",
     "audit:tags": "node scripts/audit-tags.mjs",
     "audit:locators": "node scripts/audit-locators.mjs",
+    "audit:aut-order": "node scripts/reorder-aut-ascending.mjs --check",
     "token:inspect": "node scripts/inspect-tokens.mjs"
   },
   "keywords": [],

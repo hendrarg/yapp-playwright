@@ -5,42 +5,86 @@ import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
 import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 
 test.describe('Buyer Feeds', () => {
-test('Verify Feeds and Exclusive Buyer Feed Discovery & Content Preview', {
-  tag: ['@AUT-FV-082', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage, page }) => {
-  test.setTimeout(90000);
+test('Unlock Exclusive PPV Content and Verify Access', {
+  tag: ['@AUT-E2E-003', '@feeds', '@payment', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage, transactionPage, page }) => {
+  test.setTimeout(180000);
 
-  await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed exclusive post for this E2E test');
+
+  const price = 20000;
+  const priceText = 'Rp20.000';
+  const postData = generatePostData({ 
+    content: `Exclusive unlock flow ${Date.now()}`,
+    visibility: 'pay_per_view',
+    price,
+  });
+  let postId = '';
+  let orderId = '';
+
+  try {
+    await test.step('Create locked exclusive image post via API', async () => {
+      ({ postId } = await createPost(page.request, { ...postData, imagePath: testImages.claude }, token2));
+      expect(postId).toBeDefined();
+    });
+
+    await test.step('Open feeds and verify locked post indicators', async () => {
+      await buyerNav.open('feeds');
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectLockedPostVisible(postData.content);
+    });
+
+    await test.step('Open locked post detail and verify content remains gated', async () => {
+      await buyerFeedsPage.gotoPost(postId);
+      await buyerFeedsPage.expectLockedPostDetail();
+    });
+
+    await test.step('Open unlock preview and verify locked engagement is blocked', async () => {
+      await buyerFeedsPage.openUnlockPreview(price);
+      await buyerFeedsPage.expectLockedEngagementBlocked();
+    });
+
+    await test.step('Submit unlock payment form', async () => {
+      orderId = await buyerFeedsPage.submitUnlockPayment(`Buyer ${Date.now()}`, `812${Date.now().toString().slice(-9)}`);
+      await transactionPage.expectExclusivePostTransaction(priceText);
+    });
+
+    await test.step('Pay transaction via webhook API and verify success modal', async () => {
+      await depositWebhook(page.request, orderId);
+      await page.waitForTimeout(2500);
+      await transactionPage.expectUnlockPaymentSuccess();
+    });
+
+    await test.step('View unlocked product and verify media can be accessed', async () => {
+      await transactionPage.viewUnlockedProduct();
+      await buyerFeedsPage.expectUnlockedExclusivePost(postData.content);
+      await buyerFeedsPage.zoomUnlockedPostMedia();
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded exclusive post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }}
+});
+
+test('Verify Feeds and Exclusive Buyer Content Discovery & Presentation', {
+  tag: ['@AUT-FV-076','@feeds', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open feeds and verify locked post with blur and lock icon', async () => {
     await buyerNav.open('feeds');
     await buyerFeedsPage.expectAuthenticated();
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await buyerFeedsPage.expectCreatorsSectionVisible();
+    await buyerFeedsPage.expectMemberOnlyBadgeVisible();
   });
 
-  await test.step('Switch to Your Post tab', async () => {
-    await buyerFeedsPage.switchToTab('yourPost');
-    await buyerFeedsPage.expectTabActive(feedsTabs.yourPost);
-    await expect(page).toHaveURL(/\/feeds/, { timeout: 10000 });
-  });
-
-  await test.step('Switch to Exclusive tab (gated content only)', async () => {
-    await buyerFeedsPage.switchToTab('exclusive');
-    await buyerFeedsPage.expectExclusiveContentOnly();
-  });
-
-  await test.step('Switch back to Following tab', async () => {
-    await buyerFeedsPage.switchToTab('following');
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-  });
-
-  await test.step('Infinite scroll loads additional posts', async () => {
-    await buyerFeedsPage.infiniteScroll();
-  });
-
-  await test.step('Open a public image post', async () => {
-    await buyerFeedsPage.openFirstPublicImagePost();
-    await buyerFeedsPage.expectPostDetailOpen();
-    await buyerFeedsPage.expectPublicImageUnlocked();
+  await test.step('Click locked post media and verify content remains blurred with unlock prompt', async () => {
+    await buyerFeedsPage.clickLockedPostMedia();
+    await buyerFeedsPage.expectLockedMediaBlocked();
   });
 });
 
@@ -111,246 +155,60 @@ test('Verify Feeds and Exclusive Followed Creator Feed', {
   }
 });
 
-test('Verify Feeds and Exclusive Like & Unlike Post', {
-  tag: ['@AUT-FV-085', '@feeds', '@profile', '@like', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage, page }) => {
-  test.setTimeout(120000);
+test('Verify Feeds and Exclusive Display and Navigation', {
+  tag: ['@AUT-FV-078', '@feeds', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage }) => {
+  test.setTimeout(60000);
 
-  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
-  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
-
-  const postData = generatePostData({
-    content: `Like full cycle ${Date.now()}`,
-    visibility: 'public',
+  await test.step('Open feeds and verify public post visible without Member Only badge', async () => {
+    await buyerNav.open('feeds');
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
   });
-  let postId = '';
 
-  try {
-    await test.step('Create public text post via API', async () => {
-      ({ postId } = await createPost(page.request, postData, token2));
-      expect(postId).toBeDefined();
-    });
-
-    await test.step('Open feeds and verify seeded post', async () => {
-      await buyerNav.open('feeds');
-      await buyerFeedsPage.expectAuthenticated();
-      await buyerFeedsPage.switchToTab('following');
-      await buyerFeedsPage.expectTabActive(feedsTabs.following);
-      await buyerFeedsPage.expectPostVisible(postData.content);
-    });
-
-    await test.step('Like a post from feed and verify count +1, icon active', async () => {
-      await buyerFeedsPage.likePost(postData.content);
-      await buyerFeedsPage.expectPostLikedState(postData.content);
-    });
-
-    await test.step('Open post detail and verify liked state, then go back', async () => {
-      await buyerFeedsPage.openPostDetail(postData.content);
-      await buyerFeedsPage.expectLikedState();
-      await buyerFeedsPage.clickBackFromPostDetail();
-      await buyerNav.expectLoaded('feeds');
-    });
-
-    await test.step('Navigate to creator profile from feeds post and unlike', async () => {
-      await buyerFeedsPage.navigateToCreatorProfileFromPostContent(postData.content);
-      await buyerNav.expectLoaded('profile');
-      await buyerProfilePage.switchToTab('feeds');
-      await buyerProfilePage.unlikeCreatorPost(postData.content);
-    });
-
-    await test.step('Return to feeds and verify unliked state on post detail', async () => {
-      await buyerProfilePage.clickBackButton();
-      await buyerNav.expectLoaded('feeds');
-      await buyerFeedsPage.switchToTab('following');
-      await buyerFeedsPage.expectTabActive(feedsTabs.following);
-      await buyerFeedsPage.expectPostUnlikedState(postData.content);
-      await buyerFeedsPage.openPostDetail(postData.content);
-      await buyerFeedsPage.expectUnlikedState();
-    });
-  } finally {
-    if (postId) {
-      await test.step('Delete seeded post via API', async () => {
-        await deletePost(page.request, postId, token2);
-      });
-    }
-  }
+  await test.step('Open public post and verify post detail with content', async () => {
+    await buyerFeedsPage.openFirstPublicPost();
+    await buyerFeedsPage.expectPostDetailOpen();
+  });
 });
 
-test('Verify Feeds and Exclusive Comment Submission', {
-  tag: ['@AUT-FV-304', '@feeds', '@comment', '@buyer', '@regression'],
+test('Verify Feeds and Exclusive Buyer Feed Discovery & Content Preview', {
+  tag: ['@AUT-FV-082', '@feeds', '@explore', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(90000);
 
-  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
-  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
-
-  const postData = generatePostData({
-    content: `Comment full cycle ${Date.now()}`,
-    visibility: 'public',
+  await test.step('Open feeds and verify Following tab + Creators You Might Like', async () => {
+    await buyerNav.open('feeds');
+    await buyerFeedsPage.expectAuthenticated();
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+    await buyerFeedsPage.expectCreatorsSectionVisible();
   });
-  let postId = '';
-  let previousCommentCount = 0;
-  let commentText = '';
 
-  try {
-    await test.step('Create public text post via API', async () => {
-      ({ postId } = await createPost(page.request, postData, token2));
-      expect(postId).toBeDefined();
-    });
-
-    await test.step('Open feeds and verify seeded post', async () => {
-      await buyerNav.open('feeds');
-      await buyerFeedsPage.expectAuthenticated();
-      await buyerFeedsPage.expectTabActive(feedsTabs.following);
-      await buyerFeedsPage.expectPostVisible(postData.content);
-      previousCommentCount = await buyerFeedsPage.getPostCommentCount(postData.content);
-    });
-
-    await test.step('Open post detail and verify comment section', async () => {
-      await buyerFeedsPage.openPostDetail(postData.content);
-      await buyerFeedsPage.expectPostDetailOpen();
-      await buyerFeedsPage.expectPostButtonDisabled();
-    });
-
-    await test.step('Type comment and verify Post button enabled', async () => {
-      commentText = generateComment();
-      await buyerFeedsPage.fillComment(commentText);
-      await buyerFeedsPage.expectPostButtonEnabled();
-    });
-
-    await test.step('Submit comment, verify it appears in list and count increased', async () => {
-      await buyerFeedsPage.submitComment(commentText);
-      await buyerFeedsPage.expectCommentCountIncreased(previousCommentCount);
-    });
-
-    await test.step('Click back to feeds and verify comment count increased', async () => {
-      await buyerFeedsPage.clickBackFromPostDetail();
-      await buyerNav.expectLoaded('feeds');
-      await buyerFeedsPage.expectPostCommentCountIncreased(postData.content, previousCommentCount);
-    });
-  } finally {
-    if (postId) {
-      await test.step('Delete seeded post via API', async () => {
-        await deletePost(page.request, postId, token2);
-      });
-    }
-  }
-});
-
-test('Verify Feeds and Exclusive Comment CRUD', {
-  tag: ['@AUT-FV-086', '@feeds', '@comment', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage, page }) => {
-  test.setTimeout(120000);
-
-  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
-  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
-  if (!token2) return;
-
-  const postData = generatePostData({
-    content: `Comment CRUD ${Date.now()}`,
-    visibility: 'public',
+  await test.step('Switch to Your Post tab', async () => {
+    await buyerFeedsPage.switchToTab('yourPost');
+    await buyerFeedsPage.expectTabActive(feedsTabs.yourPost);
+    await expect(page).toHaveURL(/\/feeds/, { timeout: 10000 });
   });
-  const commentText = generateComment();
-  const updatedCommentText = `${commentText} updated`;
-  let postId = '';
 
-  try {
-    await test.step('Create public text post via API', async () => {
-      ({ postId } = await createPost(page.request, postData, token2));
-      expect(postId).toBeDefined();
-    });
-
-    await test.step('Open the seeded post and submit a comment', async () => {
-      await buyerNav.open('feeds');
-      await buyerFeedsPage.expectAuthenticated();
-      await buyerFeedsPage.expectTabActive(feedsTabs.following);
-      await buyerFeedsPage.expectPostVisible(postData.content);
-      await buyerFeedsPage.openPostDetail(postData.content);
-      await buyerFeedsPage.fillComment(commentText);
-      await buyerFeedsPage.submitComment(commentText);
-    });
-
-    await test.step('Edit the own comment and verify updated text', async () => {
-      await buyerFeedsPage.editComment(commentText, updatedCommentText);
-      await buyerFeedsPage.expectCommentVisible(updatedCommentText);
-    });
-
-    await test.step('Delete the own comment and verify it is removed', async () => {
-      await buyerFeedsPage.deleteComment(updatedCommentText);
-      await buyerFeedsPage.expectCommentHidden(updatedCommentText);
-    });
-  } finally {
-    if (postId) {
-      await test.step('Delete seeded post via API', async () => {
-        await deletePost(page.request, postId, token2);
-      });
-    }
-  }
-});
-
-test('Unlock Exclusive PPV Content and Verify Access', {
-  tag: ['@AUT-E2E-003', '@feeds', '@payment', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage, transactionPage, page }) => {
-  test.setTimeout(180000);
-
-  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
-  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed exclusive post for this E2E test');
-
-  const price = 20000;
-  const priceText = 'Rp20.000';
-  const postData = generatePostData({ 
-    content: `Exclusive unlock flow ${Date.now()}`,
-    visibility: 'pay_per_view',
-    price,
+  await test.step('Switch to Exclusive tab (gated content only)', async () => {
+    await buyerFeedsPage.switchToTab('exclusive');
+    await buyerFeedsPage.expectExclusiveContentOnly();
   });
-  let postId = '';
-  let orderId = '';
 
-  try {
-    await test.step('Create locked exclusive image post via API', async () => {
-      ({ postId } = await createPost(page.request, { ...postData, imagePath: testImages.claude }, token2));
-      expect(postId).toBeDefined();
-    });
+  await test.step('Switch back to Following tab', async () => {
+    await buyerFeedsPage.switchToTab('following');
+    await buyerFeedsPage.expectTabActive(feedsTabs.following);
+  });
 
-    await test.step('Open feeds and verify locked post indicators', async () => {
-      await buyerNav.open('feeds');
-      await buyerFeedsPage.expectAuthenticated();
-      await buyerFeedsPage.expectTabActive(feedsTabs.following);
-      await buyerFeedsPage.expectLockedPostVisible(postData.content);
-    });
+  await test.step('Infinite scroll loads additional posts', async () => {
+    await buyerFeedsPage.infiniteScroll();
+  });
 
-    await test.step('Open locked post detail and verify content remains gated', async () => {
-      await buyerFeedsPage.gotoPost(postId);
-      await buyerFeedsPage.expectLockedPostDetail();
-    });
-
-    await test.step('Open unlock preview and verify locked engagement is blocked', async () => {
-      await buyerFeedsPage.openUnlockPreview(price);
-      await buyerFeedsPage.expectLockedEngagementBlocked();
-    });
-
-    await test.step('Submit unlock payment form', async () => {
-      orderId = await buyerFeedsPage.submitUnlockPayment(`Buyer ${Date.now()}`, `812${Date.now().toString().slice(-9)}`);
-      await transactionPage.expectExclusivePostTransaction(priceText);
-    });
-
-    await test.step('Pay transaction via webhook API and verify success modal', async () => {
-      await depositWebhook(page.request, orderId);
-      await page.waitForTimeout(2500);
-      await transactionPage.expectUnlockPaymentSuccess();
-    });
-
-    await test.step('View unlocked product and verify media can be accessed', async () => {
-      await transactionPage.viewUnlockedProduct();
-      await buyerFeedsPage.expectUnlockedExclusivePost(postData.content);
-      await buyerFeedsPage.zoomUnlockedPostMedia();
-    });
-  } finally {
-    if (postId) {
-      await test.step('Delete seeded exclusive post via API', async () => {
-        await deletePost(page.request, postId, token2);
-      });
-    }}
+  await test.step('Open a public image post', async () => {
+    await buyerFeedsPage.openFirstPublicImagePost();
+    await buyerFeedsPage.expectPostDetailOpen();
+    await buyerFeedsPage.expectPublicImageUnlocked();
+  });
 });
 
 test('Verify Feeds and Exclusive Buyer Media & Profile Interaction', {
@@ -425,6 +283,122 @@ test('Verify Feeds and Exclusive Buyer Media & Profile Interaction', {
     }}
 });
 
+test('Verify Feeds and Exclusive Like & Unlike Post', {
+  tag: ['@AUT-FV-085', '@feeds', '@profile', '@like', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage, page }) => {
+  test.setTimeout(120000);
+
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
+
+  const postData = generatePostData({
+    content: `Like full cycle ${Date.now()}`,
+    visibility: 'public',
+  });
+  let postId = '';
+
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
+
+    await test.step('Open feeds and verify seeded post', async () => {
+      await buyerNav.open('feeds');
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+    });
+
+    await test.step('Like a post from feed and verify count +1, icon active', async () => {
+      await buyerFeedsPage.likePost(postData.content);
+      await buyerFeedsPage.expectPostLikedState(postData.content);
+    });
+
+    await test.step('Open post detail and verify liked state, then go back', async () => {
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.expectLikedState();
+      await buyerFeedsPage.clickBackFromPostDetail();
+      await buyerNav.expectLoaded('feeds');
+    });
+
+    await test.step('Navigate to creator profile from feeds post and unlike', async () => {
+      await buyerFeedsPage.navigateToCreatorProfileFromPostContent(postData.content);
+      await buyerNav.expectLoaded('profile');
+      await buyerProfilePage.switchToTab('feeds');
+      await buyerProfilePage.unlikeCreatorPost(postData.content);
+    });
+
+    await test.step('Return to feeds and verify unliked state on post detail', async () => {
+      await buyerProfilePage.clickBackButton();
+      await buyerNav.expectLoaded('feeds');
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostUnlikedState(postData.content);
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.expectUnlikedState();
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
+});
+
+test('Verify Feeds and Exclusive Comment CRUD', {
+  tag: ['@AUT-FV-086', '@feeds', '@comment', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
+  test.setTimeout(120000);
+
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
+  if (!token2) return;
+
+  const postData = generatePostData({
+    content: `Comment CRUD ${Date.now()}`,
+    visibility: 'public',
+  });
+  const commentText = generateComment();
+  const updatedCommentText = `${commentText} updated`;
+  let postId = '';
+
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
+
+    await test.step('Open the seeded post and submit a comment', async () => {
+      await buyerNav.open('feeds');
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.fillComment(commentText);
+      await buyerFeedsPage.submitComment(commentText);
+    });
+
+    await test.step('Edit the own comment and verify updated text', async () => {
+      await buyerFeedsPage.editComment(commentText, updatedCommentText);
+      await buyerFeedsPage.expectCommentVisible(updatedCommentText);
+    });
+
+    await test.step('Delete the own comment and verify it is removed', async () => {
+      await buyerFeedsPage.deleteComment(updatedCommentText);
+      await buyerFeedsPage.expectCommentHidden(updatedCommentText);
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
+});
+
 guestTest('Verify Guest Follow Action Requires Sign In', {
   tag: ['@AUT-FV-301', '@feeds', '@auth', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, page }) => {
@@ -444,45 +418,6 @@ guestTest('Verify Guest Follow Action Requires Sign In', {
   await guestTest.step('Click Sign in now and verify redirected to login', async () => {
     await buyerFeedsPage.clickSignInNowFromDialog();
     await expect(page).toHaveURL(/\/auth/, { timeout: 10000 });
-  });
-});
-
-test('Verify Feeds and Exclusive Display and Navigation', {
-  tag: ['@AUT-FV-078', '@feeds', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage }) => {
-  test.setTimeout(60000);
-
-  await test.step('Open feeds and verify public post visible without Member Only badge', async () => {
-    await buyerNav.open('feeds');
-    await buyerFeedsPage.expectAuthenticated();
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-  });
-
-  await test.step('Open public post and verify post detail with content', async () => {
-    await buyerFeedsPage.openFirstPublicPost();
-    await buyerFeedsPage.expectPostDetailOpen();
-  });
-});
-
-test('Verify Feeds and Exclusive Creator Profile Navigation & Exclusive Preview', {
-  tag: ['@AUT-FV-305', '@feeds', '@profile', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage }) => {
-  test.setTimeout(60000);
-
-  await test.step('Open feeds and verify Member Only badge on exclusive posts', async () => {
-    await buyerNav.open('feeds');
-    await buyerFeedsPage.expectAuthenticated();
-    await buyerFeedsPage.expectTabActive(feedsTabs.following);
-    await buyerFeedsPage.expectMemberOnlyBadgeVisible();
-  });
-
-  await test.step('Navigate to creator profile and verify same badge on Feeds tab', async () => {
-    await buyerFeedsPage.navigateToLockedPostCreatorProfile();
-    await buyerNav.expectLoaded('profile');
-    await buyerProfilePage.switchToTab('feeds');
-    await buyerProfilePage.expectFeedsTabContent();
-    await buyerProfilePage.toggleExclusiveOnly();
-    await buyerProfilePage.expectExclusiveOnlyShowsLocked();
   });
 });
 
@@ -532,21 +467,86 @@ test('Verify Feeds and Exclusive Like Idempotency', {
     }}
 });
 
-test('Verify Feeds and Exclusive Buyer Content Discovery & Presentation', {
-  tag: ['@AUT-FV-076','@feeds', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage }) => {
+test('Verify Feeds and Exclusive Comment Submission', {
+  tag: ['@AUT-FV-304', '@feeds', '@comment', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
+  test.setTimeout(120000);
+
+  const token2 = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!token2, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed creator post for this E2E test');
+
+  const postData = generatePostData({
+    content: `Comment full cycle ${Date.now()}`,
+    visibility: 'public',
+  });
+  let postId = '';
+  let previousCommentCount = 0;
+  let commentText = '';
+
+  try {
+    await test.step('Create public text post via API', async () => {
+      ({ postId } = await createPost(page.request, postData, token2));
+      expect(postId).toBeDefined();
+    });
+
+    await test.step('Open feeds and verify seeded post', async () => {
+      await buyerNav.open('feeds');
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      previousCommentCount = await buyerFeedsPage.getPostCommentCount(postData.content);
+    });
+
+    await test.step('Open post detail and verify comment section', async () => {
+      await buyerFeedsPage.openPostDetail(postData.content);
+      await buyerFeedsPage.expectPostDetailOpen();
+      await buyerFeedsPage.expectPostButtonDisabled();
+    });
+
+    await test.step('Type comment and verify Post button enabled', async () => {
+      commentText = generateComment();
+      await buyerFeedsPage.fillComment(commentText);
+      await buyerFeedsPage.expectPostButtonEnabled();
+    });
+
+    await test.step('Submit comment, verify it appears in list and count increased', async () => {
+      await buyerFeedsPage.submitComment(commentText);
+      await buyerFeedsPage.expectCommentCountIncreased(previousCommentCount);
+    });
+
+    await test.step('Click back to feeds and verify comment count increased', async () => {
+      await buyerFeedsPage.clickBackFromPostDetail();
+      await buyerNav.expectLoaded('feeds');
+      await buyerFeedsPage.expectPostCommentCountIncreased(postData.content, previousCommentCount);
+    });
+  } finally {
+    if (postId) {
+      await test.step('Delete seeded post via API', async () => {
+        await deletePost(page.request, postId, token2);
+      });
+    }
+  }
+});
+
+test('Verify Feeds and Exclusive Creator Profile Navigation & Exclusive Preview', {
+  tag: ['@AUT-FV-305', '@feeds', '@profile', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage, buyerProfilePage }) => {
   test.setTimeout(60000);
 
-  await test.step('Open feeds and verify locked post with blur and lock icon', async () => {
+  await test.step('Open feeds and verify Member Only badge on exclusive posts', async () => {
     await buyerNav.open('feeds');
     await buyerFeedsPage.expectAuthenticated();
     await buyerFeedsPage.expectTabActive(feedsTabs.following);
     await buyerFeedsPage.expectMemberOnlyBadgeVisible();
   });
 
-  await test.step('Click locked post media and verify content remains blurred with unlock prompt', async () => {
-    await buyerFeedsPage.clickLockedPostMedia();
-    await buyerFeedsPage.expectLockedMediaBlocked();
+  await test.step('Navigate to creator profile and verify same badge on Feeds tab', async () => {
+    await buyerFeedsPage.navigateToLockedPostCreatorProfile();
+    await buyerNav.expectLoaded('profile');
+    await buyerProfilePage.switchToTab('feeds');
+    await buyerProfilePage.expectFeedsTabContent();
+    await buyerProfilePage.toggleExclusiveOnly();
+    await buyerProfilePage.expectExclusiveOnlyShowsLocked();
   });
 });
 });

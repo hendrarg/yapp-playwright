@@ -198,116 +198,6 @@ test.describe('Creator Sessions', () => {
     });
   });
 
-  test('Create, Update, and Manage Consultation Lifecycle', {
-    tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
-    test.setTimeout(240000);
-
-    const consultationType = productsCreationData.productTypes.find(
-      (type) => type.label === 'Consultation',
-    )!;
-    const title = generateConsultationLifecycleTitle();
-    const description = generateConsultationLifecycleDescription();
-    const savedTitle = `${title}${consultationLifecycleData.savedTitleSuffix}`;
-    const savedDescription = generateConsultationLifecycleDescription();
-    const afterSalesMessageV1 = generateConsultationAfterSalesMessage();
-    const afterSalesMessageV2 = generateConsultationAfterSalesMessage();
-    const weekday = consultationWeekdayLabel();
-    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
-    let productUuid = '';
-    let sharePath = '';
-
-    try {
-      await test.step('Save consultation as non-public draft', async () => {
-        await creatorNav.open('products');
-        await productsPage.expectLoaded();
-        await productsPage.openAddProductSheet();
-        await productsPage.selectProductType(consultationType.buttonName);
-        await productsPage.expectConsultationCreateFlow();
-        await productsPage.prepareConsultationDetailsForAvailability(
-          title,
-          description,
-        );
-        await productsPage.addConsultationWeekdayTimeSlot(weekday);
-        await productsPage.saveConsultationAsDraft();
-        await productsPage.selectStatusTab('Draft');
-        await productsPage.searchProducts(title);
-        await productsPage.expectProductVisible(title);
-        await productsPage.expectProductRowStatus(title, 'DRAFT');
-        sharePath = await productsPage.readProductSharePath(title);
-      });
-
-      await test.step('Keep draft non-public for buyers', async () => {
-        await productPurchasePage.gotoSharePath(sharePath);
-        await productPurchasePage.expectConsultationProductLoaded(title);
-        await productPurchasePage.expectConsultationNotBookable();
-      });
-
-      await test.step('Open editor with pre-populated details and availability', async () => {
-        await creatorNav.open('products');
-        await productsPage.selectStatusTab('Draft');
-        await productsPage.searchProducts(title);
-        await productsPage.openEditProduct(title);
-        productUuid = await productsPage.readAppointmentProductUuidFromUrl();
-        await productsPage.expectConsultationTitleValue(title);
-        await productsPage.expectConsultationDescriptionContains(description);
-        await productsPage.openConsultationEditTab('Availability');
-        await productsPage.expectConsultationWeekdaySlotConfigured(weekday);
-        await productsPage.openConsultationEditTab('Details');
-      });
-
-      await test.step('Discard unsaved detail edits on reload', async () => {
-        await productsPage.fillConsultationTitle(
-          `${title}${consultationLifecycleData.unsavedTitleSuffix}`,
-        );
-        await productsPage.reloadConsultationEditor();
-        await productsPage.expectConsultationTitleValue(title);
-      });
-
-      await test.step('Persist saved detail and after-sales message changes', async () => {
-        await productsPage.fillConsultationTitle(savedTitle);
-        await productsPage.fillConsultationDescription(savedDescription);
-        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV1);
-        await productsPage.openConsultationEditTab('Availability');
-        await productsPage.setConsultationMinimumNoticeHours(
-          consultationLifecycleData.minimumNoticeHours,
-        );
-        await productsPage.configureConsultationWeekdaySlot(weekday);
-        await productsPage.expectConsultationPublishReady();
-        await productsPage.saveAndPublishConsultation();
-        await productsPage.expectProductCompleteModal();
-        sharePath = await productsPage.readProductCompleteSharePath();
-        await productsPage.closeProductCompleteModal();
-      });
-
-      await test.step('Apply updated after-sales message for future delivery only', async () => {
-        await creatorNav.open('products');
-        await productsPage.selectStatusTab('Active');
-        await productsPage.searchProducts(savedTitle);
-        await productsPage.openEditProduct(savedTitle);
-        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV1);
-        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV2);
-        await productsPage.openConsultationEditTab('Availability');
-        await productsPage.expectConsultationPublishReady();
-        await productsPage.saveAndPublishConsultationFromEdit();
-        await creatorNav.open('products');
-        await productsPage.searchProducts(savedTitle);
-        await productsPage.openEditProduct(savedTitle);
-        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV2);
-      });
-
-      await test.step('Review available booking slots on active consultation', async () => {
-        await productPurchasePage.gotoSharePath(sharePath);
-        await productPurchasePage.expectConsultationProductLoaded(savedTitle);
-        await productPurchasePage.expectConsultationBookable();
-      });
-    } finally {
-      if (productUuid && accessToken) {
-        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
-      }
-    }
-  });
-
   test('Validate Consultation Pricing, Vouchers, and Fees', {
     tag: ['@AUT-FV-020', '@sessions', '@creator', '@regression'],
   }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
@@ -419,6 +309,116 @@ test.describe('Creator Sessions', () => {
         for (const productUuid of productUuids) {
           await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
         }
+      }
+    }
+  });
+
+  test('Create, Update, and Manage Consultation Lifecycle', {
+    tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
+  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
+    test.setTimeout(240000);
+
+    const consultationType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Consultation',
+    )!;
+    const title = generateConsultationLifecycleTitle();
+    const description = generateConsultationLifecycleDescription();
+    const savedTitle = `${title}${consultationLifecycleData.savedTitleSuffix}`;
+    const savedDescription = generateConsultationLifecycleDescription();
+    const afterSalesMessageV1 = generateConsultationAfterSalesMessage();
+    const afterSalesMessageV2 = generateConsultationAfterSalesMessage();
+    const weekday = consultationWeekdayLabel();
+    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    let productUuid = '';
+    let sharePath = '';
+
+    try {
+      await test.step('Save consultation as non-public draft', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.openAddProductSheet();
+        await productsPage.selectProductType(consultationType.buttonName);
+        await productsPage.expectConsultationCreateFlow();
+        await productsPage.prepareConsultationDetailsForAvailability(
+          title,
+          description,
+        );
+        await productsPage.addConsultationWeekdayTimeSlot(weekday);
+        await productsPage.saveConsultationAsDraft();
+        await productsPage.selectStatusTab('Draft');
+        await productsPage.searchProducts(title);
+        await productsPage.expectProductVisible(title);
+        await productsPage.expectProductRowStatus(title, 'DRAFT');
+        sharePath = await productsPage.readProductSharePath(title);
+      });
+
+      await test.step('Keep draft non-public for buyers', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectConsultationProductLoaded(title);
+        await productPurchasePage.expectConsultationNotBookable();
+      });
+
+      await test.step('Open editor with pre-populated details and availability', async () => {
+        await creatorNav.open('products');
+        await productsPage.selectStatusTab('Draft');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        productUuid = await productsPage.readAppointmentProductUuidFromUrl();
+        await productsPage.expectConsultationTitleValue(title);
+        await productsPage.expectConsultationDescriptionContains(description);
+        await productsPage.openConsultationEditTab('Availability');
+        await productsPage.expectConsultationWeekdaySlotConfigured(weekday);
+        await productsPage.openConsultationEditTab('Details');
+      });
+
+      await test.step('Discard unsaved detail edits on reload', async () => {
+        await productsPage.fillConsultationTitle(
+          `${title}${consultationLifecycleData.unsavedTitleSuffix}`,
+        );
+        await productsPage.reloadConsultationEditor();
+        await productsPage.expectConsultationTitleValue(title);
+      });
+
+      await test.step('Persist saved detail and after-sales message changes', async () => {
+        await productsPage.fillConsultationTitle(savedTitle);
+        await productsPage.fillConsultationDescription(savedDescription);
+        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV1);
+        await productsPage.openConsultationEditTab('Availability');
+        await productsPage.setConsultationMinimumNoticeHours(
+          consultationLifecycleData.minimumNoticeHours,
+        );
+        await productsPage.configureConsultationWeekdaySlot(weekday);
+        await productsPage.expectConsultationPublishReady();
+        await productsPage.saveAndPublishConsultation();
+        await productsPage.expectProductCompleteModal();
+        sharePath = await productsPage.readProductCompleteSharePath();
+        await productsPage.closeProductCompleteModal();
+      });
+
+      await test.step('Apply updated after-sales message for future delivery only', async () => {
+        await creatorNav.open('products');
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(savedTitle);
+        await productsPage.openEditProduct(savedTitle);
+        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV1);
+        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV2);
+        await productsPage.openConsultationEditTab('Availability');
+        await productsPage.expectConsultationPublishReady();
+        await productsPage.saveAndPublishConsultationFromEdit();
+        await creatorNav.open('products');
+        await productsPage.searchProducts(savedTitle);
+        await productsPage.openEditProduct(savedTitle);
+        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV2);
+      });
+
+      await test.step('Review available booking slots on active consultation', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectConsultationProductLoaded(savedTitle);
+        await productPurchasePage.expectConsultationBookable();
+      });
+    } finally {
+      if (productUuid && accessToken) {
+        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
       }
     }
   });

@@ -52,6 +52,95 @@ test('Open Tipping Page and Confirm Successful Tip', {
   });
 });
 
+test('Reject Empty and Invalid Tip Amounts', {
+  tag: ['@AUT-FV-284', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ buyerNav, tipPage }) => {
+  test.setTimeout(60000);
+
+  await test.step('Open tip amount form', async () => {
+    await buyerNav.goto('tip', { handle: creatorProfile });
+    await tipPage.expectPageLoaded();
+    await tipPage.selectCurrency(tipCheckoutData.currency);
+  });
+
+  await test.step('Reject empty amount', async () => {
+    await tipPage.clearAmount();
+    await tipPage.expectAmountError(tipAmountBoundary.requiredError);
+  });
+
+  await test.step('Reject zero amount', async () => {
+    await tipPage.fillAmount('0');
+    await tipPage.expectAmountError(tipAmountBoundary.requiredError);
+  });
+
+  await test.step('Reject amount below minimum', async () => {
+    await tipPage.fillAmount(tipAmountBoundary.belowMinimum);
+    await tipPage.expectAmountError(tipAmountBoundary.minimumError);
+  });
+});
+
+guestTest('Require Name and Email Before Sending a Tip', {
+  tag: ['@AUT-FV-285', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ buyerNav, tipPage }) => {
+  guestTest.setTimeout(60000);
+
+  await guestTest.step('Open tip page and enter a valid amount', async () => {
+    await buyerNav.goto('tip', { handle: creatorProfile });
+    await tipPage.expectPageLoaded();
+    await tipPage.fillAmount(tipCheckoutData.amount);
+  });
+
+  await guestTest.step('Leave Name and Email empty', async () => {
+    await expect(tipPage.nameInput).toHaveValue('');
+    await expect(tipPage.emailInput).toHaveValue('');
+  });
+
+  await guestTest.step('Attempt to submit the tip', async () => {
+    await tipPage.expectSendTipEnabled();
+    await tipPage.attemptSubmit();
+  });
+
+  await guestTest.step('Verify submission blocked with required errors on Name and Email', async () => {
+    await tipPage.expectNameError();
+    await tipPage.expectEmailError();
+    await tipPage.expectSubmissionBlocked();
+  });
+});
+
+test('Validate Buyer Tip Details and Notes', {
+  tag: ['@AUT-FV-286', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ buyerNav, tipPage }) => {
+
+  await test.step('Verify buyer name and email are prefilled', async () => {
+    await buyerNav.goto('tip', { handle: creatorProfile });
+    await tipPage.expectTipFormReady();
+  });
+
+  await test.step('Validate required name on blur', async () => {
+    await tipPage.clearName();
+    await tipPage.blurName();
+    await tipPage.expectNameError();
+    await tipPage.expectEmailDisabled();
+    await tipPage.fillName(tipCheckoutData.creatorName);
+  });
+
+  await test.step('Enable anonymous tip and continue with a valid amount', async () => {
+    await tipPage.fillAmount(tipCheckoutData.amount);
+    await tipPage.selectAnonymous();
+    await tipPage.expectAnonymousSelected();
+    await tipPage.expectSendTipEnabled();
+  });
+
+  await test.step('Continue with optional notes empty', async () => {
+    await tipPage.expectNotesEmpty();
+    await tipPage.expectSendTipEnabled();
+  });
+
+  await test.step('Accept 200 Give Notes characters and block the 201st', async () => {
+    await tipPage.expectGiveNotesLimit();
+  });
+});
+
 test('Complete Tip Payment and Verify Transaction Status', {
   tag: ['@AUT-FV-287', '@tip', '@buyer', '@smoke', '@regression'],
 }, async ({ buyerNav, tipPage, transactionPage, page }) => {
@@ -136,117 +225,6 @@ test('Select Tip Agreement by Default', {
   });
 });
 
-test('Enforce the Minimum IDR Tip Amount', {
-  tag: ['@AUT-FV-291', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ buyerNav, tipPage }) => {
-  test.setTimeout(90000);
-
-  await test.step('Select IDR and open the tip amount form', async () => {
-    await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectTipFormReady();
-    await tipPage.selectCurrency(tipCheckoutData.currency);
-  });
-
-  await test.step('Reject Rp9.999 as below the minimum', async () => {
-    await tipPage.fillAmount(tipAmountBoundary.belowMinimum);
-    await tipPage.expectAmountError(tipAmountBoundary.minimumError);
-  });
-
-  await test.step('Accept Rp10.000 with Send Tip enabled', async () => {
-    await tipPage.fillAmount(tipAmountBoundary.minimum);
-    await tipPage.expectSendTipEnabled();
-  });
-});
-
-test('Validate Buyer Tip Details and Notes', {
-  tag: ['@AUT-FV-286', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ buyerNav, tipPage }) => {
-
-  await test.step('Verify buyer name and email are prefilled', async () => {
-    await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectTipFormReady();
-  });
-
-  await test.step('Validate required name on blur', async () => {
-    await tipPage.clearName();
-    await tipPage.blurName();
-    await tipPage.expectNameError();
-    await tipPage.expectEmailDisabled();
-    await tipPage.fillName(tipCheckoutData.creatorName);
-  });
-
-  await test.step('Enable anonymous tip and continue with a valid amount', async () => {
-    await tipPage.fillAmount(tipCheckoutData.amount);
-    await tipPage.selectAnonymous();
-    await tipPage.expectAnonymousSelected();
-    await tipPage.expectSendTipEnabled();
-  });
-
-  await test.step('Continue with optional notes empty', async () => {
-    await tipPage.expectNotesEmpty();
-    await tipPage.expectSendTipEnabled();
-  });
-
-  await test.step('Accept 200 Give Notes characters and block the 201st', async () => {
-    await tipPage.expectGiveNotesLimit();
-  });
-});
-
-guestTest('Require Name and Email Before Sending a Tip', {
-  tag: ['@AUT-FV-285', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ buyerNav, tipPage }) => {
-  guestTest.setTimeout(60000);
-
-  await guestTest.step('Open tip page and enter a valid amount', async () => {
-    await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.fillAmount(tipCheckoutData.amount);
-  });
-
-  await guestTest.step('Leave Name and Email empty', async () => {
-    await expect(tipPage.nameInput).toHaveValue('');
-    await expect(tipPage.emailInput).toHaveValue('');
-  });
-
-  await guestTest.step('Attempt to submit the tip', async () => {
-    await tipPage.expectSendTipEnabled();
-    await tipPage.attemptSubmit();
-  });
-
-  await guestTest.step('Verify submission blocked with required errors on Name and Email', async () => {
-    await tipPage.expectNameError();
-    await tipPage.expectEmailError();
-    await tipPage.expectSubmissionBlocked();
-  });
-});
-
-test('Reject Empty and Invalid Tip Amounts', {
-  tag: ['@AUT-FV-284', '@payment', '@tip', '@buyer', '@regression'],
-}, async ({ buyerNav, tipPage }) => {
-  test.setTimeout(60000);
-
-  await test.step('Open tip amount form', async () => {
-    await buyerNav.goto('tip', { handle: creatorProfile });
-    await tipPage.expectPageLoaded();
-    await tipPage.selectCurrency(tipCheckoutData.currency);
-  });
-
-  await test.step('Reject empty amount', async () => {
-    await tipPage.clearAmount();
-    await tipPage.expectAmountError(tipAmountBoundary.requiredError);
-  });
-
-  await test.step('Reject zero amount', async () => {
-    await tipPage.fillAmount('0');
-    await tipPage.expectAmountError(tipAmountBoundary.requiredError);
-  });
-
-  await test.step('Reject amount below minimum', async () => {
-    await tipPage.fillAmount(tipAmountBoundary.belowMinimum);
-    await tipPage.expectAmountError(tipAmountBoundary.minimumError);
-  });
-});
-
 test('Switch Currency and Continue with a Valid Tip Amount', {
   tag: ['@AUT-FV-290', '@payment', '@tip', '@buyer', '@regression'],
 }, async ({ buyerNav, tipPage }) => {
@@ -268,6 +246,28 @@ test('Switch Currency and Continue with a Valid Tip Amount', {
     await tipPage.fillAmount(tipCheckoutData.usdtAmount);
     await tipPage.expectOnlyCurrencyActive(tipCheckoutData.usdtCurrency, tipCheckoutData.currency);
     await expect(tipPage.amountInput).toHaveValue(tipCheckoutData.usdtDisplayAmount);
+    await tipPage.expectSendTipEnabled();
+  });
+});
+
+test('Enforce the Minimum IDR Tip Amount', {
+  tag: ['@AUT-FV-291', '@payment', '@tip', '@buyer', '@regression'],
+}, async ({ buyerNav, tipPage }) => {
+  test.setTimeout(90000);
+
+  await test.step('Select IDR and open the tip amount form', async () => {
+    await buyerNav.goto('tip', { handle: creatorProfile });
+    await tipPage.expectTipFormReady();
+    await tipPage.selectCurrency(tipCheckoutData.currency);
+  });
+
+  await test.step('Reject Rp9.999 as below the minimum', async () => {
+    await tipPage.fillAmount(tipAmountBoundary.belowMinimum);
+    await tipPage.expectAmountError(tipAmountBoundary.minimumError);
+  });
+
+  await test.step('Accept Rp10.000 with Send Tip enabled', async () => {
+    await tipPage.fillAmount(tipAmountBoundary.minimum);
     await tipPage.expectSendTipEnabled();
   });
 });

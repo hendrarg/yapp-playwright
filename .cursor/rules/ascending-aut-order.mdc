@@ -1,0 +1,21 @@
+---
+description: Keep mapped Playwright tests in ascending @AUT-* order inside each spec
+globs: tests/**/*.spec.ts
+alwaysApply: false
+---
+
+# Ascending AUT order in test specs
+
+Inside each feature spec, `test()` / `guestTest()` blocks with `@AUT-*` tags must be ordered ascending:
+
+1. `@AUT-E2E-*` (numeric ID ascending)
+2. `@AUT-FV-*` (numeric ID ascending)
+
+When adding a new AUT, insert it at the correct sorted position — never leave the file out of order.
+
+```bash
+node scripts/reorder-aut-ascending.mjs --check
+node scripts/reorder-aut-ascending.mjs
+```
+
+Also enforced in `.agents/rules/testing.md` → **Ascending AUT order**.

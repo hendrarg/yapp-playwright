@@ -151,6 +151,21 @@ test('description', { tag: ['@AUT-FV-216', '@feature', '@role', '@priority'] }, 
 
 Tags at `test.describe()` level apply to all child tests.
 
+### Ascending AUT order (required)
+
+Inside each `*.spec.ts`, mapped `test()` / `guestTest()` blocks must appear in **ascending `@AUT-*` order**:
+
+1. `@AUT-E2E-*` first (by numeric ID ascending)
+2. then `@AUT-FV-*` (by numeric ID ascending)
+
+When adding a new automation, **insert** it at the correct sorted position — do not append out of order at the bottom of the file.
+
+```bash
+# Check / fix order
+node scripts/reorder-aut-ascending.mjs --check
+node scripts/reorder-aut-ascending.mjs
+```
+
 After adding or editing tests, run `npm run audit:tags`.
 
 ### Tag Reference

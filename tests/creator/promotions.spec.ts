@@ -10,6 +10,60 @@ import { generatePromotionData } from "@test-data/creator/promotion.data";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 test.describe("Creator Promotions", () => {
+  test("Validate Promotions Inputs and Boundary Conditions", {
+    tag: ["@AUT-FV-236", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    let unlimitedPromotionId = "";
+    let limitedPromotionId = "";
+
+    try {
+      await test.step("Validate required fields", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.submitEmptyPromotionForm();
+        await promotionsPage.expectRequiredFieldFeedback();
+      });
+
+      await test.step("Save promotion without usage limit", async () => {
+        const promotion = generatePromotionValidationData({ maximumUsage: undefined });
+
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillPromotionForm(promotion);
+
+        const response = await promotionsPage.submitPromotionForm();
+        unlimitedPromotionId = getPromotionId(response);
+        expect(response.data.name).toBe(promotion.name);
+        expect(response.data.maxUsed).toBeNull();
+      });
+
+      await test.step("Save promotion with usage limit", async () => {
+        const promotion = generatePromotionValidationData({
+          maximumUsage: promotionValidationData.maximumUsage,
+        });
+
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillPromotionForm(promotion);
+
+        const response = await promotionsPage.submitPromotionForm();
+        limitedPromotionId = getPromotionId(response);
+        expect(response.data.name).toBe(promotion.name);
+        expect(response.data.maxUsed).toBe(promotion.maximumUsage);
+      });
+    } finally {
+      if (limitedPromotionId) {
+        await deletePromotion(page.request, limitedPromotionId);
+      }
+
+      if (unlimitedPromotionId) {
+        await deletePromotion(page.request, unlimitedPromotionId);
+      }
+    }
+  });
+
   test("Validate Promotions Pricing, Vouchers, and Fees", {
     tag: ["@AUT-FV-237", "@promotions", "@creator", "@regression"],
   }, async ({ creatorNav, promotionsPage, page }) => {
@@ -70,60 +124,6 @@ test.describe("Creator Promotions", () => {
     }
   });
 
-  test("Validate Promotions Inputs and Boundary Conditions", {
-    tag: ["@AUT-FV-236", "@promotions", "@creator", "@regression"],
-  }, async ({ creatorNav, promotionsPage, page }) => {
-    test.setTimeout(120_000);
-
-    let unlimitedPromotionId = "";
-    let limitedPromotionId = "";
-
-    try {
-      await test.step("Validate required fields", async () => {
-        await creatorNav.open("promotions");
-        await promotionsPage.openCreatePromotionForm();
-        await promotionsPage.submitEmptyPromotionForm();
-        await promotionsPage.expectRequiredFieldFeedback();
-      });
-
-      await test.step("Save promotion without usage limit", async () => {
-        const promotion = generatePromotionValidationData({ maximumUsage: undefined });
-
-        await creatorNav.open("promotions");
-        await promotionsPage.openCreatePromotionForm();
-        await promotionsPage.fillPromotionForm(promotion);
-
-        const response = await promotionsPage.submitPromotionForm();
-        unlimitedPromotionId = getPromotionId(response);
-        expect(response.data.name).toBe(promotion.name);
-        expect(response.data.maxUsed).toBeNull();
-      });
-
-      await test.step("Save promotion with usage limit", async () => {
-        const promotion = generatePromotionValidationData({
-          maximumUsage: promotionValidationData.maximumUsage,
-        });
-
-        await creatorNav.open("promotions");
-        await promotionsPage.openCreatePromotionForm();
-        await promotionsPage.fillPromotionForm(promotion);
-
-        const response = await promotionsPage.submitPromotionForm();
-        limitedPromotionId = getPromotionId(response);
-        expect(response.data.name).toBe(promotion.name);
-        expect(response.data.maxUsed).toBe(promotion.maximumUsage);
-      });
-    } finally {
-      if (limitedPromotionId) {
-        await deletePromotion(page.request, limitedPromotionId);
-      }
-
-      if (unlimitedPromotionId) {
-        await deletePromotion(page.request, unlimitedPromotionId);
-      }
-    }
-  });
-
   test("Verify Core Promotions Behavior", {
     tag: ["@AUT-FV-238", "@promotions", "@creator", "@regression"],
   }, async ({ creatorNav, promotionsPage, page }) => {
@@ -163,6 +163,162 @@ test.describe("Creator Promotions", () => {
       if (promotionId) {
         await deletePromotion(page.request, promotionId);
       }}
+  });
+
+  test("Select selected-products scope", {
+    tag: ["@AUT-FV-239", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage }) => {
+    await test.step("Open create promotion form", async () => {
+      await creatorNav.open("promotions");
+      await promotionsPage.openCreatePromotionForm();
+    });
+
+    await test.step("Choose Selected Products and verify product selector", async () => {
+      await promotionsPage.selectSelectedProductsScope();
+    });
+  });
+
+  test("Search products across categories in product scope", {
+    tag: ["@AUT-FV-240", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage }) => {
+    test.setTimeout(120_000);
+
+    await test.step("Open create promotion form and choose Selected Products", async () => {
+      await creatorNav.open("promotions");
+      await promotionsPage.openCreatePromotionForm();
+      await promotionsPage.selectSelectedProductsScope();
+    });
+
+    await test.step("Search and select products from different categories", async () => {
+      await promotionsPage.searchProductsInScope(promotionsScopeData.products.telegram);
+      await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.telegram);
+      await promotionsPage.selectProductInScope(promotionsScopeData.products.telegram);
+
+      await promotionsPage.searchProductsInScope(promotionsScopeData.products.digitalDownload);
+      await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.digitalDownload);
+      await promotionsPage.selectProductInScope(promotionsScopeData.products.digitalDownload);
+    });
+  });
+
+  test("Persist Promotions Changes and State", {
+    tag: ["@AUT-FV-241", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const promotion = generatePromotionValidationData();
+    const selectedProducts = [
+      promotionsScopeData.products.telegram,
+      promotionsScopeData.products.digitalDownload,
+    ];
+    let promotionId = "";
+
+    try {
+      await test.step("Create promotion with selected products and save", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillSelectedProductsPromotion(promotion, selectedProducts);
+        const response = await promotionsPage.submitPromotionForm();
+        promotionId = getPromotionId(response);
+      });
+
+      await test.step("Reopen promotion edit and verify selected products are prepopulated", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
+        await promotionsPage.openPromotionEdit(promotion.code, promotion.name);
+        await promotionsPage.expectSelectedProductsOnEdit(selectedProducts);
+      });
+    } finally {
+      if (promotionId) {
+        await deletePromotion(page.request, promotionId);
+      }
+    }
+  });
+
+  test("Validate Promotions Scheduling, Availability, and Time Rules", {
+    tag: ["@AUT-FV-242", "@promotions", "@creator", "@regression"],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const startDate = new Date();
+    const endDate = new Date(Date.now() + DAY_MS);
+    const promotion = generatePromotionValidationData({
+      startDateDay: `${startDate.getMonth() + 1}/${startDate.getDate()}/${startDate.getFullYear()}`,
+      endDateDay: `${endDate.getMonth() + 1}/${endDate.getDate()}/${endDate.getFullYear()}`,
+    });
+    let promotionId = "";
+
+    try {
+      await test.step("Create promotion with start and end period then save", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.openCreatePromotionForm();
+        await promotionsPage.fillPromotionForm(promotion);
+        const response = await promotionsPage.submitPromotionForm();
+        promotionId = getPromotionId(response);
+      });
+
+      await test.step("Verify saved promotion period on management list", async () => {
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(promotion.name, promotion.code);
+        await promotionsPage.expectPromotionPeriodInList(
+          promotion.code,
+          formatPromotionListDate(startDate),
+          formatPromotionListDate(endDate),
+        );
+      });
+    } finally {
+      if (promotionId) {
+        await deletePromotion(page.request, promotionId);
+      }
+    }
+  });
+
+  test("Verify Promotions Access, Entitlements, and Eligibility", {
+    tag: ["@AUT-FV-243", "@promotions", "@creator", "@smoke", "@regression"],
+  }, async ({ creatorNav, promotionsPage, page }) => {
+    test.setTimeout(120_000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
+    test.skip(!seedToken, "YAPP_TEST_ACCESS_TOKEN for QA Tester is required");
+    if (!seedToken) return;
+
+    const listPromotion = generatePromotionData("active");
+    const deletePromotionData = generatePromotionData("active");
+
+    let listPromotionId = "";
+
+    try {
+      await test.step("Display promotion list fields", async () => {
+        listPromotionId = getPromotionId(
+          await createPromotion(page.request, listPromotion, seedToken),
+        );
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(listPromotion.name, listPromotion.code);
+        await promotionsPage.expectPromotionRowFields(listPromotion.code, {
+          name: listPromotion.name,
+          code: listPromotion.code,
+          discountLabel: `${listPromotion.discount}% off`,
+          status: "Active",
+          redeemCount: "0",
+        });
+        await promotionsPage.expectPromotionPeriodInList(
+          listPromotion.code,
+          formatPromotionListDate(new Date(listPromotion.periodStartAt)),
+          formatPromotionListDate(new Date(listPromotion.periodEndAt)),
+        );
+      });
+
+      await test.step("Delete promotion from management list", async () => {
+        await createPromotion(page.request, deletePromotionData, seedToken);
+        await creatorNav.open("promotions");
+        await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
+        await promotionsPage.deletePromotionFromList(deletePromotionData.code);
+        await promotionsPage.expectPromotionAbsent(deletePromotionData.code);
+      });
+    } finally {
+      if (listPromotionId) {
+        await deletePromotion(page.request, listPromotionId, seedToken);
+      }
+    }
   });
 
   test("Publish & Share Promotions", {
@@ -321,162 +477,6 @@ test.describe("Creator Promotions", () => {
       }
       if (deletePromotionId) {
         await deletePromotion(page.request, deletePromotionId, seedToken);
-      }
-    }
-  });
-
-  test("Select selected-products scope", {
-    tag: ["@AUT-FV-239", "@promotions", "@creator", "@regression"],
-  }, async ({ creatorNav, promotionsPage }) => {
-    await test.step("Open create promotion form", async () => {
-      await creatorNav.open("promotions");
-      await promotionsPage.openCreatePromotionForm();
-    });
-
-    await test.step("Choose Selected Products and verify product selector", async () => {
-      await promotionsPage.selectSelectedProductsScope();
-    });
-  });
-
-  test("Search products across categories in product scope", {
-    tag: ["@AUT-FV-240", "@promotions", "@creator", "@regression"],
-  }, async ({ creatorNav, promotionsPage }) => {
-    test.setTimeout(120_000);
-
-    await test.step("Open create promotion form and choose Selected Products", async () => {
-      await creatorNav.open("promotions");
-      await promotionsPage.openCreatePromotionForm();
-      await promotionsPage.selectSelectedProductsScope();
-    });
-
-    await test.step("Search and select products from different categories", async () => {
-      await promotionsPage.searchProductsInScope(promotionsScopeData.products.telegram);
-      await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.telegram);
-      await promotionsPage.selectProductInScope(promotionsScopeData.products.telegram);
-
-      await promotionsPage.searchProductsInScope(promotionsScopeData.products.digitalDownload);
-      await promotionsPage.expectProductSelectableInScope(promotionsScopeData.products.digitalDownload);
-      await promotionsPage.selectProductInScope(promotionsScopeData.products.digitalDownload);
-    });
-  });
-
-  test("Persist Promotions Changes and State", {
-    tag: ["@AUT-FV-241", "@promotions", "@creator", "@regression"],
-  }, async ({ creatorNav, promotionsPage, page }) => {
-    test.setTimeout(120_000);
-
-    const promotion = generatePromotionValidationData();
-    const selectedProducts = [
-      promotionsScopeData.products.telegram,
-      promotionsScopeData.products.digitalDownload,
-    ];
-    let promotionId = "";
-
-    try {
-      await test.step("Create promotion with selected products and save", async () => {
-        await creatorNav.open("promotions");
-        await promotionsPage.openCreatePromotionForm();
-        await promotionsPage.fillSelectedProductsPromotion(promotion, selectedProducts);
-        const response = await promotionsPage.submitPromotionForm();
-        promotionId = getPromotionId(response);
-      });
-
-      await test.step("Reopen promotion edit and verify selected products are prepopulated", async () => {
-        await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.name, promotion.code);
-        await promotionsPage.openPromotionEdit(promotion.code, promotion.name);
-        await promotionsPage.expectSelectedProductsOnEdit(selectedProducts);
-      });
-    } finally {
-      if (promotionId) {
-        await deletePromotion(page.request, promotionId);
-      }
-    }
-  });
-
-  test("Validate Promotions Scheduling, Availability, and Time Rules", {
-    tag: ["@AUT-FV-242", "@promotions", "@creator", "@regression"],
-  }, async ({ creatorNav, promotionsPage, page }) => {
-    test.setTimeout(120_000);
-
-    const startDate = new Date();
-    const endDate = new Date(Date.now() + DAY_MS);
-    const promotion = generatePromotionValidationData({
-      startDateDay: `${startDate.getMonth() + 1}/${startDate.getDate()}/${startDate.getFullYear()}`,
-      endDateDay: `${endDate.getMonth() + 1}/${endDate.getDate()}/${endDate.getFullYear()}`,
-    });
-    let promotionId = "";
-
-    try {
-      await test.step("Create promotion with start and end period then save", async () => {
-        await creatorNav.open("promotions");
-        await promotionsPage.openCreatePromotionForm();
-        await promotionsPage.fillPromotionForm(promotion);
-        const response = await promotionsPage.submitPromotionForm();
-        promotionId = getPromotionId(response);
-      });
-
-      await test.step("Verify saved promotion period on management list", async () => {
-        await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(promotion.name, promotion.code);
-        await promotionsPage.expectPromotionPeriodInList(
-          promotion.code,
-          formatPromotionListDate(startDate),
-          formatPromotionListDate(endDate),
-        );
-      });
-    } finally {
-      if (promotionId) {
-        await deletePromotion(page.request, promotionId);
-      }
-    }
-  });
-
-  test("Verify Promotions Access, Entitlements, and Eligibility", {
-    tag: ["@AUT-FV-243", "@promotions", "@creator", "@smoke", "@regression"],
-  }, async ({ creatorNav, promotionsPage, page }) => {
-    test.setTimeout(120_000);
-
-    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, "");
-    test.skip(!seedToken, "YAPP_TEST_ACCESS_TOKEN for QA Tester is required");
-    if (!seedToken) return;
-
-    const listPromotion = generatePromotionData("active");
-    const deletePromotionData = generatePromotionData("active");
-
-    let listPromotionId = "";
-
-    try {
-      await test.step("Display promotion list fields", async () => {
-        listPromotionId = getPromotionId(
-          await createPromotion(page.request, listPromotion, seedToken),
-        );
-        await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(listPromotion.name, listPromotion.code);
-        await promotionsPage.expectPromotionRowFields(listPromotion.code, {
-          name: listPromotion.name,
-          code: listPromotion.code,
-          discountLabel: `${listPromotion.discount}% off`,
-          status: "Active",
-          redeemCount: "0",
-        });
-        await promotionsPage.expectPromotionPeriodInList(
-          listPromotion.code,
-          formatPromotionListDate(new Date(listPromotion.periodStartAt)),
-          formatPromotionListDate(new Date(listPromotion.periodEndAt)),
-        );
-      });
-
-      await test.step("Delete promotion from management list", async () => {
-        await createPromotion(page.request, deletePromotionData, seedToken);
-        await creatorNav.open("promotions");
-        await promotionsPage.searchPromotions(deletePromotionData.name, deletePromotionData.code);
-        await promotionsPage.deletePromotionFromList(deletePromotionData.code);
-        await promotionsPage.expectPromotionAbsent(deletePromotionData.code);
-      });
-    } finally {
-      if (listPromotionId) {
-        await deletePromotion(page.request, listPromotionId, seedToken);
       }
     }
   });
