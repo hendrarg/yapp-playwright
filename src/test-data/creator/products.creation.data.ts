@@ -147,6 +147,14 @@ export const digitalProductValidationData = {
   },
 } as const;
 
+export function generateDigitalProductTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateDigitalProductDescription(): string {
+  return faker.lorem.sentence();
+}
+
 export function generateOnlineCourseProductData(
   overrides?: Partial<OnlineCourseProductData>,
 ): OnlineCourseProductData {

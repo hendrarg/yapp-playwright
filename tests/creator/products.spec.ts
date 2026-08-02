@@ -3,7 +3,7 @@ import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile,
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -602,6 +602,84 @@ test.describe('Creator Products', () => {
     await test.step('Correct link data and save multiple valid embedded links', async () => {
       const [firstLink, secondLink] = digitalProductValidationData.linkValidation.validLinks;
 
+      await productsPage.fillEmbedLink(firstLink.label, firstLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(secondLink.label, secondLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.expectEmbedLinksSaved([firstLink.label, secondLink.label]);
+    });
+  });
+
+  test('Validate Digital Product Navigation and Unsaved Changes', {
+    tag: ['@AUT-FV-190', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-PD-C-003',
+    }],
+  }, async ({ creatorNav, productsPage, page }) => {
+
+    const digitalProductType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Digital Product',
+    )!;
+
+    await test.step('Open Digital Product creation flow and make an unsaved change', async () => {
+      await creatorNav.open('products');
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(digitalProductType.buttonName);
+      await productsPage.expectDigitalProductCreateFlow();
+      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+    });
+
+    await test.step('Attempt to continue with incomplete content and remain on the form', async () => {
+      await productsPage.submitEmptyDigitalProductAddContent();
+      await productsPage.expectDigitalProductCreateFlow();
+    });
+
+    await test.step('Protect the unsaved Digital Product changes when leaving', async () => {
+      await productsPage.navigateAwayFromDigitalProductViaBack();
+      await productsPage.expectDigitalProductUnsavedChangesDialog();
+      await page.keyboard.press('Escape');
+    });
+  });
+
+  test('Validate Digital Product After Sales Link Validation', {
+    tag: ['@AUT-FV-191', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-PD-C-027',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    const digitalProductType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Digital Product',
+    )!;
+    const { linkValidation } = digitalProductValidationData;
+
+    await test.step('Open Digital Product and enable After Sales Links', async () => {
+      await creatorNav.open('products');
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(digitalProductType.buttonName);
+      await productsPage.expectDigitalProductCreateFlow();
+      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await productsPage.enableLinksContentType();
+      const [contentLink] = linkValidation.validLinks;
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await onlineCoursePage.submitContentDetails();
+      await productsPage.enableAfterSalesLinks();
+    });
+
+    await test.step('Block invalid After Sales URL and over-limit label', async () => {
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(linkValidation.longLabel, linkValidation.invalidUrl);
+      await productsPage.expectInvalidEmbedLinkFeedback();
+    });
+
+    await test.step('Save multiple valid After Sales links', async () => {
+      const [firstLink, secondLink] = linkValidation.validLinks;
       await productsPage.fillEmbedLink(firstLink.label, firstLink.url);
       await productsPage.saveCurrentEmbedLink();
       await productsPage.openEmbedLinkDialog();

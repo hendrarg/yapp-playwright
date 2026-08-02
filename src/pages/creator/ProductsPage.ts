@@ -71,6 +71,11 @@ export class ProductsPage {
     selector: 'input[placeholder="Enter title"]',
   });
 
+  private readonly digitalProductThumbnailInput = smartLocator(this.page, {
+    label: "Upload File",
+    selector: 'input[type="file"][accept*="image/jpeg"]:not([multiple]):visible',
+  });
+
   readonly embedLinkUrlInput = locatorChain(this.page, {
     role: "textbox",
     name: "https://placeyourlinkhere",
@@ -280,6 +285,19 @@ export class ProductsPage {
     name: "Back",
     text: "Back",
     selector: 'button:has-text("Back")',
+  });
+
+  private readonly digitalProductBackAction = smartLocator(this.page, {
+    role: "button",
+    name: "",
+    exact: true,
+    selector: 'button:has(svg.lucide-arrow-left)',
+  });
+
+  private readonly digitalProductUnsavedChangesDialog = smartLocator(this.page, {
+    role: "dialog",
+    text: "Unsaved changes",
+    selector: '[role="dialog"], [role="alertdialog"]',
   });
 
   private readonly addQuestionsAction = smartLocator(this.page, {
@@ -1017,6 +1035,19 @@ export class ProductsPage {
     await expect(this.page).toHaveURL(productsCreationData.digitalProductCreatePath);
     await expect(this.digitalProductTitleInput).toBeVisible({ timeout: 10000 });
     await expect(this.contentDetailsHeading).toBeVisible({ timeout: 10000 });
+  }
+
+  async uploadDigitalProductThumbnail(filePath: string) {
+    await this.digitalProductThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
+  }
+
+  async navigateAwayFromDigitalProductViaBack() {
+    await this.digitalProductBackAction.click({ timeout: 10000 });
+  }
+
+  async expectDigitalProductUnsavedChangesDialog() {
+    const dialogText = await this.digitalProductUnsavedChangesDialog.text({ timeout: 10000 });
+    expect(dialogText).toMatch(/unsaved|leave|discard|lose your changes|are you sure/i);
   }
 
   async submitEmptyDigitalProductAddContent() {
