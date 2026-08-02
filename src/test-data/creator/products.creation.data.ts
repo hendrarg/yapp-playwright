@@ -36,7 +36,30 @@ export const productsCreationData = {
   digitalProductCreatePath: /\/products\/create\/digital-downloads/,
   discordMembershipCreatePath: /\/products\/create\/discord-membership/,
   consultationCreatePath: /\/products\/create\/consultation/,
+  onlineCourseCreatePath: /\/products\/create\/online-course/,
 } as const;
+
+/** Online Course content editor labels and defaults (AUT-FV-161 / TC-OC-C-001..033). */
+export const onlineCourseStructureData = {
+  contentTypes: ["Video", "File", "Free Text"] as const,
+  defaultChapterName: "Chapter title",
+  defaultEpisodeName: "New Episode",
+} as const;
+
+export type OnlineCourseContentType =
+  (typeof onlineCourseStructureData.contentTypes)[number];
+
+export function generateOnlineCourseChapterTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateOnlineCourseEpisodeTitle(): string {
+  return faker.commerce.productName();
+}
+
+export function generateOnlineCourseEpisodeContent(): string {
+  return faker.lorem.sentence();
+}
 
 export const digitalProductValidationData = {
   requiredErrors: {

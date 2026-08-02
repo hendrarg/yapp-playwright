@@ -18,6 +18,7 @@ import { CampaignsPage } from "@pages/creator/CampaignsPage";
 import { FeedsPage as CreatorFeedsPage } from "@pages/creator/FeedsPage";
 import { MembershipPage } from "@pages/creator/MembershipPage";
 import { MessagesPage } from "@pages/creator/MessagesPage";
+import { OnlineCoursePage } from "@pages/creator/OnlineCoursePage";
 import { OrdersPage } from "@pages/creator/OrdersPage";
 import { ProductsPage } from "@pages/creator/ProductsPage";
 import { ProfilePage as CreatorProfilePage } from "@pages/creator/ProfilePage";
@@ -65,6 +66,7 @@ export type PageFixtures = {
   membershipPage: MembershipPage;
   messagesPage: MessagesPage;
   ordersPage: OrdersPage;
+  onlineCoursePage: OnlineCoursePage;
   productsPage: ProductsPage;
   creatorProfilePage: CreatorProfilePage;
   promotionsPage: PromotionsPage;
@@ -100,6 +102,7 @@ export const pageFixtures = {
   membershipPage: creatorPage(MembershipPage),
   messagesPage: creatorPage(MessagesPage),
   ordersPage: creatorPage(OrdersPage),
+  onlineCoursePage: creatorPage(OnlineCoursePage),
   productsPage: creatorPage(ProductsPage),
   creatorProfilePage: creatorPage(CreatorProfilePage),
   promotionsPage: creatorPage(PromotionsPage),

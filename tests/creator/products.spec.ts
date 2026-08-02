@@ -2,7 +2,7 @@ import { creatorAuthTest as test, expect } from '../test-base';
 import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile, expectProductStatus, setProductHideFromProfile } from '@helpers/api/product';
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateOnlineCourseProductData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -775,5 +775,83 @@ test.describe('Creator Products', () => {
         await deleteProduct(page.request, productUuid, seedToken);
       }
     }
+  });
+
+  test('Validate Online Course Structure and Episode Management', {
+    tag: ['@AUT-FV-161', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-001, TC-OC-C-002, TC-OC-C-003, TC-OC-C-008, TC-OC-C-033',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    test.setTimeout(180000);
+
+    const onlineCourseType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Online Course',
+    )!;
+    const chapterOne = generateOnlineCourseChapterTitle();
+    const chapterTwo = generateOnlineCourseChapterTitle();
+    const episodeName = generateOnlineCourseEpisodeTitle();
+    const contentA = `A ${generateOnlineCourseEpisodeContent()}`;
+    const contentB = `B ${generateOnlineCourseEpisodeContent()}`;
+
+    await test.step('Open Online Course content editor from Add Product', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(onlineCourseType.buttonName);
+      await onlineCoursePage.expectLoaded();
+    });
+
+    await test.step('Create two chapters with episodes and review structure', async () => {
+      await onlineCoursePage.renameChapter(0, chapterOne);
+      await onlineCoursePage.addChapter();
+      await onlineCoursePage.renameChapter(1, chapterTwo);
+      await onlineCoursePage.expectChapterCount(2);
+      await onlineCoursePage.expectChapterNames([chapterOne, chapterTwo]);
+      expect(await onlineCoursePage.getEpisodeCount()).toBeGreaterThanOrEqual(2);
+    });
+
+    await test.step('Rename an episode and reorder chapters, then review saved order', async () => {
+      await onlineCoursePage.openEpisode(0);
+      await onlineCoursePage.renameSelectedEpisode(episodeName);
+      await onlineCoursePage.reorderChapterDown(0);
+      await onlineCoursePage.expectChapterNames([chapterTwo, chapterOne]);
+    });
+
+    await test.step('Create a standalone episode outside any chapter', async () => {
+      const standaloneBefore = await onlineCoursePage.getStandaloneEpisodeCount();
+      await onlineCoursePage.addStandaloneEpisode();
+      expect(await onlineCoursePage.getStandaloneEpisodeCount()).toBe(standaloneBefore + 1);
+    });
+
+    await test.step('Switch between episodes and verify content stays isolated', async () => {
+      const lastEpisode = (await onlineCoursePage.getEpisodeCount()) - 1;
+      await onlineCoursePage.openEpisode(0);
+      await onlineCoursePage.setFreeTextContent(contentA);
+      await onlineCoursePage.openEpisode(lastEpisode);
+      await onlineCoursePage.setFreeTextContent(contentB);
+
+      await onlineCoursePage.openEpisode(0);
+      await onlineCoursePage.expectSelectedContentType('Free Text');
+      await onlineCoursePage.expectFreeTextContent(contentA);
+
+      await onlineCoursePage.openEpisode(lastEpisode);
+      await onlineCoursePage.expectFreeTextContent(contentB);
+    });
+
+    await test.step('Edit content type, remove a chapter, and verify edits persist', async () => {
+      await onlineCoursePage.openEpisode(0);
+      await onlineCoursePage.selectContentType('File');
+      await onlineCoursePage.expectSelectedContentType('File');
+
+      await onlineCoursePage.deleteChapter(await onlineCoursePage.getChapterCount() - 1);
+      await onlineCoursePage.expectChapterCount(1);
+
+      const lastEpisode = (await onlineCoursePage.getEpisodeCount()) - 1;
+      await onlineCoursePage.openEpisode(lastEpisode);
+      await onlineCoursePage.openEpisode(0);
+      await onlineCoursePage.expectSelectedContentType('File');
+    });
   });
 });
