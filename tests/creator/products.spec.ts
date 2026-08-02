@@ -2,7 +2,7 @@ import { creatorAuthTest as test, expect } from '../test-base';
 import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile, expectProductStatus, setProductHideFromProfile } from '@helpers/api/product';
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -852,6 +852,54 @@ test.describe('Creator Products', () => {
       await onlineCoursePage.openEpisode(lastEpisode);
       await onlineCoursePage.openEpisode(0);
       await onlineCoursePage.expectSelectedContentType('File');
+    });
+  });
+
+  test('Validate Online Course Required Inputs and Form Boundaries', {
+    tag: ['@AUT-FV-162', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-004, TC-OC-C-015, TC-OC-C-016',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    test.setTimeout(180000);
+
+    const onlineCourseType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Online Course',
+    )!;
+    const courseTitle = generateOnlineCourseChapterTitle();
+    const courseDescription = generateOnlineCourseEpisodeContent();
+    const overLimitDescription = 'A'.repeat(550);
+
+    await test.step('Open Online Course creation from Add Product', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(onlineCourseType.buttonName);
+      await onlineCoursePage.expectLoaded();
+    });
+
+    await test.step('Require at least one episode to proceed', async () => {
+      await onlineCoursePage.deleteAllChapters();
+      await onlineCoursePage.attemptNextSetDetails();
+      await onlineCoursePage.expectEpisodeRequiredError();
+      await onlineCoursePage.addChapter();
+      await onlineCoursePage.expectChapterCount(1);
+    });
+
+    await test.step('Require title and enforce description 500 character counter', async () => {
+      await onlineCoursePage.clearTitle();
+      await onlineCoursePage.fillDescription(overLimitDescription);
+      await onlineCoursePage.expectDescriptionCounter('1 / 500');
+
+      await onlineCoursePage.fillDescription(courseDescription);
+      await onlineCoursePage.expectDescriptionCounter('/ 500');
+    });
+
+    await test.step('Apply rich text formatting to product description', async () => {
+      await onlineCoursePage.fillTitle(courseTitle);
+      await onlineCoursePage.applyRichTextFormatting();
+      await onlineCoursePage.expectDescriptionFormatted();
     });
   });
 });

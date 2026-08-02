@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
 import {
   onlineCourseStructureData,
+  onlineCourseValidationData,
   productsCreationData,
   type OnlineCourseContentType,
 } from "@test-data/creator/products.creation.data";
@@ -42,6 +43,30 @@ export class OnlineCoursePage {
     name: "Next: Set Details",
     text: "Next: Set Details",
     selector: 'button:has-text("Next: Set Details")',
+  });
+
+  readonly boldButton = smartLocator(this.page, {
+    selector: 'button[aria-label="Bold"]:visible',
+  });
+
+  readonly italicButton = smartLocator(this.page, {
+    selector: 'button[aria-label="Italic"]:visible',
+  });
+
+  readonly underlineButton = smartLocator(this.page, {
+    selector: 'button[aria-label="Underline"]:visible',
+  });
+
+  readonly bulletedListButton = smartLocator(this.page, {
+    role: "button",
+    name: "Bulleted list",
+    selector: 'button[aria-label="Bulleted list"]',
+  });
+
+  readonly createLinkButton = smartLocator(this.page, {
+    role: "button",
+    name: "Create link",
+    selector: 'button[aria-label="Create link"]',
   });
 
   private contentTypeTab(type: OnlineCourseContentType) {
@@ -254,10 +279,83 @@ export class OnlineCoursePage {
     await expect(this.chapterCards()).toHaveCount(before - 1, { timeout: 10000 });
   }
 
-  async expectDefaultStructure() {
-    await expect(this.chapterCards().first()).toBeVisible({ timeout: 10000 });
+  private detailsCard(): Locator {
+    return this.page
+      .locator("div.border.rounded-2xl")
+      .filter({ hasText: "Title" })
+      .locator("visible=true")
+      .first();
+  }
+
+  private detailsTitleInput(): Locator {
+    return this.detailsCard().locator('input[placeholder="Enter title"]').first();
+  }
+
+  private detailsDescriptionEditor(): Locator {
+    return this.detailsCard().locator('div[contenteditable="true"]').first();
+  }
+
+  private detailsDescriptionCounter(): Locator {
+    return this.detailsCard().locator("p").filter({ hasText: /\d+\s*\/\s*500/ }).first();
+  }
+
+  async fillTitle(title: string) {
+    const input = this.detailsTitleInput();
+    await input.click({ timeout: 10000 });
+    await input.fill(title);
+  }
+
+  async clearTitle() {
+    const input = this.detailsTitleInput();
+    await input.click({ timeout: 10000 });
+    await input.fill("");
+  }
+
+  async fillDescription(text: string) {
+    const editor = this.detailsDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    await this.page.keyboard.insertText(text);
+  }
+
+  async expectDescriptionCounter(expectedText: string) {
+    await expect(this.detailsDescriptionCounter()).toContainText(expectedText, { timeout: 10000 });
+  }
+
+  async applyRichTextFormatting() {
+    const editor = this.detailsDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+
+    await this.boldButton.click({ timeout: 10000 });
+    await this.italicButton.click({ timeout: 10000 });
+    await this.underlineButton.click({ timeout: 10000 });
+  }
+
+  async expectDescriptionFormatted() {
+    const html = await this.detailsDescriptionEditor().innerHTML();
+    expect(html).toMatch(/_bold_|_italic_|_underline_|strong|em|u/i);
+  }
+
+  async attemptNextSetDetails() {
+    await this.nextSetDetailsButton.click({ timeout: 10000 });
+  }
+
+  async expectEpisodeRequiredError() {
     await expect(
-      this.page.getByText(onlineCourseStructureData.defaultChapterName, { exact: true }).first(),
+      this.page
+        .locator('div, p, span')
+        .filter({ hasText: onlineCourseValidationData.requiredErrors.summary })
+        .first(),
     ).toBeVisible({ timeout: 10000 });
+  }
+
+  async deleteAllChapters() {
+    const count = await this.getChapterCount();
+    for (let i = 0; i < count; i++) {
+      await this.deleteChapter(0);
+    }
+    await this.expectChapterCount(0);
   }
 }

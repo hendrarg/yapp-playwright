@@ -61,6 +61,23 @@ export function generateOnlineCourseEpisodeContent(): string {
   return faker.lorem.sentence();
 }
 
+export const onlineCourseValidationData = {
+  requiredErrors: {
+    title: "Title is required",
+    description: "Description is required",
+    thumbnail: "Thumbnail is required",
+    summary: "Please fill in all required fields before proceeding",
+  },
+  descriptionLimit: 500,
+  fiveCustomQuestions: [
+    "Question 1",
+    "Question 2",
+    "Question 3",
+    "Question 4",
+    "Question 5",
+  ],
+} as const;
+
 export const digitalProductValidationData = {
   requiredErrors: {
     title: "Title is required",
