@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { testImages } from "@test-data/creator/post.data";
+import { testImages, testVideos } from "@test-data/creator/post.data";
 
 export interface OnlineCourseProductData {
   title: string;
@@ -76,6 +76,24 @@ export const onlineCourseValidationData = {
     "Question 4",
     "Question 5",
   ],
+} as const;
+
+export const onlineCourseMediaData = {
+  videoPath: testVideos.sample,
+  thumbnailPaths: [
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+    testImages.claude,
+  ] as const,
+  tinyThumbnailPath: "src/test-data/assets/tiny-1x1.png",
 } as const;
 
 export const digitalProductValidationData = {

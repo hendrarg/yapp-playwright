@@ -297,6 +297,27 @@ export class SmartHealable {
     await smartFill(this.page, this.strategies, value, options);
   }
 
+  async setInputFiles(files: Parameters<Locator["setInputFiles"]>[0], options?: { timeout?: number }) {
+    const { primary, fallbacks, primaryDesc } = buildStrategyChain(this.page, this.strategies);
+    const allLocators = [primary, ...fallbacks];
+
+    for (let i = 0; i < allLocators.length; i++) {
+      try {
+        const locator = allLocators[i];
+        await locator.waitFor({ state: "attached", timeout: options?.timeout ?? 10000 });
+        await locator.setInputFiles(files, { timeout: options?.timeout });
+        if (i > 0) {
+          monitor.log({ action: "click", primary: primaryDesc, healed: describeLocator(locator), timestamp: new Date().toISOString() });
+        }
+        return;
+      } catch {
+        if (i === allLocators.length - 1) {
+          throw new Error(`smartSetInputFiles: all ${allLocators.length} strategies failed for "${primaryDesc}"`);
+        }
+      }
+    }
+  }
+
   async text(options?: { timeout?: number }): Promise<string> {
     return smartGetText(this.page, this.strategies, options);
   }
@@ -322,6 +343,21 @@ export class SmartHealable {
     }
 
     return null;
+  }
+
+  async count(): Promise<number> {
+    const { primary } = buildStrategyChain(this.page, this.strategies);
+    return primary.count();
+  }
+
+  async visibleCount(): Promise<number> {
+    const { primary } = buildStrategyChain(this.page, this.strategies);
+    const count = await primary.count();
+    let visible = 0;
+    for (let index = 0; index < count; index++) {
+      if (await primary.nth(index).isVisible()) visible++;
+    }
+    return visible;
   }
 }
 

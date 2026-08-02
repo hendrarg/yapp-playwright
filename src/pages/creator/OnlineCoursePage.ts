@@ -66,15 +66,61 @@ export class OnlineCoursePage {
     selector: 'button:has-text("Publish"):visible',
   });
 
+  private readonly videoFileInput = smartLocator(this.page, {
+    text: "Upload Video",
+    selector: 'div:has(> label:has-text("Video")) input[type="file"][accept*="video/mp4"]:visible',
+  });
+
+  private readonly lessonFileInput = smartLocator(this.page, {
+    text: "Upload File or Audio",
+    selector: 'div:has(> label:has-text("File")) input[type="file"][accept*="application/pdf"]:visible',
+  });
+
+  private readonly videoThumbnailInput = smartLocator(this.page, {
+    text: "Video Thumbnail",
+    selector: 'div:has(> label:has-text("Video Thumbnail")) input[type="file"]:visible',
+  });
+
+  private readonly productThumbnailInput = smartLocator(this.page, {
+    text: "Upload File",
+    selector: 'input[type="file"][accept*="image/gif"]:not([multiple]):visible',
+  });
+
+  private readonly productGalleryInput = smartLocator(this.page, {
+    text: "select from gallery or drag and drop",
+    selector: 'div:has-text("select from gallery or drag and drop") input[type="file"][multiple]:visible',
+  });
+
+  private readonly deleteVideoButton = smartLocator(this.page, {
+    role: "button",
+    name: "Delete Video",
+    text: "Delete Video",
+    selector: 'button:has-text("Delete Video")',
+  });
+
+  private readonly noImagePlaceholder = smartLocator(this.page, {
+    text: "No Image",
+    selector: 'text="No Image"',
+  });
+
   readonly boldButton = smartLocator(this.page, {
+    role: "button",
+    name: "Bold",
+    text: "Bold",
     selector: 'button[aria-label="Bold"]:visible',
   });
 
   readonly italicButton = smartLocator(this.page, {
+    role: "button",
+    name: "Italic",
+    text: "Italic",
     selector: 'button[aria-label="Italic"]:visible',
   });
 
   readonly underlineButton = smartLocator(this.page, {
+    role: "button",
+    name: "Underline",
+    text: "Underline",
     selector: 'button[aria-label="Underline"]:visible',
   });
 
@@ -128,6 +174,37 @@ export class OnlineCoursePage {
       .getByRole("tab", { selected: true })
       .locator("visible=true")
       .first();
+  }
+
+  private readBodyText(): Promise<string> {
+    return this.page.evaluate(() => {
+      const root = globalThis as unknown as { document: { body: { innerText: string } } };
+      return root.document.body.innerText;
+    });
+  }
+
+  private readBlobImageCount(): Promise<number> {
+    return this.page.evaluate(() => {
+      type ImageElement = { getAttribute: (name: string) => string | null };
+      const root = globalThis as unknown as {
+        document: { querySelectorAll: (selector: string) => ArrayLike<ImageElement> };
+      };
+      return Array.from(root.document.querySelectorAll("img")).filter(
+        (image) => image.getAttribute("src")?.startsWith("blob:") === true,
+      ).length;
+    });
+  }
+
+  private readVisibleEditorHtml(): Promise<string> {
+    return this.page.evaluate(() => {
+      type Editor = { offsetParent: unknown; innerHTML: string };
+      const root = globalThis as unknown as {
+        document: { querySelectorAll: (selector: string) => ArrayLike<Editor> };
+      };
+      return Array.from(root.document.querySelectorAll('[contenteditable="true"]'))
+        .find((editor) => editor.offsetParent !== null)
+        ?.innerHTML ?? "";
+    });
   }
 
   async goto() {
@@ -339,8 +416,81 @@ export class OnlineCoursePage {
     await expect(editor).toContainText(text, { timeout: 10000 });
   }
 
+  async uploadVideo(filePath: string) {
+    await this.videoFileInput.setInputFiles(filePath, { timeout: 15000 });
+    await expect(this.deleteVideoButton.text({ timeout: 60000 })).resolves.toContain("Delete Video");
+  }
+
+  async deleteVideo() {
+    await this.deleteVideoButton.click({ timeout: 10000 });
+    await expect.poll(() => this.deleteVideoButton.count(), { timeout: 15000 }).toBe(0);
+  }
+
+  async uploadVideoThumbnail(filePath: string) {
+    await this.videoThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
+    await expect.poll(() => this.readBodyText(), { timeout: 30000 })
+      .toContain("Video Thumbnail");
+  }
+
+  async uploadLessonFiles(filePaths: readonly string[]) {
+    await this.lessonFileInput.setInputFiles([...filePaths], { timeout: 15000 });
+    await expect.poll(() => this.readBodyText(), { timeout: 60000 })
+      .toContain(filePaths.map((filePath) => filePath.split(/[\\/]/).pop()).find(Boolean)!);
+  }
+
+  async expectLessonFiles(fileNames: readonly string[]) {
+    const bodyText = await this.readBodyText();
+    for (const fileName of fileNames) {
+      expect(bodyText).toContain(fileName);
+    }
+  }
+
+  async uploadProductThumbnail(filePath: string) {
+    await this.productThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
+    await expect.poll(() => this.readBlobImageCount(), {
+      timeout: 30000,
+    }).toBeGreaterThan(0);
+  }
+
+  async uploadThumbnailForValidation(filePath: string) {
+    await this.productThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
+  }
+
+  async uploadProductGallery(filePaths: readonly string[]) {
+    await this.productGalleryInput.setInputFiles([...filePaths], { timeout: 15000 });
+    await expect.poll(() => this.noImagePlaceholder.visibleCount(), { timeout: 60000 }).toBeLessThan(9);
+  }
+
+  async expectProductThumbnailLimit() {
+    await expect.poll(() => this.noImagePlaceholder.visibleCount(), { timeout: 30000 }).toBe(0);
+  }
+
+  async expectThumbnailTooSmall() {
+    await expect.poll(() => this.readBodyText(), { timeout: 15000 })
+      .toMatch(/too small|at least 500/i);
+  }
+
+  async expectThumbnailTooLarge() {
+    await expect.poll(() => this.readBodyText(), { timeout: 15000 })
+      .toMatch(/larger than 524288000|500 MB/i);
+  }
+
   async expectFreeTextContent(text: string) {
     await expect(this.freeTextEditor()).toContainText(text, { timeout: 10000 });
+  }
+
+  async applyEpisodeRichTextFormatting(text: string) {
+    await this.setFreeTextContent(text);
+    await this.page.keyboard.press("Control+A");
+    await this.boldButton.click({ timeout: 10000 });
+    await this.italicButton.click({ timeout: 10000 });
+    await this.underlineButton.click({ timeout: 10000 });
+    await expect.poll(() => this.readVisibleEditorHtml()).toMatch(/strong|em|u/i);
+  }
+
+  async expectEpisodeRichTextContent(text: string) {
+    await this.expectFreeTextContent(text);
+    await expect.poll(() => this.readVisibleEditorHtml()).toMatch(/strong|em|u/i);
   }
 
   /** Reorder a chapter one position via the dnd-kit keyboard sensor. */

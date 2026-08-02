@@ -1,8 +1,9 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile, expectProductStatus, setProductHideFromProfile } from '@helpers/api/product';
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
+import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -1040,6 +1041,104 @@ test.describe('Creator Products', () => {
       if (productUuid) {
         await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
       }
+    }
+  });
+
+  test('Validate Online Course Lesson Content, Media, Files, and Thumbnails', {
+    tag: ['@AUT-FV-165', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-007, TC-OC-C-009, TC-OC-C-010, TC-OC-C-011, TC-OC-C-012, TC-OC-C-013, TC-OC-C-014, TC-OC-C-017, TC-OC-C-018, TC-OC-C-019',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    test.setTimeout(300000);
+
+    const onlineCourseType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Online Course',
+    )!;
+    const richText = generateOnlineCourseEpisodeContent();
+    const lessonFixtures = createOnlineCourseLessonFixtures();
+
+    try {
+      await test.step('Open Online Course content editor and prepare three episode types', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.openAddProductSheet();
+        await productsPage.selectProductType(onlineCourseType.buttonName);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.addStandaloneEpisode();
+        await onlineCoursePage.addStandaloneEpisode();
+      });
+
+      await test.step('Select and retain Video, File, and Free Text episode content types', async () => {
+        const lastEpisode = (await onlineCoursePage.getEpisodeCount()) - 1;
+        await onlineCoursePage.openEpisode(0);
+        await onlineCoursePage.selectContentType('Video');
+        await onlineCoursePage.expectSelectedContentType('Video');
+        await onlineCoursePage.openEpisode(1);
+        await onlineCoursePage.selectContentType('File');
+        await onlineCoursePage.expectSelectedContentType('File');
+        await onlineCoursePage.openEpisode(lastEpisode);
+        await onlineCoursePage.selectContentType('Free Text');
+        await onlineCoursePage.expectSelectedContentType('Free Text');
+      });
+
+      await test.step('Upload a supported video lesson and verify its preview', async () => {
+        await onlineCoursePage.openEpisode(0);
+        await onlineCoursePage.uploadVideo(onlineCourseMediaData.videoPath);
+      });
+
+      await test.step('Remove and replace the episode video', async () => {
+        await onlineCoursePage.deleteVideo();
+        await onlineCoursePage.uploadVideo(onlineCourseMediaData.videoPath);
+      });
+
+      await test.step('Apply a custom video thumbnail', async () => {
+        await onlineCoursePage.uploadVideoThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      });
+
+      await test.step('Upload all supported lesson file types', async () => {
+        await onlineCoursePage.openEpisode(1);
+        await onlineCoursePage.uploadLessonFiles(lessonFixtures.filePaths);
+        await onlineCoursePage.expectLessonFiles(lessonFixtures.fileNames);
+      });
+
+      await test.step('Review the uploaded lesson file cards', async () => {
+        await onlineCoursePage.openEpisode(1);
+        await onlineCoursePage.expectLessonFiles(lessonFixtures.fileNames);
+      });
+
+      await test.step('Save formatted Free Text content for an episode and verify it remains formatted', async () => {
+        const lastEpisode = (await onlineCoursePage.getEpisodeCount()) - 1;
+        await onlineCoursePage.openEpisode(lastEpisode);
+        await onlineCoursePage.applyEpisodeRichTextFormatting(richText);
+        await onlineCoursePage.expectEpisodeRichTextContent(richText);
+      });
+
+      await test.step('Upload a valid product thumbnail', async () => {
+        await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      });
+
+      await test.step('Enforce the eleven-image product thumbnail maximum', async () => {
+        await onlineCoursePage.uploadProductGallery(onlineCourseMediaData.thumbnailPaths.slice(1));
+        await onlineCoursePage.expectProductThumbnailLimit();
+      });
+
+      await test.step('Reject undersized and oversized product thumbnails', async () => {
+        await onlineCoursePage.goto();
+        await onlineCoursePage.expectLoaded();
+        const oversized = createOversizedImageFixture();
+        try {
+          await onlineCoursePage.uploadThumbnailForValidation(onlineCourseMediaData.tinyThumbnailPath);
+          await onlineCoursePage.expectThumbnailTooSmall();
+          await onlineCoursePage.uploadThumbnailForValidation(oversized.filePath);
+          await onlineCoursePage.expectThumbnailTooLarge();
+        } finally {
+          oversized.cleanup();
+        }
+      });
+    } finally {
+      lessonFixtures.cleanup();
     }
   });
 });
