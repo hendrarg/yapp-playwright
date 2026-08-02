@@ -102,7 +102,6 @@ export class OnlineCoursePage {
   });
 
   private readonly afterSalesCustomizeSwitch = smartLocator(this.page, {
-    role: "switch",
     selector: 'button[role="switch"]:has(+ label:has-text("Customize Message"))',
   });
 
