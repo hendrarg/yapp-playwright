@@ -3,6 +3,7 @@ import { expect } from "@playwright/test";
 import { locatorChain, smartClick, smartLocator } from "@utils/heal-utils";
 import { productsHideFromProfileData } from "@test-data/creator/products.hide-from-profile.data";
 import { safeClick, safeFill } from "@utils/playwright.utils";
+import { flakyClick } from "@utils/flaky-utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
 import { consultationConfigData } from "@test-data/creator/consultation.config.data";
 import { consultationLifecycleData, consultationWeekdayLabel } from "@test-data/creator/consultation.lifecycle.data";
@@ -426,6 +427,22 @@ export class ProductsPage {
     await this.page.waitForTimeout(1200);
   }
 
+  async searchProductsUntilVisible(query: string) {
+    const responsePromise = this.page.waitForResponse(
+      (response) => {
+        if (!response.url().includes("/api/v1/shop/products") || response.request().method() !== "GET") {
+          return false;
+        }
+        return new URL(response.url()).searchParams.get("title") === query;
+      },
+      { timeout: 15000 },
+    );
+    await safeFill(this.searchInput, query);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    await expect(this.productRow(query)).toBeVisible({ timeout: 10000 });
+  }
+
   async clearSearch() {
     await safeFill(this.searchInput, "");
     await this.page.waitForTimeout(1200);
@@ -477,13 +494,15 @@ export class ProductsPage {
     return href!;
   }
 
-  async selectStatusTab(status: ProductStatusTab) {
+  async selectStatusTab(status: ProductStatusTab, options: { waitForRender?: boolean } = {}) {
     void this.activeStatusTabAction;
     await safeClick(this.statusTab(status));
     await expect(this.statusTab(status)).toHaveAttribute("aria-selected", "true", {
       timeout: 10000,
     });
-    await this.page.waitForTimeout(1000);
+    if (options.waitForRender !== false) {
+      await this.page.waitForTimeout(1000);
+    }
   }
 
   async expectStatusTabSelected(status: ProductStatusTab) {
@@ -550,7 +569,8 @@ export class ProductsPage {
   }
 
   async openProductActionsMenu(productName: string) {
-    await safeClick(this.productActionsTrigger(productName));
+    // FLAKY_FIX: product rows can re-render once after the filtered list response settles.
+    await flakyClick(this.productActionsTrigger(productName), { retries: 3, timeout: 5000 });
     await expect(this.productActionMenu()).toBeVisible({ timeout: 10000 });
   }
 
@@ -1426,9 +1446,10 @@ export class ProductsPage {
 
   async openEditProduct(productName: string) {
     await this.openProductActionsMenu(productName);
+    await this.editProductAction.text({ timeout: 10000 });
     await this.editProductAction.click({ timeout: 10000 });
     await expect(this.page).toHaveURL(
-      /\/products\/update\/(?:appointment|discord-membership)\//,
+      /\/products\/update\/(?:appointment|discord-membership|online-course)\//,
       { timeout: 30000 },
     );
   }
@@ -1686,6 +1707,20 @@ export class ProductsPage {
     await safeClick(this.page.getByRole("button", { name: "Save as Draft", exact: true }));
     await expect(this.page).toHaveURL(/\/products(?:\?|$)/, { timeout: 60000 });
     await this.expectLoaded();
+  }
+
+  async saveAsDraft() {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/shop/products") &&
+        !response.url().includes("/hide-from-profile") &&
+        ["PATCH", "POST", "PUT"].includes(response.request().method()),
+      { timeout: 15000 },
+    );
+
+    await this.saveAsDraftAction.click({ timeout: 15000 });
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
   }
 
   async expectProductRowStatus(

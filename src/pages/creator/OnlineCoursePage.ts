@@ -45,6 +45,27 @@ export class OnlineCoursePage {
     selector: 'button:has-text("Next: Set Details")',
   });
 
+  readonly nextEditDetailsButton = smartLocator(this.page, {
+    role: "button",
+    name: "Next: Edit Details",
+    text: "Next: Edit Details",
+    selector: 'button:has-text("Next: Edit Details")',
+  });
+
+  readonly nextPublishButton = smartLocator(this.page, {
+    role: "button",
+    name: "Next: Publish",
+    text: "Next: Publish",
+    selector: 'button:has-text("Next: Publish")',
+  });
+
+  readonly publishButton = smartLocator(this.page, {
+    role: "button",
+    name: "Publish",
+    text: "Publish",
+    selector: 'button:has-text("Publish"):visible',
+  });
+
   readonly boldButton = smartLocator(this.page, {
     selector: 'button[aria-label="Bold"]:visible',
   });
@@ -116,13 +137,84 @@ export class OnlineCoursePage {
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(productsCreationData.onlineCourseCreatePath, {
+    await expect(this.page).toHaveURL(/\/products\/(?:create|update)\/online-course(?:\/[^/?#]+)?/, {
       timeout: 30000,
     });
     expect(this.page.url()).not.toContain("/auth");
     await this.addChapterButton.text({ timeout: 15000 });
     await this.addEpisodeButton.text({ timeout: 15000 });
     await expect(this.chapterCards().first()).toBeVisible({ timeout: 15000 });
+  }
+
+  async useMobileViewport() {
+    await this.page.setViewportSize({ width: 390, height: 844 });
+  }
+
+  async useDesktopViewport() {
+    await this.page.setViewportSize({ width: 1280, height: 900 });
+  }
+
+  private async readVisibleNextSetDetailsCta() {
+    return this.page.evaluate(() => {
+      type Button = {
+        getBoundingClientRect: () => { width: number; height: number; y: number };
+        textContent: string | null;
+      };
+      const root = globalThis as unknown as {
+        document: { querySelectorAll: (selector: string) => ArrayLike<Button> };
+      };
+      const button = Array.from(root.document.querySelectorAll("button")).find((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        return candidate.textContent?.trim() === "Next: Set Details"
+          && rect.width > 0
+          && rect.height > 0;
+      });
+      if (!button) return null;
+      const rect = button.getBoundingClientRect();
+      return { y: rect.y, height: rect.height };
+    });
+  }
+
+  async expectNextSetDetailsCtaStickyAfterScroll() {
+    await this.nextSetDetailsButton.text({ timeout: 10000 });
+    const before = await this.readVisibleNextSetDetailsCta();
+    expect(before, "expected Next: Set Details CTA before scroll").toBeTruthy();
+
+    await this.page.evaluate(() => {
+      const root = globalThis as unknown as {
+        scrollBy: (x: number, y: number) => void;
+      };
+      root.scrollBy(0, 1500);
+    });
+    await this.page.waitForTimeout(400);
+
+    const after = await this.readVisibleNextSetDetailsCta();
+    expect(after, "expected Next: Set Details CTA after scroll").toBeTruthy();
+    expect(after!.y).toBeGreaterThanOrEqual(0);
+    expect(after!.y).toBeLessThan(844);
+    expect(Math.abs(after!.y - before!.y)).toBeLessThan(60);
+  }
+
+  async scrollToTop() {
+    await this.page.evaluate(() => {
+      const root = globalThis as unknown as {
+        scrollTo: (x: number, y: number) => void;
+      };
+      root.scrollTo(0, 0);
+    });
+    await this.page.waitForTimeout(300);
+  }
+
+  async navigateAwayFromContent() {
+    const dialogPromise = this.page.waitForEvent("dialog", { timeout: 10000 });
+    const navigationPromise = this.page
+      .goBack({ waitUntil: "commit", timeout: 10000 })
+      .catch(() => undefined);
+    const dialog = await dialogPromise;
+    expect(dialog.type()).toBe("beforeunload");
+    expect(dialog.message()).toMatch(/unsaved|leave|discard|save your changes|are you sure|lose your changes/i);
+    await dialog.dismiss();
+    await navigationPromise;
   }
 
   async getChapterCount(): Promise<number> {
@@ -171,7 +263,9 @@ export class OnlineCoursePage {
   }
 
   async renameChapter(index: number, name: string) {
-    const titleSpan = this.chapterCards().nth(index).locator("span.cursor-pointer").first();
+    const chapter = this.chapterCards().nth(index);
+    await chapter.scrollIntoViewIfNeeded({ timeout: 10000 });
+    const titleSpan = chapter.locator("span.cursor-pointer").first();
     await titleSpan.click();
     const input = this.page.locator("input:focus");
     await input.fill(name);
@@ -339,7 +433,24 @@ export class OnlineCoursePage {
   }
 
   async attemptNextSetDetails() {
+    await this.submitContentDetails();
+  }
+
+  async submitContentDetails() {
+    if (this.page.url().includes("/products/update/online-course/")) {
+      await this.nextEditDetailsButton.click({ timeout: 10000 });
+      return;
+    }
+
     await this.nextSetDetailsButton.click({ timeout: 10000 });
+  }
+
+  async submitNextPublish() {
+    await this.nextPublishButton.click({ timeout: 15000 });
+  }
+
+  async submitPublish() {
+    await this.publishButton.click({ timeout: 15000 });
   }
 
   async expectEpisodeRequiredError() {

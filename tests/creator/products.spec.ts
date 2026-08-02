@@ -902,4 +902,144 @@ test.describe('Creator Products', () => {
       await onlineCoursePage.expectDescriptionFormatted();
     });
   });
+
+  test('Validate Online Course Creator Navigation and Unsaved Changes', {
+    tag: ['@AUT-FV-163', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-005, TC-OC-C-006',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    test.setTimeout(120000);
+    test.fail(true, 'Online Course currently navigates away without an unsaved-changes confirmation');
+
+    const onlineCourseType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Online Course',
+    )!;
+    const updatedChapterTitle = generateOnlineCourseChapterTitle();
+
+    await test.step('Open Online Course content editor and establish the mobile layout', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(onlineCourseType.buttonName);
+      await onlineCoursePage.expectLoaded();
+      await onlineCoursePage.useMobileViewport();
+    });
+
+    await test.step('Scroll the course structure and verify Next: Set Details stays sticky', async () => {
+      await onlineCoursePage.expectNextSetDetailsCtaStickyAfterScroll();
+    });
+
+    await test.step('Make a content change, navigate away, and verify the unsaved-change warning', async () => {
+      await onlineCoursePage.useDesktopViewport();
+      await onlineCoursePage.scrollToTop();
+      await onlineCoursePage.renameChapter(0, updatedChapterTitle);
+      await onlineCoursePage.navigateAwayFromContent();
+    });
+  });
+
+  test('Validate Online Course Draft, Publish, and Republish Lifecycle', {
+    tag: ['@AUT-FV-164', '@products', '@creator', '@smoke', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-OC-C-025, TC-OC-C-026, TC-OC-C-035',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
+    test.setTimeout(300000);
+
+    const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!accessToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed an online course lifecycle product');
+    if (!accessToken) return;
+
+    const baseline = generateOnlineCourseProductData();
+    const draftTitle = generateOnlineCourseChapterTitle();
+    const draftDescription = generateOnlineCourseEpisodeContent();
+    const republishedTitle = generateOnlineCourseChapterTitle();
+    const republishedDescription = generateOnlineCourseEpisodeContent();
+    let productUuid = '';
+    let sharePath = '';
+
+    try {
+      await test.step('Seed a valid active Online Course baseline via API', async () => {
+        const product = await createOnlineCourseProduct(page.request, baseline, accessToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+      });
+
+      await test.step('Save edited course content as a draft and verify draft visibility', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(baseline.title);
+        await productsPage.openEditProduct(baseline.title);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.fillTitle(draftTitle);
+        await onlineCoursePage.fillDescription(draftDescription);
+        await onlineCoursePage.submitContentDetails();
+        await productsPage.saveAsDraft();
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Draft', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(draftTitle);
+        await productsPage.expectProductVisible(draftTitle);
+        await productsPage.expectProductRowStatus(draftTitle, 'DRAFT');
+        sharePath = await productsPage.readProductSharePath(draftTitle);
+      });
+
+      await test.step('Verify the draft is not publicly purchasable', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await expect.poll(() => productPurchasePage.isProductPubliclyPurchasable()).toBe(false);
+      });
+
+      await test.step('Publish the draft and verify the completion modal and share URL', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Draft', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(draftTitle);
+        await productsPage.openEditProduct(draftTitle);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
+        await onlineCoursePage.submitPublish();
+        await productsPage.expectProductCompleteModal();
+        expect(await productsPage.readProductCompleteSharePath()).toBe(sharePath);
+        expect(await productsPage.copyProductCompleteLink()).toContain(sharePath);
+        await productsPage.closeProductCompleteModal();
+      });
+
+      await test.step('Verify the published course is active with the same share URL', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(draftTitle);
+        await productsPage.expectProductVisible(draftTitle);
+        await productsPage.expectProductRowStatus(draftTitle, 'ACTIVE');
+        expect(await productsPage.readProductSharePath(draftTitle)).toBe(sharePath);
+      });
+
+      await test.step('Edit and republish the course while preserving its share URL', async () => {
+        await productsPage.openEditProduct(draftTitle);
+        await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.fillTitle(republishedTitle);
+        await onlineCoursePage.fillDescription(republishedDescription);
+        await onlineCoursePage.submitContentDetails();
+        await onlineCoursePage.submitPublish();
+        await productsPage.expectProductCompleteModal();
+        expect(await productsPage.readProductCompleteSharePath()).toBe(sharePath);
+        await productsPage.closeProductCompleteModal();
+
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active', { waitForRender: false });
+        await productsPage.searchProductsUntilVisible(republishedTitle);
+        await productsPage.expectProductVisible(republishedTitle);
+        expect(await productsPage.readProductSharePath(republishedTitle)).toBe(sharePath);
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, accessToken).catch(() => undefined);
+      }
+    }
+  });
 });
