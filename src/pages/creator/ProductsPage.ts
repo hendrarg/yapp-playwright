@@ -72,7 +72,9 @@ export class ProductsPage {
   });
 
   private readonly digitalProductThumbnailInput = smartLocator(this.page, {
-    label: "Upload File",
+    // Hidden file input without id/aria-label/label association — getByLabel
+    // can never match it and would burn the full 10s waitFor timeout on every
+    // setInputFiles. The :not([multiple]) disambiguates from the gallery input.
     selector: 'input[type="file"][accept*="image/jpeg"]:not([multiple]):visible',
   });
 
@@ -544,6 +546,13 @@ export class ProductsPage {
   }
 
   async openAddProductSheet() {
+    // Dismiss the one-time "Add your active social media" dialog when it blocks
+    // the products page (it can appear on first product dashboard visit).
+    const skipButton = this.page.getByRole("button", { name: "Skip", exact: true });
+    if (await skipButton.isVisible().catch(() => false)) {
+      await safeClick(skipButton);
+      await expect(skipButton).toBeHidden({ timeout: 10000 });
+    }
     await safeClick(this.addProductButton);
     await expect(this.addNewProductHeading).toBeVisible({ timeout: 10000 });
   }
@@ -1061,6 +1070,62 @@ export class ProductsPage {
     await expect(this.textFeedback(requiredErrors.content)).toBeVisible({ timeout: 10000 });
     await expect(this.textFeedback(requiredErrors.thumbnail)).toBeVisible({ timeout: 10000 });
     await expect(this.textFeedback(requiredErrors.summary)).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Buyer-only Content Description editor (second editable-markdown editor) — TC-PD-C-013. */
+  private digitalProductContentDescriptionEditor(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "editable markdown",
+      selector: '[role="textbox"][aria-label="editable markdown"]',
+    }).nth(1);
+  }
+
+  /** Rich text toolbar of the buyer-only Content Description (second toolbar on Add Content). */
+  private digitalProductContentDescriptionToolbar(): Locator {
+    return this.page.getByRole("toolbar").nth(1);
+  }
+
+  private digitalProductContentDescriptionCounter(): Locator {
+    return this.page.locator("p").filter({ hasText: /\d+\s*\/\s*500/ }).nth(1);
+  }
+
+  private digitalProductContentDescriptionFormatAction(name: string): Locator {
+    return this.digitalProductContentDescriptionToolbar().locator(`[aria-label="${name}"]`);
+  }
+
+  async fillDigitalProductContentDescription(text: string) {
+    const editor = this.digitalProductContentDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    if (text) await this.page.keyboard.insertText(text);
+  }
+
+  async expectDigitalProductContentDescriptionCounter(expectedText: string) {
+    await expect(this.digitalProductContentDescriptionCounter()).toContainText(expectedText, {
+      timeout: 10000,
+    });
+  }
+
+  async applyDigitalProductContentDescriptionFormatting() {
+    const editor = this.digitalProductContentDescriptionEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.digitalProductContentDescriptionFormatAction("Bold").click({ timeout: 10000 });
+    await this.digitalProductContentDescriptionFormatAction("Italic").click({ timeout: 10000 });
+    await this.digitalProductContentDescriptionFormatAction("Underline").click({ timeout: 10000 });
+  }
+
+  async expectDigitalProductContentDescriptionFormatted() {
+    const html = await this.digitalProductContentDescriptionEditor().innerHTML();
+    expect(html).toMatch(/_bold_|_italic_|_underline_|strong|em|u/i);
+  }
+
+  async expectDigitalProductSetDetailsLoaded() {
+    await expect(this.page.getByRole("button", { name: "Next: Publish" })).toBeVisible({
+      timeout: 15000,
+    });
   }
 
   async enableLinksContentType() {

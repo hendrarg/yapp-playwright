@@ -155,6 +155,15 @@ export function generateDigitalProductDescription(): string {
   return faker.lorem.sentence();
 }
 
+/** Buyer-only post-purchase description content (TC-PD-C-013). The UI counter counts words (max 500). */
+export function generateDigitalProductBuyerOnlyDescription(wordCount = 500): string {
+  const words: string[] = [];
+  while (words.length < wordCount) {
+    words.push(...faker.lorem.words(3).split(' '));
+  }
+  return words.slice(0, wordCount).join(' ');
+}
+
 export function generateOnlineCourseProductData(
   overrides?: Partial<OnlineCourseProductData>,
 ): OnlineCourseProductData {

@@ -3,7 +3,7 @@ import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile,
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -1113,6 +1113,57 @@ test.describe('Creator Products', () => {
       await productsPage.fillEmbedLink(secondLink.label, secondLink.url);
       await productsPage.saveCurrentEmbedLink();
       await productsPage.expectEmbedLinksSaved([firstLink.label, secondLink.label]);
+    });
+  });
+
+  test('Validate Digital Product Buyer-Only Description', {
+    tag: ['@AUT-FV-192', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-PD-C-013',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+    test.setTimeout(180000);
+
+    const digitalProductType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Digital Product',
+    )!;
+    const [contentLink] = digitalProductValidationData.linkValidation.validLinks;
+
+    await test.step('Open Digital Product creation flow', async () => {
+      await creatorNav.open('products');
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(digitalProductType.buttonName);
+      await productsPage.expectDigitalProductCreateFlow();
+    });
+
+    await test.step('Fill required Add Content fields', async () => {
+      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+      await productsPage.enableLinksContentType();
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+    });
+
+    await test.step('Fill buyer-only description to the 500-word limit and verify counter', async () => {
+      const buyerOnly = generateDigitalProductBuyerOnlyDescription(500);
+      expect(buyerOnly.split(' ').length).toBe(500);
+      await productsPage.fillDigitalProductContentDescription(buyerOnly);
+      await productsPage.expectDigitalProductContentDescriptionCounter('500 / 500');
+    });
+
+    await test.step('Apply rich text formatting to buyer-only description', async () => {
+      await productsPage.applyDigitalProductContentDescriptionFormatting();
+      await productsPage.expectDigitalProductContentDescriptionFormatted();
+    });
+
+    await test.step('Clear buyer-only description and verify it remains optional', async () => {
+      await productsPage.fillDigitalProductContentDescription('');
+      await productsPage.expectDigitalProductContentDescriptionCounter('0 / 500');
+      await onlineCoursePage.submitContentDetails();
+      await productsPage.expectDigitalProductSetDetailsLoaded();
     });
   });
 
