@@ -103,6 +103,18 @@ export const onlineCoursePricingData = {
   invalidPriceErrorPattern: /Price must be either 0 or at least Rp10\.000/i,
 } as const;
 
+/** Digital Product pricing boundary data (AUT-FV-193 / TC-PD-C-018..019). */
+export const digitalProductPricingData = {
+  freeLabel: "Free",
+  idrZeroPattern: /IDR\s*0/,
+  validPrice: "10000",
+  /** Creator-side live preview formats price as "IDR 10,000". */
+  validPriceDisplayPattern: /IDR\s*10[,.]000/,
+  zeroPrice: "0",
+  belowMinimumPrice: "9999",
+  invalidPriceErrorPattern: /Price must be either 0 or at least Rp10\.000/i,
+} as const;
+
 export const onlineCourseAfterSalesData = {
   defaultOffCopyPattern: /turn this on|default.*email|email.*default/i,
   previewDialogPattern: /after sales|preview|links/i,

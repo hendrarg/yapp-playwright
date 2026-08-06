@@ -3,7 +3,7 @@ import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile,
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductPricingData, digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -1164,6 +1164,87 @@ test.describe('Creator Products', () => {
       await productsPage.expectDigitalProductContentDescriptionCounter('0 / 500');
       await onlineCoursePage.submitContentDetails();
       await productsPage.expectDigitalProductSetDetailsLoaded();
+    });
+  });
+
+  test('Validate Digital Product Pricing Rules', {
+    tag: ['@AUT-FV-193', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-PD-C-018, TC-PD-C-019',
+    }],
+  }, async ({ creatorNav, productsPage, onlineCoursePage, buyerNav, productPurchasePage, page }) => {
+    test.setTimeout(240000);
+
+    const digitalProductType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Digital Product',
+    )!;
+    const [contentLink] = digitalProductValidationData.linkValidation.validLinks;
+    const freeTitle = generateDigitalProductTitle();
+    let freeUuid = '';
+    let freeSharePath = '';
+
+    await test.step('Open Digital Product creation flow with pricing off by default', async () => {
+      await creatorNav.open('products');
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(digitalProductType.buttonName);
+      await productsPage.expectDigitalProductCreateFlow();
+    });
+
+    await test.step('Fill Add Content and reach Set Details with pricing default', async () => {
+      await productsPage.digitalProductTitleInput.fill(freeTitle);
+      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+      await productsPage.enableLinksContentType();
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await onlineCoursePage.submitContentDetails();
+      await productsPage.expectDigitalProductSetDetailsLoaded();
+    });
+
+    await test.step('Verify free default pricing (preview shows IDR 0)', async () => {
+      await productsPage.expectDigitalProductPricingFreeDefault();
+    });
+
+    await test.step('Publish the free product and verify IDR 0 on the buyer page', async () => {
+      await onlineCoursePage.submitPublish();
+      await productsPage.expectProductCompleteModal();
+      freeSharePath = await productsPage.readProductCompleteSharePath();
+      expect(freeSharePath).toMatch(/\/s\//);
+      await productsPage.closeProductCompleteModal();
+
+      await productPurchasePage.gotoSharePath(freeSharePath);
+      await productPurchasePage.expectOnlineCourseFreeBuyerView(freeTitle, freeSharePath);
+    });
+
+    await test.step('Open paid pricing and reject below-minimum nominal values', async () => {
+      await creatorNav.open('products');
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(digitalProductType.buttonName);
+      await productsPage.expectDigitalProductCreateFlow();
+      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+      await productsPage.enableLinksContentType();
+      await productsPage.openEmbedLinkDialog();
+      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
+      await productsPage.saveCurrentEmbedLink();
+      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await onlineCoursePage.submitContentDetails();
+      await productsPage.expectDigitalProductSetDetailsLoaded();
+
+      await productsPage.enableDigitalProductPricing();
+      await productsPage.fillDigitalProductPrice(digitalProductPricingData.belowMinimumPrice);
+      await productsPage.expectDigitalProductInvalidPriceFeedback();
+      await productsPage.fillDigitalProductPrice(digitalProductPricingData.zeroPrice);
+      await productsPage.expectDigitalProductPricingFreeDefault();
+      await productsPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
+      await productsPage.expectDigitalProductValidPrice();
+    });
+
+    await test.step('Enter a valid positive price and verify it persists', async () => {
+      await productsPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
+      await productsPage.expectDigitalProductValidPrice();
     });
   });
 

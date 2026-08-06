@@ -31,6 +31,8 @@ export const onlineCourseCheckoutData = {
   checkoutHeading: "Checkout",
   freeTotalLabel: "Free",
   freeCheckoutBadge: "FREE",
+  /** Badge shown on the buyer product page for a free product. */
+  freeBuyerBadge: "Free",
   payCtaPattern: /^Pay IDR/,
   /** 11% promo from `generatePromotionData('active')` used in the voucher step. */
   activePromotionDiscountPercent: 11,

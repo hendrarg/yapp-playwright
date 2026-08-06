@@ -13,6 +13,7 @@ import { consultationPricingData } from "@test-data/creator/consultation.pricing
 import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
 import { discordMembershipValidationData } from "@test-data/creator/membership.data";
 import {
+  digitalProductPricingData,
   digitalProductValidationData,
   productsCreationData,
 } from "@test-data/creator/products.creation.data";
@@ -1126,6 +1127,48 @@ export class ProductsPage {
     await expect(this.page.getByRole("button", { name: "Next: Publish" })).toBeVisible({
       timeout: 15000,
     });
+  }
+
+  /** Digital Product pricing (AUT-FV-193 / TC-PD-C-018..019) — shares the online-course pricing UI. */
+
+  async readDigitalProductPricingEnabled(): Promise<boolean> {
+    return (await this.page.getByRole("switch", { name: "Add Pricing" }).getAttribute("aria-checked")) === "true";
+  }
+
+  /** Free default: pricing either OFF (input hidden) or ON with IDR 0 — preview must show IDR 0. */
+  async expectDigitalProductPricingFreeDefault() {
+    await expect
+      .poll(() => this.page.locator("main").innerText(), { timeout: 10000 })
+      .toMatch(digitalProductPricingData.idrZeroPattern);
+  }
+
+  async enableDigitalProductPricing() {
+    const toggle = this.page.getByRole("switch", { name: "Add Pricing" });
+    if ((await toggle.getAttribute("aria-checked")) !== "true") {
+      await safeClick(toggle);
+    }
+    await expect(toggle).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    await expect(this.page.getByRole("textbox", { name: "10,000" })).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillDigitalProductPrice(price: string) {
+    const input = this.page.getByRole("textbox", { name: "10,000" });
+    await input.click({ timeout: 10000 });
+    await input.fill(price);
+    // Blur to trigger client-side pricing validation.
+    await this.page.getByText("Add pricing to charge viewers").click({ timeout: 10000 });
+  }
+
+  async expectDigitalProductInvalidPriceFeedback() {
+    await expect
+      .poll(() => this.page.locator("main").innerText(), { timeout: 10000 })
+      .toMatch(digitalProductPricingData.invalidPriceErrorPattern);
+  }
+
+  async expectDigitalProductValidPrice() {
+    await expect
+      .poll(() => this.page.locator("main").innerText(), { timeout: 10000 })
+      .toMatch(digitalProductPricingData.validPriceDisplayPattern);
   }
 
   async enableLinksContentType() {

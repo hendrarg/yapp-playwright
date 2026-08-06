@@ -33,12 +33,23 @@ Then work inline and finish through this sequence:
 
 1. Load the validated automation context when an AUT ID exists.
 2. Complete the Mandatory Reuse Gate.
-3. Apply the smallest edit to existing files. **Every new or touched page-object locator must use `smartLocator`** — fragile CSS/XPath-only locators are `Extend`, not `Reuse` unchanged (see `.agents/rules/code-style.md` and `add-test-spec` Step 5).
-4. Run `npx tsc --noEmit`.
-5. Run only the target AUT once.
-6. Stop when it passes.
+3. **Complete the Cross-Product Reuse Scan** (see below) before opening the browser.
+4. Apply the smallest edit to existing files. **Every new or touched page-object locator must use `smartLocator`** — fragile CSS/XPath-only locators are `Extend`, not `Reuse` unchanged (see `.agents/rules/code-style.md` and `add-test-spec` Step 5).
+5. Run `npx tsc --noEmit`.
+6. Run only the target AUT once.
+7. Stop when it passes.
 
 Do not create long design documents or implementation plans. The short new-automation test-step plan is local-only and must not be committed. Do not create worktrees or subagents, and do not ask the user to choose an execution mode for this fast path.
+
+## Cross-Product Reuse Scan
+
+Many product behaviors are shared across product types (Online Course, Digital Product, Consultation, Discord/Telegram Membership, Events). Before exploring the browser for a new AUT, scan the other product types first:
+
+- Search `src/pages/`, `src/test-data/`, and `src/helpers/` for the same **step intent, locator label, page-object method, or test data** already used by another product type (e.g. pricing switch `Add Pricing`, free default / `Free` buyer view, buyer-only description counter, after-sales links, thumbnail upload).
+- Classify each required operation as **Reuse**, **Extend**, or **New** in the working conversation; prefer reusing/parameterizing an existing method over writing a parallel one.
+- Only open the browser to validate **product-specific labels/locators** and **actual behavior differences** (e.g. default state, counter semantics, price display format). Do not re-derive shared behavior from scratch.
+
+Reuse the page-object **method** and **element intent**, not fragile selectors — fragile CSS/XPath-only locators stay `Extend` (see `.agents/rules/code-style.md`).
 
 Use an extended planning or delegated workflow only when the user explicitly requests it, the task spans multiple independent systems, or a blocking architectural decision cannot be resolved from repository evidence.
 

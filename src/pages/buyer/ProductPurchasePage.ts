@@ -824,6 +824,24 @@ export class ProductPurchasePage {
     await expect(payCta).toContainText(summary.total.toLocaleString('en-US'), { timeout: 10000 });
   }
 
+  /** Free product buyer page shows Free / IDR 0 (AUT-FV-193 / TC-PD-C-018). Works as product owner. */
+  async expectOnlineCourseFreeBuyerView(title: string, sharePath: string) {
+    await this.gotoSharePath(sharePath);
+    await this.expectOnlineCourseProductLoaded(title);
+    await expect(
+      this.page
+        .getByText(onlineCourseCheckoutData.freeTotalLabel, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page
+        .getByText(onlineCourseCheckoutData.freeBuyerBadge, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
   private async readMoney(label: string, fallback?: number): Promise<number> {
     const row = this.page.getByText(label, { exact: true }).locator('..');
     if (await row.count() === 0 && fallback !== undefined) return fallback;
