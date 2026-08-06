@@ -4,7 +4,7 @@ import {
   consultationBuyerSchedulingData,
   formatConsultationSaveMySpotDate,
 } from '@test-data/buyer/consultation.detail.data';
-import { onlineCourseBuyerDetailData } from '@test-data/buyer/online-course.detail.data';
+import { onlineCourseBuyerDetailData, onlineCourseCheckoutData } from '@test-data/buyer/online-course.detail.data';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
 import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
@@ -668,8 +668,160 @@ export class ProductPurchasePage {
       .first();
   }
 
+  private onlineCourseSlideDot(index: number): Locator {
+    const name = onlineCourseBuyerDetailData.slideButtonName(index);
+    return this.page.getByRole('button', { name, exact: true }).filter({ visible: true });
+  }
+
   async goToOnlineCourseNextSlide() {
     await safeClick(this.onlineCourseNextSlideButton());
+  }
+
+  async goToOnlineCoursePreviousSlide() {
+    await safeClick(this.onlineCoursePreviousSlideButton());
+  }
+
+  async goToOnlineCourseSlide(index: number) {
+    await safeClick(this.onlineCourseSlideDot(index));
+  }
+
+  async expectOnlineCourseSlideActive(index: number) {
+    const slide = this.onlineCourseSlideDot(index);
+    await expect(slide).toBeVisible({ timeout: 10000 });
+    await expect
+      .poll(async () => (await slide.getAttribute('class')) ?? '', { timeout: 10000 })
+      .toMatch(onlineCourseBuyerDetailData.activeSlideClassPattern);
+    await expect(slide).not.toHaveClass(onlineCourseBuyerDetailData.inactiveSlideClassPattern);
+  }
+
+  /** Arrow + thumbnail-strip navigation (AUT-FV-170 / TC-OC-B-002). */
+  async expectOnlineCourseThumbnailNavigation() {
+    await expect(this.page.getByRole('button', { name: /^Go to slide \d+$/ })).toHaveCount(
+      onlineCourseBuyerDetailData.expectedSlideCount,
+      { timeout: 15000 },
+    );
+    await this.expectOnlineCourseSlideActive(1);
+
+    await this.goToOnlineCourseNextSlide();
+    await this.expectOnlineCourseSlideActive(2);
+    await expect(this.onlineCoursePreviousSlideButton()).toBeVisible({ timeout: 10000 });
+
+    await this.goToOnlineCoursePreviousSlide();
+    await this.expectOnlineCourseSlideActive(1);
+
+    await this.goToOnlineCourseSlide(onlineCourseBuyerDetailData.expectedSlideCount);
+    await this.expectOnlineCourseSlideActive(onlineCourseBuyerDetailData.expectedSlideCount);
+
+    for (let index = 1; index <= onlineCourseBuyerDetailData.expectedSlideCount; index++) {
+      await this.goToOnlineCourseSlide(index);
+      await this.expectOnlineCourseSlideActive(index);
+    }
+  }
+
+  /** Online Course checkout (AUT-FV-171 / TC-OC-B-003..007). */
+
+  /** Open a paid course checkout page from its share path as a logged-in buyer. */
+  async openOnlineCourseCheckout(title: string, sharePath: string) {
+    await this.gotoSharePath(sharePath);
+    await this.expectOnlineCourseProductLoaded(title);
+    await flakyClick(this.page.getByRole('button', { name: /^(Get Product|Purchase)$/ }));
+    await expect(this.page).toHaveURL(/\/checkout\?quantity=1/, { timeout: 15000 });
+  }
+
+  /** Opens the Redeem Voucher dialog from the online course checkout page. */
+  async openOnlineCourseVoucherDialog() {
+    await safeClick(this.chooseVoucherButton);
+    await expect(this.voucherInput).toBeVisible({ timeout: 10000 });
+  }
+
+  /** TC-OC-B-003: checkout shows product, creator, and quantity 1. */
+  async expectOnlineCourseCheckoutInitiated(options: { title: string; creatorName?: string }) {
+    const creatorName = options.creatorName ?? onlineCourseBuyerDetailData.creatorName;
+    await expect(
+      this.page.getByText(options.title, { exact: false }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page.getByText(creatorName, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page.getByText(onlineCourseCheckoutData.quantityLabelPattern).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  /** TC-OC-B-004: buyer fields prefill from profile; required fields block submission. */
+  async expectOnlineCourseCheckoutPrefill() {
+    // Email is always pre-filled from the logged-in account; name may be empty
+    // when the profile has no display name, so only the applicable field asserts.
+    await expect(this.page.getByPlaceholder('Enter your email')).toBeDisabled({ timeout: 10000 });
+    await expect(this.page.getByPlaceholder('Enter your email')).toHaveValue(/@inbox\.testmail\.app/, {
+      timeout: 10000,
+    });
+    await expect(this.page.getByPlaceholder('Enter phone number')).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectOnlineCourseCheckoutRequiredValidation() {
+    const name = this.page.getByPlaceholder('Enter your name');
+    const phone = this.page.getByPlaceholder('Enter phone number');
+
+    await name.fill('');
+    await phone.focus();
+    await expect(this.page.getByText(onlineCourseCheckoutData.buyerNameRequiredError)).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Phone can pre-fill from the buyer profile; clear it so the required
+    // validation blocks submission.
+    await phone.fill('');
+    await this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern }).click();
+    await expect(this.page.getByText(onlineCourseCheckoutData.phoneNumberRequiredError)).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  /** TC-OC-B-005: selecting a payment method is reflected in the checkout summary. */
+  async selectOnlineCoursePaymentMethod(name: string | RegExp) {
+    await this.page.getByRole('combobox').click();
+    await this.page.getByRole('option', { name }).click();
+  }
+
+  async expectOnlineCoursePaymentMethod(name: string | RegExp) {
+    await expect(this.page.getByRole('combobox')).toContainText(name, { timeout: 10000 });
+  }
+
+  /** Free course checkout shows a zero total and Get Product CTA (no payment method). */
+  async expectOnlineCourseFreeCheckout(title: string, sharePath: string) {
+    await this.gotoSharePath(sharePath);
+    await this.expectOnlineCourseProductLoaded(title);
+    await expect(
+      this.page
+        .getByText(onlineCourseCheckoutData.freeTotalLabel, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+
+    await this.page.getByRole('button', { name: 'Get Product', exact: true }).click();
+    const dialog = this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.getByRole('heading', { name: onlineCourseCheckoutData.checkoutHeading, exact: true }) });
+    await expect(dialog).toBeVisible({ timeout: 15000 });
+    await expect(dialog.getByText(onlineCourseCheckoutData.freeCheckoutBadge, { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(dialog.getByRole('button', { name: 'Get Product', exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  /** TC-OC-B-007: order review shows subtotal, total, and the Pay CTA matching the total. */
+  async expectOnlineCourseOrderReview(options: { subtotal: number }) {
+    await expect(
+      this.page.getByText(onlineCourseCheckoutData.payCtaPattern).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    const summary = await this.getOrderSummary();
+    expect(summary.subtotal).toBe(options.subtotal);
+    expect(summary.discount).toBeGreaterThanOrEqual(0);
+    const payCta = this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern });
+    await expect(payCta).toContainText(summary.total.toLocaleString('en-US'), { timeout: 10000 });
   }
 
   private async readMoney(label: string, fallback?: number): Promise<number> {
