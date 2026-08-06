@@ -144,6 +144,13 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
 
 Do not create intermediate Markdown files other than the required short, local test-step plan for a new AUT. Automation Mapping and its active source TC sheets remain the authoritative inputs.
 
+## MCP Playwright Browser Hygiene
+
+- Close the MCP Playwright browser when the browser session is no longer needed: call `browser_close` on the MCP server after finishing the final interaction, so no orphaned tabs are left behind.
+- Do not leave long-lived browser contexts open between unrelated tasks. A leftover context can persist stale state and cause the next session to start on a stale/blank page.
+- After closing, verify with `browser_tabs` that only the default `about:blank` tab remains.
+- Note: the MCP server itself is stateful — a full server restart (Settings → MCP → refresh) is the only way to reload `--storage-state`; `browser_close` only closes the page, not the server.
+
 ## Required Tags
 
 Every mapped test must include:
