@@ -6,6 +6,33 @@ function apexDomain(url) {
 }
 
 /**
+ * Account presets for the MCP browser session. Mirrors src/test-data/users.ts.
+ */
+export const mcpAccounts = {
+  qa: {
+    label: "QA Tester (token1)",
+    envVar: "YAPP_TEST_ACCESS_TOKEN",
+  },
+  sundanese: {
+    label: "Sundanese buyer (token2)",
+    envVar: "YAPP_TEST_ACCESS_TOKEN_2",
+  },
+};
+
+/**
+ * Resolve which account the MCP browser authenticates as from YAPP_MCP_ACCOUNT.
+ * Values: `qa` (default), `sundanese`, or `guest`/`none` for an unauthenticated session.
+ */
+export function resolveMcpAccount(account = process.env.YAPP_MCP_ACCOUNT?.toLowerCase()) {
+  if (!account || account === "qa" || account === "token1") return "qa";
+  if (account === "sundanese" || account === "token2") return "sundanese";
+  if (account === "guest" || account === "none" || account === "off") return "guest";
+  throw new Error(
+    `Unknown YAPP_MCP_ACCOUNT value "${account}". Use "qa", "sundanese", or "guest".`,
+  );
+}
+
+/**
  * Build Playwright storage state with the shared `at` cookie used by auth fixtures.
  */
 export function buildMcpAuthStorageState(baseURL, accessToken) {
@@ -27,16 +54,28 @@ export function buildMcpAuthStorageState(baseURL, accessToken) {
 }
 
 /**
- * Writes MCP auth storage state when YAPP_TEST_ACCESS_TOKEN is available.
+ * Writes MCP auth storage state for the account selected by YAPP_MCP_ACCOUNT
+ * (default `qa` = YAPP_TEST_ACCESS_TOKEN). In `guest` mode the storage file is
+ * removed so the MCP browser starts unauthenticated.
+ *
  * Returns the output path when written, otherwise null.
  */
 export function writeMcpAuthStorageState({
   root,
   baseURL = process.env.YAPP_BASE_URL,
-  accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, ""),
+  account = resolveMcpAccount(),
   outputPath = path.join(root, ".playwright-mcp", "auth-storage.json"),
 } = {}) {
-  if (!baseURL || !accessToken) {
+  if (account === "guest") {
+    if (fs.existsSync(outputPath)) {
+      fs.unlinkSync(outputPath);
+    }
+    return null;
+  }
+
+  const envVar = mcpAccounts[account]?.envVar;
+  const accessToken = envVar ? process.env[envVar]?.replace(/"/g, "") : undefined;
+  if (!baseURL || !envVar || !accessToken) {
     return null;
   }
 

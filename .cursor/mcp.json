@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "node",
-      "args": ["D:/yapp/scripts/playwright-mcp.mjs"]
-    }
-  }
-}

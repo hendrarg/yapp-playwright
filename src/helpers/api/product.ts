@@ -28,7 +28,8 @@ export interface CreateOnlineCourseProductOptions {
   price?: number;
   status?: ProductStatus;
   pages?: OnlineCourseChapter[];
-  productImages?: string[];
+  /** Additional gallery image paths shown in the buyer carousel. Uploaded as product images. */
+  productImagePaths?: string[];
   additionalQuestions?: unknown[];
   categoryIDs?: string[];
   purchaseButtonText?: string;
@@ -244,13 +245,30 @@ export async function createOnlineCourseProduct(
     headers,
   });
 
+  const galleryUploads: { uploadId: string }[] = [];
+  for (const filePath of options.productImagePaths ?? []) {
+    galleryUploads.push(
+      await uploadFile(request, {
+        filePath,
+        token,
+        headers,
+      }),
+    );
+  }
+
   const response = await request.post(apiUrl('/api/v1/shop/products'), {
     headers,
     data: {
       title: options.title,
       description: options.description,
       thumbnailImage: uploaded.uploadId,
-      productImages: options.productImages ?? [],
+      productImages: galleryUploads.map((upload) => ({
+        title: '',
+        description: '',
+        feedAssetType: 'image',
+        url: upload.uploadId,
+        uuid: '',
+      })),
       isSetPrice: true,
       price: options.price ?? 0,
       isSetDiscount: false,

@@ -4,6 +4,7 @@ import {
   consultationBuyerSchedulingData,
   formatConsultationSaveMySpotDate,
 } from '@test-data/buyer/consultation.detail.data';
+import { onlineCourseBuyerDetailData } from '@test-data/buyer/online-course.detail.data';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
 import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
@@ -519,6 +520,156 @@ export class ProductPurchasePage {
       await this.goToConsultationSlide(index);
       await this.expectConsultationSlideActive(index);
     }
+  }
+
+  /** Online Course buyer product-detail (AUT-FV-169 / TC-OC-B-001). */
+  async expectOnlineCourseProductLoaded(title: string) {
+    await expect(
+      locatorChain(this.page, {
+        role: 'heading',
+        name: onlineCourseBuyerDetailData.detailHeading,
+        text: onlineCourseBuyerDetailData.detailHeading,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(
+      this.page.getByText(title, { exact: false }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectOnlineCourseProductDetails(options: {
+    title: string;
+    description: string;
+    pricePattern?: RegExp;
+    creatorName?: string;
+  }) {
+    const creatorName = options.creatorName ?? onlineCourseBuyerDetailData.creatorName;
+    await this.expectOnlineCourseProductLoaded(options.title);
+
+    await expect(
+      this.page.getByText(options.description, { exact: false }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+
+    await expect(
+      this.page
+        .getByText(options.pricePattern ?? onlineCourseBuyerDetailData.priceDisplayPattern)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+
+    await expect(
+      this.page
+        .getByText(onlineCourseBuyerDetailData.productBadge, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+
+    await expect(
+      this.page
+        .getByText(creatorName, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
+
+    await expect(
+      locatorChain(this.page, {
+        role: 'tab',
+        name: onlineCourseBuyerDetailData.overviewTab,
+        text: onlineCourseBuyerDetailData.overviewTab,
+      }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'tab',
+        name: onlineCourseBuyerDetailData.aboutCreatorTab,
+        text: onlineCourseBuyerDetailData.aboutCreatorTab,
+      }),
+    ).toBeVisible({ timeout: 10000 });
+
+    await expect(
+      locatorChain(this.page, {
+        role: 'button',
+        name: 'Purchase',
+        text: 'Purchase',
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'button',
+        name: 'Add To Cart',
+        text: 'Add To Cart',
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+
+    await expect(this.onlineCourseCarouselItem()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByRole('button', { name: /^Go to slide \d+$/ })).toHaveCount(
+      onlineCourseBuyerDetailData.expectedSlideCount,
+      { timeout: 15000 },
+    );
+  }
+
+  async expectOnlineCourseCarouselNavigable() {
+    await expect(this.page.getByRole('button', { name: /^Go to slide \d+$/ })).toHaveCount(
+      onlineCourseBuyerDetailData.expectedSlideCount,
+      { timeout: 15000 },
+    );
+    await this.goToOnlineCourseNextSlide();
+    await expect(this.onlineCoursePreviousSlideButton()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectOnlineCourseOverviewAndAboutCreatorTabs() {
+    const overview = locatorChain(this.page, {
+      role: 'tab',
+      name: onlineCourseBuyerDetailData.overviewTab,
+      text: onlineCourseBuyerDetailData.overviewTab,
+    });
+    const about = locatorChain(this.page, {
+      role: 'tab',
+      name: onlineCourseBuyerDetailData.aboutCreatorTab,
+      text: onlineCourseBuyerDetailData.aboutCreatorTab,
+    });
+    await about.click({ timeout: 10000 });
+    await expect(about).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+    await expect(
+      this.page
+        .getByText(onlineCourseBuyerDetailData.creatorName, { exact: true })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
+    await overview.click({ timeout: 10000 });
+    await expect(overview).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+  }
+
+  private onlineCourseCarouselItem(): Locator {
+    return locatorChain(this.page, {
+      role: 'group',
+      selector: '[data-slot="carousel-item"]',
+    })
+      .filter({ visible: true })
+      .first();
+  }
+
+  private onlineCourseNextSlideButton(): Locator {
+    return locatorChain(this.page, {
+      role: 'button',
+      name: onlineCourseBuyerDetailData.nextSlideName,
+      selector: '[data-slot="carousel-next"]',
+    })
+      .filter({ visible: true })
+      .first();
+  }
+
+  private onlineCoursePreviousSlideButton(): Locator {
+    return locatorChain(this.page, {
+      role: 'button',
+      name: onlineCourseBuyerDetailData.previousSlideName,
+      selector: '[data-slot="carousel-previous"]',
+    })
+      .filter({ visible: true })
+      .first();
+  }
+
+  async goToOnlineCourseNextSlide() {
+    await safeClick(this.onlineCourseNextSlideButton());
   }
 
   private async readMoney(label: string, fallback?: number): Promise<number> {

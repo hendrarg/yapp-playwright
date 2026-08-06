@@ -128,6 +128,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
 | `TESTMAIL_NAMESPACE` | For OTP tests | Do not commit |
 | `PW_HEADLESS` | No | Defaults to `false` |
 | `PW_WORKERS` | No | Defaults to 1 |
+| `YAPP_MCP_ACCOUNT` | No | Account injected into the MCP Playwright browser session: `qa` (default, token1), `sundanese` (token2), or `guest` (start unauthenticated). |
 | `YAPP_PLAYWRIGHT_BROWSERS_PATH` | No | Optional stable Playwright browser cache. Cursor sandboxes otherwise point at empty Temp paths and re-download Chromium. |
 
 ## Test Case Flow
