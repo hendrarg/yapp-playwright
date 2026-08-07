@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 
 /** After-sales preview / inactive access data (AUT-FV-025, AUT-FV-026). */
 export const consultationConfigData = {
@@ -7,11 +8,11 @@ export const consultationConfigData = {
 } as const;
 
 export function generateConsultationConfigTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("consultation:title", () => faker.commerce.productName());
 }
 
 export function generateConsultationConfigDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("consultation:description", () => faker.lorem.sentence());
 }
 
 export function generateConsultationAfterSalesPreviewMessage(): string {

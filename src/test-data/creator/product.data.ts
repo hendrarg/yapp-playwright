@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 
 export type ProductInput = {
   name: string;
@@ -30,8 +31,8 @@ export const productTemplates = {
 
 export function generateProduct(overrides?: Partial<ProductInput>): ProductInput {
   return {
-    name: faker.commerce.productName(),
-    description: faker.commerce.productDescription(),
+    name: getAiText("product:name", () => faker.commerce.productName()),
+    description: getAiText("product:description", () => faker.commerce.productDescription()),
     price: parseFloat(faker.commerce.price({ min: 5, max: 200 })),
     category: faker.helpers.arrayElement(["digital", "physical"]),
     stock: faker.number.int({ min: 1, max: 100 }),

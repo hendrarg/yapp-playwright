@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText, getAiTextList } from "@test-data/ai";
 
 export type MembershipTier = {
   name: string;
@@ -54,11 +55,11 @@ export const discordMembershipSettingsData = {
 } as const;
 
 export function generateDiscordMembershipTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("tier:name", () => faker.commerce.productName());
 }
 
 export function generateDiscordMembershipDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("tier:description", () => faker.lorem.sentence());
 }
 
 export function generateDiscordMembershipSettingsNote(): string {
@@ -77,10 +78,12 @@ export function generateDiscordMembershipLimitDescription(): string {
 
 export function generateMembershipTier(overrides?: Partial<MembershipTier>): MembershipTier {
   return {
-    name: faker.company.buzzNoun() + " Tier",
+    name: getAiText("tier:name", () => faker.company.buzzNoun() + " Tier"),
     price: parseFloat(faker.commerce.price({ min: 5, max: 100 })),
-    description: faker.lorem.sentence(),
-    benefits: faker.helpers.multiple(() => faker.lorem.words(3), { count: 3 }),
+    description: getAiText("tier:description", () => faker.lorem.sentence()),
+    benefits: getAiTextList("tier:benefits", () =>
+      faker.helpers.multiple(() => faker.lorem.words(3), { count: 3 }),
+    ),
     ...overrides,
   };
 }

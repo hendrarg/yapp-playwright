@@ -16,3 +16,15 @@ export function testmailEnv() {
     namespace: requireEnv('TESTMAIL_NAMESPACE'),
   };
 }
+
+/**
+ * Optional AI-assisted test-data config (Google Gemini). Never required: when the
+ * key is absent the factories fall back to seeded Faker. Reads env at call time so
+ * unit tests can set/clear it.
+ */
+export function geminiConfig() {
+  return {
+    apiKey: process.env.GEMINI_API_KEY ?? '',
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+  };
+}

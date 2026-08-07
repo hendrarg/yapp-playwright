@@ -66,6 +66,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npm run automation:context -- AUT-E2E-002` | Build validated context from Google Sheets |
 | `npx playwright test --ui` | Playwright UI mode |
 | `npx tsc --noEmit` | Type-check only |
+| `npm run test:unit` | Offline AI test-data generator tests |
 | `npm run audit:tags` | Audit TC, feature, role, priority tags |
 | `npm run audit:locators` | Audit fragile locators in page objects |
 
@@ -74,7 +75,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 ```text
 tests/test-base.ts      fixture entry: test, authTest, creatorAuthTest + buyerNav, creatorNav
 src/
-  test-data/            static and factory test data
+  test-data/            static and factory test data (+ ai/ content generator)
   pages/                page objects
   fixtures/             Playwright fixture wiring (page, buyer-nav, creator-nav)
   helpers/
@@ -141,6 +142,10 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
 | `PW_WORKERS` | No | Defaults to 1 |
 | `YAPP_MCP_ACCOUNT` | No | Account injected into the MCP Playwright browser session: `qa` (default, token1), `sundanese` (token2), or `guest` (start unauthenticated). |
 | `YAPP_PLAYWRIGHT_BROWSERS_PATH` | No | Optional stable Playwright browser cache. Cursor sandboxes otherwise point at empty Temp paths and re-download Chromium. |
+| `GEMINI_API_KEY` | No | Enables AI-assisted test data (Google Gemini). Absent → seeded-Faker only |
+| `GEMINI_MODEL` | No | Gemini model for test data (default `gemini-3.5-flash-lite`) |
+| `YAPP_TEST_SEED` | No | Fixed Faker seed to reproduce a run exactly (default per-run timestamp) |
+| `YAPP_TEST_AI_BUNDLE` | No | Replay a previously logged AI bundle for an exact AI-enabled re-run |
 
 ## Test Case Flow
 

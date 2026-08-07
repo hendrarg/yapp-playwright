@@ -39,6 +39,7 @@ yapp/
 │       └── flaky-utils.ts        # Flaky element resolution
 ├── tests/
 │   ├── test-base.ts              # test, authTest, creatorAuthTest
+│   ├── unit/                     # Offline unit tests (AI test-data generator)
 │   ├── auth/
 │   ├── buyer/
 │   └── creator/
@@ -133,6 +134,17 @@ Mixed auth + guest specs:
 import { authTest as test, test as guestTest, expect } from '../test-base';
 ```
 
+## AI-Assisted Test Data
+
+Creator-content fields (product/consultation titles & descriptions, online-course chapters/episodes, post captions, campaign and membership copy) are generated **AI-first, seeded-Faker fallback** — the same pattern as the eDOT project. Factories in `src/test-data/` read from `src/test-data/ai/`.
+
+- **How it works:** one Gemini call per run (`tests/test-base.ts` → `warmAiCache()`) fetches a JSON content bundle; synchronous factories consume it via `getAiText(kind, fallback)`. When the bundle is missing or exhausted, or no `GEMINI_API_KEY` is set, factories fall back to seeded Faker — the generator never fails.
+- **Determinism:** the Faker fallback is seeded per run (`getRunSeed()` → `faker.seed()`), so output is reproducible within a run and unique across runs. Gemini output itself is not deterministic; replay a logged bundle via `YAPP_TEST_AI_BUNDLE` to reproduce an AI-enabled run exactly.
+- **Scope:** only creator-content text is AI-generated. Prices, stock, categories, addresses, promo names/codes, and exact-word-count fields (e.g. the 500-word buyer-only description) stay Faker/static.
+- **Offline:** with no `GEMINI_API_KEY` the SDK is never imported and no network call is made.
+
+Run `npm run test:unit` to verify the generator offline.
+
 ## Setup
 
 ```bash
@@ -170,6 +182,10 @@ npm run automation:context -- AUT-E2E-002   # Build automation context from Goog
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
 | `PW_HEADLESS` | No | Run headless (`true`/`false`, default `false` locally) |
 | `PW_WORKERS` | No | Parallel worker count (default `1`) |
+| `GEMINI_API_KEY` | No | Enables AI-assisted test data (Google Gemini). Absent → seeded-Faker only |
+| `GEMINI_MODEL` | No | Gemini model for test data (default `gemini-3.5-flash-lite`) |
+| `YAPP_TEST_SEED` | No | Fixed Faker seed to reproduce a run exactly (default per-run timestamp) |
+| `YAPP_TEST_AI_BUNDLE` | No | Replay a previously logged AI bundle for an exact AI-enabled re-run |
 
 ## CI/CD
 

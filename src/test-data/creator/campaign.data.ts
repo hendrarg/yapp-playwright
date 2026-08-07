@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 
 export type CampaignInput = {
   name: string;
@@ -30,8 +31,8 @@ export function generateCampaign(overrides?: Partial<CampaignInput>): CampaignIn
   const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   return {
-    name: faker.commerce.department() + " Campaign",
-    description: faker.lorem.sentence(),
+    name: getAiText("campaign:name", () => faker.commerce.department() + " Campaign"),
+    description: getAiText("campaign:description", () => faker.lorem.sentence()),
     discountPercent: faker.number.int({ min: 5, max: 70 }),
     startDate: start.toISOString().split("T")[0],
     endDate: end.toISOString().split("T")[0],

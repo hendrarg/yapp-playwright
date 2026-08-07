@@ -9,12 +9,16 @@ import { waitForAuthResponse } from '../src/helpers/auth/validate-token';
 import { primaryTokenNeedsRefresh, assertPrimaryTestToken } from '../src/helpers/auth/save-token';
 import { refreshAccountTokenViaOtp } from '../src/helpers/auth/refresh-token-otp';
 import { testAccounts } from '../src/test-data/users';
+import { getRunSeed, warmAiCache } from '../src/test-data/ai';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
 import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 import { creatorNavFixtures } from '../src/fixtures/creator-nav.fixture';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
+
+// Seed the global faker once per worker (per-run seed) before any test-data factory runs.
+getRunSeed();
 
 type MyFixtures = PageFixtures & BuyerNavFixtures & CreatorNavFixtures;
 
@@ -80,6 +84,11 @@ test.afterEach(async ({ page }) => {
   if (!page.isClosed()) {
     await page.close();
   }
+});
+
+// Warm the per-run AI content pool before any factory runs (no-op without GEMINI_API_KEY).
+test.beforeAll(async () => {
+  await warmAiCache();
 });
 
 export { expect, headless };

@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import { getAiText } from '@test-data/ai';
 
 export type PostVisibility = 'public' | 'pay_per_view' | 'exclusive' | 'member_only';
 
@@ -26,7 +27,7 @@ export const testVideos = {
 
 export function generatePostData(overrides?: Partial<PostData>): PostData {
   return {
-    content: faker.lorem.sentence(),
+    content: getAiText("post:content", () => faker.lorem.sentence()),
     visibility: 'public',
     price: 0,
     isFlexiblePrice: false,

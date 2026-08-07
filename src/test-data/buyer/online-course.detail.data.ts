@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 import { testImages } from "@test-data/creator/post.data";
 
 /** Buyer Online Course product-detail data (AUT-FV-169 / TC-OC-B-001). */
@@ -43,9 +44,9 @@ export function generateOnlineCourseInvalidVoucherCode(): string {
 }
 
 export function generateOnlineCourseBuyerTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("product:name", () => faker.commerce.productName());
 }
 
 export function generateOnlineCourseBuyerDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("product:description", () => faker.lorem.sentence());
 }

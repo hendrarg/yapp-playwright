@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 
 /** Pricing / notice data for consultation (AUT-FV-020). */
 export const consultationPricingData = {
@@ -17,11 +18,11 @@ export const consultationPricingData = {
 } as const;
 
 export function generateConsultationPricingTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("consultation:title", () => faker.commerce.productName());
 }
 
 export function generateConsultationPricingDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("consultation:description", () => faker.lorem.sentence());
 }
 
 const monthIndex: Record<string, number> = {

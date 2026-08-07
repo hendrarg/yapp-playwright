@@ -196,7 +196,7 @@ npx playwright test --grep "(?=.*@smoke)(?=.*@cart)"
 
 ### Free-text input factories (required)
 
-User-entered free text (product/consultation **title**, **description**, comments, tip notes, usernames typed into forms) **must** come from `@faker-js/faker` factories in `@test-data/`. Do not invent long labels or bake Automation IDs into the value.
+User-entered free text (product/consultation **title**, **description**, comments, tip notes, usernames typed into forms) **must** come from the factory functions in `@test-data/`. Content factories are AI-aware: they read from `@test-data/ai` (`getAiText` / `getAiTextList` — Gemini-first, seeded-Faker fallback) so the factory remains the single source of free text, never hardcoded in specs. Do not invent long labels or bake Automation IDs into the value.
 
 | Kind | Preferred factory |
 |------|-------------------|

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 import { testImages, testVideos } from "@test-data/creator/post.data";
 
 export interface OnlineCourseProductData {
@@ -50,15 +51,15 @@ export type OnlineCourseContentType =
   (typeof onlineCourseStructureData.contentTypes)[number];
 
 export function generateOnlineCourseChapterTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("chapter:title", () => faker.commerce.productName());
 }
 
 export function generateOnlineCourseEpisodeTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("episode:title", () => faker.commerce.productName());
 }
 
 export function generateOnlineCourseEpisodeContent(): string {
-  return faker.lorem.sentence();
+  return getAiText("episode:content", () => faker.lorem.sentence());
 }
 
 export const onlineCourseValidationData = {
@@ -160,11 +161,11 @@ export const digitalProductValidationData = {
 } as const;
 
 export function generateDigitalProductTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("product:name", () => faker.commerce.productName());
 }
 
 export function generateDigitalProductDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("product:description", () => faker.lorem.sentence());
 }
 
 /** Buyer-only post-purchase description content (TC-PD-C-013). The UI counter counts words (max 500). */
@@ -180,8 +181,8 @@ export function generateOnlineCourseProductData(
   overrides?: Partial<OnlineCourseProductData>,
 ): OnlineCourseProductData {
   return {
-    title: faker.commerce.productName(),
-    description: faker.lorem.sentence(),
+    title: getAiText("product:name", () => faker.commerce.productName()),
+    description: getAiText("product:description", () => faker.lorem.sentence()),
     thumbnailImagePath: testImages.hermes,
     price: 0,
     ...overrides,

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 import { testImages } from "@test-data/creator/post.data";
 
 /** Media / publish data for consultation create (AUT-FV-018). */
@@ -33,9 +34,9 @@ export const consultationMediaData = {
 } as const;
 
 export function generateConsultationTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("consultation:title", () => faker.commerce.productName());
 }
 
 export function generateConsultationDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("consultation:description", () => faker.lorem.sentence());
 }

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 import { creatorProfiles } from "@test-data/buyer/profile.data";
 
 /** Buyer consultation product-detail data (AUT-FV-027 / AUT-FV-028 / AUT-FV-029). */
@@ -66,9 +67,9 @@ export function formatConsultationSaveMySpotDate(dayLabel: string): string {
 }
 
 export function generateConsultationBuyerTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("consultation:title", () => faker.commerce.productName());
 }
 
 export function generateConsultationBuyerDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("consultation:description", () => faker.lorem.sentence());
 }

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { getAiText } from "@test-data/ai";
 
 /** Lifecycle / CRUD data for consultation (AUT-FV-024). */
 export const consultationLifecycleData = {
@@ -12,11 +13,11 @@ export const consultationLifecycleData = {
 } as const;
 
 export function generateConsultationLifecycleTitle(): string {
-  return faker.commerce.productName();
+  return getAiText("consultation:title", () => faker.commerce.productName());
 }
 
 export function generateConsultationLifecycleDescription(): string {
-  return faker.lorem.sentence();
+  return getAiText("consultation:description", () => faker.lorem.sentence());
 }
 
 export function generateConsultationAfterSalesMessage(): string {
