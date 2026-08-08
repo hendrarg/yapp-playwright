@@ -106,8 +106,8 @@ test(products): add product status automation
 
 Validation:
 - npx tsc --noEmit
-- npx playwright test tests/creator/products.spec.ts --project=chromium --grep "Verify Products Status Grouping"
-- npx playwright test tests/creator/products.spec.ts --project=chromium --grep "Set Active Product Inactive"
+- npx playwright test tests/creator/products-list.spec.ts --project=chromium --grep "Verify Products Status Grouping"
+- npx playwright test tests/creator/products-list.spec.ts --project=chromium --grep "Set Active Product Inactive"
 ```
 
 ## Style rules
