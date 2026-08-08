@@ -9,6 +9,8 @@ import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
 import { creatorProfile } from '@test-data/buyer/profile.data';
 import { discordMembershipPricingData, discordMembershipSettingsData, discordMembershipValidationData, generateDiscordMembershipBuyerQuestion, generateDiscordMembershipDescription, generateDiscordMembershipLimitDescription, generateDiscordMembershipSettingsNote, generateDiscordMembershipTitle } from '@test-data/creator/membership.data';
+import { addCustomBuyerQuestion, chooseGalleryFiles, chooseHeroFile, closeProductCompleteModal, copyProductCompleteLink, enableAfterSalesLinks, expectEmbedLinksSaved, expectGalleryCount, expectGalleryInputUnavailable, expectHeroNotUploaded, expectImageTooLarge, expectImageTooSmall, expectInvalidEmbedLinkFeedback, expectMandatoryBuyerFieldsProtected, expectPreviewPaidPrice, expectPreviewWithoutPaidPrice, expectProductCompleteModal, fillEmbedLink, fillPrice, openEmbedLinkDialog, readPricingEnabled, readProductCompleteSharePath, saveAsDraft, saveCurrentEmbedLink, setPricingEnabled, uploadHero } from '@helpers/creator/product-editor';
+import { titleInput } from '@pages/shared/locators';
 
 test.describe('Creator Products', () => {
   test('Validate Creator Discord Membership Basic Details and Discord Access Setup', {
@@ -17,7 +19,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-DM-C-001, TC-DM-C-002, TC-DM-C-003, TC-DM-C-004, TC-DM-C-005, TC-DM-C-006, TC-DM-C-007',
     }],
-  }, async ({ creatorNav, productsPage, page }) => {
+  }, async ({
+    discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const discordType = productsCreationData.productTypes.find(
@@ -31,67 +34,68 @@ test.describe('Creator Products', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
-      await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.submitDiscordMembershipDetails();
-      await productsPage.expectDiscordMembershipRequiredFeedback();
+      await discordMembershipPage.expectDiscordMembershipCreateFlow();
+      await discordMembershipPage.submitDiscordMembershipDetails();
+      await discordMembershipPage.expectDiscordMembershipRequiredFeedback();
     });
 
     await test.step('Format the description and enforce the 500-word limit', async () => {
-      await productsPage.fillDiscordMembershipTitle(title);
-      await productsPage.fillDiscordMembershipDescription(
+      await discordMembershipPage.fillDiscordMembershipTitle(title);
+      await discordMembershipPage.fillDiscordMembershipDescription(
         generateDiscordMembershipDescription(),
       );
-      await productsPage.fillDiscordMembershipDescription(
+      await discordMembershipPage.fillDiscordMembershipDescription(
         generateDiscordMembershipLimitDescription(),
       );
-      await productsPage.applyDiscordMembershipDescriptionFormatting();
-      await productsPage.expectDiscordMembershipDescriptionCounter();
-      await productsPage.appendDiscordMembershipDescription(
+      await discordMembershipPage.applyDiscordMembershipDescriptionFormatting();
+      await discordMembershipPage.expectDiscordMembershipDescriptionCounter();
+      await discordMembershipPage.appendDiscordMembershipDescription(
         discordMembershipValidationData.descriptionOverflowWord,
       );
-      await productsPage.expectDiscordMembershipDescriptionCounter();
+      await discordMembershipPage.expectDiscordMembershipDescriptionCounter();
     });
 
     await test.step('Accept valid duration values for days, months, and years', async () => {
       for (const unit of discordMembershipValidationData.durationUnits) {
-        await productsPage.selectDiscordMembershipDuration('1', currentDurationUnit, unit);
+        await discordMembershipPage.selectDiscordMembershipDuration('1', currentDurationUnit, unit);
         currentDurationUnit = unit;
       }
     });
 
     await test.step('Review navigation and unsaved-change protection', async () => {
-      await productsPage.navigateAwayFromDiscordMembershipViaBack();
-      await productsPage.expectDiscordMembershipUnsavedChangesDialog();
+      await discordMembershipPage.navigateAwayFromDiscordMembershipViaBack();
+      await discordMembershipPage.expectDiscordMembershipUnsavedChangesDialog();
       await page.keyboard.press('Escape');
     });
 
     await test.step('Expose the connected Discord account and server setup controls', async () => {
-      await productsPage.expectDiscordMembershipConnectionControl();
+      await discordMembershipPage.expectDiscordMembershipConnectionControl();
     });
 
     await test.step('Require a server before a Discord role can be selected', async () => {
-      await productsPage.expectDiscordMembershipServerRequirement();
+      await discordMembershipPage.expectDiscordMembershipServerRequirement();
     });
 
     await test.step('Select a Discord server and role and continue to publish details', async () => {
-      await productsPage.selectDiscordMembershipServer(
+      await discordMembershipPage.selectDiscordMembershipServer(
         discordMembershipValidationData.serverName,
       );
-      await productsPage.selectDiscordMembershipRole(
+      await discordMembershipPage.selectDiscordMembershipRole(
         discordMembershipValidationData.roleName,
       );
-      await productsPage.expectDiscordMembershipServerAndRole(
+      await discordMembershipPage.expectDiscordMembershipServerAndRole(
         discordMembershipValidationData.serverName,
         discordMembershipValidationData.roleName,
       );
-      await productsPage.continueToDiscordMembershipDetails();
+      await discordMembershipPage.continueToDiscordMembershipDetails();
     });
   });
 
   test('Validate Discord Membership Thumbnail Upload and Validation', {
     tag: ['@AUT-FV-040', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-008, TC-DM-C-009' }],
-  }, async ({ creatorNav, productsPage }) => {
+  }, async ({
+    discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const discordType = productsCreationData.productTypes.find(
@@ -103,8 +107,8 @@ test.describe('Creator Products', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
-      await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.prepareDiscordMembershipDetails({
+      await discordMembershipPage.expectDiscordMembershipCreateFlow();
+      await discordMembershipPage.prepareDiscordMembershipDetails({
         title: generateDiscordMembershipTitle(),
         description: generateDiscordMembershipDescription(),
         serverName: discordMembershipValidationData.serverName,
@@ -114,14 +118,10 @@ test.describe('Creator Products', () => {
 
     await test.step('Upload eleven thumbnails and enforce the maximum', async () => {
       await openDiscordMembershipDetails();
-      await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
-      await productsPage.chooseConsultationGalleryFiles(
-        consultationMediaData.additionalImagePaths,
-      );
-      await productsPage.expectConsultationGalleryCount(
-        consultationMediaData.maxAdditionalImages,
-      );
-      await productsPage.expectConsultationGalleryInputUnavailable();
+      await uploadHero(page, consultationMediaData.heroImagePath);
+      await chooseGalleryFiles(page, consultationMediaData.additionalImagePaths);
+      await expectGalleryCount(page, consultationMediaData.maxAdditionalImages);
+      await expectGalleryInputUnavailable(page);
     });
 
     await test.step('Reject undersized and oversized thumbnail fixtures', async () => {
@@ -129,13 +129,13 @@ test.describe('Creator Products', () => {
 
       const oversized = createOversizedImageFixture();
       try {
-        await productsPage.chooseConsultationHeroFile(consultationMediaData.tinyImagePath);
-        await productsPage.expectConsultationImageTooSmall('tiny-1x1.png');
-        await productsPage.expectConsultationHeroNotUploaded();
+        await chooseHeroFile(page, consultationMediaData.tinyImagePath);
+        await expectImageTooSmall(page, 'tiny-1x1.png');
+        await expectHeroNotUploaded(page);
 
-        await productsPage.chooseConsultationHeroFile(oversized.filePath);
-        await productsPage.expectConsultationImageTooLarge();
-        await productsPage.expectConsultationHeroNotUploaded();
+        await chooseHeroFile(page, oversized.filePath);
+        await expectImageTooLarge(page);
+        await expectHeroNotUploaded(page);
       } finally {
         oversized.cleanup();
       }
@@ -145,7 +145,8 @@ test.describe('Creator Products', () => {
   test('Validate Discord Membership Pricing Rules', {
     tag: ['@AUT-FV-041', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-010, TC-DM-C-011' }],
-  }, async ({ creatorNav, productsPage }) => {
+  }, async ({
+    discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const discordType = productsCreationData.productTypes.find(
@@ -159,8 +160,8 @@ test.describe('Creator Products', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
-      await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.prepareDiscordMembershipDetails({
+      await discordMembershipPage.expectDiscordMembershipCreateFlow();
+      await discordMembershipPage.prepareDiscordMembershipDetails({
         title: generateDiscordMembershipTitle(),
         description: generateDiscordMembershipDescription(),
         serverName: discordMembershipValidationData.serverName,
@@ -169,22 +170,20 @@ test.describe('Creator Products', () => {
     });
 
     await test.step('Verify free pricing and accept a positive paid price', async () => {
-      defaultPricingEnabled = await productsPage.readConsultationPricingEnabled();
+      defaultPricingEnabled = await readPricingEnabled(page);
       expect.soft(defaultPricingEnabled, 'Discord Membership should default to Free').toBe(false);
 
-      await productsPage.setConsultationPricingEnabled(false);
-      await productsPage.expectConsultationPreviewWithoutPaidPrice();
-      await productsPage.setConsultationPricingEnabled(true);
-      await productsPage.fillConsultationPrice(discordMembershipPricingData.validPrice);
-      await productsPage.expectConsultationPreviewPaidPrice(
-        discordMembershipPricingData.previewPaidPricePattern,
-      );
+      await setPricingEnabled(page, false);
+      await expectPreviewWithoutPaidPrice(page);
+      await setPricingEnabled(page, true);
+      await fillPrice(page, discordMembershipPricingData.validPrice);
+      await expectPreviewPaidPrice(page, discordMembershipPricingData.previewPaidPricePattern);
     });
 
     await test.step('Reject zero when paid pricing is enabled', async () => {
-      await productsPage.fillConsultationPrice(discordMembershipPricingData.zeroPrice);
-      await productsPage.submitDiscordMembershipPricing();
-      zeroPriceRejected = await productsPage.isDiscordMembershipZeroPriceRejected();
+      await fillPrice(page, discordMembershipPricingData.zeroPrice);
+      await discordMembershipPage.submitDiscordMembershipPricing();
+      zeroPriceRejected = await discordMembershipPage.isDiscordMembershipZeroPriceRejected();
       expect.soft(zeroPriceRejected, 'Zero price should be rejected when paid pricing is enabled').toBe(true);
       test.fail(
         defaultPricingEnabled || !zeroPriceRejected,
@@ -196,7 +195,8 @@ test.describe('Creator Products', () => {
   test('Validate Discord Membership Draft, Publish, Edit, and Republish Lifecycle', {
     tag: ['@AUT-FV-042', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-019, TC-DM-C-020, TC-DM-C-026, TC-DM-C-029' }],
-  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
+  }, async ({
+    discordMembershipPage, creatorNav, productsPage, productPurchasePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -221,24 +221,24 @@ test.describe('Creator Products', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
-      await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.prepareDiscordMembershipDetails({
+      await discordMembershipPage.expectDiscordMembershipCreateFlow();
+      await discordMembershipPage.prepareDiscordMembershipDetails({
         title,
         description,
         serverName: discordMembershipValidationData.serverName,
         roleName: discordMembershipValidationData.roleName,
       });
-      await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
-      await productsPage.fillConsultationPrice(discordMembershipPricingData.validPrice);
+      await uploadHero(page, consultationMediaData.heroImagePath);
+      await fillPrice(page, discordMembershipPricingData.validPrice);
     };
 
     try {
       await test.step('Publish a valid Discord Membership', async () => {
         await openDiscordMembershipCreate();
-        sharePath = await productsPage.publishDiscordMembershipAndReadSharePath();
-        const copied = await productsPage.copyProductCompleteLink();
+        sharePath = await discordMembershipPage.publishDiscordMembershipAndReadSharePath();
+        const copied = await copyProductCompleteLink(page);
         expect(copied).toContain(sharePath);
-        await productsPage.closeProductCompleteModal();
+        await closeProductCompleteModal(page);
       });
 
       await test.step('Edit the published product and save changes as a draft', async () => {
@@ -247,18 +247,18 @@ test.describe('Creator Products', () => {
         await productsPage.selectStatusTab('Active');
         await productsPage.searchProducts(title);
         await productsPage.openEditProduct(title);
-        productUuid = await productsPage.readDiscordMembershipProductUuidFromUrl();
-        await productsPage.expectDiscordMembershipEditorValues({
+        productUuid = await discordMembershipPage.readDiscordMembershipProductUuidFromUrl();
+        await discordMembershipPage.expectDiscordMembershipEditorValues({
           title,
           description,
           serverName: discordMembershipValidationData.serverName,
           roleName: discordMembershipValidationData.roleName,
         });
-        await productsPage.fillDiscordMembershipTitle(editedTitle);
-        await productsPage.fillDiscordMembershipDescription(editedDescription);
-        await productsPage.navigateAwayFromDiscordMembershipViaBack();
-        await productsPage.expectDiscordMembershipUnsavedChangesDialog();
-        await productsPage.saveDiscordMembershipChangesFromUnsavedDialog();
+        await discordMembershipPage.fillDiscordMembershipTitle(editedTitle);
+        await discordMembershipPage.fillDiscordMembershipDescription(editedDescription);
+        await discordMembershipPage.navigateAwayFromDiscordMembershipViaBack();
+        await discordMembershipPage.expectDiscordMembershipUnsavedChangesDialog();
+        await discordMembershipPage.saveDiscordMembershipChangesFromUnsavedDialog();
         await productsPage.selectStatusTab('Draft');
         await productsPage.searchProducts(editedTitle);
         await productsPage.expectProductVisible(editedTitle);
@@ -285,16 +285,16 @@ test.describe('Creator Products', () => {
         await productsPage.selectStatusTab('Draft');
         await productsPage.searchProducts(editedTitle);
         await productsPage.openEditProduct(editedTitle);
-        expect(await productsPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
-        await productsPage.expectDiscordMembershipEditorValues({
+        expect(await discordMembershipPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
+        await discordMembershipPage.expectDiscordMembershipEditorValues({
           title: editedTitle,
           description: editedDescription,
           serverName: discordMembershipValidationData.serverName,
           roleName: discordMembershipValidationData.roleName,
         });
-        await productsPage.submitDiscordMembershipDetails();
-        expect(await productsPage.publishDiscordMembershipAndReadSharePath()).toBe(sharePath);
-        await productsPage.closeProductCompleteModal();
+        await discordMembershipPage.submitDiscordMembershipDetails();
+        expect(await discordMembershipPage.publishDiscordMembershipAndReadSharePath()).toBe(sharePath);
+        await closeProductCompleteModal(page);
       });
 
       await test.step('Edit and republish while preserving the share URL', async () => {
@@ -303,12 +303,12 @@ test.describe('Creator Products', () => {
         await productsPage.selectStatusTab('Active');
         await productsPage.searchProducts(editedTitle);
         await productsPage.openEditProduct(editedTitle);
-        expect(await productsPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
-        await productsPage.fillDiscordMembershipTitle(republishedTitle);
-        await productsPage.fillDiscordMembershipDescription(republishedDescription);
-        await productsPage.submitDiscordMembershipDetails();
-        expect(await productsPage.publishDiscordMembershipAndReadSharePath()).toBe(sharePath);
-        await productsPage.closeProductCompleteModal();
+        expect(await discordMembershipPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
+        await discordMembershipPage.fillDiscordMembershipTitle(republishedTitle);
+        await discordMembershipPage.fillDiscordMembershipDescription(republishedDescription);
+        await discordMembershipPage.submitDiscordMembershipDetails();
+        expect(await discordMembershipPage.publishDiscordMembershipAndReadSharePath()).toBe(sharePath);
+        await closeProductCompleteModal(page);
       });
 
     } finally {
@@ -321,7 +321,8 @@ test.describe('Creator Products', () => {
   test('Validate Discord Membership Product Settings Edit', {
     tag: ['@AUT-FV-045', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-027, TC-DM-C-028' }],
-  }, async ({ creatorNav, productsPage, page }) => {
+  }, async ({
+    discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -342,18 +343,18 @@ test.describe('Creator Products', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(discordType.buttonName);
-      await productsPage.expectDiscordMembershipCreateFlow();
-      await productsPage.prepareDiscordMembershipDetails({
+      await discordMembershipPage.expectDiscordMembershipCreateFlow();
+      await discordMembershipPage.prepareDiscordMembershipDetails({
         title,
         description,
         serverName: discordMembershipValidationData.serverName,
         roleName: discordMembershipValidationData.roleName,
       });
-      await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
-      await productsPage.fillConsultationPrice(discordMembershipPricingData.validPrice);
-      await productsPage.submitDiscordMembershipPricing();
-      await productsPage.expectProductCompleteModal();
-      await productsPage.closeProductCompleteModal();
+      await uploadHero(page, consultationMediaData.heroImagePath);
+      await fillPrice(page, discordMembershipPricingData.validPrice);
+      await discordMembershipPage.submitDiscordMembershipPricing();
+      await expectProductCompleteModal(page);
+      await closeProductCompleteModal(page);
     };
 
     try {
@@ -367,25 +368,25 @@ test.describe('Creator Products', () => {
         await productsPage.selectStatusTab('Active');
         await productsPage.searchProducts(title);
         await productsPage.openEditProduct(title);
-        productUuid = await productsPage.readDiscordMembershipProductUuidFromUrl();
-        await productsPage.selectDiscordMembershipServer(discordMembershipValidationData.serverName);
-        await productsPage.selectDiscordMembershipRole(discordMembershipValidationData.roleName);
-        await productsPage.expectDiscordMembershipServerAndRole(
+        productUuid = await discordMembershipPage.readDiscordMembershipProductUuidFromUrl();
+        await discordMembershipPage.selectDiscordMembershipServer(discordMembershipValidationData.serverName);
+        await discordMembershipPage.selectDiscordMembershipRole(discordMembershipValidationData.roleName);
+        await discordMembershipPage.expectDiscordMembershipServerAndRole(
           discordMembershipValidationData.serverName,
           discordMembershipValidationData.roleName,
         );
       });
 
       await test.step('Save Discord configuration and edit pricing, notes, advanced settings, benefits, and buyer form', async () => {
-        await productsPage.continueToDiscordMembershipDetails();
-        await productsPage.expectDiscordMembershipSettingsSections();
-        await productsPage.fillDiscordMembershipSettingsPrice(discordMembershipSettingsData.updatedPrice);
-        await productsPage.fillDiscordMembershipAfterSalesMessage(settingsNote);
-        await productsPage.setDiscordMembershipHideFromExplore(discordMembershipSettingsData.hideFromExplore);
-        await productsPage.addDiscordMembershipBuyerQuestion(buyerQuestion);
-        await productsPage.submitDiscordMembershipPricing();
-        await productsPage.expectProductCompleteModal();
-        await productsPage.closeProductCompleteModal();
+        await discordMembershipPage.continueToDiscordMembershipDetails();
+        await discordMembershipPage.expectDiscordMembershipSettingsSections();
+        await discordMembershipPage.fillDiscordMembershipSettingsPrice(discordMembershipSettingsData.updatedPrice);
+        await discordMembershipPage.fillDiscordMembershipAfterSalesMessage(settingsNote);
+        await discordMembershipPage.setDiscordMembershipHideFromExplore(discordMembershipSettingsData.hideFromExplore);
+        await addCustomBuyerQuestion(page, buyerQuestion);
+        await discordMembershipPage.submitDiscordMembershipPricing();
+        await expectProductCompleteModal(page);
+        await closeProductCompleteModal(page);
       });
 
       await test.step('Reopen the editor and verify saved settings', async () => {
@@ -394,16 +395,16 @@ test.describe('Creator Products', () => {
         await productsPage.selectStatusTab('Active');
         await productsPage.searchProducts(title);
         await productsPage.openEditProduct(title);
-        expect(await productsPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
-        await productsPage.expectDiscordMembershipServerAndRole(
+        expect(await discordMembershipPage.readDiscordMembershipProductUuidFromUrl()).toBe(productUuid);
+        await discordMembershipPage.expectDiscordMembershipServerAndRole(
           discordMembershipValidationData.serverName,
           discordMembershipValidationData.roleName,
         );
-        await productsPage.continueToDiscordMembershipDetails();
-        await productsPage.expectDiscordMembershipSettingsPrice(discordMembershipSettingsData.updatedPrice);
-        await productsPage.expectDiscordMembershipAfterSalesMessage(settingsNote);
-        await productsPage.expectDiscordMembershipHideFromExplore(discordMembershipSettingsData.hideFromExplore);
-        const buyerQuestionPersisted = await productsPage.isDiscordMembershipBuyerQuestionVisible(buyerQuestion);
+        await discordMembershipPage.continueToDiscordMembershipDetails();
+        await discordMembershipPage.expectDiscordMembershipSettingsPrice(discordMembershipSettingsData.updatedPrice);
+        await discordMembershipPage.expectDiscordMembershipAfterSalesMessage(settingsNote);
+        await discordMembershipPage.expectDiscordMembershipHideFromExplore(discordMembershipSettingsData.hideFromExplore);
+        const buyerQuestionPersisted = await discordMembershipPage.isDiscordMembershipBuyerQuestionVisible(buyerQuestion);
         expect.soft(
           buyerQuestionPersisted,
           'A saved Discord Membership buyer question should persist when the editor is reopened',
@@ -587,7 +588,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-OC-C-025, TC-OC-C-026, TC-OC-C-035',
     }],
-  }, async ({ creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
+  }, async ({
+    creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -619,7 +621,7 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.fillTitle(draftTitle);
         await onlineCoursePage.fillDescription(draftDescription);
-        await productsPage.saveAsDraft();
+        await saveAsDraft(page);
 
         await creatorNav.open('products');
         await productsPage.expectLoaded();
@@ -644,10 +646,10 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.expectLoaded();
         await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.submitPublish();
-        await productsPage.expectProductCompleteModal();
-        expect(await productsPage.readProductCompleteSharePath()).toBe(sharePath);
-        expect(await productsPage.copyProductCompleteLink()).toContain(sharePath);
-        await productsPage.closeProductCompleteModal();
+        await expectProductCompleteModal(page);
+        expect(await readProductCompleteSharePath(page)).toBe(sharePath);
+        expect(await copyProductCompleteLink(page)).toContain(sharePath);
+        await closeProductCompleteModal(page);
       });
 
       await test.step('Verify the published course is active with the same share URL', async () => {
@@ -667,9 +669,9 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.fillTitle(republishedTitle);
         await onlineCoursePage.fillDescription(republishedDescription);
         await onlineCoursePage.submitPublish();
-        await productsPage.expectProductCompleteModal();
-        expect(await productsPage.readProductCompleteSharePath()).toBe(sharePath);
-        await productsPage.closeProductCompleteModal();
+        await expectProductCompleteModal(page);
+        expect(await readProductCompleteSharePath(page)).toBe(sharePath);
+        await closeProductCompleteModal(page);
 
         await creatorNav.open('products');
         await productsPage.expectLoaded();
@@ -838,7 +840,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-OC-C-027, TC-OC-C-028, TC-OC-C-029, TC-OC-C-030, TC-OC-C-031',
     }],
-  }, async ({ creatorNav, productsPage, onlineCoursePage, page }) => {
+  }, async ({
+    creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -873,7 +876,7 @@ test.describe('Creator Products', () => {
         expect(defaultEnabled, 'After Sales Customize Message should default OFF').toBe(false);
         await onlineCoursePage.setAfterSalesMessageEnabled(false);
         await onlineCoursePage.expectAfterSalesDisabledCopy();
-        await productsPage.saveAsDraft();
+        await saveAsDraft(page);
 
         await creatorNav.open('products');
         await productsPage.expectLoaded();
@@ -889,21 +892,21 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.applyAfterSalesMessageFormatting(firstMessage);
         await onlineCoursePage.expectAfterSalesMessage(firstMessage);
         await onlineCoursePage.fillAfterSalesMessage('');
-        await productsPage.saveAsDraft();
+        await saveAsDraft(page);
       });
 
       await test.step('Add valid After Sales links and validate invalid fields', async () => {
         await onlineCoursePage.fillAfterSalesMessage(firstMessage);
         await onlineCoursePage.enableAfterSalesLinks();
-        await productsPage.openEmbedLinkDialog();
-        await productsPage.fillEmbedLink(
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page,
           digitalProductValidationData.linkValidation.longLabel,
           digitalProductValidationData.linkValidation.invalidUrl,
         );
-        await productsPage.expectInvalidEmbedLinkFeedback();
-        await productsPage.fillEmbedLink(afterSalesLink.label, afterSalesLink.url);
-        await productsPage.saveCurrentEmbedLink();
-        await productsPage.expectEmbedLinksSaved([afterSalesLink.label]);
+        await expectInvalidEmbedLinkFeedback(page);
+        await fillEmbedLink(page, afterSalesLink.label, afterSalesLink.url);
+        await saveCurrentEmbedLink(page);
+        await expectEmbedLinksSaved(page, [afterSalesLink.label]);
       });
 
       await test.step('Preview staged After Sales content as read-only', async () => {
@@ -947,7 +950,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-OC-C-022, TC-OC-C-023, TC-OC-C-032, TC-OC-C-034',
     }],
-  }, async ({ creatorNav, productsPage, onlineCoursePage, page }) => {
+  }, async ({
+    creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -980,14 +984,14 @@ test.describe('Creator Products', () => {
       });
 
       await test.step('Verify mandatory buyer fields remain protected', async () => {
-        await productsPage.expectMandatoryBuyerFieldsProtected();
+        await expectMandatoryBuyerFieldsProtected(page);
       });
 
       await test.step('Add a buyer question and save the existing course settings', async () => {
-        await productsPage.addCustomBuyerQuestion(updatedQuestion);
+        await addCustomBuyerQuestion(page, updatedQuestion);
         await onlineCoursePage.submitPublish();
-        await productsPage.expectProductCompleteModal();
-        await productsPage.closeProductCompleteModal();
+        await expectProductCompleteModal(page);
+        await closeProductCompleteModal(page);
       });
     } finally {
       if (productUuid) {
@@ -998,7 +1002,8 @@ test.describe('Creator Products', () => {
 
   test('Validate Digital Products Inputs and Boundary Conditions', {
     tag: ['@AUT-FV-188', '@products', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage }) => {
+  }, async ({
+    digitalProductPage, creatorNav, productsPage, page }) => {
     await test.step('Open Digital Product creation flow', async () => {
       const digitalProductType = productsCreationData.productTypes.find(
         (type) => type.label === 'Digital Product',
@@ -1008,33 +1013,33 @@ test.describe('Creator Products', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(digitalProductType.buttonName);
-      await productsPage.expectDigitalProductCreateFlow();
+      await digitalProductPage.expectDigitalProductCreateFlow();
     });
 
     await test.step('Validate title and required Add Content fields cannot be empty', async () => {
-      await productsPage.submitEmptyDigitalProductAddContent();
-      await productsPage.expectDigitalProductRequiredFeedback();
+      await digitalProductPage.submitEmptyDigitalProductAddContent();
+      await digitalProductPage.expectDigitalProductRequiredFeedback();
     });
 
     await test.step('Validate link label boundary and invalid URL are blocked', async () => {
-      await productsPage.enableLinksContentType();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(
+      await digitalProductPage.enableLinksContentType();
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page,
         digitalProductValidationData.linkValidation.longLabel,
         digitalProductValidationData.linkValidation.invalidUrl,
       );
-      await productsPage.expectInvalidEmbedLinkFeedback();
+      await expectInvalidEmbedLinkFeedback(page);
     });
 
     await test.step('Correct link data and save multiple valid embedded links', async () => {
       const [firstLink, secondLink] = digitalProductValidationData.linkValidation.validLinks;
 
-      await productsPage.fillEmbedLink(firstLink.label, firstLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(secondLink.label, secondLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.expectEmbedLinksSaved([firstLink.label, secondLink.label]);
+      await fillEmbedLink(page, firstLink.label, firstLink.url);
+      await saveCurrentEmbedLink(page);
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, secondLink.label, secondLink.url);
+      await saveCurrentEmbedLink(page);
+      await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
     });
   });
 
@@ -1044,7 +1049,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-PD-C-003',
     }],
-  }, async ({ creatorNav, productsPage, page }) => {
+  }, async ({
+    digitalProductPage, creatorNav, productsPage, page }) => {
 
     const digitalProductType = productsCreationData.productTypes.find(
       (type) => type.label === 'Digital Product',
@@ -1054,18 +1060,18 @@ test.describe('Creator Products', () => {
       await creatorNav.open('products');
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(digitalProductType.buttonName);
-      await productsPage.expectDigitalProductCreateFlow();
-      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await digitalProductPage.expectDigitalProductCreateFlow();
+      await titleInput(page).fill(generateDigitalProductTitle());
     });
 
     await test.step('Attempt to continue with incomplete content and remain on the form', async () => {
-      await productsPage.submitEmptyDigitalProductAddContent();
-      await productsPage.expectDigitalProductCreateFlow();
+      await digitalProductPage.submitEmptyDigitalProductAddContent();
+      await digitalProductPage.expectDigitalProductCreateFlow();
     });
 
     await test.step('Protect the unsaved Digital Product changes when leaving', async () => {
-      await productsPage.navigateAwayFromDigitalProductViaBack();
-      await productsPage.expectDigitalProductUnsavedChangesDialog();
+      await digitalProductPage.navigateAwayFromDigitalProductViaBack();
+      await digitalProductPage.expectDigitalProductUnsavedChangesDialog();
       await page.keyboard.press('Escape');
     });
   });
@@ -1076,7 +1082,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-PD-C-027',
     }],
-  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+  }, async ({
+    digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
     const digitalProductType = productsCreationData.productTypes.find(
       (type) => type.label === 'Digital Product',
     )!;
@@ -1086,33 +1093,33 @@ test.describe('Creator Products', () => {
       await creatorNav.open('products');
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(digitalProductType.buttonName);
-      await productsPage.expectDigitalProductCreateFlow();
-      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await digitalProductPage.expectDigitalProductCreateFlow();
+      await titleInput(page).fill(generateDigitalProductTitle());
       await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
-      await productsPage.enableLinksContentType();
+      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await digitalProductPage.enableLinksContentType();
       const [contentLink] = linkValidation.validLinks;
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
-      await productsPage.saveCurrentEmbedLink();
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, contentLink.label, contentLink.url);
+      await saveCurrentEmbedLink(page);
       await onlineCoursePage.submitContentDetails();
-      await productsPage.enableAfterSalesLinks();
+      await enableAfterSalesLinks(page);
     });
 
     await test.step('Block invalid After Sales URL and over-limit label', async () => {
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(linkValidation.longLabel, linkValidation.invalidUrl);
-      await productsPage.expectInvalidEmbedLinkFeedback();
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, linkValidation.longLabel, linkValidation.invalidUrl);
+      await expectInvalidEmbedLinkFeedback(page);
     });
 
     await test.step('Save multiple valid After Sales links', async () => {
       const [firstLink, secondLink] = linkValidation.validLinks;
-      await productsPage.fillEmbedLink(firstLink.label, firstLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(secondLink.label, secondLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.expectEmbedLinksSaved([firstLink.label, secondLink.label]);
+      await fillEmbedLink(page, firstLink.label, firstLink.url);
+      await saveCurrentEmbedLink(page);
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, secondLink.label, secondLink.url);
+      await saveCurrentEmbedLink(page);
+      await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
     });
   });
 
@@ -1122,7 +1129,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-PD-C-013',
     }],
-  }, async ({ creatorNav, productsPage, onlineCoursePage }) => {
+  }, async ({
+    digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(180000);
 
     const digitalProductType = productsCreationData.productTypes.find(
@@ -1134,36 +1142,36 @@ test.describe('Creator Products', () => {
       await creatorNav.open('products');
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(digitalProductType.buttonName);
-      await productsPage.expectDigitalProductCreateFlow();
+      await digitalProductPage.expectDigitalProductCreateFlow();
     });
 
     await test.step('Fill required Add Content fields', async () => {
-      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await titleInput(page).fill(generateDigitalProductTitle());
       await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await productsPage.enableLinksContentType();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await digitalProductPage.enableLinksContentType();
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, contentLink.label, contentLink.url);
+      await saveCurrentEmbedLink(page);
+      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
     });
 
     await test.step('Fill buyer-only description to the 500-word limit and verify counter', async () => {
       const buyerOnly = generateDigitalProductBuyerOnlyDescription(500);
       expect(buyerOnly.split(' ').length).toBe(500);
-      await productsPage.fillDigitalProductContentDescription(buyerOnly);
-      await productsPage.expectDigitalProductContentDescriptionCounter('500 / 500');
+      await digitalProductPage.fillDigitalProductContentDescription(buyerOnly);
+      await digitalProductPage.expectDigitalProductContentDescriptionCounter('500 / 500');
     });
 
     await test.step('Apply rich text formatting to buyer-only description', async () => {
-      await productsPage.applyDigitalProductContentDescriptionFormatting();
-      await productsPage.expectDigitalProductContentDescriptionFormatted();
+      await digitalProductPage.applyDigitalProductContentDescriptionFormatting();
+      await digitalProductPage.expectDigitalProductContentDescriptionFormatted();
     });
 
     await test.step('Clear buyer-only description and verify it remains optional', async () => {
-      await productsPage.fillDigitalProductContentDescription('');
-      await productsPage.expectDigitalProductContentDescriptionCounter('0 / 500');
+      await digitalProductPage.fillDigitalProductContentDescription('');
+      await digitalProductPage.expectDigitalProductContentDescriptionCounter('0 / 500');
       await onlineCoursePage.submitContentDetails();
-      await productsPage.expectDigitalProductSetDetailsLoaded();
+      await digitalProductPage.expectDigitalProductSetDetailsLoaded();
     });
   });
 
@@ -1173,7 +1181,8 @@ test.describe('Creator Products', () => {
       type: 'covers',
       description: 'TC-PD-C-018, TC-PD-C-019',
     }],
-  }, async ({ creatorNav, productsPage, onlineCoursePage, buyerNav, productPurchasePage, page }) => {
+  }, async ({
+    digitalProductPage, creatorNav, productsPage, onlineCoursePage, buyerNav, productPurchasePage, page }) => {
     test.setTimeout(240000);
 
     const digitalProductType = productsCreationData.productTypes.find(
@@ -1188,31 +1197,31 @@ test.describe('Creator Products', () => {
       await creatorNav.open('products');
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(digitalProductType.buttonName);
-      await productsPage.expectDigitalProductCreateFlow();
+      await digitalProductPage.expectDigitalProductCreateFlow();
     });
 
     await test.step('Fill Add Content and reach Set Details with pricing default', async () => {
-      await productsPage.digitalProductTitleInput.fill(freeTitle);
+      await titleInput(page).fill(freeTitle);
       await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await productsPage.enableLinksContentType();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await digitalProductPage.enableLinksContentType();
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, contentLink.label, contentLink.url);
+      await saveCurrentEmbedLink(page);
+      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
       await onlineCoursePage.submitContentDetails();
-      await productsPage.expectDigitalProductSetDetailsLoaded();
+      await digitalProductPage.expectDigitalProductSetDetailsLoaded();
     });
 
     await test.step('Verify free default pricing (preview shows IDR 0)', async () => {
-      await productsPage.expectDigitalProductPricingFreeDefault();
+      await digitalProductPage.expectDigitalProductPricingFreeDefault();
     });
 
     await test.step('Publish the free product and verify IDR 0 on the buyer page', async () => {
       await onlineCoursePage.submitPublish();
-      await productsPage.expectProductCompleteModal();
-      freeSharePath = await productsPage.readProductCompleteSharePath();
+      await expectProductCompleteModal(page);
+      freeSharePath = await readProductCompleteSharePath(page);
       expect(freeSharePath).toMatch(/\/s\//);
-      await productsPage.closeProductCompleteModal();
+      await closeProductCompleteModal(page);
 
       await productPurchasePage.gotoSharePath(freeSharePath);
       await productPurchasePage.expectOnlineCourseFreeBuyerView(freeTitle, freeSharePath);
@@ -1222,29 +1231,29 @@ test.describe('Creator Products', () => {
       await creatorNav.open('products');
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(digitalProductType.buttonName);
-      await productsPage.expectDigitalProductCreateFlow();
-      await productsPage.digitalProductTitleInput.fill(generateDigitalProductTitle());
+      await digitalProductPage.expectDigitalProductCreateFlow();
+      await titleInput(page).fill(generateDigitalProductTitle());
       await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await productsPage.enableLinksContentType();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(contentLink.label, contentLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+      await digitalProductPage.enableLinksContentType();
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, contentLink.label, contentLink.url);
+      await saveCurrentEmbedLink(page);
+      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
       await onlineCoursePage.submitContentDetails();
-      await productsPage.expectDigitalProductSetDetailsLoaded();
+      await digitalProductPage.expectDigitalProductSetDetailsLoaded();
 
-      await productsPage.enableDigitalProductPricing();
-      await productsPage.fillDigitalProductPrice(digitalProductPricingData.belowMinimumPrice);
-      await productsPage.expectDigitalProductInvalidPriceFeedback();
-      await productsPage.fillDigitalProductPrice(digitalProductPricingData.zeroPrice);
-      await productsPage.expectDigitalProductPricingFreeDefault();
-      await productsPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
-      await productsPage.expectDigitalProductValidPrice();
+      await digitalProductPage.enableDigitalProductPricing();
+      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.belowMinimumPrice);
+      await digitalProductPage.expectDigitalProductInvalidPriceFeedback();
+      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.zeroPrice);
+      await digitalProductPage.expectDigitalProductPricingFreeDefault();
+      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
+      await digitalProductPage.expectDigitalProductValidPrice();
     });
 
     await test.step('Enter a valid positive price and verify it persists', async () => {
-      await productsPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
-      await productsPage.expectDigitalProductValidPrice();
+      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
+      await digitalProductPage.expectDigitalProductValidPrice();
     });
   });
 
@@ -1377,7 +1386,8 @@ test.describe('Creator Products', () => {
 
   test('Verify Products Integrations and External Services', {
     tag: ['@AUT-FV-214', '@products', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage }) => {
+  }, async ({
+    discordMembershipPage, creatorNav, productsPage }) => {
     await test.step('Open Products and product type selection', async () => {
       await creatorNav.open('products');
       await productsPage.expectLoaded();
@@ -1393,7 +1403,7 @@ test.describe('Creator Products', () => {
         (type) => type.label === 'Discord Membership',
       )!;
       await productsPage.selectProductType(discordType.buttonName);
-      await productsPage.expectDiscordMembershipCreateFlow();
+      await discordMembershipPage.expectDiscordMembershipCreateFlow();
     });
   });
 

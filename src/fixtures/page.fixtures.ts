@@ -18,9 +18,13 @@ import { CampaignsPage } from "@pages/creator/CampaignsPage";
 import { FeedsPage as CreatorFeedsPage } from "@pages/creator/FeedsPage";
 import { MembershipPage } from "@pages/creator/MembershipPage";
 import { MessagesPage } from "@pages/creator/MessagesPage";
+import { ConsultationPage } from "@pages/creator/ConsultationPage";
+import { DigitalProductPage } from "@pages/creator/DigitalProductPage";
+import { DiscordMembershipPage } from "@pages/creator/DiscordMembershipPage";
 import { OnlineCoursePage } from "@pages/creator/OnlineCoursePage";
 import { OrdersPage } from "@pages/creator/OrdersPage";
 import { ProductsPage } from "@pages/creator/ProductsPage";
+import { TelegramMembershipPage } from "@pages/creator/TelegramMembershipPage";
 import { ProfilePage as CreatorProfilePage } from "@pages/creator/ProfilePage";
 import { PromotionsPage } from "@pages/creator/PromotionsPage";
 import { ReferralPage } from "@pages/creator/ReferralPage";
@@ -68,6 +72,10 @@ export type PageFixtures = {
   ordersPage: OrdersPage;
   onlineCoursePage: OnlineCoursePage;
   productsPage: ProductsPage;
+  consultationPage: ConsultationPage;
+  digitalProductPage: DigitalProductPage;
+  discordMembershipPage: DiscordMembershipPage;
+  telegramMembershipPage: TelegramMembershipPage;
   creatorProfilePage: CreatorProfilePage;
   promotionsPage: PromotionsPage;
   referralPage: ReferralPage;
@@ -104,6 +112,10 @@ export const pageFixtures = {
   ordersPage: creatorPage(OrdersPage),
   onlineCoursePage: creatorPage(OnlineCoursePage),
   productsPage: creatorPage(ProductsPage),
+  consultationPage: creatorPage(ConsultationPage),
+  digitalProductPage: creatorPage(DigitalProductPage),
+  discordMembershipPage: creatorPage(DiscordMembershipPage),
+  telegramMembershipPage: creatorPage(TelegramMembershipPage),
   creatorProfilePage: creatorPage(CreatorProfilePage),
   promotionsPage: creatorPage(PromotionsPage),
   referralPage: creatorPage(ReferralPage),

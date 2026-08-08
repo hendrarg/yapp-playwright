@@ -826,4 +826,5 @@ export class OnlineCoursePage {
     }
     await this.expectChapterCount(0);
   }
+
 }

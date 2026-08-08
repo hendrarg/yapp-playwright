@@ -8,11 +8,13 @@ import { generateConsultationNavigationDescription, generateConsultationNavigati
 import { consultationPricingData, generateConsultationPricingDescription, generateConsultationPricingTitle } from '@test-data/creator/consultation.pricing.data';
 import { consultationValidationData } from '@test-data/creator/consultation.validation.data';
 import { digitalProductValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { addCustomBuyerQuestion, chooseGalleryFiles, chooseHeroFile, closeProductCompleteModal, copyProductCompleteLink, enableAfterSalesLinks, expectAddQuestionsDisabled, expectAddQuestionsEnabled, expectDescriptionContains, expectEmbedLinksSaved, expectGalleryCount, expectGalleryInputUnavailable, expectHeroNotUploaded, expectHeroRequired, expectImageTooLarge, expectImageTooSmall, expectInvalidEmbedLinkFeedback, expectMandatoryBuyerFieldsProtected, expectPreviewPaidPrice, expectPreviewWithoutPaidPrice, expectProductCompleteModal, expectTitleValue, fillEmbedLink, fillPrice, openEmbedLinkDialog, readProductCompleteSharePath, removeCustomBuyerQuestion, saveCurrentEmbedLink, setPricingEnabled, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
 
 test.describe('Creator Sessions', () => {
   test('Validate Consultation Inputs and Boundary Conditions', {
     tag: ['@AUT-FV-017', '@sessions', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage }) => {
+  }, async ({
+    consultationPage, creatorNav, productsPage, page }) => {
     test.setTimeout(120000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -26,55 +28,54 @@ test.describe('Creator Sessions', () => {
       await productsPage.expectLoaded();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(consultationType.buttonName);
-      await productsPage.expectConsultationCreateFlow();
+      await consultationPage.expectConsultationCreateFlow();
     });
 
     await test.step('Require title and enforce description counter limit', async () => {
-      await productsPage.fillConsultationDescription(
+      await consultationPage.fillConsultationDescription(
         consultationValidationData.descriptionWordsAtLimit,
       );
-      await productsPage.expectConsultationDescriptionCounter(
+      await consultationPage.expectConsultationDescriptionCounter(
         consultationValidationData.descriptionCounterMax,
       );
-      await productsPage.appendConsultationDescription(
+      await consultationPage.appendConsultationDescription(
         consultationValidationData.descriptionOverflowWord,
       );
-      await productsPage.expectConsultationDescriptionCounter(
+      await consultationPage.expectConsultationDescriptionCounter(
         consultationValidationData.descriptionCounterMax,
       );
-      await productsPage.submitConsultationDetails();
-      await productsPage.expectConsultationTitleRequired();
+      await consultationPage.submitConsultationDetails();
+      await consultationPage.expectConsultationTitleRequired();
     });
 
     await test.step('Protect mandatory buyer fields and enforce five custom questions', async () => {
-      await productsPage.expectMandatoryBuyerFieldsProtected();
+      await expectMandatoryBuyerFieldsProtected(page);
 
       for (const question of consultationValidationData.customQuestions) {
-        await productsPage.addCustomBuyerQuestion(question);
+        await addCustomBuyerQuestion(page, question);
       }
-      await productsPage.expectAddQuestionsDisabled();
+      await expectAddQuestionsDisabled(page);
 
-      await productsPage.removeCustomBuyerQuestion(
-        consultationValidationData.customQuestions[0],
-      );
-      await productsPage.expectAddQuestionsEnabled();
+      await removeCustomBuyerQuestion(page, consultationValidationData.customQuestions[0]);
+      await expectAddQuestionsEnabled(page);
     });
 
     await test.step('Validate after-sales link buttons', async () => {
-      await productsPage.enableAfterSalesLinks();
-      await productsPage.openEmbedLinkDialog();
-      await productsPage.fillEmbedLink(linkValidation.longLabel, linkValidation.invalidUrl);
-      await productsPage.expectInvalidEmbedLinkFeedback();
+      await enableAfterSalesLinks(page);
+      await openEmbedLinkDialog(page);
+      await fillEmbedLink(page, linkValidation.longLabel, linkValidation.invalidUrl);
+      await expectInvalidEmbedLinkFeedback(page);
 
-      await productsPage.fillEmbedLink(validLink.label, validLink.url);
-      await productsPage.saveCurrentEmbedLink();
-      await productsPage.expectEmbedLinksSaved([validLink.label]);
+      await fillEmbedLink(page, validLink.label, validLink.url);
+      await saveCurrentEmbedLink(page);
+      await expectEmbedLinksSaved(page, [validLink.label]);
     });
   });
 
   test('Upload and Manage Consultation Media and Content', {
     tag: ['@AUT-FV-018', '@sessions', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage, page }) => {
+  }, async ({
+    consultationPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -94,57 +95,53 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectLoaded();
         await productsPage.openAddProductSheet();
         await productsPage.selectProductType(consultationType.buttonName);
-        await productsPage.expectConsultationCreateFlow();
+        await consultationPage.expectConsultationCreateFlow();
       });
 
       await test.step('Apply rich text formatting in description', async () => {
-        await productsPage.fillConsultationTitle(title);
-        await productsPage.applyConsultationRichTextFormatting(description);
+        await consultationPage.fillConsultationTitle(title);
+        await consultationPage.applyConsultationRichTextFormatting(description);
       });
 
       await test.step('Reject missing hero, undersized, and oversized images', async () => {
-        await productsPage.submitConsultationDetails();
-        await productsPage.expectConsultationHeroRequired();
+        await consultationPage.submitConsultationDetails();
+        await expectHeroRequired(page);
 
         const oversized = createOversizedImageFixture();
         try {
-          await productsPage.chooseConsultationHeroFile(oversized.filePath);
-          await productsPage.expectConsultationImageTooLarge();
-          await productsPage.expectConsultationHeroNotUploaded();
+          await chooseHeroFile(page, oversized.filePath);
+          await expectImageTooLarge(page);
+          await expectHeroNotUploaded(page);
         } finally {
           oversized.cleanup();
         }
 
-        await productsPage.chooseConsultationHeroFile(consultationMediaData.tinyImagePath);
-        await productsPage.expectConsultationImageTooSmall('tiny-1x1.png');
-        await productsPage.expectConsultationHeroNotUploaded();
+        await chooseHeroFile(page, consultationMediaData.tinyImagePath);
+        await expectImageTooSmall(page, 'tiny-1x1.png');
+        await expectHeroNotUploaded(page);
       });
 
       await test.step('Upload hero and ten additional images', async () => {
-        await productsPage.uploadConsultationHero(consultationMediaData.heroImagePath);
+        await uploadHero(page, consultationMediaData.heroImagePath);
 
-        await productsPage.chooseConsultationGalleryFiles([
-          consultationMediaData.undersizedImagePath,
-        ]);
-        await productsPage.expectConsultationImageTooSmall('hermes.jpg');
+        await chooseGalleryFiles(page, [consultationMediaData.undersizedImagePath]);
+        await expectImageTooSmall(page, 'hermes.jpg');
 
-        await productsPage.uploadConsultationGallery(consultationMediaData.additionalImagePaths);
-        await productsPage.expectConsultationGalleryCount(
-          consultationMediaData.maxAdditionalImages,
-        );
-        await productsPage.expectConsultationGalleryInputUnavailable();
+        await uploadGallery(page, consultationMediaData.additionalImagePaths);
+        await expectGalleryCount(page, consultationMediaData.maxAdditionalImages);
+        await expectGalleryInputUnavailable(page);
       });
 
       await test.step('Publish consultation and review Product Complete modal', async () => {
-        await productsPage.submitConsultationDetails();
-        await productsPage.expectConsultationAvailabilityStep();
-        await productsPage.addConsultationWeekdayTimeSlot('Mon');
-        await productsPage.createConsultation();
-        await productsPage.expectProductCompleteModal();
-        sharePath = await productsPage.readProductCompleteSharePath();
-        const copied = await productsPage.copyProductCompleteLink();
+        await consultationPage.submitConsultationDetails();
+        await consultationPage.expectConsultationAvailabilityStep();
+        await consultationPage.addConsultationWeekdayTimeSlot('Mon');
+        await consultationPage.createConsultation();
+        await expectProductCompleteModal(page);
+        sharePath = await readProductCompleteSharePath(page);
+        const copied = await copyProductCompleteLink(page);
         expect(copied).toContain(sharePath);
-        await productsPage.closeProductCompleteModal();
+        await closeProductCompleteModal(page);
       });
 
       await test.step('Republish edits with unchanged share URL', async () => {
@@ -152,12 +149,12 @@ test.describe('Creator Sessions', () => {
         await productsPage.searchProducts(title);
         await productsPage.expectProductVisible(title);
         await productsPage.openEditProduct(title);
-        productUuid = await productsPage.readAppointmentProductUuidFromUrl();
+        productUuid = await consultationPage.readAppointmentProductUuidFromUrl();
 
-        await productsPage.fillConsultationTitle(editedTitle);
-        await productsPage.fillConsultationDescription(updatedDescription);
-        await productsPage.saveAndPublishConsultation();
-        await productsPage.expectConsultationLiveModalWithSharePath(sharePath);
+        await consultationPage.fillConsultationTitle(editedTitle);
+        await consultationPage.fillConsultationDescription(updatedDescription);
+        await consultationPage.saveAndPublishConsultation();
+        await consultationPage.expectConsultationLiveModalWithSharePath(sharePath);
       });
     } finally {
       if (productUuid && accessToken) {
@@ -168,7 +165,8 @@ test.describe('Creator Sessions', () => {
 
   test('Validate Consultation Navigation and Unsaved Warning', {
     tag: ['@AUT-FV-019', '@sessions', '@creator', '@smoke', '@regression'],
-  }, async ({ creatorNav, productsPage }) => {
+  }, async ({
+    consultationPage, creatorNav, productsPage }) => {
     const consultationType = productsCreationData.productTypes.find(
       (type) => type.label === 'Consultation',
     )!;
@@ -178,29 +176,30 @@ test.describe('Creator Sessions', () => {
       // Establish history so Back returns to Products instead of about:blank.
       await creatorNav.open('products');
       await productsPage.expectLoaded();
-      await productsPage.useConsultationMobileViewport();
+      await consultationPage.useConsultationMobileViewport();
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(consultationType.buttonName);
-      await productsPage.expectConsultationCreateFlow();
-      await productsPage.makeConsultationUnsavedChanges(
+      await consultationPage.expectConsultationCreateFlow();
+      await consultationPage.makeConsultationUnsavedChanges(
         title,
         generateConsultationNavigationDescription(),
       );
     });
 
     await test.step('Scroll and verify Next: Set Availability stays sticky', async () => {
-      await productsPage.expectConsultationNextCtaStickyAfterScroll();
+      await consultationPage.expectConsultationNextCtaStickyAfterScroll();
     });
 
     await test.step('Navigate away and review unsaved confirmation dialog', async () => {
-      await productsPage.navigateAwayFromConsultationViaBack();
-      await productsPage.expectConsultationUnsavedChangesDialog();
+      await consultationPage.navigateAwayFromConsultationViaBack();
+      await consultationPage.expectConsultationUnsavedChangesDialog();
     });
   });
 
   test('Validate Consultation Pricing, Vouchers, and Fees', {
     tag: ['@AUT-FV-020', '@sessions', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
+  }, async ({
+    consultationPage, creatorNav, productsPage, productPurchasePage, page }) => {
     test.setTimeout(300000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -217,7 +216,7 @@ test.describe('Creator Sessions', () => {
       await productsPage.expectLoaded();
       await productsPage.searchProducts(title);
       await productsPage.openEditProduct(title);
-      productUuids.push(await productsPage.readAppointmentProductUuidFromUrl());
+      productUuids.push(await consultationPage.readAppointmentProductUuidFromUrl());
       await creatorNav.open('products');
     };
 
@@ -227,33 +226,31 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectLoaded();
         await productsPage.openAddProductSheet();
         await productsPage.selectProductType(consultationType.buttonName);
-        await productsPage.expectConsultationCreateFlow();
+        await consultationPage.expectConsultationCreateFlow();
       });
 
       await test.step('Verify free default and accept valid paid preview price', async () => {
-        await productsPage.fillConsultationTitle(generateConsultationPricingTitle());
-        await productsPage.setConsultationPricingEnabled(false);
-        await productsPage.expectConsultationPreviewWithoutPaidPrice();
+        await consultationPage.fillConsultationTitle(generateConsultationPricingTitle());
+        await setPricingEnabled(page, false);
+        await expectPreviewWithoutPaidPrice(page);
 
-        await productsPage.setConsultationPricingEnabled(true);
-        await productsPage.fillConsultationPrice(consultationPricingData.validPrice);
-        await productsPage.expectConsultationPreviewPaidPrice(
-          consultationPricingData.previewPaidPricePattern,
-        );
+        await setPricingEnabled(page, true);
+        await fillPrice(page, consultationPricingData.validPrice);
+        await expectPreviewPaidPrice(page, consultationPricingData.previewPaidPricePattern);
       });
 
       await test.step('Reject zero price when pricing is enabled', async () => {
         test.fail(true, 'Product currently allows zero price to reach Availability (TC-CON-C-007 gap)');
 
         const zeroTitle = generateConsultationPricingTitle();
-        await productsPage.prepareConsultationDetailsWithoutSubmit(
+        await consultationPage.prepareConsultationDetailsWithoutSubmit(
           zeroTitle,
           generateConsultationPricingDescription(),
         );
-        await productsPage.setConsultationPricingEnabled(true);
-        await productsPage.fillConsultationPrice(consultationPricingData.zeroPrice);
-        await productsPage.submitConsultationDetails();
-        await productsPage.expectConsultationZeroPriceRejected();
+        await setPricingEnabled(page, true);
+        await fillPrice(page, consultationPricingData.zeroPrice);
+        await consultationPage.submitConsultationDetails();
+        await consultationPage.expectConsultationZeroPriceRejected();
       });
 
       await test.step('Push first bookable day later with longer minimum notice', async () => {
@@ -264,8 +261,8 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectLoaded();
         await productsPage.openAddProductSheet();
         await productsPage.selectProductType(consultationType.buttonName);
-        await productsPage.expectConsultationCreateFlow();
-        shortSharePath = await productsPage.publishConsultationWithMinimumNotice(
+        await consultationPage.expectConsultationCreateFlow();
+        shortSharePath = await consultationPage.publishConsultationWithMinimumNotice(
           shortTitle,
           generateConsultationPricingDescription(),
           {
@@ -279,8 +276,8 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectLoaded();
         await productsPage.openAddProductSheet();
         await productsPage.selectProductType(consultationType.buttonName);
-        await productsPage.expectConsultationCreateFlow();
-        longSharePath = await productsPage.publishConsultationWithMinimumNotice(
+        await consultationPage.expectConsultationCreateFlow();
+        longSharePath = await consultationPage.publishConsultationWithMinimumNotice(
           longTitle,
           generateConsultationPricingDescription(),
           {
@@ -315,7 +312,8 @@ test.describe('Creator Sessions', () => {
 
   test('Create, Update, and Manage Consultation Lifecycle', {
     tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage, productPurchasePage, page }) => {
+  }, async ({
+    consultationPage, creatorNav, productsPage, productPurchasePage, page }) => {
     test.setTimeout(240000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -338,13 +336,13 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectLoaded();
         await productsPage.openAddProductSheet();
         await productsPage.selectProductType(consultationType.buttonName);
-        await productsPage.expectConsultationCreateFlow();
-        await productsPage.prepareConsultationDetailsForAvailability(
+        await consultationPage.expectConsultationCreateFlow();
+        await consultationPage.prepareConsultationDetailsForAvailability(
           title,
           description,
         );
-        await productsPage.addConsultationWeekdayTimeSlot(weekday);
-        await productsPage.saveConsultationAsDraft();
+        await consultationPage.addConsultationWeekdayTimeSlot(weekday);
+        await consultationPage.saveConsultationAsDraft();
         await productsPage.selectStatusTab('Draft');
         await productsPage.searchProducts(title);
         await productsPage.expectProductVisible(title);
@@ -363,36 +361,36 @@ test.describe('Creator Sessions', () => {
         await productsPage.selectStatusTab('Draft');
         await productsPage.searchProducts(title);
         await productsPage.openEditProduct(title);
-        productUuid = await productsPage.readAppointmentProductUuidFromUrl();
-        await productsPage.expectConsultationTitleValue(title);
-        await productsPage.expectConsultationDescriptionContains(description);
-        await productsPage.openConsultationEditTab('Availability');
-        await productsPage.expectConsultationWeekdaySlotConfigured(weekday);
-        await productsPage.openConsultationEditTab('Details');
+        productUuid = await consultationPage.readAppointmentProductUuidFromUrl();
+        await expectTitleValue(page, title);
+        await expectDescriptionContains(page, description);
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.expectConsultationWeekdaySlotConfigured(weekday);
+        await consultationPage.openConsultationEditTab('Details');
       });
 
       await test.step('Discard unsaved detail edits on reload', async () => {
-        await productsPage.fillConsultationTitle(
+        await consultationPage.fillConsultationTitle(
           `${title}${consultationLifecycleData.unsavedTitleSuffix}`,
         );
-        await productsPage.reloadConsultationEditor();
-        await productsPage.expectConsultationTitleValue(title);
+        await consultationPage.reloadConsultationEditor();
+        await expectTitleValue(page, title);
       });
 
       await test.step('Persist saved detail and after-sales message changes', async () => {
-        await productsPage.fillConsultationTitle(savedTitle);
-        await productsPage.fillConsultationDescription(savedDescription);
-        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV1);
-        await productsPage.openConsultationEditTab('Availability');
-        await productsPage.setConsultationMinimumNoticeHours(
+        await consultationPage.fillConsultationTitle(savedTitle);
+        await consultationPage.fillConsultationDescription(savedDescription);
+        await consultationPage.fillConsultationAfterSalesMessage(afterSalesMessageV1);
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.setConsultationMinimumNoticeHours(
           consultationLifecycleData.minimumNoticeHours,
         );
-        await productsPage.configureConsultationWeekdaySlot(weekday);
-        await productsPage.expectConsultationPublishReady();
-        await productsPage.saveAndPublishConsultation();
-        await productsPage.expectProductCompleteModal();
-        sharePath = await productsPage.readProductCompleteSharePath();
-        await productsPage.closeProductCompleteModal();
+        await consultationPage.configureConsultationWeekdaySlot(weekday);
+        await consultationPage.expectConsultationPublishReady();
+        await consultationPage.saveAndPublishConsultation();
+        await expectProductCompleteModal(page);
+        sharePath = await readProductCompleteSharePath(page);
+        await closeProductCompleteModal(page);
       });
 
       await test.step('Apply updated after-sales message for future delivery only', async () => {
@@ -400,15 +398,15 @@ test.describe('Creator Sessions', () => {
         await productsPage.selectStatusTab('Active');
         await productsPage.searchProducts(savedTitle);
         await productsPage.openEditProduct(savedTitle);
-        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV1);
-        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessageV2);
-        await productsPage.openConsultationEditTab('Availability');
-        await productsPage.expectConsultationPublishReady();
-        await productsPage.saveAndPublishConsultationFromEdit();
+        await consultationPage.expectConsultationAfterSalesMessage(afterSalesMessageV1);
+        await consultationPage.fillConsultationAfterSalesMessage(afterSalesMessageV2);
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.expectConsultationPublishReady();
+        await consultationPage.saveAndPublishConsultationFromEdit();
         await creatorNav.open('products');
         await productsPage.searchProducts(savedTitle);
         await productsPage.openEditProduct(savedTitle);
-        await productsPage.expectConsultationAfterSalesMessage(afterSalesMessageV2);
+        await consultationPage.expectConsultationAfterSalesMessage(afterSalesMessageV2);
       });
 
       await test.step('Review available booking slots on active consultation', async () => {
@@ -425,7 +423,8 @@ test.describe('Creator Sessions', () => {
 
   test('Configure and Customize Consultation', {
     tag: ['@AUT-FV-025', '@sessions', '@creator', '@regression'],
-  }, async ({ creatorNav, productsPage, page }) => {
+  }, async ({
+    consultationPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -457,17 +456,17 @@ test.describe('Creator Sessions', () => {
         await productsPage.expectLoaded();
         await productsPage.searchProducts(title);
         await productsPage.openEditProduct(title);
-        await productsPage.fillConsultationAfterSalesMessage(afterSalesMessage);
-        await productsPage.enableAfterSalesLinks();
-        await productsPage.openEmbedLinkDialog();
-        await productsPage.fillEmbedLink(afterSalesLink.label, afterSalesLink.url);
-        await productsPage.saveCurrentEmbedLink();
-        await productsPage.expectEmbedLinksSaved([afterSalesLink.label]);
+        await consultationPage.fillConsultationAfterSalesMessage(afterSalesMessage);
+        await enableAfterSalesLinks(page);
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page, afterSalesLink.label, afterSalesLink.url);
+        await saveCurrentEmbedLink(page);
+        await expectEmbedLinksSaved(page, [afterSalesLink.label]);
       });
 
       await test.step('Open Preview and review staged content as read-only', async () => {
-        await productsPage.openConsultationAfterSalesPreview();
-        await productsPage.expectConsultationAfterSalesPreviewReadOnly({
+        await consultationPage.openConsultationAfterSalesPreview();
+        await consultationPage.expectConsultationAfterSalesPreviewReadOnly({
           message: afterSalesMessage,
           linkLabel: afterSalesLink.label,
         });
