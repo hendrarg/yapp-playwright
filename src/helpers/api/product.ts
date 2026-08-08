@@ -66,7 +66,7 @@ function defaultOnlineCoursePages(): OnlineCourseChapter[] {
           videoUrl: '',
           videoThumbnail: '',
           thumbnailType: '',
-          pageName: 'New Episode',
+          pageName: 'New Page',
           content: '',
           position: 1,
           files: [],

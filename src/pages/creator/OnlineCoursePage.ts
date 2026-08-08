@@ -2,24 +2,12 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
 import {
-  onlineCourseStructureData,
   onlineCourseAfterSalesData,
   onlineCoursePricingData,
   onlineCourseValidationData,
-  productsCreationData,
   type OnlineCourseContentType,
 } from "@test-data/creator/products.creation.data";
 
-/**
- * Online Course content editor (Add Content step) — chapters, episodes,
- * standalone episodes, per-episode content type/content, reorder, and delete.
- *
- * Layout note: the desktop outline (chapter/episode cards) is duplicated by a
- * `lg:hidden` mobile tree. Role-named controls resolve uniquely because the
- * mobile copy is `display:none` (excluded from the accessibility tree), while
- * the role-less outline cards/spans are matched with tag-qualified CSS scoped
- * to `visible=true`.
- */
 export class OnlineCoursePage {
   constructor(
     public readonly page: Page,
@@ -28,37 +16,39 @@ export class OnlineCoursePage {
 
   readonly addChapterButton = smartLocator(this.page, {
     role: "button",
-    name: "Add Chapter",
-    text: "Add Chapter",
-    selector: 'button:has-text("Add Chapter")',
+    name: "Chapter",
+    exact: true,
+    text: "Chapter",
+    selector: 'button:text-is("Chapter"):visible',
   });
 
-  readonly addEpisodeButton = smartLocator(this.page, {
+  readonly addPageButton = smartLocator(this.page, {
     role: "button",
-    name: "Add Episode",
-    text: "Add Episode",
-    selector: 'button:has-text("Add Episode")',
+    name: "Page",
+    exact: true,
+    text: "Page",
+    selector: 'button:text-is("Page"):visible',
   });
 
   readonly nextSetDetailsButton = smartLocator(this.page, {
     role: "button",
     name: "Next: Set Details",
     text: "Next: Set Details",
-    selector: 'button:has-text("Next: Set Details")',
+    selector: 'button:text-is("Next: Set Details"):visible',
   });
 
   readonly nextEditDetailsButton = smartLocator(this.page, {
     role: "button",
     name: "Next: Edit Details",
     text: "Next: Edit Details",
-    selector: 'button:has-text("Next: Edit Details")',
+    selector: 'button:text-is("Next: Edit Details"):visible',
   });
 
   readonly nextPublishButton = smartLocator(this.page, {
     role: "button",
     name: "Next: Publish",
     text: "Next: Publish",
-    selector: 'button:has-text("Next: Publish")',
+    selector: 'button:text-is("Next: Publish"):visible',
   });
 
   private readonly addPricingSwitch = smartLocator(this.page, {
@@ -78,22 +68,22 @@ export class OnlineCoursePage {
   readonly publishButton = smartLocator(this.page, {
     role: "button",
     name: "Publish",
+    exact: true,
     text: "Publish",
-    selector: 'button:has-text("Publish"):visible',
+    selector: 'button:text-is("Publish"):visible',
   });
 
   private readonly membershipBenefitsHeading = smartLocator(this.page, {
-    role: "heading",
-    name: "Membership Benefits",
-    text: "Membership Benefits",
-    selector: 'text="Membership Benefits"',
+    text: "Set benefits for membership",
+    selector: ':has-text("Set benefits for membership")',
   });
 
   private readonly saveChangesButton = smartLocator(this.page, {
     role: "button",
-    name: "Save Changes",
-    text: "Save Changes",
-    selector: 'button:has-text("Save Changes")',
+    name: "Save",
+    exact: true,
+    text: "Save",
+    selector: 'button:text-is("Save"):visible',
   });
 
   private readonly afterSalesHeading = smartLocator(this.page, {
@@ -102,33 +92,7 @@ export class OnlineCoursePage {
   });
 
   private readonly afterSalesCustomizeSwitch = smartLocator(this.page, {
-    selector: 'button[role="switch"]:has(+ label:has-text("Customize Message"))',
-  });
-
-  private readonly afterSalesMessageEditor = smartLocator(this.page, {
-    role: "textbox",
-    name: "editable markdown",
-    selector: '[contenteditable="true"][role="textbox"]',
-  });
-
-  private readonly afterSalesLinksCheckbox = smartLocator(this.page, {
-    role: "checkbox",
-    text: "Links",
-    selector: 'button[role="checkbox"]',
-  });
-
-  private readonly afterSalesAddLinkButton = smartLocator(this.page, {
-    role: "button",
-    name: "Add Link",
-    text: "Add Link",
-    selector: 'button:has-text("Add Link")',
-  });
-
-  private readonly afterSalesPreviewButton = smartLocator(this.page, {
-    role: "button",
-    name: "Preview",
-    text: "Preview",
-    selector: 'div:has(> p:has-text("After Sales")) button:has-text("Preview")',
+    selector: 'div.border.rounded-2xl:has-text("Customize Message") button[role="switch"]',
   });
 
   private readonly afterSalesPreviewDialog = smartLocator(this.page, {
@@ -137,73 +101,28 @@ export class OnlineCoursePage {
     selector: '[role="dialog"]:has-text("After Sales")',
   });
 
-  private readonly videoFileInput = smartLocator(this.page, {
-    text: "Upload Video",
-    selector: 'div:has(> label:has-text("Video")) input[type="file"][accept*="video/mp4"]:visible',
-  });
-
-  private readonly lessonFileInput = smartLocator(this.page, {
-    text: "Upload File or Audio",
-    selector: 'div:has(> label:has-text("File")) input[type="file"][accept*="application/pdf"]:visible',
-  });
-
-  private readonly videoThumbnailInput = smartLocator(this.page, {
-    text: "Video Thumbnail",
-    selector: 'div:has(> label:has-text("Video Thumbnail")) input[type="file"]:visible',
-  });
-
-  private readonly productThumbnailInput = smartLocator(this.page, {
-    text: "Upload File",
-    selector: 'input[type="file"][accept*="image/gif"]:not([multiple]):visible',
-  });
-
-  private readonly productGalleryInput = smartLocator(this.page, {
-    text: "select from gallery or drag and drop",
-    selector: 'div:has-text("select from gallery or drag and drop") input[type="file"][multiple]:visible',
-  });
-
-  private readonly deleteVideoButton = smartLocator(this.page, {
-    role: "button",
-    name: "Delete Video",
-    text: "Delete Video",
-    selector: 'button:has-text("Delete Video")',
-  });
-
   private readonly noImagePlaceholder = smartLocator(this.page, {
     text: "No Image",
     selector: 'text="No Image"',
   });
 
-  readonly boldButton = smartLocator(this.page, {
-    selector: 'button[aria-label="Bold"]:visible',
-  });
-
-  readonly italicButton = smartLocator(this.page, {
-    selector: 'button[aria-label="Italic"]:visible',
-  });
-
-  readonly underlineButton = smartLocator(this.page, {
-    selector: 'button[aria-label="Underline"]:visible',
-  });
-
-  readonly bulletedListButton = smartLocator(this.page, {
-    role: "button",
-    name: "Bulleted list",
-    selector: 'button[aria-label="Bulleted list"]',
-  });
-
-  readonly createLinkButton = smartLocator(this.page, {
-    role: "button",
-    name: "Create link",
-    selector: 'button[aria-label="Create link"]',
-  });
-
-  private contentTypeTab(type: OnlineCourseContentType) {
+  private addVideoBlockButton() {
     return smartLocator(this.page, {
-      role: "tab",
-      name: type,
-      text: type,
-      selector: `[role="tab"]:has-text("${type}")`,
+      role: "button",
+      name: "Video",
+      exact: true,
+      text: "Video",
+      selector: 'div.blocknote-container button[data-slot="button"]:has-text("Video")',
+    });
+  }
+
+  private addAttachmentBlockButton() {
+    return smartLocator(this.page, {
+      role: "button",
+      name: "Attachment",
+      exact: true,
+      text: "Attachment",
+      selector: 'div.blocknote-container button[data-slot="button"]:has-text("Attachment")',
     });
   }
 
@@ -231,11 +150,8 @@ export class OnlineCoursePage {
       .first();
   }
 
-  private selectedTab(): Locator {
-    return this.page
-      .getByRole("tab", { selected: true })
-      .locator("visible=true")
-      .first();
+  private async blockNoteText(): Promise<string> {
+    return this.page.locator("div.blocknote-container").first().innerText().catch(() => "");
   }
 
   private readBodyText(): Promise<string> {
@@ -245,27 +161,16 @@ export class OnlineCoursePage {
     });
   }
 
-  private readBlobImageCount(): Promise<number> {
+  private readUploadedImageCount(): Promise<number> {
     return this.page.evaluate(() => {
       type ImageElement = { getAttribute: (name: string) => string | null };
       const root = globalThis as unknown as {
         document: { querySelectorAll: (selector: string) => ArrayLike<ImageElement> };
       };
-      return Array.from(root.document.querySelectorAll("img")).filter(
-        (image) => image.getAttribute("src")?.startsWith("blob:") === true,
-      ).length;
-    });
-  }
-
-  private readVisibleEditorHtml(): Promise<string> {
-    return this.page.evaluate(() => {
-      type Editor = { offsetParent: unknown; innerHTML: string };
-      const root = globalThis as unknown as {
-        document: { querySelectorAll: (selector: string) => ArrayLike<Editor> };
-      };
-      return Array.from(root.document.querySelectorAll('[contenteditable="true"]'))
-        .find((editor) => editor.offsetParent !== null)
-        ?.innerHTML ?? "";
+      return Array.from(root.document.querySelectorAll("img")).filter((image) => {
+        const src = image.getAttribute("src");
+        return src?.startsWith("blob:") === true || src?.startsWith("data:image/") === true;
+      }).length;
     });
   }
 
@@ -281,7 +186,7 @@ export class OnlineCoursePage {
     });
     expect(this.page.url()).not.toContain("/auth");
     await this.addChapterButton.text({ timeout: 15000 });
-    await this.addEpisodeButton.text({ timeout: 15000 });
+    await this.addPageButton.text({ timeout: 15000 });
     await expect(this.chapterCards().first()).toBeVisible({ timeout: 15000 });
   }
 
@@ -395,7 +300,7 @@ export class OnlineCoursePage {
 
   async addStandaloneEpisode() {
     const before = await this.getStandaloneEpisodeCount();
-    await this.addEpisodeButton.click({ timeout: 10000 });
+    await this.addPageButton.click({ timeout: 10000 });
     await expect
       .poll(() => this.getStandaloneEpisodeCount(), { timeout: 10000 })
       .toBe(before + 1);
@@ -435,7 +340,6 @@ export class OnlineCoursePage {
       .evaluate((el) => el.className.includes("border-primary"));
   }
 
-  /** Open an episode by its outline card index (selects it in the left editor). */
   async openEpisode(index: number) {
     if (!(await this.isEpisodeSelected(index))) {
       await this.episodeCards().nth(index).locator("span.cursor-pointer").first().click();
@@ -445,7 +349,6 @@ export class OnlineCoursePage {
     }
   }
 
-  /** Rename the currently open (selected) episode via its outline label. */
   async renameSelectedEpisode(name: string) {
     await this.selectedEpisodeCard().locator("span.cursor-pointer").first().click();
     const input = this.page.locator("input:focus");
@@ -456,20 +359,30 @@ export class OnlineCoursePage {
   }
 
   async selectContentType(type: OnlineCourseContentType) {
-    await this.contentTypeTab(type).click({ timeout: 10000 });
-    await expect(this.selectedTab()).toHaveText(type, { timeout: 10000 });
+    if (type === "Text") return;
+    if ((await this.getSelectedContentType()) === type) return;
+
+    if (type === "Video") {
+      await this.addVideoBlockButton().click({ timeout: 10000 });
+    } else {
+      await this.addAttachmentBlockButton().click({ timeout: 10000 });
+    }
+    await expect.poll(() => this.getSelectedContentType(), { timeout: 10000 }).toBe(type);
   }
 
   async getSelectedContentType(): Promise<string> {
-    return (await this.selectedTab().innerText()).trim();
+    const text = await this.blockNoteText();
+    if (/upload attachment/i.test(text)) return "Attachment";
+    if (/upload video|delete video/i.test(text)) return "Video";
+    return "Text";
   }
 
   async expectSelectedContentType(type: OnlineCourseContentType) {
-    await expect(this.selectedTab()).toHaveText(type, { timeout: 10000 });
+    await expect.poll(() => this.getSelectedContentType(), { timeout: 10000 }).toBe(type);
   }
 
   async setFreeTextContent(text: string) {
-    await this.selectContentType("Free Text");
+    await this.selectContentType("Text");
     const editor = this.freeTextEditor();
     await editor.click();
     await this.page.keyboard.press("Control+A");
@@ -478,26 +391,43 @@ export class OnlineCoursePage {
     await expect(editor).toContainText(text, { timeout: 10000 });
   }
 
+  private videoFileInput(): Locator {
+    return this.page
+      .locator('div.blocknote-container input[type="file"][accept*="video/mp4"]')
+      .first();
+  }
+
+  private deleteVideoButton(): Locator {
+    return this.page
+      .locator('div.blocknote-container button:has-text("Delete Video")')
+      .first();
+  }
+
   async uploadVideo(filePath: string) {
-    await this.videoFileInput.setInputFiles(filePath, { timeout: 15000 });
-    await expect(this.deleteVideoButton.text({ timeout: 60000 })).resolves.toContain("Delete Video");
+    await this.selectContentType("Video");
+    await this.videoFileInput().setInputFiles(filePath, { timeout: 15000 });
+    await expect.poll(() => this.blockNoteText(), { timeout: 60000 })
+      .toContain("Delete Video");
   }
 
   async deleteVideo() {
-    await this.deleteVideoButton.click({ timeout: 10000 });
-    await expect.poll(() => this.deleteVideoButton.count(), { timeout: 15000 }).toBe(0);
-  }
-
-  async uploadVideoThumbnail(filePath: string) {
-    await this.videoThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
-    await expect.poll(() => this.readBodyText(), { timeout: 30000 })
-      .toContain("Video Thumbnail");
+    await this.deleteVideoButton().click({ timeout: 10000 });
+    await expect.poll(() => this.blockNoteText(), { timeout: 15000 })
+      .not.toContain("Delete Video");
   }
 
   async uploadLessonFiles(filePaths: readonly string[]) {
-    await this.lessonFileInput.setInputFiles([...filePaths], { timeout: 15000 });
-    await expect.poll(() => this.readBodyText(), { timeout: 60000 })
-      .toContain(filePaths.map((filePath) => filePath.split(/[\\/]/).pop()).find(Boolean)!);
+    for (const filePath of filePaths) {
+      const emptyBlockInput = this.page.locator(
+        'div.blocknote-container .bn-block:has-text("Upload attachment") input[type="file"]',
+      );
+      if ((await emptyBlockInput.count()) === 0) {
+        await this.addAttachmentBlockButton().click({ timeout: 10000 });
+      }
+      await emptyBlockInput.last().setInputFiles(filePath, { timeout: 15000 });
+      await this.page.waitForTimeout(400);
+    }
+    await this.expectLessonFiles(filePaths.map((filePath) => filePath.split(/[\\/]/).pop()!));
   }
 
   async expectLessonFiles(fileNames: readonly string[]) {
@@ -507,19 +437,33 @@ export class OnlineCoursePage {
     }
   }
 
+  private productThumbnailInput(): Locator {
+    return this.page
+      .locator('input[type="file"][accept*="image/gif"]:not([multiple])')
+      .locator("visible=true")
+      .first();
+  }
+
+  private productGalleryInput(): Locator {
+    return this.page
+      .locator('div:has-text("select from gallery or drag and drop") input[type="file"][multiple]')
+      .locator("visible=true")
+      .first();
+  }
+
   async uploadProductThumbnail(filePath: string) {
-    await this.productThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
-    await expect.poll(() => this.readBlobImageCount(), {
+    await this.productThumbnailInput().setInputFiles(filePath, { timeout: 15000 });
+    await expect.poll(() => this.readUploadedImageCount(), {
       timeout: 30000,
     }).toBeGreaterThan(0);
   }
 
   async uploadThumbnailForValidation(filePath: string) {
-    await this.productThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
+    await this.productThumbnailInput().setInputFiles(filePath, { timeout: 15000 });
   }
 
   async uploadProductGallery(filePaths: readonly string[]) {
-    await this.productGalleryInput.setInputFiles([...filePaths], { timeout: 15000 });
+    await this.productGalleryInput().setInputFiles([...filePaths], { timeout: 15000 });
     await expect.poll(() => this.noImagePlaceholder.visibleCount(), { timeout: 60000 }).toBeLessThan(9);
   }
 
@@ -594,6 +538,28 @@ export class OnlineCoursePage {
     return onlineCoursePricingData.invalidPriceErrorPattern.test(await this.readBodyText());
   }
 
+  private afterSalesCard(): Locator {
+    return this.page.locator('div.border.rounded-2xl:has-text("Customize Message")').first();
+  }
+
+  private afterSalesMessageEditor(): Locator {
+    return this.afterSalesCard().locator('[contenteditable="true"]').first();
+  }
+
+  private afterSalesLinksCheckbox(): Locator {
+    return this.afterSalesCard().locator('button[role="checkbox"]').first();
+  }
+
+  private afterSalesAddLinkButton(): Locator {
+    return this.afterSalesCard().locator('button:has-text("Add Link")').first();
+  }
+
+  private afterSalesPreviewButton(): Locator {
+    return this.page
+      .locator('div.bg-muted.rounded-2xl:has-text("Customize Message") button:has-text("Preview")')
+      .first();
+  }
+
   async expectAfterSalesLoaded() {
     await this.afterSalesHeading.text({ timeout: 15000 });
   }
@@ -617,23 +583,24 @@ export class OnlineCoursePage {
 
   async fillAfterSalesMessage(message: string) {
     await this.setAfterSalesMessageEnabled(true);
-    await this.afterSalesMessageEditor.click({ timeout: 10000 });
+    await this.afterSalesMessageEditor().click({ timeout: 10000 });
     await this.page.keyboard.press("Control+A");
     await this.page.keyboard.press("Backspace");
     if (message) await this.page.keyboard.insertText(message);
   }
 
   async expectAfterSalesMessage(message: string) {
-    await expect(this.afterSalesMessageEditor.text({ timeout: 10000 })).resolves.toContain(message);
+    await expect(this.afterSalesMessageEditor().innerText({ timeout: 10000 })).resolves.toContain(message);
   }
 
   async applyAfterSalesMessageFormatting(message: string) {
     await this.fillAfterSalesMessage(message);
     await this.page.keyboard.press("Control+A");
-    await this.boldButton.click({ timeout: 10000 });
-    await this.italicButton.click({ timeout: 10000 });
-    await this.underlineButton.click({ timeout: 10000 });
-    await expect.poll(() => this.readVisibleEditorHtml(), { timeout: 10000 })
+    const { bold, italic, underline } = this.formatButtons(this.afterSalesCard());
+    await bold.click({ timeout: 10000 });
+    await italic.click({ timeout: 10000 });
+    await underline.click({ timeout: 10000 });
+    await expect.poll(() => this.afterSalesMessageEditor().innerHTML(), { timeout: 10000 })
       .toMatch(/strong|em|u/i);
   }
 
@@ -642,16 +609,16 @@ export class OnlineCoursePage {
   }
 
   async enableAfterSalesLinks() {
-    if ((await this.afterSalesLinksCheckbox.getAttribute("aria-checked")) !== "true") {
-      await this.afterSalesLinksCheckbox.click({ timeout: 10000 });
+    if ((await this.afterSalesLinksCheckbox().getAttribute("aria-checked")) !== "true") {
+      await this.afterSalesLinksCheckbox().click({ timeout: 10000 });
     }
-    await expect.poll(() => this.afterSalesLinksCheckbox.getAttribute("aria-checked"), { timeout: 10000 })
+    await expect.poll(() => this.afterSalesLinksCheckbox().getAttribute("aria-checked"), { timeout: 10000 })
       .toBe("true");
-    await this.afterSalesAddLinkButton.text({ timeout: 10000 });
+    await expect(this.afterSalesAddLinkButton()).toBeVisible({ timeout: 10000 });
   }
 
   async openAfterSalesPreview() {
-    await this.afterSalesPreviewButton.click({ timeout: 10000 });
+    await this.afterSalesPreviewButton().click({ timeout: 10000 });
     await expect.poll(() => this.readBodyText(), { timeout: 10000 })
       .toMatch(onlineCourseAfterSalesData.previewDialogPattern);
   }
@@ -688,76 +655,10 @@ export class OnlineCoursePage {
       .toBe(0);
   }
 
-  async expectFreeTextContent(text: string) {
-    await expect(this.freeTextEditor()).toContainText(text, { timeout: 10000 });
-  }
-
-  async applyEpisodeRichTextFormatting(text: string) {
-    await this.setFreeTextContent(text);
-    await this.page.keyboard.press("Control+A");
-    await this.boldButton.click({ timeout: 10000 });
-    await this.italicButton.click({ timeout: 10000 });
-    await this.underlineButton.click({ timeout: 10000 });
-    await expect.poll(() => this.readVisibleEditorHtml()).toMatch(/strong|em|u/i);
-  }
-
-  async expectEpisodeRichTextContent(text: string) {
-    await this.expectFreeTextContent(text);
-    await expect.poll(() => this.readVisibleEditorHtml()).toMatch(/strong|em|u/i);
-  }
-
-  async expectOnlineCourseMembershipBenefitsState() {
-    await this.membershipBenefitsHeading.text({ timeout: 15000 });
-    await expect.poll(() => this.readBodyText(), { timeout: 15000 })
-      .toMatch(/Membership tiers are still loading\. You can enable this once the data is ready\.|Choose benefits for specific membership tiers\./i);
-  }
-
-  async expectTitleValue(title: string) {
-    await expect(this.detailsTitleInput()).toHaveValue(title, { timeout: 10000 });
-  }
-
-  async expectDescriptionContains(text: string) {
-    await expect(this.detailsDescriptionEditor()).toContainText(text, { timeout: 10000 });
-  }
-
-  async saveOnlineCourseChanges() {
-    await this.saveChangesButton.click({ timeout: 15000 });
-  }
-
-  /** Reorder a chapter one position via the dnd-kit keyboard sensor. */
-  async reorderChapterDown(index: number) {
-    const handle = this.chapterCards()
-      .nth(index)
-      .locator('[aria-roledescription="sortable"]')
-      .first();
-    await handle.focus();
-    await this.page.keyboard.press("Space");
-    await this.page.waitForTimeout(300);
-    await this.page.keyboard.press("ArrowDown");
-    await this.page.waitForTimeout(300);
-    await this.page.keyboard.press("Space");
-    await this.page.waitForTimeout(400);
-  }
-
-  async deleteChapter(index: number) {
-    const before = await this.getChapterCount();
-    await this.chapterCards()
-      .nth(index)
-      .locator('button[aria-haspopup="menu"]')
-      .first()
-      .click();
-    await this.page
-      .getByRole("menuitem", { name: "Delete" })
-      .locator("visible=true")
-      .first()
-      .click();
-    await expect(this.chapterCards()).toHaveCount(before - 1, { timeout: 10000 });
-  }
-
   private detailsCard(): Locator {
     return this.page
       .locator("div.border.rounded-2xl")
-      .filter({ hasText: "Title" })
+      .filter({ has: this.page.locator('input[placeholder="Enter title"]') })
       .locator("visible=true")
       .first();
   }
@@ -803,9 +704,10 @@ export class OnlineCoursePage {
     await editor.click({ timeout: 10000 });
     await this.page.keyboard.press("Control+A");
 
-    await this.boldButton.click({ timeout: 10000 });
-    await this.italicButton.click({ timeout: 10000 });
-    await this.underlineButton.click({ timeout: 10000 });
+    const { bold, italic, underline } = this.formatButtons(this.detailsCard());
+    await bold.click({ timeout: 10000 });
+    await italic.click({ timeout: 10000 });
+    await underline.click({ timeout: 10000 });
   }
 
   async expectDescriptionFormatted() {
@@ -813,17 +715,91 @@ export class OnlineCoursePage {
     expect(html).toMatch(/_bold_|_italic_|_underline_|strong|em|u/i);
   }
 
+  private formatButtons(scope: Locator) {
+    const button = (label: string) => scope.locator(`button[aria-label="${label}"]`).first();
+    return {
+      bold: button("Bold"),
+      italic: button("Italic"),
+      underline: button("Underline"),
+    };
+  }
+
+  async expectFreeTextContent(text: string) {
+    await expect(this.freeTextEditor()).toContainText(text, { timeout: 10000 });
+  }
+
+  async applyEpisodeRichTextFormatting(text: string) {
+    await this.setFreeTextContent(text);
+    await this.page.keyboard.press("Control+A");
+    const { bold, italic, underline } = this.formatButtons(this.page.locator("div.blocknote-container"));
+    await bold.click({ timeout: 10000 });
+    await italic.click({ timeout: 10000 });
+    await underline.click({ timeout: 10000 });
+    await expect.poll(() => this.freeTextEditor().innerHTML()).toMatch(/strong|em|u/i);
+  }
+
+  async expectEpisodeRichTextContent(text: string) {
+    await this.expectFreeTextContent(text);
+    await expect.poll(() => this.freeTextEditor().innerHTML()).toMatch(/strong|em|u/i);
+  }
+
+  async expectOnlineCourseMembershipBenefitsState() {
+    await this.membershipBenefitsHeading.text({ timeout: 15000 });
+    await expect.poll(() => this.readBodyText(), { timeout: 15000 })
+      .toMatch(/Set benefits for membership|Membership tiers are still loading\. You can enable this once the data is ready\.|Choose benefits for specific membership tiers\./i);
+  }
+
+  async expectTitleValue(title: string) {
+    await expect(this.detailsTitleInput()).toHaveValue(title, { timeout: 10000 });
+  }
+
+  async expectDescriptionContains(text: string) {
+    await expect(this.detailsDescriptionEditor()).toContainText(text, { timeout: 10000 });
+  }
+
+  async saveOnlineCourseChanges() {
+    await this.saveChangesButton.click({ timeout: 15000 });
+  }
+
+  async reorderChapterDown(index: number) {
+    const handle = this.chapterCards()
+      .nth(index)
+      .locator('[aria-roledescription="sortable"]')
+      .first();
+    await handle.focus();
+    await this.page.keyboard.press("Space");
+    await this.page.waitForTimeout(300);
+    await this.page.keyboard.press("ArrowDown");
+    await this.page.waitForTimeout(300);
+    await this.page.keyboard.press("Space");
+    await this.page.waitForTimeout(400);
+  }
+
+  async deleteChapter(index: number) {
+    const before = await this.getChapterCount();
+    await this.chapterCards()
+      .nth(index)
+      .locator('button[aria-haspopup="menu"]')
+      .first()
+      .click();
+    await this.page
+      .getByRole("menuitem", { name: "Delete" })
+      .locator("visible=true")
+      .first()
+      .click();
+    await expect(this.chapterCards()).toHaveCount(before - 1, { timeout: 10000 });
+  }
+
   async attemptNextSetDetails() {
     await this.submitContentDetails();
   }
 
   async submitContentDetails() {
-    if (this.page.url().includes("/products/update/online-course/")) {
-      await this.nextEditDetailsButton.click({ timeout: 10000 });
-      return;
-    }
-
-    await this.nextSetDetailsButton.click({ timeout: 10000 });
+    const cta = this.page
+      .locator('button:text-is("Next: Edit Details"), button:text-is("Next: Set Details")')
+      .locator("visible=true")
+      .first();
+    await cta.click({ timeout: 10000 });
   }
 
   async submitNextPublish() {
@@ -831,16 +807,16 @@ export class OnlineCoursePage {
   }
 
   async submitPublish() {
-    await this.publishButton.click({ timeout: 15000 });
+    const publishCta = this.page
+      .locator('button:text-is("Publish"), button:text-is("Next: Publish")')
+      .locator("visible=true")
+      .first();
+    await publishCta.click({ timeout: 15000 });
   }
 
-  async expectEpisodeRequiredError() {
-    await expect(
-      this.page
-        .locator('div, p, span')
-        .filter({ hasText: onlineCourseValidationData.requiredErrors.summary })
-        .first(),
-    ).toBeVisible({ timeout: 10000 });
+  async expectRequiredFieldsError() {
+    await expect.poll(() => this.readBodyText(), { timeout: 10000 })
+      .toContain(onlineCourseValidationData.requiredErrors.summary);
   }
 
   async deleteAllChapters() {

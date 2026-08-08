@@ -3,7 +3,7 @@ import { createOnlineCourseProduct, deleteProduct, expectProductHideFromProfile,
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { createOnlineCourseLessonFixtures } from '@helpers/creator/online-course-media';
 import { consultationMediaData } from '@test-data/creator/consultation.media.data';
-import { digitalProductPricingData, digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, onlineCourseValidationData, productsCreationData } from '@test-data/creator/products.creation.data';
+import { digitalProductPricingData, digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesLink, generateOnlineCourseAfterSalesMessage, generateOnlineCourseChapterTitle, generateOnlineCourseEpisodeContent, generateOnlineCourseEpisodeTitle, generateOnlineCourseProductData, onlineCourseMediaData, onlineCoursePricingData, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsHideFromProfileData } from '@test-data/creator/products.hide-from-profile.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productsStatusData } from '@test-data/creator/products.status.data';
@@ -476,7 +476,7 @@ test.describe('Creator Products', () => {
       await onlineCoursePage.setFreeTextContent(contentB);
 
       await onlineCoursePage.openEpisode(0);
-      await onlineCoursePage.expectSelectedContentType('Free Text');
+      await onlineCoursePage.expectSelectedContentType('Text');
       await onlineCoursePage.expectFreeTextContent(contentA);
 
       await onlineCoursePage.openEpisode(lastEpisode);
@@ -485,8 +485,8 @@ test.describe('Creator Products', () => {
 
     await test.step('Edit content type, remove a chapter, and verify edits persist', async () => {
       await onlineCoursePage.openEpisode(0);
-      await onlineCoursePage.selectContentType('File');
-      await onlineCoursePage.expectSelectedContentType('File');
+      await onlineCoursePage.selectContentType('Attachment');
+      await onlineCoursePage.expectSelectedContentType('Attachment');
 
       await onlineCoursePage.deleteChapter(await onlineCoursePage.getChapterCount() - 1);
       await onlineCoursePage.expectChapterCount(1);
@@ -494,7 +494,7 @@ test.describe('Creator Products', () => {
       const lastEpisode = (await onlineCoursePage.getEpisodeCount()) - 1;
       await onlineCoursePage.openEpisode(lastEpisode);
       await onlineCoursePage.openEpisode(0);
-      await onlineCoursePage.expectSelectedContentType('File');
+      await onlineCoursePage.expectSelectedContentType('Attachment');
     });
   });
 
@@ -522,12 +522,11 @@ test.describe('Creator Products', () => {
       await onlineCoursePage.expectLoaded();
     });
 
-    await test.step('Require at least one episode to proceed', async () => {
+    await test.step('Advance with no pages and enforce step-2 required fields', async () => {
       await onlineCoursePage.deleteAllChapters();
       await onlineCoursePage.attemptNextSetDetails();
-      await onlineCoursePage.expectEpisodeRequiredError();
-      await onlineCoursePage.addChapter();
-      await onlineCoursePage.expectChapterCount(1);
+      await onlineCoursePage.submitNextPublish();
+      await onlineCoursePage.expectRequiredFieldsError();
     });
 
     await test.step('Require title and enforce description 500 character counter', async () => {
@@ -617,9 +616,9 @@ test.describe('Creator Products', () => {
         await productsPage.searchProductsUntilVisible(baseline.title);
         await productsPage.openEditProduct(baseline.title);
         await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.fillTitle(draftTitle);
         await onlineCoursePage.fillDescription(draftDescription);
-        await onlineCoursePage.submitContentDetails();
         await productsPage.saveAsDraft();
 
         await creatorNav.open('products');
@@ -664,9 +663,9 @@ test.describe('Creator Products', () => {
       await test.step('Edit and republish the course while preserving its share URL', async () => {
         await productsPage.openEditProduct(draftTitle);
         await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.fillTitle(republishedTitle);
         await onlineCoursePage.fillDescription(republishedDescription);
-        await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.submitPublish();
         await productsPage.expectProductCompleteModal();
         expect(await productsPage.readProductCompleteSharePath()).toBe(sharePath);
@@ -718,11 +717,11 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.selectContentType('Video');
         await onlineCoursePage.expectSelectedContentType('Video');
         await onlineCoursePage.openEpisode(1);
-        await onlineCoursePage.selectContentType('File');
-        await onlineCoursePage.expectSelectedContentType('File');
+        await onlineCoursePage.selectContentType('Attachment');
+        await onlineCoursePage.expectSelectedContentType('Attachment');
         await onlineCoursePage.openEpisode(lastEpisode);
-        await onlineCoursePage.selectContentType('Free Text');
-        await onlineCoursePage.expectSelectedContentType('Free Text');
+        await onlineCoursePage.selectContentType('Text');
+        await onlineCoursePage.expectSelectedContentType('Text');
       });
 
       await test.step('Upload a supported video lesson and verify its preview', async () => {
@@ -733,10 +732,6 @@ test.describe('Creator Products', () => {
       await test.step('Remove and replace the episode video', async () => {
         await onlineCoursePage.deleteVideo();
         await onlineCoursePage.uploadVideo(onlineCourseMediaData.videoPath);
-      });
-
-      await test.step('Apply a custom video thumbnail', async () => {
-        await onlineCoursePage.uploadVideoThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
       });
 
       await test.step('Upload all supported lesson file types', async () => {
@@ -750,14 +745,15 @@ test.describe('Creator Products', () => {
         await onlineCoursePage.expectLessonFiles(lessonFixtures.fileNames);
       });
 
-      await test.step('Save formatted Free Text content for an episode and verify it remains formatted', async () => {
+      await test.step('Save formatted Text content for an episode and verify it remains formatted', async () => {
         const lastEpisode = (await onlineCoursePage.getEpisodeCount()) - 1;
         await onlineCoursePage.openEpisode(lastEpisode);
         await onlineCoursePage.applyEpisodeRichTextFormatting(richText);
         await onlineCoursePage.expectEpisodeRichTextContent(richText);
       });
 
-      await test.step('Upload a valid product thumbnail', async () => {
+      await test.step('Advance to details and upload a valid product thumbnail', async () => {
+        await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
       });
 
@@ -769,6 +765,7 @@ test.describe('Creator Products', () => {
       await test.step('Reject undersized and oversized product thumbnails', async () => {
         await onlineCoursePage.goto();
         await onlineCoursePage.expectLoaded();
+        await onlineCoursePage.submitContentDetails();
         const oversized = createOversizedImageFixture();
         try {
           await onlineCoursePage.uploadThumbnailForValidation(onlineCourseMediaData.tinyThumbnailPath);
@@ -806,10 +803,10 @@ test.describe('Creator Products', () => {
       await productsPage.openAddProductSheet();
       await productsPage.selectProductType(onlineCourseType.buttonName);
       await onlineCoursePage.expectLoaded();
+      await onlineCoursePage.submitContentDetails();
       await onlineCoursePage.fillTitle(generateOnlineCourseChapterTitle());
       await onlineCoursePage.fillDescription(generateOnlineCourseEpisodeContent());
       await onlineCoursePage.uploadThumbnailForValidation(onlineCourseMediaData.thumbnailPaths[0]);
-      await onlineCoursePage.submitContentDetails();
     });
 
     await test.step('Verify Free default at zero and accept a positive paid price', async () => {
@@ -870,9 +867,12 @@ test.describe('Creator Products', () => {
 
       await test.step('Persist the default After Sales toggle state and explanatory copy', async () => {
         const defaultEnabled = await onlineCoursePage.readAfterSalesMessageEnabled();
+        // A product with no saved After Sales message/config reads as OFF on edit
+        // (the create form's switch starts ON, but that initial state is not
+        // persisted until a message is saved).
         expect(defaultEnabled, 'After Sales Customize Message should default OFF').toBe(false);
-        await onlineCoursePage.expectAfterSalesDisabledCopy();
         await onlineCoursePage.setAfterSalesMessageEnabled(false);
+        await onlineCoursePage.expectAfterSalesDisabledCopy();
         await productsPage.saveAsDraft();
 
         await creatorNav.open('products');
@@ -973,9 +973,9 @@ test.describe('Creator Products', () => {
       });
 
       await test.step('Verify existing course values and membership tier availability', async () => {
+        await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.expectTitleValue(courseData.title);
         await onlineCoursePage.expectDescriptionContains(courseData.description);
-        await onlineCoursePage.submitContentDetails();
         await onlineCoursePage.expectOnlineCourseMembershipBenefitsState();
       });
 

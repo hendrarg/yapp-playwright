@@ -42,9 +42,9 @@ export const productsCreationData = {
 
 /** Online Course content editor labels and defaults (AUT-FV-161 / TC-OC-C-001..033). */
 export const onlineCourseStructureData = {
-  contentTypes: ["Video", "File", "Free Text"] as const,
+  contentTypes: ["Video", "Attachment", "Text"] as const,
   defaultChapterName: "Chapter title",
-  defaultEpisodeName: "New Episode",
+  defaultEpisodeName: "New Page",
 } as const;
 
 export type OnlineCourseContentType =
@@ -67,7 +67,7 @@ export const onlineCourseValidationData = {
     title: "Title is required",
     description: "Description is required",
     thumbnail: "Thumbnail is required",
-    summary: "Please fill in all required fields before proceeding",
+    summary: "Please fill in all required fields before publishing",
   },
   descriptionLimit: 500,
   fiveCustomQuestions: [
