@@ -59,3 +59,13 @@ export const themePresets = [
 ] as const;
 
 export type ThemePreset = (typeof themePresets)[number];
+
+export const layoutOptions = ["Default", "Simple"] as const;
+
+export type LayoutOption = (typeof layoutOptions)[number];
+
+export const customColors = {
+  background: "#1A1A2E",
+  primary: "#E94560",
+  secondary: "#0F3460",
+} as const;

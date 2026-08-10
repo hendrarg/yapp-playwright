@@ -98,6 +98,45 @@ export class CustomizePage {
     expect(secondary).toBeTruthy();
   }
 
+  get layoutHeading(): Locator {
+    return this.page.getByRole("heading", { name: "Profile layout", level: 2 });
+  }
+
+  async selectLayout(name: string) {
+    await this.layoutHeading.locator("..").getByText(name, { exact: true }).click();
+  }
+
+  async expectLayoutOptionsVisible() {
+    await expect(this.layoutHeading).toBeVisible({ timeout: 5000 });
+    const layoutSection = this.layoutHeading.locator("..");
+    await expect(layoutSection.getByText("Default", { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(layoutSection.getByText("Simple", { exact: true })).toBeVisible({ timeout: 5000 });
+  }
+
+  async fillBackgroundColor(value: string) {
+    await safeFill(this.backgroundColorInput, value);
+  }
+
+  async fillPrimaryColor(value: string) {
+    await safeFill(this.primaryColorInput, value);
+  }
+
+  async fillSecondaryColor(value: string) {
+    await safeFill(this.secondaryColorInput, value);
+  }
+
+  async expectBackgroundColorValue(expected: string) {
+    await expect(this.backgroundColorInput).toHaveValue(expected);
+  }
+
+  async expectPrimaryColorValue(expected: string) {
+    await expect(this.primaryColorInput).toHaveValue(expected);
+  }
+
+  async expectSecondaryColorValue(expected: string) {
+    await expect(this.secondaryColorInput).toHaveValue(expected);
+  }
+
   private readonly changeBanner = smartLocator(this.page, {
     role: "button",
     name: "Change profile banner",
