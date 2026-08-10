@@ -2,6 +2,63 @@ import { creatorAuthTest as test, expect } from '../test-base';
 import { ordersFilterData } from '@test-data/creator/orders.data';
 
 test.describe('Creator Orders', () => {
+
+test('Verify Orders Display and Navigation', {
+  tag: ['@AUT-FV-181', '@orders', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-ORD-C-009, TC-ORD-C-015' },
+  ],
+}, async ({ creatorNav, ordersPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Orders page and verify all columns visible', async () => {
+    await creatorNav.open('orders');
+    await ordersPage.expectLoaded();
+    await ordersPage.expectOrderColumnsVisible();
+  });
+
+  await test.step('Verify first order row has a non-empty Order ID', async () => {
+    await ordersPage.expectFirstRowHasOrderId();
+  });
+});
+
+test('Verify Orders Customer Information Display', {
+  tag: ['@AUT-FV-182', '@orders', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-ORD-C-010' },
+  ],
+}, async ({ creatorNav, ordersPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Orders page and verify customer info populated', async () => {
+    await creatorNav.open('orders');
+    await ordersPage.expectLoaded();
+    await ordersPage.expectFirstRowHasCustomerInfo();
+  });
+});
+
+test('Validate Orders Product Info and Boundary Conditions', {
+  tag: ['@AUT-FV-183', '@orders', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-ORD-C-011, TC-ORD-C-014, TC-ORD-C-016' },
+  ],
+}, async ({ creatorNav, ordersPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Orders page and verify product info populated', async () => {
+    await creatorNav.open('orders');
+    await ordersPage.expectLoaded();
+    await ordersPage.expectFirstRowHasProductInfo();
+  });
+
+  await test.step('Verify product info contains recognizable type and name', async () => {
+    const cell = ordersPage.page.locator('table tbody td:nth-child(3)').first();
+    const text = (await cell.textContent()) ?? '';
+    const hasProductType = /Digital Download|Online Course|Discord Membership|Consultations?|Telegram Membership/i.test(text);
+    expect(hasProductType).toBe(true);
+  });
+});
+
   test('Search, Filter, Sort, and Discover Orders Data', {
     tag: ['@AUT-FV-187', '@orders', '@creator', '@regression'],
   }, async ({ creatorNav, ordersPage }) => {

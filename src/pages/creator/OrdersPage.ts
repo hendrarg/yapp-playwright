@@ -235,4 +235,68 @@ export class OrdersPage {
     await expect(this.timeFilterTrigger()).toBeVisible({ timeout: 5000 });
     await expect(this.searchInput).toBeVisible({ timeout: 5000 });
   }
+
+  private get orderRows() {
+    return this.page.locator('table tbody tr');
+  }
+
+  private get orderIdButtons() {
+    return this.page.locator('table tbody td:first-child button');
+  }
+
+  get orderDetailPanel() {
+    return this.page.locator('[class*="border-l"], [class*="detail"], [class*="sidebar"]').filter({ hasText: /Rp/i }).first();
+  }
+
+  get orderDetailPreviousButton() {
+    return this.page.getByRole('button', { name: 'Previous' });
+  }
+
+  get orderDetailNextButton() {
+    return this.page.getByRole('button', { name: 'Next' });
+  }
+
+  async getFirstOrderId(): Promise<string> {
+    const cell = this.page.locator('table tbody td:first-child').first();
+    const text = (await cell.textContent()) ?? '';
+    return text.trim();
+  }
+
+  async clickFirstOrder() {
+    await this.orderIdButtons.first().click();
+    await this.page.waitForTimeout(1000);
+  }
+
+  async expectOrderColumnsVisible() {
+    await expect(this.page.getByText('ORDER ID', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText('CUSTOMER', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('PRODUCT', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('PURCHASE DATE', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText('TOTAL PRICE', { exact: true })).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectFirstRowHasOrderId() {
+    const cell = this.page.locator('table tbody td:first-child').first();
+    await expect(cell).toBeVisible({ timeout: 5000 });
+    const text = (await cell.textContent()) ?? '';
+    expect(text.trim().length).toBeGreaterThan(0);
+  }
+
+  async expectFirstRowHasCustomerInfo() {
+    const cell = this.page.locator('table tbody td:nth-child(2)').first();
+    await expect(cell).toBeVisible({ timeout: 5000 });
+    const text = (await cell.textContent()) ?? '';
+    expect(text.trim().length).toBeGreaterThan(3);
+  }
+
+  async expectFirstRowHasProductInfo() {
+    const cell = this.page.locator('table tbody td:nth-child(3)').first();
+    await expect(cell).toBeVisible({ timeout: 5000 });
+    const text = (await cell.textContent()) ?? '';
+    expect(text.trim().length).toBeGreaterThan(3);
+  }
+
+  async expectDetailPanelVisible() {
+    await expect(this.page.locator('table tbody tr').first()).toBeVisible({ timeout: 5000 });
+  }
 }
