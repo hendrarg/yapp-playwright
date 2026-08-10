@@ -268,4 +268,74 @@ test('Validate Tip Button Visibility, Text, and Quick Amount Basics', {
   });
 });
 
+test('Validate Customize Live Preview and Save Behavior', {
+  tag: ['@AUT-FV-223', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-066, TC-PRF-C-067, TC-PRF-C-068, TC-PRF-C-069' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  const creatorHandle = creatorProfiles.hendrarg.handle;
+  const previewName = generateProfileName();
+
+  await test.step('Open /customize and verify Live Preview is visible', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Change Theme preset and verify preview updates immediately', async () => {
+    await customizePage.selectThemeTab();
+    await customizePage.expectThemeTabActive();
+    await customizePage.selectThemePreset('Ocean');
+    await customizePage.expectColorControlsChanged();
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Change Profile name and verify preview updates immediately', async () => {
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await customizePage.fillYourName(previewName);
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Toggle Tip Button text and verify preview updates immediately', async () => {
+    await showTipButton(page.request);
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.fillTipButtonText('TipMe ' + Date.now().toString().slice(-2));
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Verify unsaved changes are private (public profile unchanged)', async () => {
+    const publicTab = await page.context().newPage();
+    try {
+      await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
+      await expect(publicTab.getByText(previewName)).toHaveCount(0, { timeout: 10000 });
+    } finally {
+      await publicTab.close();
+    }
+  });
+
+  await test.step('Save and verify changes persist across all tabs', async () => {
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+
+    await customizePage.goto();
+    await customizePage.expectLoaded();
+
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await customizePage.expectNameValue(previewName);
+
+    await customizePage.selectThemeTab();
+    await customizePage.expectThemeTabActive();
+    await customizePage.expectColorControlsChanged();
+  });
+});
+
 });
