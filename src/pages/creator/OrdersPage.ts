@@ -7,6 +7,10 @@ import { ordersFilterData } from "@test-data/creator/orders.data";
 /**
  * Creator Orders live under Products with the Orders tab:
  * https://creators-dev.yapp.ink/products?tab=orders
+ *
+ * The orders UI is a single table — there is no separate detail panel or
+ * navigation. All columns (ORDER ID, CUSTOMER, PRODUCT, PURCHASE DATE,
+ * TOTAL PRICE) are displayed inline. Order ID buttons are copy-to-clipboard.
  */
 export class OrdersPage {
   constructor(
@@ -140,7 +144,6 @@ export class OrdersPage {
     const allOption = this.filterOption("All Products");
     const allChecked = await allOption.locator('[role="checkbox"]').getAttribute("aria-checked");
     if (allChecked === "true") {
-      // Selecting a concrete type unchecks All Products
       await safeClick(this.filterOption(types[0]));
       await this.page.waitForTimeout(400);
     }
@@ -236,35 +239,15 @@ export class OrdersPage {
     await expect(this.searchInput).toBeVisible({ timeout: 5000 });
   }
 
-  private get orderRows() {
-    return this.page.locator('table tbody tr');
-  }
+  // ── Order rows (inline table — no separate detail panel) ────────
 
-  private get orderIdButtons() {
-    return this.page.locator('table tbody td:first-child button');
-  }
-
-  get orderDetailPanel() {
-    return this.page.locator('[class*="border-l"], [class*="detail"], [class*="sidebar"]').filter({ hasText: /Rp/i }).first();
-  }
-
-  get orderDetailPreviousButton() {
-    return this.page.getByRole('button', { name: 'Previous' });
-  }
-
-  get orderDetailNextButton() {
-    return this.page.getByRole('button', { name: 'Next' });
-  }
+  private readonly customerCell = this.page.locator('table tbody td:nth-child(2)').first();
+  private readonly productCell = this.page.locator('table tbody td:nth-child(3)').first();
+  private readonly orderIdCell = this.page.locator('table tbody td:first-child').first();
 
   async getFirstOrderId(): Promise<string> {
-    const cell = this.page.locator('table tbody td:first-child').first();
-    const text = (await cell.textContent()) ?? '';
+    const text = (await this.orderIdCell.textContent()) ?? '';
     return text.trim();
-  }
-
-  async clickFirstOrder() {
-    await this.orderIdButtons.first().click();
-    await this.page.waitForTimeout(1000);
   }
 
   async expectOrderColumnsVisible() {
@@ -276,27 +259,34 @@ export class OrdersPage {
   }
 
   async expectFirstRowHasOrderId() {
-    const cell = this.page.locator('table tbody td:first-child').first();
-    await expect(cell).toBeVisible({ timeout: 5000 });
-    const text = (await cell.textContent()) ?? '';
+    await expect(this.orderIdCell).toBeVisible({ timeout: 5000 });
+    const text = (await this.orderIdCell.textContent()) ?? '';
     expect(text.trim().length).toBeGreaterThan(0);
   }
 
-  async expectFirstRowHasCustomerInfo() {
-    const cell = this.page.locator('table tbody td:nth-child(2)').first();
-    await expect(cell).toBeVisible({ timeout: 5000 });
-    const text = (await cell.textContent()) ?? '';
-    expect(text.trim().length).toBeGreaterThan(3);
+  async expectCustomerCellHasNameAndContact() {
+    await expect(this.customerCell).toBeVisible({ timeout: 5000 });
+    const text = (await this.customerCell.textContent()) ?? '';
+    const hasEmail = /@/.test(text);
+    const hasPhone = /\d{8,}/.test(text);
+    expect(hasEmail || hasPhone, `CUSTOMER cell should contain email or phone: "${text.trim()}"`).toBe(true);
   }
 
-  async expectFirstRowHasProductInfo() {
-    const cell = this.page.locator('table tbody td:nth-child(3)').first();
-    await expect(cell).toBeVisible({ timeout: 5000 });
-    const text = (await cell.textContent()) ?? '';
-    expect(text.trim().length).toBeGreaterThan(3);
+  async expectProductCellHasTypeAndName() {
+    await expect(this.productCell).toBeVisible({ timeout: 5000 });
+    const text = (await this.productCell.textContent()) ?? '';
+    const hasProductType = /Digital Download|Online Course|Discord Membership|Consultations?|Telegram Membership|Events and Tickets/i.test(text);
+    expect(hasProductType, `PRODUCT cell should contain a known product type: "${text.trim()}"`).toBe(true);
   }
 
-  async expectDetailPanelVisible() {
-    await expect(this.page.locator('table tbody tr').first()).toBeVisible({ timeout: 5000 });
+  async expectEachRowHasUniqueOrderId() {
+    const cells = this.page.locator('table tbody td:first-child');
+    const count = await cells.count();
+    const ids: string[] = [];
+    for (let i = 0; i < Math.min(count, 3); i++) {
+      const text = (await cells.nth(i).textContent()) ?? '';
+      ids.push(text.trim());
+    }
+    expect(new Set(ids).size, `order IDs should be unique: ${ids.join(', ')}`).toBe(ids.length);
   }
 }

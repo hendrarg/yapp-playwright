@@ -17,8 +17,9 @@ test('Verify Orders Display and Navigation', {
     await ordersPage.expectOrderColumnsVisible();
   });
 
-  await test.step('Verify first order row has a non-empty Order ID', async () => {
+  await test.step('Verify each visible row has a non-empty, unique Order ID', async () => {
     await ordersPage.expectFirstRowHasOrderId();
+    await ordersPage.expectEachRowHasUniqueOrderId();
   });
 });
 
@@ -33,7 +34,7 @@ test('Verify Orders Customer Information Display', {
   await test.step('Open Orders page and verify customer info populated', async () => {
     await creatorNav.open('orders');
     await ordersPage.expectLoaded();
-    await ordersPage.expectFirstRowHasCustomerInfo();
+    await ordersPage.expectCustomerCellHasNameAndContact();
   });
 });
 
@@ -45,17 +46,18 @@ test('Validate Orders Product Info and Boundary Conditions', {
 }, async ({ creatorNav, ordersPage }) => {
   test.setTimeout(120000);
 
-  await test.step('Open Orders page and verify product info populated', async () => {
+  await test.step('Open Orders page and verify product type + name populated', async () => {
     await creatorNav.open('orders');
     await ordersPage.expectLoaded();
-    await ordersPage.expectFirstRowHasProductInfo();
+    await ordersPage.expectProductCellHasTypeAndName();
   });
 
-  await test.step('Verify product info contains recognizable type and name', async () => {
-    const cell = ordersPage.page.locator('table tbody td:nth-child(3)').first();
-    const text = (await cell.textContent()) ?? '';
-    const hasProductType = /Digital Download|Online Course|Discord Membership|Consultations?|Telegram Membership/i.test(text);
-    expect(hasProductType).toBe(true);
+  await test.step('Verify empty state with unmatched search', async () => {
+    await ordersPage.searchOrders(ordersFilterData.emptySearch);
+    await ordersPage.expectEmptyResultsState();
+    await ordersPage.expectFiltersStillEditable();
+    await ordersPage.resetFilters();
+    await ordersPage.expectDefaultUnfilteredState();
   });
 });
 
