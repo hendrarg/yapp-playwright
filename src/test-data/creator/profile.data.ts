@@ -81,3 +81,9 @@ export const tipButtonData = {
   usdtAmount2: "75",
   usdtAmount3: "300",
 } as const;
+
+export const tipButtonColors = {
+  text: "#FFD700",
+  left: "#8B0000",
+  right: "#006400",
+} as const;

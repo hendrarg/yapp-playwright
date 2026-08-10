@@ -207,6 +207,59 @@ export class CustomizePage {
     await expect(this.tipButtonCharCount.first()).toHaveText(new RegExp(`\\d+\\/${max}`));
   }
 
+  get tipButtonTextColorInput(): Locator {
+    return this.page.locator("#tip-button-text-color");
+  }
+
+  get tipButtonLeftColorInput(): Locator {
+    return this.page.locator("#tip-button-left-color");
+  }
+
+  get tipButtonRightColorInput(): Locator {
+    return this.page.locator("#tip-button-right-color");
+  }
+
+  async fillTipButtonTextColor(value: string) {
+    await safeFill(this.tipButtonTextColorInput, value);
+  }
+
+  async fillTipButtonLeftColor(value: string) {
+    await safeFill(this.tipButtonLeftColorInput, value);
+  }
+
+  async fillTipButtonRightColor(value: string) {
+    await safeFill(this.tipButtonRightColorInput, value);
+  }
+
+  async expectTipButtonTextColorValue(expected: string) {
+    await expect(this.tipButtonTextColorInput).toHaveValue(expected);
+  }
+
+  async expectTipButtonLeftColorValue(expected: string) {
+    await expect(this.tipButtonLeftColorInput).toHaveValue(expected);
+  }
+
+  async expectTipButtonRightColorValue(expected: string) {
+    await expect(this.tipButtonRightColorInput).toHaveValue(expected);
+  }
+
+  async expectTipButtonColorControlsVisible() {
+    await expect(this.tipButtonTextColorInput).toBeVisible({ timeout: 5000 });
+    await expect(this.tipButtonLeftColorInput).toBeVisible({ timeout: 5000 });
+    await expect(this.tipButtonRightColorInput).toBeVisible({ timeout: 5000 });
+  }
+
+  get bannerDialog(): Locator {
+    return this.page.getByRole("dialog");
+  }
+
+  async selectBannerGalleryOption(index: number) {
+    await this.changeBanner.click();
+    await expect(this.bannerDialog).toBeVisible({ timeout: 5000 });
+    await this.bannerDialog.getByRole("button").filter({ has: this.page.locator("img") }).nth(index).click();
+    await this.page.waitForTimeout(500);
+  }
+
   private readonly changeBanner = smartLocator(this.page, {
     role: "button",
     name: "Change profile banner",

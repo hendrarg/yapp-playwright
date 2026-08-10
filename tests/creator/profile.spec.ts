@@ -1,6 +1,6 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { baseURL } from '@config/env';
-import { customColors, generateProfileFormState, generateProfileName, layoutOptions, themePresets, tipButtonData } from '@test-data/creator/profile.data';
+import { customColors, generateProfileFormState, generateProfileName, layoutOptions, themePresets, tipButtonColors, tipButtonData } from '@test-data/creator/profile.data';
 import { creatorProfiles } from '@test-data/buyer/profile.data';
 import { showTipButton } from '@helpers/api/tip-button';
 
@@ -406,6 +406,88 @@ test('Validate Profile Social Link External Behavior', {
     } finally {
       await publicTab.close();
     }
+  });
+});
+
+test('Validate Tip Button Color Controls', {
+  tag: ['@AUT-FV-226', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-060, TC-PRF-C-061, TC-PRF-C-062' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  await test.step('Ensure Tip Button is shown via API', async () => {
+    await showTipButton(page.request);
+  });
+
+  await test.step('Open Tip Button tab and verify color inputs visible', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.expectTipButtonColorControlsVisible();
+  });
+
+  await test.step('Update Text Color and verify preview updates', async () => {
+    await customizePage.fillTipButtonTextColor(tipButtonColors.text);
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Update Button Left color and verify preview updates', async () => {
+    await customizePage.fillTipButtonLeftColor(tipButtonColors.left);
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Update Button Right color and verify preview updates', async () => {
+    await customizePage.fillTipButtonRightColor(tipButtonColors.right);
+    await customizePage.expectPreviewVisible();
+  });
+
+  const colorLabel = "Tip " + Date.now().toString().slice(-4);
+
+  await test.step('Save with label change and verify tip button colors persist', async () => {
+    await customizePage.fillTipButtonText(colorLabel);
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+
+    await customizePage.goto();
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.expectTipButtonTextColorValue(tipButtonColors.text);
+    await customizePage.expectTipButtonLeftColorValue(tipButtonColors.left);
+    await customizePage.expectTipButtonRightColorValue(tipButtonColors.right);
+  });
+});
+
+test('Validate Profile Banner Upload and Persistence', {
+  tag: ['@AUT-FV-227', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-025, TC-PRF-C-026, TC-PRF-C-027' },
+  ],
+}, async ({ creatorNav, customizePage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Profile tab and select a banner image from gallery', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await customizePage.selectBannerGalleryOption(1);
+  });
+
+  await test.step('Save banner and verify it persists after reload', async () => {
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+
+    await customizePage.gotoProfileTab();
+    await customizePage.expectLoaded();
+    await customizePage.expectProfileTabActive();
+    await customizePage.expectBannerControlVisible();
+    await customizePage.expectPreviewVisible();
   });
 });
 
