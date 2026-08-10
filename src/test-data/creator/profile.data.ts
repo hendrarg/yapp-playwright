@@ -69,3 +69,15 @@ export const customColors = {
   primary: "#E94560",
   secondary: "#0F3460",
 } as const;
+
+export const tipButtonData = {
+  label: "Support Me",
+  labelMaxChars: 40,
+  overflowLabel: "Support Me! This is a very long button text exceeding forty characters",
+  idrAmount1: "15000",
+  idrAmount2: "75000",
+  idrAmount3: "300000",
+  usdtAmount1: "15",
+  usdtAmount2: "75",
+  usdtAmount3: "300",
+} as const;

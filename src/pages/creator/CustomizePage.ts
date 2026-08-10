@@ -46,6 +46,17 @@ export class CustomizePage {
     await this.themeTab.click();
   }
 
+  private readonly tipButtonTab = smartLocator(this.page, {
+    role: "button",
+    name: "Tip Button",
+    text: "Tip Button",
+    selector: "button:has-text('Tip Button')",
+  });
+
+  async selectTipButtonTab() {
+    await this.tipButtonTab.click();
+  }
+
   private readonly presetOrder = ["Default", "Sunset", "Ocean", "Forest", "Midnight"];
 
   async selectThemePreset(name: string) {
@@ -135,6 +146,65 @@ export class CustomizePage {
 
   async expectSecondaryColorValue(expected: string) {
     await expect(this.secondaryColorInput).toHaveValue(expected);
+  }
+
+  get tipButtonSwitch(): Locator {
+    return this.page.getByRole("switch").first();
+  }
+
+  get tipButtonTextInput(): Locator {
+    return this.page.locator("#tip-button-label");
+  }
+
+  get tipButtonCharCount(): Locator {
+    return this.page.locator('[class*="char"]').filter({ hasText: /\d+\/\d+/ });
+  }
+
+  async toggleTipButton(enabled: boolean) {
+    const checked = await this.tipButtonSwitch.getAttribute("aria-checked");
+    if ((checked === "true") !== enabled) {
+      await this.tipButtonSwitch.click();
+    }
+    await expect(this.tipButtonSwitch).toHaveAttribute("aria-checked", enabled ? "true" : "false");
+  }
+
+  async fillTipButtonText(text: string) {
+    await safeFill(this.tipButtonTextInput, text);
+  }
+
+  async fillIdrQuickAmount(index: number, value: string) {
+    await safeFill(this.page.getByRole("textbox", { name: "IDR quick amount" }).nth(index), value);
+  }
+
+  async fillUsdtQuickAmount(index: number, value: string) {
+    await safeFill(this.page.getByRole("textbox", { name: "USDT quick amount" }).nth(index), value);
+  }
+
+  get idrQuickAmounts(): Locator {
+    return this.page.getByRole("textbox", { name: "IDR quick amount" });
+  }
+
+  get usdtQuickAmounts(): Locator {
+    return this.page.getByRole("textbox", { name: "USDT quick amount" });
+  }
+
+  async expectTipButtonTabActive() {
+    await expect(this.page.getByRole("heading", { name: "Tip Button", level: 2 })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectTipButtonControlsVisible() {
+    await expect(this.tipButtonSwitch).toBeVisible({ timeout: 5000 });
+    await expect(this.tipButtonTextInput).toBeVisible({ timeout: 5000 });
+    await expect(this.idrQuickAmounts.first()).toBeVisible({ timeout: 5000 });
+    await expect(this.usdtQuickAmounts.first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectTipButtonText(value: string) {
+    await expect(this.tipButtonTextInput).toHaveValue(value);
+  }
+
+  async expectTipButtonCharCountAt(max: number) {
+    await expect(this.tipButtonCharCount.first()).toHaveText(new RegExp(`\\d+\\/${max}`));
   }
 
   private readonly changeBanner = smartLocator(this.page, {

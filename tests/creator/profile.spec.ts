@@ -1,7 +1,8 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { baseURL } from '@config/env';
-import { customColors, generateProfileFormState, generateProfileName, layoutOptions, themePresets } from '@test-data/creator/profile.data';
+import { customColors, generateProfileFormState, generateProfileName, layoutOptions, themePresets, tipButtonData } from '@test-data/creator/profile.data';
 import { creatorProfiles } from '@test-data/buyer/profile.data';
+import { showTipButton } from '@helpers/api/tip-button';
 
 test.describe('Creator Profile', () => {
 
@@ -203,6 +204,67 @@ test('Validate Custom Theme Colors and Profile Layout', {
     await customizePage.expectBackgroundColorValue(customColors.background);
     await customizePage.expectPrimaryColorValue(customColors.primary);
     await customizePage.expectSecondaryColorValue(customColors.secondary);
+  });
+});
+
+test('Validate Tip Button Visibility, Text, and Quick Amount Basics', {
+  tag: ['@AUT-FV-222', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-056, TC-PRF-C-057, TC-PRF-C-058, TC-PRF-C-059, TC-PRF-C-063, TC-PRF-C-064' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  await test.step('Ensure Tip Button is enabled via API', async () => {
+    await showTipButton(page.request);
+  });
+
+  await test.step('Open Customize Tip Button tab and verify controls', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.expectTipButtonControlsVisible();
+  });
+
+  await test.step('Toggle Show Tip Button off and on and observe Preview', async () => {
+    await customizePage.toggleTipButton(false);
+    await customizePage.toggleTipButton(true);
+    await customizePage.expectPreviewVisible();
+  });
+
+  const savedLabel = "Tip " + Date.now().toString().slice(-4);
+
+  await test.step('Update Tip Button text', async () => {
+    await customizePage.fillTipButtonText(savedLabel);
+    await customizePage.expectPreviewVisible();
+  });
+
+  await test.step('Enforce Button Text 40-character limit', async () => {
+    await customizePage.fillTipButtonText(tipButtonData.overflowLabel);
+    const value = await customizePage.tipButtonTextInput.inputValue();
+    expect(value.length).toBeLessThanOrEqual(tipButtonData.labelMaxChars);
+  });
+
+  await test.step('Update quick amounts, reset label, and save', async () => {
+    await customizePage.fillIdrQuickAmount(0, tipButtonData.idrAmount1);
+    await customizePage.fillIdrQuickAmount(1, tipButtonData.idrAmount2);
+    await customizePage.fillIdrQuickAmount(2, tipButtonData.idrAmount3);
+    await customizePage.fillUsdtQuickAmount(0, tipButtonData.usdtAmount1);
+    await customizePage.fillUsdtQuickAmount(1, tipButtonData.usdtAmount2);
+    await customizePage.fillUsdtQuickAmount(2, tipButtonData.usdtAmount3);
+    await customizePage.fillTipButtonText(savedLabel);
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+  });
+
+  await test.step('Verify Tip Button text persists after reload', async () => {
+    await customizePage.goto();
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.expectTipButtonText(savedLabel);
   });
 });
 
