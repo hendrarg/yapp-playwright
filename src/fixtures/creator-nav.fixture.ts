@@ -16,6 +16,7 @@ type CreatorNavDeps = Pick<
   | "ordersPage"
   | "productsPage"
   | "creatorProfilePage"
+  | "customizePage"
   | "promotionsPage"
   | "referralPage"
   | "sessionsPage"
@@ -36,6 +37,7 @@ export const creatorNavFixtures = {
       ordersPage,
       productsPage,
       creatorProfilePage,
+      customizePage,
       promotionsPage,
       referralPage,
       sessionsPage,
@@ -56,6 +58,7 @@ export const creatorNavFixtures = {
         ordersPage,
         productsPage,
         creatorProfilePage,
+        customizePage,
         promotionsPage,
         referralPage,
         sessionsPage,

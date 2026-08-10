@@ -1,6 +1,7 @@
 import type { AffiliatePage } from "@pages/creator/AffiliatePage";
 import type { AnalyticsPage } from "@pages/creator/AnalyticsPage";
 import type { CampaignsPage } from "@pages/creator/CampaignsPage";
+import type { CustomizePage } from "@pages/creator/CustomizePage";
 import type { FeedsPage } from "@pages/creator/FeedsPage";
 import type { MembershipPage } from "@pages/creator/MembershipPage";
 import type { MessagesPage } from "@pages/creator/MessagesPage";
@@ -18,6 +19,7 @@ export type CreatorRoute =
   | "affiliate"
   | "analytics"
   | "campaigns"
+  | "customize"
   | "feeds"
   | "membership"
   | "messages"
@@ -45,6 +47,7 @@ export type CreatorNavPages = {
   ordersPage: OrdersPage;
   productsPage: ProductsPage;
   creatorProfilePage: ProfilePage;
+  customizePage: CustomizePage;
   promotionsPage: PromotionsPage;
   referralPage: ReferralPage;
   sessionsPage: SessionsPage;
@@ -73,6 +76,9 @@ export function createCreatorNav(pages: CreatorNavPages) {
           return;
         case "campaigns":
           await pages.campaignsPage.goto();
+          return;
+        case "customize":
+          await pages.customizePage.goto();
           return;
         case "feeds":
           await pages.creatorFeedsPage.goto();
@@ -125,6 +131,9 @@ export function createCreatorNav(pages: CreatorNavPages) {
           return;
         case "campaigns":
           await pages.campaignsPage.expectLoaded();
+          return;
+        case "customize":
+          await pages.customizePage.expectLoaded();
           return;
         case "feeds":
           await pages.creatorFeedsPage.expectLoaded();

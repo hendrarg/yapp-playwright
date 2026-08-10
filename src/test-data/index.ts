@@ -31,6 +31,17 @@ export type { ProductStatusTab } from "./creator/products.status.data";
 export { campaignTemplates, generateCampaign } from "./creator/campaign.data";
 export type { CampaignInput } from "./creator/campaign.data";
 export { membershipTemplates, generateMembershipTier } from "./creator/membership.data";
+export {
+  profileCustomizationData,
+  generateProfileName,
+  generateProfileBio,
+  generateProfileSocialLink,
+  generateProfileLink,
+  generateProfileRole,
+  generateProfileInterest,
+  generateProfileFormState,
+  type ProfileFormState,
+} from "./creator/profile.data";
 export type { MembershipTier } from "./creator/membership.data";
 export { generatePostData, testImages } from "./creator/post.data";
 export type { PostData, PostVisibility } from "./creator/post.data";

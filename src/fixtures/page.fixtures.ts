@@ -15,6 +15,7 @@ import { TransactionPage } from "@pages/buyer/TransactionPage";
 import { AffiliatePage } from "@pages/creator/AffiliatePage";
 import { AnalyticsPage } from "@pages/creator/AnalyticsPage";
 import { CampaignsPage } from "@pages/creator/CampaignsPage";
+import { CustomizePage } from "@pages/creator/CustomizePage";
 import { FeedsPage as CreatorFeedsPage } from "@pages/creator/FeedsPage";
 import { MembershipPage } from "@pages/creator/MembershipPage";
 import { MessagesPage } from "@pages/creator/MessagesPage";
@@ -77,6 +78,7 @@ export type PageFixtures = {
   discordMembershipPage: DiscordMembershipPage;
   telegramMembershipPage: TelegramMembershipPage;
   creatorProfilePage: CreatorProfilePage;
+  customizePage: CustomizePage;
   promotionsPage: PromotionsPage;
   referralPage: ReferralPage;
   sessionsPage: SessionsPage;
@@ -117,6 +119,7 @@ export const pageFixtures = {
   discordMembershipPage: creatorPage(DiscordMembershipPage),
   telegramMembershipPage: creatorPage(TelegramMembershipPage),
   creatorProfilePage: creatorPage(CreatorProfilePage),
+  customizePage: creatorPage(CustomizePage),
   promotionsPage: creatorPage(PromotionsPage),
   referralPage: creatorPage(ReferralPage),
   sessionsPage: creatorPage(SessionsPage),
