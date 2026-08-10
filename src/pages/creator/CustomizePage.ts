@@ -35,6 +35,69 @@ export class CustomizePage {
     await this.profileTab.click();
   }
 
+  private readonly themeTab = smartLocator(this.page, {
+    role: "button",
+    name: "Theme",
+    text: "Theme",
+    selector: "button:has-text('Theme')",
+  });
+
+  async selectThemeTab() {
+    await this.themeTab.click();
+  }
+
+  private readonly presetOrder = ["Default", "Sunset", "Ocean", "Forest", "Midnight"];
+
+  async selectThemePreset(name: string) {
+    const index = this.presetOrder.indexOf(name);
+    await this.page.getByRole("button", { name: "Aa" }).nth(index).click();
+  }
+
+  get backgroundColorInput(): Locator {
+    return this.page.getByRole("textbox", { name: "Background Color" });
+  }
+
+  get primaryColorInput(): Locator {
+    return this.page.getByRole("textbox", { name: "Primary" });
+  }
+
+  get secondaryColorInput(): Locator {
+    return this.page.getByRole("textbox", { name: "Secondary" });
+  }
+
+  get previewFrame(): Locator {
+    return this.page.locator("iframe").first();
+  }
+
+  async expectThemeTabActive() {
+    await expect(this.page.getByRole("heading", { name: "Theme", level: 2 })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectThemePresetsVisible() {
+    const swatches = this.page.getByRole("button", { name: "Aa" });
+    await expect(swatches.first()).toBeVisible({ timeout: 5000 });
+    await expect(swatches).toHaveCount(5);
+  }
+
+  async expectColorControlsVisible() {
+    await expect(this.backgroundColorInput).toBeVisible({ timeout: 5000 });
+    await expect(this.primaryColorInput).toBeVisible({ timeout: 5000 });
+    await expect(this.secondaryColorInput).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectPreviewVisible() {
+    await expect(this.previewFrame).toBeAttached({ timeout: 5000 });
+  }
+
+  async expectColorControlsChanged() {
+    const bg = await this.backgroundColorInput.inputValue();
+    const primary = await this.primaryColorInput.inputValue();
+    const secondary = await this.secondaryColorInput.inputValue();
+    expect(bg).toBeTruthy();
+    expect(primary).toBeTruthy();
+    expect(secondary).toBeTruthy();
+  }
+
   private readonly changeBanner = smartLocator(this.page, {
     role: "button",
     name: "Change profile banner",

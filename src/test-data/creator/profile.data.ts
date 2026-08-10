@@ -49,3 +49,13 @@ export function generateProfileFormState(): ProfileFormState {
     interest: generateProfileInterest(),
   };
 }
+
+export const themePresets = [
+  "Default",
+  "Sunset",
+  "Ocean",
+  "Forest",
+  "Midnight",
+] as const;
+
+export type ThemePreset = (typeof themePresets)[number];

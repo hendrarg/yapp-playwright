@@ -1,9 +1,56 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { baseURL } from '@config/env';
-import { generateProfileFormState, generateProfileName } from '@test-data/creator/profile.data';
+import { generateProfileFormState, generateProfileName, themePresets } from '@test-data/creator/profile.data';
 import { creatorProfiles } from '@test-data/buyer/profile.data';
 
 test.describe('Creator Profile', () => {
+
+test('Validate Profile Theme Presets', {
+  tag: ['@AUT-FV-220', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-011, TC-PRF-C-012, TC-PRF-C-013, TC-PRF-C-014, TC-PRF-C-015, TC-PRF-C-016, TC-PRF-C-017, TC-PRF-C-018' },
+  ],
+}, async ({ creatorNav, customizePage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Customize Theme tab and verify preset list', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectThemeTab();
+    await customizePage.expectThemeTabActive();
+    await customizePage.expectThemePresetsVisible();
+  });
+
+  for (const preset of themePresets) {
+    await test.step(`Select ${preset} theme and verify controls and preview update`, async () => {
+      await customizePage.selectThemePreset(preset);
+      await customizePage.expectColorControlsVisible();
+      await customizePage.expectColorControlsChanged();
+      await customizePage.expectPreviewVisible();
+    });
+  }
+
+  await test.step('Verify only one theme preset active at a time', async () => {
+    await customizePage.selectThemePreset('Sunset');
+    await customizePage.selectThemePreset('Ocean');
+
+    await customizePage.expectColorControlsChanged();
+  });
+
+  await test.step('Persist selected theme after save and refresh', async () => {
+    await customizePage.selectThemePreset('Forest');
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+
+    await customizePage.goto();
+    await customizePage.expectLoaded();
+    await customizePage.selectThemeTab();
+    await customizePage.expectThemeTabActive();
+    await customizePage.expectColorControlsVisible();
+  });
+});
+
 test('Validate Profile Tab Information and Persistence', {
   tag: ['@AUT-FV-219', '@profile', '@creator', '@regression'],
   annotation: [
