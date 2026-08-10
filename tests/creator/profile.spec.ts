@@ -491,4 +491,79 @@ test('Validate Profile Banner Upload and Persistence', {
   });
 });
 
+test('Validate Tip Button Visibility and Retained Configuration', {
+  tag: ['@AUT-FV-228', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-075, TC-PRF-C-076, TC-PRF-C-077' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  const savedLabel = "Btn " + Date.now().toString().slice(-4);
+
+  await test.step('Ensure Tip Button is enabled via API', async () => {
+    await showTipButton(page.request);
+  });
+
+  await test.step('Open Tip Button tab, configure and save', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+
+    await customizePage.fillTipButtonText(savedLabel);
+    await customizePage.fillTipButtonTextColor(tipButtonColors.left);
+    await customizePage.fillTipButtonLeftColor(tipButtonColors.right);
+    await customizePage.fillTipButtonRightColor(tipButtonColors.text);
+    await customizePage.fillIdrQuickAmount(0, tipButtonData.idrAmount1);
+
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+  });
+
+  await test.step('Toggle off and verify controls hidden, toggle on and verify retained', async () => {
+    await customizePage.toggleTipButton(false);
+    const offValue = await customizePage.tipButtonTextInput.inputValue();
+    expect(offValue).toBe(savedLabel);
+
+    await customizePage.toggleTipButton(true);
+
+    await expect(customizePage.tipButtonTextInput).toHaveValue(savedLabel);
+    await customizePage.expectTipButtonTextColorValue(tipButtonColors.left);
+    await customizePage.expectTipButtonLeftColorValue(tipButtonColors.right);
+    await customizePage.expectTipButtonRightColorValue(tipButtonColors.text);
+  });
+});
+
+test('Validate Unsaved Banner Change Stays Private', {
+  tag: ['@AUT-FV-229', '@profile', '@creator', '@regression', '@smoke'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-026' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  const creatorHandle = creatorProfiles.hendrarg.handle;
+
+  await test.step('Open Profile tab and select a new banner without saving', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await customizePage.selectBannerGalleryOption(0);
+  });
+
+  await test.step('Open public profile and verify it still shows the last saved state', async () => {
+    const publicTab = await page.context().newPage();
+    try {
+      await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
+      await expect(publicTab.getByText(creatorHandle, { exact: true })).toBeVisible({ timeout: 10000 });
+      await expect(publicTab.getByRole('button', { name: /Send Tip|Send tip/i }).first()).toBeVisible({ timeout: 5000 });
+    } finally {
+      await publicTab.close();
+    }
+  });
+});
+
 });

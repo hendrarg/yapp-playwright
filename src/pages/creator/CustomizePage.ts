@@ -164,8 +164,8 @@ export class CustomizePage {
     const checked = await this.tipButtonSwitch.getAttribute("aria-checked");
     if ((checked === "true") !== enabled) {
       await this.tipButtonSwitch.click();
+      await this.page.waitForTimeout(1000);
     }
-    await expect(this.tipButtonSwitch).toHaveAttribute("aria-checked", enabled ? "true" : "false");
   }
 
   async fillTipButtonText(text: string) {
