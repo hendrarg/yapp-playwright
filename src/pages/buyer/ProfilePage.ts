@@ -94,6 +94,10 @@ export class ProfilePage {
     await expect(this.main.locator("img").first()).toBeVisible({ timeout: 10000 });
   }
 
+  get followerCountText() {
+    return this.page.getByText(/followers/);
+  }
+
   // ── Share profile ──
   get shareButton() {
     return this.main.getByRole("button", { name: profileLabels.share });

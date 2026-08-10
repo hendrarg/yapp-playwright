@@ -174,4 +174,45 @@ guestTest('Verify Guest Like Action Requires Sign In', {
     await expect(buyerProfilePage.page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
+
+test('Validate Buyer Quick Tip Amount Selection', {
+  tag: ['@AUT-FV-234', '@profile', '@tip', '@buyer', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-B-014' },
+  ],
+}, async ({ buyerNav, buyerProfilePage }) => {
+  test.setTimeout(60000);
+
+  const enabledTips = creatorProfiles.hendrarg.tipSuggestions.idr;
+
+  await test.step('Open creator profile and verify quick tip amounts visible', async () => {
+    await buyerNav.open('profile', { handle: creatorProfile });
+    await buyerProfilePage.expectAuthenticated();
+    await buyerProfilePage.expectQuickTipAmountsVisible(enabledTips);
+  });
+
+  await test.step('Select a quick tip amount and verify it is applied', async () => {
+    await buyerProfilePage.selectTipSuggestion();
+    await buyerProfilePage.expectSendTipEnabled();
+  });
+});
+
+guestTest('Validate Public Profile Access and Visible Follower Count', {
+  tag: ['@AUT-FV-235', '@profile', '@buyer', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-B-016, TC-PRF-B-021' },
+  ],
+}, async ({ buyerNav, buyerProfilePage }) => {
+  guestTest.setTimeout(60000);
+
+  await guestTest.step('Open public creator profile as guest', async () => {
+    await buyerNav.goto('profile', { handle: creatorProfile });
+    await buyerProfilePage.expectLoaded();
+    await buyerProfilePage.expectProfileAvatarVisible();
+  });
+
+  await guestTest.step('Verify follower count is visible', async () => {
+    await expect(buyerProfilePage.followerCountText.first()).toBeVisible({ timeout: 5000 });
+  });
+});
 });
