@@ -121,6 +121,7 @@ See also `.agents/skills/add-page-object/SKILL.md` step 6.
 - **All locators live in page objects** — never in spec files.
 - **Every new or touched locator MUST use `smartLocator`** from `@utils/heal-utils` with ≥2 strategies (`testId` → `role` → `text` → `label` → `placeholder` → `selector`). See `.agents/rules/code-style.md`.
 - When generating locators from the browser, follow `.agents/skills/generate-locators-mcp/SKILL.md` — complete mapped TC steps in MCP Playwright before writing code.
+- **Before MCP browser locator exploration:** if the MCP session redirects to `/auth`, run the full OTP login flow in the MCP browser (fill email → poll testmail API for OTP → fill code → extract `at` cookie → write back to `.env`). Never skip MCP browser exploration because of auth failures — the codebase already has `refreshAccountTokenViaOtp` and the testmail client that can be executed in MCP browser context.
 - Fragile CSS/XPath-only locators are **Extend**, not **Reuse** unchanged (see Mandatory Reuse Gate in `code-style.md`).
 
 ## API seeding and cleanup
