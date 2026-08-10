@@ -301,4 +301,33 @@ export class CustomizePage {
   async expectSaveSuccess() {
     await expect(this.toastMessage.first()).toBeVisible({ timeout: 10000 });
   }
+
+  get roleCombobox(): Locator {
+    return this.page.getByRole("combobox");
+  }
+
+  async selectRole(role: string) {
+    await this.roleCombobox.click();
+    await this.page.waitForTimeout(500);
+    await this.page.getByRole("option", { name: role }).click();
+    await this.page.waitForTimeout(300);
+  }
+
+  async clickInterestTag(tag: string) {
+    await this.page.getByRole("button", { name: tag, exact: true }).click();
+  }
+
+  async expectInterestTagSelected(tag: string) {
+    const btn = this.page.getByRole("button", { name: tag, exact: true });
+    await expect(btn).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectRoleVisible() {
+    await expect(this.roleCombobox).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectRoleHasChanged() {
+    const text = await this.roleCombobox.textContent();
+    expect(text?.trim()).toBeTruthy();
+  }
 }

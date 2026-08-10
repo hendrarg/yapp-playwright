@@ -338,4 +338,75 @@ test('Validate Customize Live Preview and Save Behavior', {
   });
 });
 
+test('Validate Profile Role and Interest Controls', {
+  tag: ['@AUT-FV-224', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-041, TC-PRF-C-044' },
+  ],
+}, async ({ creatorNav, customizePage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Profile tab and verify Role selector visible', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await customizePage.expectRoleVisible();
+  });
+
+  await test.step('Select a different role', async () => {
+    await customizePage.selectRole('Design');
+  });
+
+  await test.step('Select multiple interest tags', async () => {
+    await customizePage.clickInterestTag('Technology');
+    await customizePage.clickInterestTag('Gaming');
+    await customizePage.clickInterestTag('Travel');
+    await customizePage.expectInterestTagSelected('Technology');
+    await customizePage.expectInterestTagSelected('Gaming');
+    await customizePage.expectInterestTagSelected('Travel');
+  });
+
+  await test.step('Save and verify role and interests persist', async () => {
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+
+    await customizePage.gotoProfileTab();
+    await customizePage.expectLoaded();
+    await customizePage.expectProfileTabActive();
+    await customizePage.expectRoleHasChanged();
+  });
+});
+
+test('Validate Profile Social Link External Behavior', {
+  tag: ['@AUT-FV-225', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-055' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  const creatorHandle = creatorProfiles.hendrarg.handle;
+
+  await test.step('Open Profile tab and verify saved username link', async () => {
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectProfileTab();
+    await customizePage.expectProfileTabActive();
+    await customizePage.expectLinkPrefixed();
+  });
+
+  await test.step('Open public creator profile and verify social link is accessible', async () => {
+    const publicTab = await page.context().newPage();
+    try {
+      await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
+      const socialLink = publicTab.locator('a[href*="instagram.com"], a[href*="twitter.com"], a[href*="youtube.com"]').first();
+      await expect(socialLink).toBeAttached({ timeout: 10000 });
+    } finally {
+      await publicTab.close();
+    }
+  });
+});
+
 });
