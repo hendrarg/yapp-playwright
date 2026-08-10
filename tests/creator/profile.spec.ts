@@ -566,4 +566,123 @@ test('Validate Unsaved Banner Change Stays Private', {
   });
 });
 
+test('Validate Tip Button Text Public Persistence', {
+  tag: ['@AUT-FV-230', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-078, TC-PRF-C-079' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  const creatorHandle = creatorProfiles.hendrarg.handle;
+  const tipLabel = "TipMe " + Date.now().toString().slice(-4);
+
+  await test.step('Ensure Tip Button is shown and configure custom text', async () => {
+    await showTipButton(page.request);
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+
+    await customizePage.fillTipButtonText(tipLabel);
+    await customizePage.expectPreviewVisible();
+
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+  });
+
+  await test.step('Reload and verify custom text persists', async () => {
+    await customizePage.goto();
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.expectTipButtonText(tipLabel);
+  });
+
+  await test.step('Open public profile and verify tip button label is present', async () => {
+    const publicTab = await page.context().newPage();
+    try {
+      await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
+      await expect(publicTab.getByRole('button', { name: /Send Tip|Send tip/i }).first()).toBeVisible({ timeout: 10000 });
+    } finally {
+      await publicTab.close();
+    }
+  });
+});
+
+test('Validate Creator Quick Tip Amount Configuration', {
+  tag: ['@AUT-FV-231', '@profile', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-C-080, TC-PRF-C-081, TC-PRF-C-082, TC-PRF-C-083, TC-PRF-C-084, TC-PRF-C-085' },
+  ],
+}, async ({ creatorNav, customizePage, page }) => {
+  test.setTimeout(120000);
+
+  const creatorHandle = creatorProfiles.hendrarg.handle;
+  const tipLabel = "Tip " + Date.now().toString().slice(-4);
+
+  await test.step('Ensure Tip Button is shown and open tab', async () => {
+    await showTipButton(page.request);
+    await creatorNav.goto('customize');
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+    await customizePage.expectTipButtonControlsVisible();
+  });
+
+  await test.step('Edit IDR quick amount values and save', async () => {
+    await customizePage.fillIdrQuickAmount(0, tipButtonData.idrAmount1);
+    await customizePage.fillIdrQuickAmount(1, tipButtonData.idrAmount2);
+    await customizePage.fillIdrQuickAmount(2, tipButtonData.idrAmount3);
+  });
+
+  await test.step('Edit USDT quick amount values and save', async () => {
+    await customizePage.fillUsdtQuickAmount(0, tipButtonData.usdtAmount1);
+    await customizePage.fillUsdtQuickAmount(1, tipButtonData.usdtAmount2);
+    await customizePage.fillUsdtQuickAmount(2, tipButtonData.usdtAmount3);
+    await customizePage.fillTipButtonText(tipLabel);
+
+    await expect(customizePage.saveButton).toBeEnabled({ timeout: 5000 });
+    await customizePage.clickSave();
+    await customizePage.expectSaveSuccess();
+  });
+
+  await test.step('Reload and verify IDR and USDT values persist', async () => {
+    await customizePage.goto();
+    await customizePage.expectLoaded();
+    await customizePage.selectTipButtonTab();
+    await customizePage.expectTipButtonTabActive();
+
+    await customizePage.expectIdrQuickAmountValue(0, tipButtonData.idrAmount1);
+    await customizePage.expectIdrQuickAmountValue(1, tipButtonData.idrAmount2);
+    await customizePage.expectIdrQuickAmountValue(2, tipButtonData.idrAmount3);
+    await customizePage.expectUsdtQuickAmountValue(0, tipButtonData.usdtAmount1);
+    await customizePage.expectUsdtQuickAmountValue(1, tipButtonData.usdtAmount2);
+    await customizePage.expectUsdtQuickAmountValue(2, tipButtonData.usdtAmount3);
+  });
+
+  await test.step('Open public profile and verify support section is visible', async () => {
+    const publicTab = await page.context().newPage();
+    try {
+      await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
+      await expect(publicTab.getByRole('button', { name: /Send Tip|Send tip/i }).first()).toBeAttached({ timeout: 10000 });
+    } finally {
+      await publicTab.close();
+    }
+  });
+
+  await test.step('Toggle off and on, verify quick amounts retained', async () => {
+    await customizePage.toggleTipButton(false);
+    await customizePage.toggleTipButton(true);
+
+    await customizePage.expectIdrQuickAmountValue(0, tipButtonData.idrAmount1);
+    await customizePage.expectIdrQuickAmountValue(1, tipButtonData.idrAmount2);
+    await customizePage.expectIdrQuickAmountValue(2, tipButtonData.idrAmount3);
+    await customizePage.expectUsdtQuickAmountValue(0, tipButtonData.usdtAmount1);
+    await customizePage.expectUsdtQuickAmountValue(1, tipButtonData.usdtAmount2);
+    await customizePage.expectUsdtQuickAmountValue(2, tipButtonData.usdtAmount3);
+  });
+});
+
 });

@@ -188,6 +188,14 @@ export class CustomizePage {
     return this.page.getByRole("textbox", { name: "USDT quick amount" });
   }
 
+  async expectIdrQuickAmountValue(index: number, expected: string) {
+    await expect(this.idrQuickAmounts.nth(index)).toHaveValue(expected);
+  }
+
+  async expectUsdtQuickAmountValue(index: number, expected: string) {
+    await expect(this.usdtQuickAmounts.nth(index)).toHaveValue(expected);
+  }
+
   async expectTipButtonTabActive() {
     await expect(this.page.getByRole("heading", { name: "Tip Button", level: 2 })).toBeVisible({ timeout: 10000 });
   }
