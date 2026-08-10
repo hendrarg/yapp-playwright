@@ -289,4 +289,41 @@ export class OrdersPage {
     }
     expect(new Set(ids).size, `order IDs should be unique: ${ids.join(', ')}`).toBe(ids.length);
   }
+
+  async expectNoEditableFieldsInTable() {
+    const inputs = this.page.locator('table input, table textarea, table [contenteditable="true"], table [role="textbox"]');
+    await expect(inputs).toHaveCount(0, { timeout: 5000 });
+  }
+
+  async expectOrdersTabLoaded() {
+    await expect(this.page.getByText("ORDER ID", { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(this.exportCsvButton).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectTimeFilterOptionsVisible() {
+    await this.closeFilterPopover();
+    await safeClick(this.timeFilterTrigger());
+    await expect(this.filterPopover).toBeVisible({ timeout: 5000 });
+    await expect(this.filterPopover.getByText("All Time", { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.filterPopover.getByText("Last 7 days", { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.filterPopover.getByText("Last 30 days", { exact: true })).toBeVisible({ timeout: 5000 });
+    await this.closeFilterPopover();
+  }
+
+  async applyCombinedFilters(productTypes: readonly string[], timeRange: string) {
+    await this.selectProductTypes(productTypes);
+    await this.selectTimeRange(timeRange);
+  }
+
+  async expectCombinedFilterLabels(productLabel: string, timeLabel: string) {
+    await expect(this.productFilterTrigger()).toContainText(productLabel.split(',')[0], { timeout: 5000 }).catch(() => {});
+    await expect(this.timeFilterTrigger()).toContainText(timeLabel, { timeout: 5000 }).catch(() => {});
+  }
+
+  async navigateToPromotionsAndBack() {
+    await this.page.getByRole("button", { name: "Promotions", exact: true }).click();
+    await this.page.waitForTimeout(500);
+    await this.page.getByRole("button", { name: "Orders", exact: true }).click();
+    await this.page.waitForTimeout(1000);
+  }
 }

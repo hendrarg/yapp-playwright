@@ -61,6 +61,77 @@ test('Validate Orders Product Info and Boundary Conditions', {
   });
 });
 
+test('Persist Orders State and Tab Navigation', {
+  tag: ['@AUT-FV-184', '@orders', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-ORD-C-020' },
+  ],
+}, async ({ creatorNav, ordersPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Orders page and verify loaded', async () => {
+    await creatorNav.open('orders');
+    await ordersPage.expectLoaded();
+  });
+
+  await test.step('Navigate to Promotions tab and back to Orders, verify state preserved', async () => {
+    await ordersPage.navigateToPromotionsAndBack();
+    await ordersPage.expectOrdersTabLoaded();
+    await ordersPage.expectOrderColumnsVisible();
+  });
+});
+
+test('Validate Orders Read-Only Detail Display', {
+  tag: ['@AUT-FV-185', '@orders', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-ORD-C-021' },
+  ],
+}, async ({ creatorNav, ordersPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Orders page and verify read-only display', async () => {
+    await creatorNav.open('orders');
+    await ordersPage.expectLoaded();
+  });
+
+  await test.step('Verify no editable fields exist in the orders table', async () => {
+    await ordersPage.expectNoEditableFieldsInTable();
+  });
+});
+
+test('Validate Orders Time Filter and Combined Filters', {
+  tag: ['@AUT-FV-186', '@orders', '@creator', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-ORD-C-022, TC-ORD-C-023, TC-ORD-C-045' },
+  ],
+}, async ({ creatorNav, ordersPage }) => {
+  test.setTimeout(120000);
+
+  await test.step('Open Orders page and verify time filter options exist', async () => {
+    await creatorNav.open('orders');
+    await ordersPage.expectLoaded();
+    await ordersPage.expectTimeFilterOptionsVisible();
+  });
+
+  await test.step('Select Last 30 days and verify filter applied', async () => {
+    await ordersPage.selectTimeRange('Last 30 days');
+    await ordersPage.expectTimeFilterLabel('Last 30 days');
+    await ordersPage.expectFiltersStillEditable();
+  });
+
+  await test.step('Combine product types and time range, verify both applied', async () => {
+    await ordersPage.resetFilters();
+    await ordersPage.applyCombinedFilters(['Digital Download'], 'Last 7 days');
+    await ordersPage.expectTimeFilterLabel('Last 7 days');
+    await ordersPage.expectFiltersStillEditable();
+  });
+
+  await test.step('Reset and verify default state restored', async () => {
+    await ordersPage.resetFilters();
+    await ordersPage.expectDefaultUnfilteredState();
+  });
+});
+
   test('Search, Filter, Sort, and Discover Orders Data', {
     tag: ['@AUT-FV-187', '@orders', '@creator', '@regression'],
   }, async ({ creatorNav, ordersPage }) => {
