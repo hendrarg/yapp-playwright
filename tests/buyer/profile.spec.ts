@@ -110,8 +110,11 @@ test('Verify Membership Access, Entitlements, and Eligibility — Part 3', {
   });
 });
 
-test('Upload and Manage Profile Media and Content — Part 6', {
+test('Validate Public Profile Share Options', {
   tag: ['@AUT-FV-232', '@profile', '@buyer', '@regression'],
+  annotation: [
+    { type: 'covers', description: 'TC-PRF-B-009' },
+  ],
 }, async ({ buyerNav, buyerProfilePage }) => {
   test.setTimeout(60000);
 

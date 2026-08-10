@@ -95,11 +95,9 @@ export class ProfilePage {
   }
 
   // ── Share profile ──
-  readonly shareButton = locatorChain(this.page, {
-    role: "button",
-    name: profileLabels.share,
-    text: profileLabels.share,
-  });
+  get shareButton() {
+    return this.main.getByRole("button", { name: profileLabels.share });
+  }
 
   async clickShare() {
     await safeClick(this.shareButton);
