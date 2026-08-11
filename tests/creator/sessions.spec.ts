@@ -310,6 +310,80 @@ test.describe('Creator Sessions', () => {
     }
   });
 
+  test('Verify Consultation Notifications and Messaging', {
+    tag: ['@AUT-FV-021', '@sessions', '@creator', '@regression'],
+    annotation: [
+      { type: 'covers', description: 'TC-CON-C-008, TC-CON-C-023, TC-CON-C-024' },
+    ],
+  }, async ({ consultationPage, creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed consultation for this test');
+    if (!seedToken) return;
+
+    const title = generateConsultationLifecycleTitle();
+    const description = generateConsultationLifecycleDescription();
+    const afterSalesMessage = generateConsultationAfterSalesMessage();
+    let productUuid = '';
+
+    try {
+      await test.step('Seed active consultation product via API', async () => {
+        const product = await createConsultationProduct(page.request, {
+          title,
+          description,
+          thumbnailImagePath: consultationMediaData.heroImagePath,
+          status: 'active',
+        }, seedToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+      });
+
+      await test.step('Open editor, enable Customize Message and fill content', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+
+        await expect(consultationPage.page).toHaveURL(/\/products\/update\/appointment\//, { timeout: 30000 });
+        await consultationPage.openConsultationEditTab('Details');
+        await consultationPage.enableConsultationAfterSalesMessage();
+        await consultationPage.fillConsultationAfterSalesMessage(afterSalesMessage);
+        await consultationPage.expectAfterSalesToggleOn();
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.expectConsultationPublishReady();
+        await consultationPage.saveAndPublishConsultationFromEdit();
+      });
+
+      await test.step('Reopen and verify toggle ON and message persist', async () => {
+        await creatorNav.open('products');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await consultationPage.openConsultationEditTab('Details');
+        await consultationPage.expectAfterSalesToggleOn();
+      });
+
+      await test.step('Toggle OFF, save and verify toggle stays OFF after reopen', async () => {
+        await consultationPage.disableConsultationAfterSalesMessage();
+        await consultationPage.expectAfterSalesToggleOff();
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.expectConsultationPublishReady();
+        await consultationPage.saveAndPublishConsultationFromEdit();
+
+        await creatorNav.open('products');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await consultationPage.openConsultationEditTab('Details');
+        await consultationPage.expectAfterSalesToggleOff();
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
+
   test('Create, Update, and Manage Consultation Lifecycle', {
     tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
   }, async ({

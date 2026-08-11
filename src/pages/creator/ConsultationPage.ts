@@ -465,6 +465,32 @@ export class ConsultationPage {
     await expect(this.afterSalesMessageEditor()).toBeVisible({ timeout: 10000 });
   }
 
+  async disableConsultationAfterSalesMessage() {
+    const toggle = this.afterSalesCustomizeSwitch();
+    if ((await toggle.getAttribute("aria-checked")) !== "false") {
+      await toggle.click({ timeout: 10000 });
+    }
+    await expect(this.afterSalesMessageEditor()).toBeHidden({ timeout: 5000 });
+  }
+
+  get afterSalesSwitchChecked(): Promise<string | null> {
+    return this.afterSalesCustomizeSwitch().getAttribute("aria-checked");
+  }
+
+  async expectAfterSalesToggleOff() {
+    const checked = await this.afterSalesCustomizeSwitch().getAttribute("aria-checked");
+    expect(checked, "Customize Message toggle should be off").toBe("false");
+  }
+
+  async expectAfterSalesToggleOn() {
+    const checked = await this.afterSalesCustomizeSwitch().getAttribute("aria-checked");
+    expect(checked, "Customize Message toggle should be on").toBe("true");
+  }
+
+  async expectAfterSalesMessageBlocked() {
+    await expect(this.page.getByText(/please fill|required|enter a message/i).first()).toBeVisible({ timeout: 5000 });
+  }
+
   async fillConsultationAfterSalesMessage(message: string) {
     await this.enableConsultationAfterSalesMessage();
     const editor = this.afterSalesMessageEditor();
