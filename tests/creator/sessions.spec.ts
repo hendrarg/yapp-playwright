@@ -460,6 +460,63 @@ test.describe('Creator Sessions', () => {
     }
   });
 
+  test('Verify Consultation Buffer Time Security', {
+    tag: ['@AUT-FV-023', '@sessions', '@creator', '@smoke', '@regression'],
+    annotation: [
+      { type: 'covers', description: 'TC-CON-C-015' },
+    ],
+  }, async ({ consultationPage, creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed consultation for this test');
+    if (!seedToken) return;
+
+    const title = generateConsultationLifecycleTitle();
+    let productUuid = '';
+
+    try {
+      await test.step('Seed active consultation', async () => {
+        const product = await createConsultationProduct(page.request, {
+          title,
+          description: generateConsultationLifecycleDescription(),
+          thumbnailImagePath: consultationMediaData.heroImagePath,
+          status: 'active',
+        }, seedToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+      });
+
+      await test.step('Open editor, verify Buffer Time is off by default', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await consultationPage.openConsultationEditTab('Availability');
+      });
+
+      await test.step('Enable Buffer Time and save', async () => {
+        await consultationPage.toggleBufferTime(true);
+        await consultationPage.expectConsultationPublishReady();
+        await consultationPage.saveAndPublishConsultationFromEdit();
+      });
+
+      await test.step('Reopen and verify Buffer Time stays enabled', async () => {
+        await creatorNav.open('products');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.toggleBufferTime(false);
+        await consultationPage.toggleBufferTime(true);
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
+
   test('Create, Update, and Manage Consultation Lifecycle', {
     tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
   }, async ({
