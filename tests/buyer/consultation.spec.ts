@@ -1,4 +1,4 @@
-import { authTest as test, test as guestTest } from '../test-base';
+import { authTest as test, test as guestTest, expect } from '../test-base';
 import { baseURL } from '@config/env';
 import { createConsultationProduct, deleteProduct } from '@helpers/api/product';
 import { loginWithToken } from '@helpers/auth/token-login';
@@ -301,6 +301,70 @@ test.describe('Buyer Consultation', () => {
         await productPurchasePage.selectConsultationTimeSlot(time);
         await productPurchasePage.clickConsultationSaveMySpot();
         await productPurchasePage.expectConsultationCheckoutDetails({ title, dayLabel, time });
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
+
+  guestTest('Validate Consultation Booking and After Sales Separation', {
+    tag: ['@AUT-FV-038', '@sessions', '@buyer', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-CON-B-022' }],
+  }, async ({ page, context, productPurchasePage }) => {
+    guestTest.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    const buyerToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+    guestTest.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required');
+    guestTest.skip(!buyerToken, 'YAPP_TEST_ACCESS_TOKEN_2 is required');
+    if (!seedToken || !buyerToken) return;
+
+    await loginWithToken(context, buyerToken, baseURL);
+
+    const title = generateConsultationBuyerTitle();
+    let productUuid = '';
+
+    try {
+      let sharePath = '';
+
+      await guestTest.step('Seed consultation with session slot via API', async () => {
+        const product = await createConsultationProduct(page.request, {
+          title,
+          description: generateConsultationBuyerDescription(),
+          thumbnailImagePath: consultationMediaData.heroImagePath,
+          productImagePaths: [consultationMediaData.heroImagePath],
+          price: consultationBuyerSchedulingData.freePrice,
+          dayOfWeek: consultationBuyerSchedulingData.dayOfWeek,
+          startTime: consultationBuyerSchedulingData.startTime,
+          endTime: consultationBuyerSchedulingData.endTime,
+          appointmentDurationValue: consultationBuyerSchedulingData.appointmentDurationValue,
+          appointmentDurationUnit: consultationBuyerSchedulingData.appointmentDurationUnit,
+          availabilityRangeValue: consultationBuyerSchedulingData.availabilityRangeValue,
+          availabilityRangeUnit: consultationBuyerSchedulingData.availabilityRangeUnit,
+          minimumNoticeValue: consultationBuyerSchedulingData.minimumNoticeValue,
+          minimumNoticeUnit: consultationBuyerSchedulingData.minimumNoticeUnit,
+        }, seedToken);
+        productUuid = product.productUuid;
+        sharePath = product.sharePath;
+      });
+
+      await guestTest.step('Select date/time and open checkout dialog', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectConsultationProductLoaded(title);
+        await productPurchasePage.expectConsultationBookable();
+        await productPurchasePage.selectFirstConsultationDay();
+        await productPurchasePage.selectConsultationTimeSlot(consultationBuyerSchedulingData.expectedSlots[0]);
+        await productPurchasePage.clickConsultationSaveMySpot();
+      });
+
+      await guestTest.step('Verify checkout dialog shows consultation details without duplication', async () => {
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 10000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.checkoutHeading, { exact: true })).toBeVisible({ timeout: 5000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.consultationDetailsLabel, { exact: true })).toBeVisible({ timeout: 5000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.dateAndTimeLabel, { exact: true })).toBeVisible({ timeout: 5000 });
       });
     } finally {
       if (productUuid && seedToken) {
