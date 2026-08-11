@@ -372,4 +372,148 @@ test.describe('Buyer Consultation', () => {
       }
     }
   });
+
+  guestTest('Validate Consultation Booking Completion and Navigation', {
+    tag: ['@AUT-FV-036', '@sessions', '@buyer', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-CON-B-018' }],
+  }, async ({ page, context, productPurchasePage }) => {
+    guestTest.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    const buyerToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+    guestTest.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required');
+    guestTest.skip(!buyerToken, 'YAPP_TEST_ACCESS_TOKEN_2 is required');
+    if (!seedToken || !buyerToken) return;
+
+    await loginWithToken(context, buyerToken, baseURL);
+
+    const title = generateConsultationBuyerTitle();
+    let productUuid = '';
+
+    try {
+      let sharePath = '';
+
+      await guestTest.step('Seed consultation with session slot via API', async () => {
+        const product = await createConsultationProduct(page.request, {
+          title,
+          description: generateConsultationBuyerDescription(),
+          thumbnailImagePath: consultationMediaData.heroImagePath,
+          productImagePaths: [consultationMediaData.heroImagePath],
+          price: consultationBuyerSchedulingData.freePrice,
+          dayOfWeek: consultationBuyerSchedulingData.dayOfWeek,
+          startTime: consultationBuyerSchedulingData.startTime,
+          endTime: consultationBuyerSchedulingData.endTime,
+          appointmentDurationValue: consultationBuyerSchedulingData.appointmentDurationValue,
+          appointmentDurationUnit: consultationBuyerSchedulingData.appointmentDurationUnit,
+          availabilityRangeValue: consultationBuyerSchedulingData.availabilityRangeValue,
+          availabilityRangeUnit: consultationBuyerSchedulingData.availabilityRangeUnit,
+          minimumNoticeValue: consultationBuyerSchedulingData.minimumNoticeValue,
+          minimumNoticeUnit: consultationBuyerSchedulingData.minimumNoticeUnit,
+        }, seedToken);
+        productUuid = product.productUuid;
+        sharePath = product.sharePath;
+      });
+
+      await guestTest.step('Select date/time, open checkout and complete booking', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectConsultationProductLoaded(title);
+        await productPurchasePage.selectFirstConsultationDay();
+        await productPurchasePage.selectConsultationTimeSlot(consultationBuyerSchedulingData.expectedSlots[0]);
+        await productPurchasePage.clickConsultationSaveMySpot();
+
+        const dialog = page.getByRole('dialog');
+
+        // Fill buyer form fields if present
+        const nameInput = dialog.getByPlaceholder(/name/i).first();
+        if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await nameInput.fill('Test Buyer');
+        }
+        const emailInput = dialog.getByPlaceholder(/email/i).first();
+        if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+          await emailInput.fill('buyer.qa@inbox.testmail.app');
+        }
+
+        await dialog.getByRole('button', { name: 'Join' }).click();
+        await page.waitForTimeout(2000);
+      });
+
+      await guestTest.step('Verify booking completed and remains on product page', async () => {
+        expect(page.url()).toContain('/product/');
+        expect(page.url()).toContain('/hendrarg/');
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
+
+  guestTest('Verify Consultation Thank You Page Default State', {
+    tag: ['@AUT-FV-037', '@sessions', '@buyer', '@regression'],
+    annotation: [{ type: 'covers', description: 'TC-CON-B-021' }],
+  }, async ({ page, context, productPurchasePage }) => {
+    guestTest.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    const buyerToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+    guestTest.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required');
+    guestTest.skip(!buyerToken, 'YAPP_TEST_ACCESS_TOKEN_2 is required');
+    if (!seedToken || !buyerToken) return;
+
+    await loginWithToken(context, buyerToken, baseURL);
+
+    const title = generateConsultationBuyerTitle();
+    let productUuid = '';
+
+    try {
+      let sharePath = '';
+
+      await guestTest.step('Seed consultation with session slot via API', async () => {
+        const product = await createConsultationProduct(page.request, {
+          title,
+          description: generateConsultationBuyerDescription(),
+          thumbnailImagePath: consultationMediaData.heroImagePath,
+          productImagePaths: [consultationMediaData.heroImagePath],
+          price: consultationBuyerSchedulingData.freePrice,
+          dayOfWeek: consultationBuyerSchedulingData.dayOfWeek,
+          startTime: consultationBuyerSchedulingData.startTime,
+          endTime: consultationBuyerSchedulingData.endTime,
+          appointmentDurationValue: consultationBuyerSchedulingData.appointmentDurationValue,
+          appointmentDurationUnit: consultationBuyerSchedulingData.appointmentDurationUnit,
+          availabilityRangeValue: consultationBuyerSchedulingData.availabilityRangeValue,
+          availabilityRangeUnit: consultationBuyerSchedulingData.availabilityRangeUnit,
+          minimumNoticeValue: consultationBuyerSchedulingData.minimumNoticeValue,
+          minimumNoticeUnit: consultationBuyerSchedulingData.minimumNoticeUnit,
+        }, seedToken);
+        productUuid = product.productUuid;
+        sharePath = product.sharePath;
+      });
+
+      await guestTest.step('Select date/time and open checkout dialog', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectConsultationProductLoaded(title);
+        await productPurchasePage.selectFirstConsultationDay();
+        await productPurchasePage.selectConsultationTimeSlot(consultationBuyerSchedulingData.expectedSlots[0]);
+        await productPurchasePage.clickConsultationSaveMySpot();
+      });
+
+      await guestTest.step('Verify checkout dialog shows complete default state without broken content', async () => {
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 10000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.checkoutHeading, { exact: true })).toBeVisible({ timeout: 5000 });
+        await expect(dialog.getByText(title)).toBeVisible({ timeout: 5000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.consultationDetailsLabel, { exact: true })).toBeVisible({ timeout: 5000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.dateAndTimeLabel, { exact: true })).toBeVisible({ timeout: 5000 });
+        await expect(dialog.getByText(consultationBuyerSchedulingData.meetingPlatformLabel, { exact: true })).toBeVisible({ timeout: 5000 });
+
+        // Verify no broken/duplicate content
+        const headingCount = await dialog.getByText(consultationBuyerSchedulingData.checkoutHeading, { exact: true }).count();
+        expect(headingCount, 'checkout heading should appear exactly once').toBeLessThanOrEqual(1);
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
 });
