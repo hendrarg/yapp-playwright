@@ -216,7 +216,7 @@ export class ConsultationPage {
 
   async addConsultationWeekdayTimeSlot(day: string = "Mon") {
     await this.page.getByRole("button", { name: `Add time slot for ${day}` }).click();
-    await expect(this.page.getByRole("combobox", { name: `Start time for ${day}` })).toBeVisible({
+    await expect(this.page.getByRole("combobox", { name: `Start time for ${day}` }).first()).toBeVisible({
       timeout: 10000,
     });
   }
@@ -440,11 +440,78 @@ export class ConsultationPage {
 
   async expectConsultationWeekdaySlotConfigured(day: string) {
     await expect(
-      this.page.getByRole("combobox", { name: `Start time for ${day}` }),
+      this.page.getByRole("combobox", { name: `Start time for ${day}` }).first(),
     ).toBeVisible({ timeout: 10000 });
-    await expect(this.page.getByRole("combobox", { name: `End time for ${day}` })).toBeVisible({
+    await expect(this.page.getByRole("combobox", { name: `End time for ${day}` }).first()).toBeVisible({
       timeout: 10000,
     });
+  }
+
+  async expectAvailabilityControlsVisible() {
+    await expect(this.page.getByRole("heading", { name: "Availability*" })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Availability Range").first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Appointment Duration").first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Minimum Notice").first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Buffer Time").first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Allow Buyers to reschedule").first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Limit Booking Frequency").first()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Timezone").first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async toggleBufferTime(enable: boolean) {
+    const switchEl = this.page.locator('[role="switch"]').nth(2);
+    await switchEl.scrollIntoViewIfNeeded();
+    const checked = await switchEl.getAttribute("aria-checked");
+    if ((checked === "true") !== enable) {
+      await switchEl.click();
+      await this.page.waitForTimeout(500);
+    }
+  }
+
+  async toggleReschedule(enable: boolean) {
+    const switchEl = this.page.locator('[role="switch"]').nth(3);
+    await switchEl.scrollIntoViewIfNeeded();
+    const checked = await switchEl.getAttribute("aria-checked");
+    if ((checked === "true") !== enable) {
+      await switchEl.click();
+      await this.page.waitForTimeout(500);
+    }
+  }
+
+  async toggleBookingFrequency(enable: boolean) {
+    const switchEl = this.page.locator('[role="switch"]').nth(4);
+    await switchEl.scrollIntoViewIfNeeded();
+    const checked = await switchEl.getAttribute("aria-checked");
+    if ((checked === "true") !== enable) {
+      await switchEl.click();
+      await this.page.waitForTimeout(500);
+    }
+  }
+
+  async setAvailabilityRange(value: string) {
+    const combo = this.page.locator('[role="combobox"]').filter({ hasText: /months|weeks/i }).first();
+    await combo.click();
+    await this.page.waitForTimeout(300);
+    await this.page.getByRole("option", { name: value }).click();
+  }
+
+  async setAppointmentDuration(value: string) {
+    const combo = this.page.locator('[role="combobox"]').filter({ hasText: /hour|minute/i }).first();
+    await combo.click();
+    await this.page.waitForTimeout(300);
+    await this.page.getByRole("option", { name: value }).click();
+  }
+
+  async expectAvailabilityRangeValue(expected: string) {
+    await expect(
+      this.page.locator('[role="combobox"]').filter({ hasText: /months|weeks/i }).first()
+    ).toContainText(expected, { timeout: 5000 });
+  }
+
+  async expectAppointmentDurationValue(expected: string) {
+    await expect(
+      this.page.locator('[role="combobox"]').filter({ hasText: /hour|minute/i }).first()
+    ).toContainText(expected, { timeout: 5000 });
   }
 
   async reloadConsultationEditor() {

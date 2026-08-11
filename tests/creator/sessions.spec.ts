@@ -384,6 +384,82 @@ test.describe('Creator Sessions', () => {
     }
   });
 
+  test('Validate Consultation Scheduling and Availability Controls', {
+    tag: ['@AUT-FV-022', '@sessions', '@creator', '@regression'],
+    annotation: [
+      { type: 'covers', description: 'TC-CON-C-010, TC-CON-C-011, TC-CON-C-012, TC-CON-C-013, TC-CON-C-016, TC-CON-C-017, TC-CON-C-018, TC-CON-C-019, TC-CON-C-020, TC-CON-C-030' },
+    ],
+  }, async ({ consultationPage, creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed consultation for this test');
+    if (!seedToken) return;
+
+    const title = generateConsultationLifecycleTitle();
+    const description = generateConsultationLifecycleDescription();
+    let productUuid = '';
+
+    try {
+      await test.step('Seed active consultation', async () => {
+        const product = await createConsultationProduct(page.request, {
+          title,
+          description,
+          thumbnailImagePath: consultationMediaData.heroImagePath,
+          status: 'active',
+        }, seedToken);
+        productUuid = product.productUuid;
+        expect(productUuid).toBeTruthy();
+      });
+
+      await test.step('Open editor and switch to Availability tab', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.selectStatusTab('Active');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await expect(consultationPage.page).toHaveURL(/\/products\/update\/appointment\//, { timeout: 30000 });
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.expectAvailabilityControlsVisible();
+      });
+
+      await test.step('Configure weekday slot', async () => {
+        const weekday = consultationWeekdayLabel();
+        await consultationPage.addConsultationWeekdayTimeSlot(weekday);
+        await consultationPage.configureConsultationWeekdaySlot(weekday);
+        await consultationPage.expectConsultationWeekdaySlotConfigured(weekday);
+      });
+
+      await test.step('Verify Availability Range and Appointment Duration defaults', async () => {
+        await consultationPage.expectAvailabilityRangeValue('3 months');
+        await consultationPage.expectAppointmentDurationValue('1 hour');
+      });
+
+      await test.step('Toggle Buffer Time, Reschedule, and Booking Frequency', async () => {
+        await consultationPage.toggleBufferTime(true);
+        await consultationPage.toggleReschedule(true);
+        await consultationPage.toggleBookingFrequency(true);
+      });
+
+      await test.step('Save and verify availability tab reopens', async () => {
+        await consultationPage.expectConsultationPublishReady();
+        await consultationPage.saveAndPublishConsultationFromEdit();
+
+        await creatorNav.open('products');
+        await productsPage.searchProducts(title);
+        await productsPage.openEditProduct(title);
+        await consultationPage.openConsultationEditTab('Availability');
+        await consultationPage.expectAvailabilityControlsVisible();
+        await consultationPage.expectAvailabilityRangeValue('3 months');
+        await consultationPage.expectAppointmentDurationValue('1 hour');
+      });
+    } finally {
+      if (productUuid && seedToken) {
+        await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
+      }
+    }
+  });
+
   test('Create, Update, and Manage Consultation Lifecycle', {
     tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
   }, async ({
