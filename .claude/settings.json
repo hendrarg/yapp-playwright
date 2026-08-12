@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(NODE_PATH=d:/yapp/node_modules node -e ' *)"
+    ]
+  }
+}

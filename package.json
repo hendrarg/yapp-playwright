@@ -28,5 +28,8 @@
     "dotenv": "^17.4.2",
     "pg": "^8.23.0",
     "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "googleapis": "^174.0.1"
   }
 }

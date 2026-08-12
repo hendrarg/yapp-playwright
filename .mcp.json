@@ -7,6 +7,19 @@
         "playwright-mcp"
       ],
       "env": {}
+    },
+    "google-sheets": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-gsheets@latest"
+      ],
+      "env": {
+        "GOOGLE_PROJECT_ID": "${GOOGLE_SHEETS_PROJECT_ID}",
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GOOGLE_SHEETS_SA_KEY_PATH}",
+        "GSHEETS_TOOLSETS": "core,sheets,formatting"
+      }
     }
   }
 }
