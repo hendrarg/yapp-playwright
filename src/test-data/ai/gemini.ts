@@ -8,6 +8,8 @@ const GEMINI_TIMEOUT_MS = 30_000;
 const KIND_TO_KEY: Record<ContentKind, keyof AiContentBundle> = {
   "product:name": "productNames",
   "product:description": "productDescriptions",
+  "course:name": "courseNames",
+  "course:description": "courseDescriptions",
   "chapter:title": "chapterTitles",
   "episode:title": "episodeTitles",
   "episode:content": "episodeContents",

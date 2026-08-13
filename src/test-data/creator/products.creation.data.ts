@@ -181,8 +181,8 @@ export function generateOnlineCourseProductData(
   overrides?: Partial<OnlineCourseProductData>,
 ): OnlineCourseProductData {
   return {
-    title: getAiText("product:name", () => faker.commerce.productName()),
-    description: getAiText("product:description", () => faker.lorem.sentence()),
+    title: getAiText("course:name", () => faker.commerce.productName()),
+    description: getAiText("course:description", () => faker.lorem.sentence()),
     thumbnailImagePath: testImages.hermes,
     price: 0,
     ...overrides,

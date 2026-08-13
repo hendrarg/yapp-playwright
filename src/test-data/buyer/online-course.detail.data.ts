@@ -44,9 +44,9 @@ export function generateOnlineCourseInvalidVoucherCode(): string {
 }
 
 export function generateOnlineCourseBuyerTitle(): string {
-  return getAiText("product:name", () => faker.commerce.productName());
+  return getAiText("course:name", () => faker.commerce.productName());
 }
 
 export function generateOnlineCourseBuyerDescription(): string {
-  return getAiText("product:description", () => faker.lorem.sentence());
+  return getAiText("course:description", () => faker.lorem.sentence());
 }

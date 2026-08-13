@@ -10,6 +10,8 @@
 export type ContentKind =
   | "product:name"
   | "product:description"
+  | "course:name"
+  | "course:description"
   | "chapter:title"
   | "episode:title"
   | "episode:content"
@@ -25,6 +27,8 @@ export type ContentKind =
 export interface AiContentBundle {
   productNames: string[];
   productDescriptions: string[];
+  courseNames: string[];
+  courseDescriptions: string[];
   chapterTitles: string[];
   episodeTitles: string[];
   episodeContents: string[];
@@ -97,6 +101,7 @@ export function parseAiBundle(raw: unknown): Partial<AiContentBundle> {
   const bundle: Partial<AiContentBundle> = {};
   const titleKeys: Array<[keyof AiContentBundle, unknown]> = [
     ["productNames", raw.productNames],
+    ["courseNames", raw.courseNames],
     ["chapterTitles", raw.chapterTitles],
     ["episodeTitles", raw.episodeTitles],
     ["campaignNames", raw.campaignNames],
@@ -105,6 +110,7 @@ export function parseAiBundle(raw: unknown): Partial<AiContentBundle> {
   ];
   const paragraphKeys: Array<[keyof AiContentBundle, unknown]> = [
     ["productDescriptions", raw.productDescriptions],
+    ["courseDescriptions", raw.courseDescriptions],
     ["episodeContents", raw.episodeContents],
     ["postContents", raw.postContents],
     ["campaignDescriptions", raw.campaignDescriptions],
