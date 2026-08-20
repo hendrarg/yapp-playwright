@@ -2,6 +2,7 @@ import { creatorAuthTest as test } from '../test-base';
 import { addCustomBuyerQuestion, cancelEditBuyerQuestion, chooseHeroFile, completeOpenBuyerQuestion, expectAddQuestionDialog, expectAddQuestionsDisabled, expectAdditionalQuestionsHeading, expectEditQuestionDialog, expectHeroNotUploaded, expectImageTooSmall, expectQuestionInputTypes, expectSavedBuyerQuestion, openAddQuestionDialog, openEditBuyerQuestion, submitEmptyQuestionLabel, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
 import { eventsBuyerFormData, generateEventsBuyerQuestionLabels, generateEventsBuyerQuestionOptions } from '@test-data/creator/events.buyer-form.data';
 import { eventsMediaData, generateEventsDescription, generateEventsTitle } from '@test-data/creator/events.media.data';
+import { eventsTicketsData, generateEventsTicketDescription, generateEventsTicketName } from '@test-data/creator/events.tickets.data';
 import { productsCreationData } from '@test-data/creator/products.creation.data';
 
 test.describe('Creator Events and Tickets', () => {
@@ -145,6 +146,93 @@ test.describe('Creator Events and Tickets', () => {
       await addCustomBuyerQuestion(page, extraLabelTwo);
       await expectAdditionalQuestionsHeading(page);
       await expectAddQuestionsDisabled(page);
+    });
+  });
+
+  test('Validate Event Ticket Tier Configuration, Pricing, and Discounts', {
+    tag: ['@AUT-FV-314', '@products', '@creator', '@smoke', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-EVT-C-016, TC-EVT-C-017, TC-EVT-C-018, TC-EVT-C-019, TC-EVT-C-020, TC-EVT-C-021, TC-EVT-C-045, TC-EVT-C-046, TC-EVT-C-050',
+    }],
+  }, async ({
+    eventsPage, creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const eventsType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Events and Tickets',
+    )!;
+    const paidTierName = generateEventsTicketName();
+    const paidTierDescription = generateEventsTicketDescription();
+    const freeTierName = eventsTicketsData.defaultTierName(1);
+    const thirdTierName = eventsTicketsData.defaultTierName(2);
+
+    await test.step('Open Events and Tickets create flow', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(eventsType.buttonName);
+      await eventsPage.expectEventsCreateFlow();
+    });
+
+    await test.step('Fill All Day online details and continue to ticket configuration', async () => {
+      await eventsPage.fillMinimalEventsStep1({
+        title: generateEventsTitle(),
+        description: generateEventsDescription(),
+      });
+      await eventsPage.continueToEventsDetails();
+      await eventsPage.expectTicketConfiguration();
+    });
+
+    await test.step('Rename the default tier with the pencil control', async () => {
+      await eventsPage.renameTicketTier(0, eventsTicketsData.defaultTierName(0), paidTierName);
+      await eventsPage.expectAfterSalesUsesTicketName(paidTierName);
+    });
+
+    await test.step('Fill description, price, quantity, and sales period', async () => {
+      await eventsPage.fillTicketDescription(0, paidTierDescription);
+      await eventsPage.fillTicketPrice(0, eventsTicketsData.rawPrice);
+      await eventsPage.expectTicketPriceValue(0, eventsTicketsData.formattedPrice);
+      await eventsPage.expectTicketQuantity(0, eventsTicketsData.quantity);
+      await eventsPage.fillTicketSalesPeriod(0);
+    });
+
+    await test.step('Configure discount limits and free ticket price', async () => {
+      await eventsPage.setTicketDiscountEnabled(0, true);
+      await eventsPage.expectDiscountTypes(0);
+      await eventsPage.selectDiscountType(0, 'Rp');
+      await eventsPage.fillTicketDiscountAmount('Rp', eventsTicketsData.rpDiscountAmount);
+      await eventsPage.fillTicketDiscountAmount('Rp', eventsTicketsData.rpDiscountAtTicketPrice);
+      await eventsPage.expectTicketDiscountAmount('Rp', eventsTicketsData.rpDiscountAtTicketPrice);
+      await eventsPage.expectPreviewStartFrom(eventsTicketsData.previewZeroPricePattern);
+      await eventsPage.selectDiscountType(0, '%');
+      await eventsPage.fillTicketDiscountAmount('%', eventsTicketsData.validPercentDiscount);
+    });
+
+    await test.step('Block a percentage discount above 100 percent', async () => {
+      await eventsPage.fillTicketDiscountAmount('%', eventsTicketsData.overPercentDiscount);
+      await eventsPage.expectPercentDiscountBlocked();
+      await uploadHero(page, eventsMediaData.heroImagePath);
+      await eventsPage.submitEventsPublishDetails();
+      await eventsPage.expectPercentDiscountBlocked();
+    });
+
+    await test.step('Accept a valid percentage discount', async () => {
+      await eventsPage.fillTicketDiscountAmount('%', eventsTicketsData.validPercentDiscount);
+      await eventsPage.expectTicketDiscountAmount('%', eventsTicketsData.validPercentDiscount);
+    });
+
+    await test.step('Add a free tier and a third collapsible tier', async () => {
+      await eventsPage.addAnotherTicketType();
+      await eventsPage.expectTicketTier(freeTierName);
+      await eventsPage.fillTicketDescription(1, generateEventsTicketDescription());
+      await eventsPage.expectTicketPriceValue(1, eventsTicketsData.zeroPrice);
+      await eventsPage.expectPreviewStartFrom(eventsTicketsData.previewZeroPricePattern);
+
+      await eventsPage.addAnotherTicketType();
+      await eventsPage.expectTicketTier(thirdTierName);
+      await eventsPage.collapseTicketTier(paidTierName);
+      await eventsPage.expandTicketTier(paidTierName);
     });
   });
 });

@@ -10,6 +10,7 @@ import {
   titleInput,
 } from "@pages/shared/locators";
 import { eventsMediaData } from "@test-data/creator/events.media.data";
+import { eventsTicketsData, type EventsTicketDiscountType } from "@test-data/creator/events.tickets.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
 
 export class EventsPage {
@@ -49,6 +50,23 @@ export class EventsPage {
     name: "Select event date",
     text: "Select event date",
     selector: 'button:has-text("Select event date")',
+  });
+
+  private readonly addAnotherTicketTypeAction = smartLocator(this.page, {
+    role: "button",
+    name: eventsTicketsData.addAnotherTicketType,
+    text: eventsTicketsData.addAnotherTicketTypeText,
+    selector: 'button:has-text("Add Another Ticket Type")',
+  });
+
+  private readonly ticketConfigHeading = locatorChain(this.page, {
+    text: "Ticket Configuration",
+    selector: 'p:has-text("Ticket Configuration")',
+  });
+
+  private readonly percentDiscountError = locatorChain(this.page, {
+    text: eventsTicketsData.percentDiscountError,
+    selector: `[data-slot="form-message"]:has-text("${eventsTicketsData.percentDiscountError}")`,
   });
 
   readonly thumbnailSectionHeading = locatorChain(this.page, {
@@ -163,11 +181,276 @@ export class EventsPage {
 
   async selectFutureEventDate() {
     await this.selectEventDateAction.click({ timeout: 10000 });
+    await this.pickEnabledCalendarDay("last");
+    await expect(this.page.getByRole("button", { name: "Select event date" })).toHaveCount(0, {
+      timeout: 10000,
+    });
+  }
+
+  private async pickEnabledCalendarDay(position: "first" | "last") {
     const calendar = this.page.getByRole("dialog").getByRole("grid");
     await expect(calendar).toBeVisible({ timeout: 10000 });
-    const futureDay = calendar.getByRole("button", { disabled: false }).last();
-    await safeClick(futureDay);
+    const days = calendar.getByRole("button", { disabled: false });
+    await safeClick(position === "first" ? days.first() : days.last());
     await expect(calendar).toBeHidden({ timeout: 10000 });
+  }
+
+  private ticketRenameButton(name: string): Locator {
+    return this.page
+      .getByText(name, { exact: true })
+      .locator("xpath=ancestor::div[1]/following-sibling::button[1]")
+      .or(
+        this.page.locator(
+          `xpath=//*[normalize-space()="${name}"]/ancestor::div[1]/following-sibling::button[1]`,
+        ),
+      );
+  }
+
+  private ticketTitleInput(index: number): Locator {
+    const nameAttr = `ticketPriceConfigurations.${index}.title`;
+    return locatorChain(this.page, {
+      selector: `input[name="${nameAttr}"]`,
+    }).or(this.page.locator(`[data-slot="input"][name="${nameAttr}"]`));
+  }
+
+  private ticketDescriptionInput(index: number): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: eventsTicketsData.descriptionPlaceholder,
+      placeholder: eventsTicketsData.descriptionPlaceholder,
+      selector: 'textarea[name^="ticketPriceConfigurations."][name$=".description"]',
+    }).nth(index);
+  }
+
+  private ticketPriceInput(index: number): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "10,000",
+      placeholder: "10,000",
+      selector: 'input[placeholder="10,000"]',
+    }).nth(index);
+  }
+
+  private ticketQuantityInput(index: number): Locator {
+    return locatorChain(this.page, {
+      text: eventsTicketsData.quantityHelper,
+      selector: `p:has-text("${eventsTicketsData.quantityHelper}")`,
+    }).nth(index).locator("xpath=preceding::input[1]");
+  }
+
+  private setDiscountSwitch(index: number): Locator {
+    return locatorChain(this.page, {
+      text: eventsTicketsData.setDiscountLabel,
+      selector: `text="${eventsTicketsData.setDiscountLabel}"`,
+    }).nth(index)
+      .locator("xpath=preceding::*[@role='switch'][1]")
+  }
+
+  private discountTypeCombobox(index: number): Locator {
+    return locatorChain(this.page, {
+      text: "Discount",
+      selector: 'text="Discount"',
+    }).nth(index).locator("xpath=following::button[@role='combobox'][1]");
+  }
+
+  private discountAmountInput(type: EventsTicketDiscountType): Locator {
+    const placeholder = type === "Rp" ? "1.000" : "0";
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: placeholder,
+      placeholder,
+      selector: `input[placeholder="${placeholder}"]`,
+    }).last();
+  }
+
+  private discountTypeOption(type: EventsTicketDiscountType): Locator {
+    return this.page
+      .getByRole("listbox")
+      .getByRole("option", { name: type, exact: true })
+      .or(
+        this.page
+          .locator('[role="listbox"] [role="option"][data-slot="select-item"]')
+          .filter({ hasText: new RegExp(`^${type === "%" ? "%" : "Rp"}$`) }),
+      );
+  }
+
+  private salesPeriodStartButton(index: number): Locator {
+    return locatorChain(this.page, {
+      role: "button",
+      name: "Select date",
+      text: "Select date",
+      selector: 'button:has-text("Select date")',
+    }).nth(index * 2);
+  }
+
+  private salesPeriodEndButton(index: number): Locator {
+    return locatorChain(this.page, {
+      role: "button",
+      name: "Select date",
+      text: "Select date",
+      selector: 'button:has-text("Select date")',
+    }).last();
+  }
+
+  private ticketTierHeader(name: string): Locator {
+    return locatorChain(this.page, {
+      text: name,
+      selector: `text="${name}"`,
+    }).locator("xpath=ancestor::div[3]");
+  }
+
+  private ticketExpandButton(name: string): Locator {
+    return this.ticketTierHeader(name).locator("button").last();
+  }
+
+  private ticketDeleteButton(name: string): Locator {
+    return this.ticketTierHeader(name).locator("button").nth(1);
+  }
+
+  private ticketDescriptionByName(name: string): Locator {
+    return this.ticketTierHeader(name)
+      .locator("xpath=following-sibling::div[1]")
+      .getByRole("textbox", { name: eventsTicketsData.descriptionPlaceholder })
+      .or(
+        this.ticketTierHeader(name)
+          .locator("xpath=following-sibling::div[1]")
+          .getByPlaceholder(eventsTicketsData.descriptionPlaceholder),
+      );
+  }
+
+  async expectTicketConfiguration() {
+    await expect(this.ticketConfigHeading).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(eventsTicketsData.defaultTierName(0), { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await this.addAnotherTicketTypeAction.text({ timeout: 10000 });
+  }
+
+  async renameTicketTier(index: number, currentName: string, newName: string) {
+    await this.ticketRenameButton(currentName).click({ timeout: 10000 });
+    const title = this.ticketTitleInput(index);
+    await expect(title).toBeVisible({ timeout: 10000 });
+    await expect(title).toHaveValue(currentName, { timeout: 10000 });
+    await safeFill(title, newName);
+    await this.page.keyboard.press("Tab");
+    await expect(this.page.getByText(newName, { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectAfterSalesUsesTicketName(name: string) {
+    await expect(this.page.getByText(eventsTicketsData.afterSalesOff(name), { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async fillTicketDescription(index: number, description: string) {
+    await safeFill(this.ticketDescriptionInput(index), description);
+  }
+
+  async fillTicketPrice(index: number, amount: string) {
+    await safeFill(this.ticketPriceInput(index), amount);
+  }
+
+  async expectTicketPriceValue(index: number, value: string) {
+    await expect(this.ticketPriceInput(index)).toHaveValue(value, { timeout: 10000 });
+  }
+
+  async expectTicketQuantity(index: number, value: string) {
+    await expect(this.ticketQuantityInput(index)).toHaveValue(value, { timeout: 10000 });
+    await expect(this.page.getByText(eventsTicketsData.quantityHelper, { exact: true }).nth(index)).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async fillTicketSalesPeriod(index: number) {
+    await this.salesPeriodStartButton(index).click({ timeout: 10000 });
+    await this.pickEnabledCalendarDay("first");
+    await this.salesPeriodEndButton(index).click({ timeout: 10000 });
+    await this.pickEnabledCalendarDay("last");
+    await expect(this.page.getByRole("button", { name: "Select date" })).toHaveCount(0, {
+      timeout: 10000,
+    });
+  }
+
+  async setTicketDiscountEnabled(index: number, enabled: boolean) {
+    const discountSwitch = this.setDiscountSwitch(index);
+    if ((await discountSwitch.getAttribute("aria-checked")) !== String(enabled)) {
+      await safeClick(discountSwitch);
+    }
+    await expect(discountSwitch).toHaveAttribute("aria-checked", String(enabled), { timeout: 10000 });
+  }
+
+  async expectDiscountTypes(index: number) {
+    await this.discountTypeCombobox(index).click({ timeout: 10000 });
+    const listbox = this.page.getByRole("listbox");
+    await expect(listbox).toBeVisible({ timeout: 10000 });
+    await expect(listbox.getByRole("option")).toHaveCount(eventsTicketsData.discountTypes.length, {
+      timeout: 10000,
+    });
+    for (const type of eventsTicketsData.discountTypes) {
+      await expect(this.discountTypeOption(type)).toBeVisible({ timeout: 10000 });
+    }
+    await this.discountTypeOption(eventsTicketsData.discountTypes[0]).click({ timeout: 10000 });
+    await expect(listbox).toBeHidden({ timeout: 10000 });
+  }
+
+  async selectDiscountType(index: number, type: EventsTicketDiscountType) {
+    const combobox = this.discountTypeCombobox(index);
+    if (!(await combobox.textContent())?.includes(type)) {
+      await combobox.click({ timeout: 10000 });
+      await this.discountTypeOption(type).click({ timeout: 10000 });
+    }
+    await expect(combobox).toContainText(type, { timeout: 10000 });
+  }
+
+  async fillTicketDiscountAmount(type: EventsTicketDiscountType, amount: string) {
+    const input = this.discountAmountInput(type);
+    await safeFill(input, amount);
+    await input.press("Tab");
+  }
+
+  async expectTicketDiscountAmount(type: EventsTicketDiscountType, amount: string) {
+    await expect(this.discountAmountInput(type)).toHaveValue(amount, { timeout: 10000 });
+  }
+
+  async expectPercentDiscountBlocked() {
+    await expect(this.percentDiscountError).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectPercentDiscountAllowed() {
+    await expect(this.percentDiscountError).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async addAnotherTicketType() {
+    await this.addAnotherTicketTypeAction.click({ timeout: 10000 });
+  }
+
+  async expectTicketTier(name: string) {
+    await expect(this.page.getByText(name, { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.ticketDeleteButton(name)).toBeVisible({ timeout: 10000 });
+    await expect(this.ticketExpandButton(name)).toBeVisible({ timeout: 10000 });
+  }
+
+  async collapseTicketTier(name: string) {
+    const toggle = this.ticketExpandButton(name);
+    if ((await toggle.getAttribute("aria-expanded")) === "true") {
+      await safeClick(toggle);
+    }
+    await expect(toggle).toHaveAttribute("aria-expanded", "false", { timeout: 10000 });
+    await expect(this.ticketDescriptionByName(name)).toBeHidden({ timeout: 10000 });
+  }
+
+  async expandTicketTier(name: string) {
+    const toggle = this.ticketExpandButton(name);
+    if ((await toggle.getAttribute("aria-expanded")) !== "true") {
+      await safeClick(toggle);
+    }
+    await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 10000 });
+    await expect(this.ticketDescriptionByName(name)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectPreviewStartFrom(pattern: RegExp) {
+    await expect(this.page.getByText("Start From", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(pattern)).toBeVisible({ timeout: 10000 });
   }
 
   async fillMinimalEventsStep1(options: { title: string; description: string }) {
@@ -184,6 +467,7 @@ export class EventsPage {
   }
 
   async expectEventsDetailsStep() {
+    await expect(this.ticketConfigHeading).toBeVisible({ timeout: 20000 });
     await this.nextPublishAction.text({ timeout: 15000 });
     await expect(this.thumbnailSectionHeading).toBeVisible({ timeout: 10000 });
     await expect(this.chooseThumbnailLabel).toBeVisible({ timeout: 10000 });
