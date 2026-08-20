@@ -167,7 +167,18 @@ export const descriptionEditor = (page: Page) =>
   }).first();
 
 export const addQuestionDialog = (page: Page) =>
-  page.getByRole("dialog", { name: "Add New Question" });
+  locatorChain(page, {
+    role: "dialog",
+    name: "Add New Question",
+    selector: '[role="dialog"][data-slot="dialog-content"]:has-text("Add New Question")',
+  });
+
+export const editQuestionDialog = (page: Page) =>
+  locatorChain(page, {
+    role: "dialog",
+    name: "Edit Question",
+    selector: '[role="dialog"][data-slot="dialog-content"]:has-text("Edit Question")',
+  });
 
 export const questionLabelInput = (page: Page) =>
   locatorChain(page, {
@@ -175,6 +186,104 @@ export const questionLabelInput = (page: Page) =>
     name: "Question Label",
     placeholder: "Enter your question...",
     selector: '[role="dialog"] input[placeholder="Enter your question..."]',
+  });
+
+export const questionPlaceholderInput = (page: Page) =>
+  locatorChain(page, {
+    role: "textbox",
+    name: "Placeholder",
+    placeholder: "Enter placeholder text...",
+    selector: '[role="dialog"] input[placeholder="Enter placeholder text..."]',
+  });
+
+export const questionInputTypeCombobox = (page: Page) =>
+  page
+    .getByRole("dialog")
+    .getByRole("combobox")
+    .filter({ hasText: /^(Text|Select|Multi Select)$/ })
+    .or(
+      page
+        .locator('[role="dialog"] [data-slot="select-trigger"]')
+        .filter({ hasText: /^(Text|Select|Multi Select)$/ }),
+    );
+
+export const questionInputTypeOption = (page: Page, name: string) =>
+  page
+    .getByRole("listbox")
+    .getByRole("option", { name, exact: true })
+    .or(
+      page
+        .locator('[role="listbox"] [role="option"][data-slot="select-item"]')
+        .filter({ hasText: new RegExp(`^${name}$`) }),
+    );
+
+export const questionOptionInput = (page: Page, index: number) =>
+  locatorChain(page, {
+    role: "textbox",
+    name: `Option ${index}`,
+    label: `Option ${index}`,
+    selector: `[role="dialog"] input[aria-label="Option ${index}"]`,
+  });
+
+export const addOptionAction = (page: Page) =>
+  smartLocator(page, {
+    role: "button",
+    name: "Add Option",
+    text: "Add Option",
+    selector: '[role="dialog"] button:has-text("Add Option")',
+  });
+
+export const makeQuestionRequiredCheckbox = (page: Page) =>
+  locatorChain(page, {
+    role: "checkbox",
+    name: "Make this required",
+    label: "Make this required",
+    selector: '[role="dialog"] [role="checkbox"]',
+  });
+
+export const emptyQuestionLabelFeedback = (page: Page) =>
+  locatorChain(page, {
+    text: "Question cannot be empty",
+    selector: '[role="dialog"] [data-slot="form-message"]:has-text("Question cannot be empty")',
+  });
+
+export const updateQuestionAction = (page: Page) =>
+  locatorChain(page, {
+    role: "button",
+    name: "Update Question",
+    text: "Update Question",
+    selector: '[role="dialog"] button:has-text("Update Question")',
+  });
+
+export const cancelQuestionAction = (page: Page) =>
+  locatorChain(page, {
+    role: "button",
+    name: "Cancel",
+    text: "Cancel",
+    selector: '[role="dialog"] button:has-text("Cancel")',
+  });
+
+export const addQuestionsButton = (page: Page) =>
+  locatorChain(page, {
+    role: "button",
+    name: "Add Questions",
+    text: "Add Questions",
+    selector: 'button:has-text("Add Questions")',
+  });
+
+export const additionalQuestionsHeading = (page: Page) =>
+  locatorChain(page, {
+    role: "heading",
+    name: "Additional Questions | Max 5",
+    text: "Additional Questions | Max 5",
+  });
+
+export const createQuestionButton = (page: Page) =>
+  locatorChain(page, {
+    role: "button",
+    name: "Create Question",
+    text: "Create Question",
+    selector: '[role="dialog"] button:has-text("Create Question")',
   });
 
 export const afterSalesSection = (page: Page) => page.getByLabel("Details").or(page.locator("body"));

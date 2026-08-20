@@ -3,31 +3,45 @@ import { expect } from "@playwright/test";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import { consultationMediaData } from "@test-data/creator/consultation.media.data";
 import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
+import { eventsBuyerFormData, type EventsBuyerQuestionInputType } from "@test-data/creator/events.buyer-form.data";
 import { digitalProductValidationData } from "@test-data/creator/products.creation.data";
 import {
   addEmbedLinkAction,
+  addOptionAction,
   addQuestionDialog,
   addQuestionsAction,
+  addQuestionsButton,
+  additionalQuestionsHeading,
   afterSalesSection,
+  cancelQuestionAction,
   createQuestionAction,
+  createQuestionButton,
   descriptionEditor,
+  editQuestionDialog,
   embedLinkDoneButton,
   embedLinkLabelInput,
   embedLinkUrlInput,
+  emptyQuestionLabelFeedback,
   galleryInput,
   heroInput,
   livePreviewCard,
+  makeQuestionRequiredCheckbox,
   priceInput,
   pricingSwitchAction,
   productCompleteDialog,
+  questionInputTypeCombobox,
+  questionInputTypeOption,
   questionLabelInput,
+  questionOptionInput,
+  questionPlaceholderInput,
   saveAsDraftAction,
   textFeedback,
+  updateQuestionAction,
 } from "@pages/shared/locators";
 
 /**
  * Shared create/edit step sequences across product types (consultation,
- * discord membership, digital product, online course). Each helper owns the
+ * discord membership, digital product, online course, events). Each helper owns the
  * title input, pricing switch, hero/gallery media, buyer form, after-sales
  * links, embed links and the Product Complete modal. Page objects call these
  * with their own `page`; specs may call them directly.
@@ -90,34 +104,157 @@ export async function expectMandatoryBuyerFieldsProtected(page: Page) {
   }
 }
 
-export async function addCustomBuyerQuestion(page: Page, label: string) {
+export type BuyerQuestionConfig = {
+  type?: EventsBuyerQuestionInputType;
+  choices?: string[];
+  required?: boolean;
+};
+
+function buyerQuestionCard(page: Page, label: string) {
+  return page
+    .locator("div")
+    .filter({ has: page.getByText(label, { exact: true }) })
+    .filter({ has: page.getByRole("button", { name: "Remove", exact: true }) })
+    .last();
+}
+
+async function fillQuestionChoices(page: Page, choices: string[]) {
+  for (let index = 0; index < choices.length; index++) {
+    if (index >= 2) {
+      await addOptionAction(page).click({ timeout: 10000 });
+    }
+    await safeFill(questionOptionInput(page, index + 1), choices[index]);
+  }
+}
+
+async function setQuestionRequired(page: Page, required: boolean) {
+  const checkbox = makeQuestionRequiredCheckbox(page);
+  if ((await checkbox.getAttribute("aria-checked")) !== String(required)) {
+    await safeClick(checkbox);
+  }
+  await expect(checkbox).toHaveAttribute("aria-checked", String(required), { timeout: 10000 });
+}
+
+export async function openAddQuestionDialog(page: Page) {
   await addQuestionsAction(page).click({ timeout: 10000 });
+  await expect(addQuestionDialog(page)).toBeVisible({ timeout: 10000 });
+}
+
+export async function expectAddQuestionDialog(page: Page) {
   const dialog = addQuestionDialog(page);
   await expect(dialog).toBeVisible({ timeout: 10000 });
+  await expect(dialog.getByRole("heading", { name: eventsBuyerFormData.addQuestionDialogTitle })).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(dialog.getByText(eventsBuyerFormData.inputTypeLabel, { exact: true })).toBeVisible({
+    timeout: 10000,
+  });
+  await expect(questionInputTypeCombobox(page)).toBeVisible({ timeout: 10000 });
+  await expect(questionLabelInput(page)).toBeVisible({ timeout: 10000 });
+  await expect(questionPlaceholderInput(page)).toBeVisible({ timeout: 10000 });
+  await expect(makeQuestionRequiredCheckbox(page)).toBeVisible({ timeout: 10000 });
+  await expect(createQuestionButton(page)).toBeVisible({ timeout: 10000 });
+  await expect(cancelQuestionAction(page)).toBeVisible({ timeout: 10000 });
+}
+
+export async function expectQuestionInputTypes(page: Page, types: readonly string[]) {
+  await questionInputTypeCombobox(page).click({ timeout: 10000 });
+  const listbox = page.getByRole("listbox");
+  await expect(listbox).toBeVisible({ timeout: 10000 });
+  await expect(listbox.getByRole("option")).toHaveCount(types.length, { timeout: 10000 });
+  for (const type of types) {
+    await expect(questionInputTypeOption(page, type)).toBeVisible({ timeout: 10000 });
+  }
+  await questionInputTypeOption(page, eventsBuyerFormData.inputTypes[0]).click({ timeout: 10000 });
+  await expect(listbox).toBeHidden({ timeout: 10000 });
+}
+
+export async function selectQuestionInputType(page: Page, type: EventsBuyerQuestionInputType) {
+  await questionInputTypeCombobox(page).click({ timeout: 10000 });
+  await questionInputTypeOption(page, type).click({ timeout: 10000 });
+  await expect(questionInputTypeCombobox(page)).toContainText(type, { timeout: 10000 });
+}
+
+export async function submitEmptyQuestionLabel(page: Page) {
+  await createQuestionAction(page).click({ timeout: 10000 });
+  await expect(emptyQuestionLabelFeedback(page)).toBeVisible({ timeout: 10000 });
+  await expect(addQuestionDialog(page)).toBeVisible({ timeout: 10000 });
+}
+
+export async function completeOpenBuyerQuestion(page: Page, label: string, config?: BuyerQuestionConfig) {
+  const dialog = addQuestionDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  if (config?.type && config.type !== eventsBuyerFormData.inputTypes[0]) {
+    await selectQuestionInputType(page, config.type);
+  }
   await safeFill(questionLabelInput(page), label);
+  if (config?.choices?.length) {
+    await fillQuestionChoices(page, config.choices);
+  }
+  if (config?.required) {
+    await setQuestionRequired(page, true);
+  }
   await createQuestionAction(page).click({ timeout: 10000 });
   await expect(dialog).toBeHidden({ timeout: 10000 });
   await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 10000 });
 }
 
-export async function expectAddQuestionsEnabled(page: Page) {
-  await expect(page.getByRole("button", { name: "Add Questions" })).toBeEnabled({
+export async function addCustomBuyerQuestion(page: Page, label: string, config?: BuyerQuestionConfig) {
+  await openAddQuestionDialog(page);
+  await completeOpenBuyerQuestion(page, label, config);
+}
+
+export async function expectSavedBuyerQuestion(
+  page: Page,
+  label: string,
+  options: { required?: boolean } = {},
+) {
+  const card = buyerQuestionCard(page, label);
+  await expect(card.getByText(label, { exact: true })).toBeVisible({ timeout: 10000 });
+  const badge = options.required ? eventsBuyerFormData.requiredBadge : eventsBuyerFormData.optionalBadge;
+  await expect(card.getByText(badge, { exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(card.getByRole("button", { name: "Edit", exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(card.getByRole("button", { name: "Remove", exact: true })).toBeVisible({ timeout: 10000 });
+}
+
+export async function openEditBuyerQuestion(page: Page, label: string) {
+  const card = buyerQuestionCard(page, label);
+  await card.getByRole("button", { name: "Edit", exact: true }).click({ timeout: 10000 });
+  await expect(editQuestionDialog(page)).toBeVisible({ timeout: 10000 });
+}
+
+export async function expectEditQuestionDialog(page: Page) {
+  const dialog = editQuestionDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  await expect(dialog.getByRole("heading", { name: eventsBuyerFormData.editQuestionDialogTitle })).toBeVisible({
     timeout: 10000,
   });
+  await expect(updateQuestionAction(page)).toBeVisible({ timeout: 10000 });
+}
+
+export async function cancelEditBuyerQuestion(page: Page) {
+  await cancelQuestionAction(page).click({ timeout: 10000 });
+  await expect(editQuestionDialog(page)).toBeHidden({ timeout: 10000 });
+}
+
+export async function expectAdditionalQuestionsHeading(page: Page) {
+  await expect(additionalQuestionsHeading(page)).toBeVisible({ timeout: 10000 });
+}
+
+export async function expectAddQuestionsEnabled(page: Page) {
+  const button = addQuestionsButton(page);
+  await expect(button).toBeVisible({ timeout: 10000 });
+  await expect(button).toBeEnabled({ timeout: 10000 });
 }
 
 export async function expectAddQuestionsDisabled(page: Page) {
-  await expect(page.getByRole("button", { name: "Add Questions" })).toBeDisabled({
-    timeout: 10000,
-  });
+  const button = addQuestionsButton(page);
+  await expect(button).toBeVisible({ timeout: 10000 });
+  await expect(button).toBeDisabled({ timeout: 10000 });
 }
 
 export async function removeCustomBuyerQuestion(page: Page, label: string) {
-  const questionCard = page
-    .locator("div")
-    .filter({ has: page.getByText(label, { exact: true }) })
-    .filter({ has: page.getByRole("button", { name: "Remove", exact: true }) })
-    .last();
+  const questionCard = buyerQuestionCard(page, label);
   const removeButton = questionCard.getByRole("button", { name: "Remove", exact: true });
   await removeButton.scrollIntoViewIfNeeded();
   await expect(removeButton).toBeVisible({ timeout: 10000 });
