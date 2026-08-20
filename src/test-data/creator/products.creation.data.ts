@@ -38,6 +38,7 @@ export const productsCreationData = {
   discordMembershipCreatePath: /\/products\/create\/discord-membership/,
   consultationCreatePath: /\/products\/create\/consultation/,
   onlineCourseCreatePath: /\/products\/create\/online-course/,
+  eventsTicketCreatePath: /\/products\/create\/events-ticket/,
 } as const;
 
 /** Online Course content editor labels and defaults (AUT-FV-161 / TC-OC-C-001..033). */
