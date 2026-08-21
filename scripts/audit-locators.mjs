@@ -70,18 +70,33 @@ function auditFile(file, allowedInTests = false) {
     });
   }
 
-  // Require an actual call, not just the identifier: a dead `import { smartLocator }`
-  // used to satisfy this check, which let three page objects pass without using it.
-  const usesSmartLocator = /\bsmartLocator\s*\(/.test(content) || /\blocatorChain\s*\(/.test(content);
-  if (!usesSmartLocator && !allowedInTests && rel(file) !== 'src/pages/shared/locators.ts') {
-    const hasLocators = /getBy(Role|Text|Label|Placeholder|TestId)|page\.locator/.test(content);
-    if (hasLocators && !rel(file).includes('auth/LoginPage')) {
-      findings.push({
-        kind: 'no-smart-locator',
-        line: 1,
-        text: 'Page object defines locators but never calls smartLocator/locatorChain',
-      });
-    }
+  /*
+   * Per-file backstop for a page object built entirely on fragile selectors with no
+   * fallback strategy anywhere.
+   *
+   * It deliberately does NOT fire on a page object whose locators are all `getByRole` /
+   * `getByText` / `getByLabel`: those already follow the selector priority in
+   * `.agents/rules/code-style.md`, and demanding a `smartLocator(` call from them would
+   * only invite wrapping correct locators to satisfy a regex — the same gaming that a
+   * dead `import { smartLocator }` used to get away with here.
+   *
+   * A chain counts whether it comes from smartLocator, locatorChain, or a hand-written
+   * `.or()` — they are the same mechanism, and some chains (button-or-link with one
+   * accessible name) can only be written by hand.
+   */
+  const usesChain = /\bsmartLocator\s*\(/.test(content)
+    || /\blocatorChain\s*\(/.test(content)
+    || /\.or\s*\(/.test(content);
+  const isExempt = allowedInTests
+    || rel(file) === 'src/pages/shared/locators.ts'
+    || rel(file).includes('auth/LoginPage');
+
+  if (findings.length > 0 && !usesChain && !isExempt) {
+    findings.push({
+      kind: 'fragile-without-chain',
+      line: 1,
+      text: 'Page object relies on fragile selectors and defines no fallback chain anywhere',
+    });
   }
 
   return findings;

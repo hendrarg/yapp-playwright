@@ -13,6 +13,22 @@ Most of this file is machine-checked — do not rely on remembering it:
 | No dead imports / unused vars | `@typescript-eslint/no-unused-vars` |
 | Fragile CSS/XPath locators | `npm run audit:locators` (advisory) |
 
+`audit:locators` reports per line, and knows the shapes that are easy to miss:
+
+| Finding | Means |
+|---------|-------|
+| `css-locator` | `.class` or an unstable `#id` (Radix generates `#radix-_r_0_` fresh on every render). A hand-authored `#kebab-case` id is accepted — with no `data-testid` anywhere in the app, it is the closest thing to a test hook. |
+| `xpath-locator`, `raw-xpath-string` | an explicit `xpath=` selector |
+| `implicit-xpath` | `locator("..")` or `locator("//…")` — Playwright infers the XPath engine from the leading `..` or `//`, so these are axis walks with nothing to grep for |
+| `class-attribute-selector` | `[class*="…"]`, which is as Tailwind-fragile as `.class` |
+| `fragile-without-chain` | a page object that has fragile selectors **and** defines no fallback chain anywhere |
+
+`fragile-without-chain` does **not** fire on a page object whose locators are all
+`getByRole` / `getByText` / `getByLabel` — those already follow the priority table below.
+Do not wrap a correct semantic locator in `locatorChain` to silence an audit; the check
+counts `smartLocator`, `locatorChain`, and a hand-written `.or()` equally, because some
+chains (button-or-link sharing one accessible name) can only be written by hand.
+
 Run `npx eslint .` (and `--fix` for the mechanical ones) before finishing. ESLint is a
 blocking check in CI and in `.githooks/pre-commit`.
 
