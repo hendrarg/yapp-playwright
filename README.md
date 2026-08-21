@@ -2,11 +2,42 @@
 
 Playwright-based end-to-end test automation for [Yapp](https://yapp.ink), a content monetization platform. Covers both **Buyer** and **Creator** experiences across two subdomains.
 
+## Multi-agent setup
+
+This repo is worked on by several AI coding agents. `AGENTS.md` and `.agents/` are the
+single source of truth for all of them — **edit only those.** Each tool reaches them
+through a thin adapter:
+
+| Tool | Reads | Adapter |
+|------|-------|---------|
+| Codex | `AGENTS.md` at the repo root | none needed |
+| Cursor | `AGENTS.md`, `.cursor/rules/*.mdc` | generated |
+| OpenCode | `AGENTS.md`, `opencode.json` → `.agents/rules/*` | committed config |
+| Claude Code | `CLAUDE.md` → `AGENTS.md`, `.claude/skills/`, `.claude/commands/` | generated |
+
+Rules travel as-is because `AGENTS.md` is a cross-tool convention. Skills and slash
+commands cannot: every tool has its own format and only scans its own directory, so
+`npm run agents:sync` projects `.agents/skills/` and `.agents/commands/` into each
+tool's path. Those copies are **git-ignored and disposable** — editing one loses the
+change on the next sync and hides it from the other agents.
+
+```bash
+npm run agents:sync    # regenerate adapters (also runs on postinstall)
+npm run agents:check   # fail if any adapter is stale
+```
+
 ## Project Architecture
 
 ```
 yapp/
-├── .agents/                      # Agent runtime, rules, skills, commands
+├── AGENTS.md                     # Project guide — source of truth for every agent
+├── .agents/                      # ONLY place to edit agent config
+│   ├── runtime.md                # Load order and rule precedence
+│   ├── rules/                    # Always-on project rules
+│   ├── skills/                   # Task workflows (+ registry.md)
+│   └── commands/                 # Operation catalog / slash commands
+├── CLAUDE.md                     # One line (@AGENTS.md) so Claude Code auto-loads it
+├── opencode.json                 # Points OpenCode at .agents/rules/*
 ├── config/
 │   └── env.ts                    # Environment variables & config
 ├── scripts/

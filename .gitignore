@@ -7,9 +7,23 @@ node_modules/
 /playwright/.cache/
 /playwright/.auth/
 /.auth/
-.playwright-mcp/
-*.yml
+/.playwright-mcp/
+
+# Stray MCP snapshot/console dumps written to the repo root.
+# Root-anchored on purpose: a bare `*.yml` would also swallow
+# .github/workflows/*.yml and any future config YAML.
+/*.yml
+/*.yaml
+
+# Local-only automation plans (see AGENTS.md — never committed)
 /docs/automation-plans/
+
+# Per-tool agent adapters generated from .agents/ by `npm run agents:sync`.
+# .agents/ is the single source of truth; these are disposable projections.
+/.claude/skills/
+/.claude/commands/
+/.cursor/rules/
+/.opencode/
 
 # Secrets
 .env

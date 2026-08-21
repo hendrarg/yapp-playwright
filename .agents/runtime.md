@@ -1,6 +1,21 @@
 # Agent Runtime
 
-This directory is the provider-neutral runtime for AI agents working in this repository.
+This directory is the provider-neutral runtime for every AI agent working in this
+repository — Claude Code, Codex, Cursor, and OpenCode all resolve back to here.
+It is the **only** place to edit agent configuration.
+
+| Path | Contents | Reached by |
+|------|----------|------------|
+| `AGENTS.md` | the project guide | Codex, Cursor, OpenCode directly; Claude Code via `CLAUDE.md` |
+| `.agents/runtime.md`, `.agents/rules/` | always-on rules | read on demand (see load order); Cursor and OpenCode get them wired in |
+| `.agents/skills/registry.md` | which skill to read for which task | on demand |
+| `.agents/skills/*/SKILL.md` | task workflows | synced to each tool's skill path |
+| `.agents/commands/*.md` | operation catalog / slash commands | synced to each tool's command path |
+
+Tool-specific copies (`.claude/skills/`, `.claude/commands/`, `.cursor/rules/`) are
+**generated** by `npm run agents:sync` and git-ignored. Editing a generated copy is
+always wrong — the change is silently lost on the next sync, and the other agents
+never see it. Change the file here instead, then re-run the sync.
 
 ## Load Order
 
@@ -29,11 +44,11 @@ Single-AUT automation and small Playwright maintenance use the inline fast path 
 ## Commands
 
 - `.agents/commands/` documents common project operations.
-- Commands are references for agents and humans; they are not tied to one AI tool.
+- Commands are references for agents and humans; they are not tied to one AI tool. Where the tool supports slash commands, `npm run agents:sync` exposes them as `/automation`, `/test-grep`, `/typecheck`, and so on.
 - Prefer the documented command when validating matching work.
 
 ## Skills
 
 - `.agents/skills/` contains task workflows.
-- Read a skill only when it matches the current task.
+- Read a skill only when it matches the current task; `.agents/skills/registry.md` maps task to skill.
 - A skill can reference another skill; read referenced skills before applying their workflow.

@@ -18,8 +18,8 @@ async function main() {
     console.log('╔══════════════════════════════════════════════╗');
     console.log('║  Yapp DB Shell — PostgreSQL (staging/dev)    ║');
     console.log('╠══════════════════════════════════════════════╣');
-    console.log(`║  Host: ${process.env.PSQL_DB_HOST ?? 'yapp-dev.c3owa284mp95.ap-southeast-1.rds.amazonaws.com'}`);
-    console.log(`║  DB:   ${process.env.PSQL_DB_NAME ?? 'yapp_dev'}`);
+    console.log(`║  Host: ${process.env.PSQL_DB_HOST ?? '(PSQL_DB_HOST not set)'}`);
+    console.log(`║  DB:   ${process.env.PSQL_DB_NAME ?? '(PSQL_DB_NAME not set)'}`);
     console.log('╠══════════════════════════════════════════════╣');
     console.log('║  Usage:                                      ║');
     console.log('║    npx tsx scripts/db-shell.ts "<SQL>"       ║');

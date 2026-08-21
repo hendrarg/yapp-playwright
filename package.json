@@ -13,7 +13,13 @@
     "audit:locators": "node scripts/audit-locators.mjs",
     "audit:aut-order": "node scripts/reorder-aut-ascending.mjs --check",
     "token:inspect": "node scripts/inspect-tokens.mjs",
-    "test:unit": "playwright test --project=chromium tests/unit"
+    "test:unit": "playwright test --project=chromium tests/unit",
+    "agents:sync": "node scripts/sync-agent-config.mjs",
+    "agents:check": "node scripts/sync-agent-config.mjs --check",
+    "postinstall": "node scripts/sync-agent-config.mjs --quiet",
+    "typecheck": "tsc --noEmit",
+    "clean:artifacts": "node scripts/clean-artifacts.mjs",
+    "clean:all": "node scripts/clean-artifacts.mjs --days=0 --reports"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +31,7 @@
     "@playwright/mcp": "^0.0.76",
     "@playwright/test": "^1.61.0",
     "@types/node": "^25.9.3",
+    "@types/pg": "^8.23.1",
     "dotenv": "^17.4.2",
     "pg": "^8.23.0",
     "typescript": "^6.0.3"

@@ -1,27 +1,20 @@
 /**
- * PostgreSQL database client for Yapp staging/dev database.
+ * PostgreSQL database client for the Yapp staging/dev database.
  *
- * Credentials are read from .env (not committed):
- *   PSQL_DB_HOST, PSQL_DB_PORT, PSQL_DB_NAME, PSQL_DB_USER,
- *   PSQL_DB_PASSWORD, PSQL_DB_SSL_MODE
+ * Every connection value is required from .env (never committed, no source defaults):
+ *   PSQL_DB_HOST, PSQL_DB_NAME, PSQL_DB_USER, PSQL_DB_PASSWORD
+ * Optional: PSQL_DB_PORT (5432), PSQL_MAX_OPEN_CONNS (10), PSQL_DB_SSL_MODE (require).
  */
 import { Pool, QueryResultRow } from 'pg';
+import { dbConfig } from '@config/env';
 
 let pool: Pool | null = null;
 
 function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
-      host: process.env.PSQL_DB_HOST ?? 'yapp-dev.c3owa284mp95.ap-southeast-1.rds.amazonaws.com',
-      port: Number(process.env.PSQL_DB_PORT ?? 5432),
-      database: process.env.PSQL_DB_NAME ?? 'yapp_dev',
-      user: process.env.PSQL_DB_USER ?? 'postgres',
-      password: process.env.PSQL_DB_PASSWORD ?? '7ATkdiBujN67qtwjOBP7',
-      max: Number(process.env.PSQL_MAX_OPEN_CONNS ?? 10),
-      idleTimeoutMillis: 20_000, // 20m in ms
-      ssl: {
-        rejectUnauthorized: false, // RDS SSL requires this
-      },
+      ...dbConfig(),
+      idleTimeoutMillis: 20_000,
     });
 
     pool.on('error', (err) => {
