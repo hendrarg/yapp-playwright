@@ -51,7 +51,6 @@ yapp/
 │   │   └── shared/
 │   │       └── locators.ts       # Shared locators (≥2 pages)
 │   ├── fixtures/
-│   │   ├── base.fixture.ts       # Combined fixture entry point
 │   │   ├── page.fixtures.ts      # Page object registrations
 │   │   └── mock.fixtures.ts      # Payment/email/analytics mocks
 │   ├── helpers/
@@ -148,7 +147,7 @@ Token injection sets the cookie on the apex domain so one token works for both b
 
 ## Fixtures
 
-Fixtures are composed via `test.extend()` in `src/fixtures/`. Spec files import from `tests/test-base.ts`, not `@fixtures/base.fixture` directly.
+Fixtures are composed via `test.extend()` in `tests/test-base.ts`, which pulls the page, buyer-nav, and creator-nav fixtures out of `src/fixtures/`. Spec files import from `tests/test-base.ts`.
 
 | Fixture | Description |
 |---------|-------------|

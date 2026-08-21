@@ -38,7 +38,7 @@ blocking check in CI and in `.githooks/pre-commit`.
 
 ## Imports
 - Use path aliases: `@pages/`, `@fixtures/`, `@utils/`, `@helpers/`, `@config/`
-- Test specs import from `../test-base` (relative), never from `@fixtures/base.fixture` directly
+- Test specs import from `../test-base` (relative) — that is where the fixtures are composed; never import out of `src/fixtures/` directly
 - Do not use deep relative imports (`../../src/...`) where path aliases work
 - **Inline named imports** — keep each `import { ... } from '...'` on **one line**. Do not wrap/brace-break named import lists across multiple lines in `tests/**/*.spec.ts` (or when adding imports elsewhere in this repo).
 
@@ -109,7 +109,7 @@ readonly nameInput = this.page.locator('.form-input-name');
 ## File Naming
 - Page objects: PascalCase (`ExplorePage.ts`, `CartPage.ts`)
 - Helpers/utils: camelCase (`otp-login.ts`, `playwright.utils.ts`)
-- Fixtures: kebab-case (`page.fixtures.ts`, `base.fixture.ts`)
+- Fixtures: kebab-case (`page.fixtures.ts`, `buyer-nav.fixture.ts`)
 - Test specs: kebab-case (`explore.spec.ts`, `otp-login.spec.ts`)
 
 ## Separation
