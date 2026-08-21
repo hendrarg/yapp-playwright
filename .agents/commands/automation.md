@@ -15,7 +15,7 @@ Run this command inline. If `rg -n "@<AUT-ID>" tests` finds no exact tag, first 
    - Classify every required operation as `Reuse`, `Extend`, or `New` in the working conversation.
    - Do not create new code when an existing implementation can be reused or minimally extended.
    - **Fragile locators (CSS/XPath-only) are always `Extend`, never `Reuse` unchanged** — wrap with `smartLocator` when touching that page object.
-5. Generate a reviewable Playwright draft with source-TC annotations. **All new/touched locators must use `smartLocator`.** Meet minimum test depth (see `add-test-spec` Step 5 checklist).
+5. Generate a reviewable Playwright draft. **All new/touched locators must use `smartLocator`.** Meet minimum test depth (see `add-test-spec` Step 5 checklist).
 6. Tag generated tests with the exact Automation ID, such as `@AUT-E2E-008`.
 7. Run `npx tsc --noEmit`, then run only the generated Automation ID once after the latest change. Stop when it passes; do not use `--repeat-each`, a full spec, or a broader suite unless the user explicitly requests it.
 8. Run `npm run audit:tags` when practical. Fix tag gaps before finishing.

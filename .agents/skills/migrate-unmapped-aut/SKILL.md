@@ -45,7 +45,7 @@ Do **not** invent an `@AUT-*` ID. The Automation Mapping row must exist in Googl
 
 - [ ] Automation Mapping row validated via `automation:context`
 - [ ] Exact `@AUT-*` tag added
-- [ ] Covered TC IDs represented as ordered `test.step()` calls; traceability in `annotation.covers`, not TC ID prefixes in step titles
+- [ ] Covered TC IDs represented as ordered `test.step()` calls, with no TC ID prefixes in step titles
 - [ ] Minimum test depth met (see `add-test-spec` Step 5 checklist)
 - [ ] API seeding added if the flow needs pre-created data (see `add-test-spec` Step 4b)
 - [ ] Locators use `smartLocator` for every new/touched element

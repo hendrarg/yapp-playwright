@@ -17,7 +17,7 @@ Check for the exact AUT tag with `rg -n "@<AUT-ID>" tests`. If it does not exist
 2. If validation fails, stop and report the exact TC IDs, source rows, or open clarifications. Do not guess.
 3. Complete the blocking Mandatory Reuse Gate in Step 1. Do not edit before it is complete.
 4. For every Automation Mapping ID, generate exactly one Playwright `test()`; the mapping is the automation testcase.
-5. For `AUT-E2E-*`, make the covered journey actions `test.step()` calls and attach covered TC IDs as annotations.
+5. For `AUT-E2E-*`, make the covered journey actions `test.step()` calls. Do not add `covers` annotations — Automation Mapping already holds the covered TC IDs (see `.agents/rules/testing.md`).
 6. For `AUT-FV-*`, keep covered manual TCs as ordered `test.step()` calls inside the single test; parameterize only identical flows with different data.
 7. Tag the single generated test with the exact Automation ID, for example `@AUT-E2E-008`.
 8. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
@@ -112,7 +112,7 @@ try {
 - Import test data with `@test-data/{domain}/{feature}.data`.
 - Use the exact `@<AUT-ID>`, one feature tag, `@buyer` or `@creator`, and one priority tag.
 - Use the descriptive automation title as the test title; keep the Automation ID in the tag.
-- Use descriptive `test.step()` names without `Step N` or manual TC ID prefixes (e.g. no `TC-PRM-C-018:` in the step title). Record covered source TC IDs in the test `annotation` `covers` field instead.
+- Use descriptive `test.step()` names without `Step N` or manual TC ID prefixes (e.g. no `TC-PRM-C-018:` in the step title). Traceability lives in the `@AUT-*` tag and Automation Mapping, not in the spec.
 - Keep locators in page objects — never in spec files.
 - **Every new or touched locator MUST use `smartLocator` from `@utils/heal-utils`** with the full fallback chain from `.agents/rules/code-style.md`: `testId` → `role` → `text` → `label` → `placeholder` → `selector` (last resort only).
 - Provide at least two strategies per locator. CSS/XPath alone is forbidden for new locators.
@@ -123,7 +123,7 @@ try {
 
 Every generated `@AUT-*` test must pass this checklist:
 
-- [ ] Every covered manual TC ID from the automation context has a matching `test.step()` (or annotation for `AUT-E2E-*`); TC IDs live in `annotation.covers`, not in step titles.
+- [ ] Every covered manual TC ID from the automation context has a matching `test.step()`, and no TC ID appears in a step title.
 - [ ] **`@AUT-E2E-*`:** full journey from the sheet — smoke-only (`goto` + `expectLoaded`) is **forbidden**.
 - [ ] **`@AUT-FV-*`:** at least one interaction and one assertion beyond `expectLoaded()` per covered TC step.
 - [ ] No locators in the spec file — all UI targeting lives in page objects.

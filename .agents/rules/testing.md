@@ -95,18 +95,18 @@ See also `.agents/skills/add-page-object/SKILL.md` step 6.
 - Prefer `buyerNav.open(...)` / `creatorNav.open(...)` for route navigation; use page-object fixtures for assertions and interactions beyond load checks
 - Add meaningful interactions beyond navigation — see **Minimum test depth** below
 - Set `test.setTimeout()` only when needed (e.g. OTP flow = 90000ms)
-- **Step naming**: Use descriptive step names ONLY. Do **NOT** prefix with `Step N:`, manual TC IDs such as `TC-PRM-C-018:`, or any `@AUT-*` ID. Put source TC traceability in the test's `annotation: [{ type: 'covers', description: '...' }]` (or `@AUT-E2E-*` journey annotations), not in `test.step()` titles. Playwright already numbers steps automatically.
+- **Step naming**: Use descriptive step names ONLY. Do **NOT** prefix with `Step N:`, manual TC IDs such as `TC-PRM-C-018:`, or any `@AUT-*` ID. Playwright already numbers steps automatically.
   ```typescript
   // ✅ Good
   test.step('Publish promotion and verify live status', async () => { ... });
-  test('...', {
-    annotation: [{ type: 'covers', description: 'TC-PRM-C-018' }],
-  }, async () => { ... });
 
   // ❌ Forbidden
   test.step('Step 1: Open feeds and verify Following tab', async () => { ... });
   test.step('TC-PRM-C-018: Publish promotion and verify live status', async () => { ... });
   ```
+- **TC traceability is not the spec's job.** Do not add `annotation: [{ type: 'covers', ... }]` to satisfy a rule. Automation Mapping already carries a **Covered TC IDs** column per Automation ID, and `AGENTS.md` makes that sheet authoritative — a per-test annotation is a second copy of the same data that drifts the moment the sheet changes. The `@AUT-*` tag is the link between test and sheet, and it is enough.
+
+  Annotations remain available where they genuinely add something the sheet cannot, such as a note about *why* a step exists. They are optional, and nothing audits them. Existing annotations are fine to leave in place; do not go add them, and do not go strip them.
 
 ## Minimum test depth
 
