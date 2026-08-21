@@ -1,12 +1,15 @@
 /**
  * Interactive-ish database shell for exploring the Yapp staging DB.
  *
- * Usage: npx tsx scripts/db-shell.ts "<SQL>"
- *    or: npx tsx scripts/db-shell.ts --interactive
+ * Usage: npm run db:shell -- "<SQL>"
+ *    or: npm run db:shell            (prints the banner and quick-start queries)
  *
  * Examples:
- *   npx tsx scripts/db-shell.ts "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
- *   npx tsx scripts/db-shell.ts "SELECT * FROM users LIMIT 5"
+ *   npm run db:shell -- "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+ *   npm run db:shell -- "SELECT * FROM users LIMIT 5"
+ *
+ * Needs the PSQL_* variables from .env (see .env.example). Read-only exploration
+ * against a shared dev database — do not run destructive statements here.
  */
 import 'dotenv/config';
 import { query, closePool } from '../src/helpers/db/client';
@@ -22,7 +25,7 @@ async function main() {
     console.log(`║  DB:   ${process.env.PSQL_DB_NAME ?? '(PSQL_DB_NAME not set)'}`);
     console.log('╠══════════════════════════════════════════════╣');
     console.log('║  Usage:                                      ║');
-    console.log('║    npx tsx scripts/db-shell.ts "<SQL>"       ║');
+    console.log('║    npm run db:shell -- "<SQL>"               ║');
     console.log('║                                              ║');
     console.log('║  Quick-start queries:                        ║');
     console.log('║    # List all tables                         ║');

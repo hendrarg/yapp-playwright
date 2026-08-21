@@ -84,6 +84,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npx eslint .` | Lint (import rules, locator placement, dead code) |
 | `npm run agents:sync` | Regenerate per-tool agent adapters from `.agents/` |
 | `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
+| `npm run db:shell -- "<SQL>"` | Read-only SQL against the dev database (needs `PSQL_*` in `.env`) |
 
 ## Architecture
 

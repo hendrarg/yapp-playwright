@@ -13,6 +13,7 @@
     "audit:locators": "node scripts/audit-locators.mjs",
     "audit:aut-order": "node scripts/reorder-aut-ascending.mjs --check",
     "token:inspect": "node scripts/inspect-tokens.mjs",
+    "db:shell": "tsx scripts/db-shell.ts",
     "test:unit": "playwright test --project=chromium tests/unit",
     "agents:sync": "node scripts/sync-agent-config.mjs",
     "agents:check": "node scripts/sync-agent-config.mjs --check",
@@ -36,6 +37,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^10.8.1",
     "pg": "^8.23.0",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.67.0"
   }

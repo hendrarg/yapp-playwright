@@ -201,6 +201,7 @@ npm run audit:tags                          # Tag audit
 npm run audit:locators                      # Fragile-locator audit
 npm run audit:aut-order                     # Ascending @AUT-* order
 npm run clean:artifacts                     # Drop MCP dumps older than 7 days
+npm run db:shell -- "SELECT 1"              # Read-only SQL against the dev DB
 npm run automation:context -- AUT-E2E-002   # Build automation context from Google Sheets
 ```
 
