@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { consultationBuyerDetailData, consultationBuyerSchedulingData, formatConsultationSaveMySpotDate } from '@test-data/buyer/consultation.detail.data';
 import { onlineCourseBuyerDetailData, onlineCourseCheckoutData } from '@test-data/buyer/online-course.detail.data';
+import { amountRow } from '@pages/shared/locators';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
 import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
@@ -949,7 +950,7 @@ export class ProductPurchasePage {
   }
 
   private async readMoney(label: string, fallback?: number): Promise<number> {
-    const row = this.page.getByText(label, { exact: true }).locator('..');
+    const row = amountRow(this.page, label);
     if (await row.count() === 0 && fallback !== undefined) return fallback;
 
     const text = await row.innerText();

@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { tipLabels } from "@test-data/buyer/profile.data";
 import { locatorChain, smartClick } from "@utils/heal-utils";
+import { amountRow } from "@pages/shared/locators";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
 
 type TipReviewData = {
@@ -410,8 +411,8 @@ export class TipPage {
       }, { timeout: 1500 });
     }
 
-    const subtotalRow = subtotalLabel.locator("..");
-    const totalRow = locatorChain(this.page, { text: tipLabels.total, role: "cell", name: tipLabels.total }).locator("..");
+    const subtotalRow = amountRow(this.page, tipLabels.subtotal);
+    const totalRow = amountRow(this.page, tipLabels.total);
     await expect(subtotalRow.getByText(data.displayAmount, { exact: true })).toBeVisible();
 
     const totalValue = totalRow.locator("span").filter({ hasText: /^Rp[\d.]+$/ });

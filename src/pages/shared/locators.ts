@@ -319,3 +319,15 @@ export const livePreviewCard = (page: Page) => page.locator("div:has(> h3)");
  */
 export const POST_CARD_SELECTOR =
   "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
+
+/**
+ * The row that directly contains a label, so the value beside it can be asserted.
+ *
+ * Replaces `getByText(label).locator("..")`. Playwright reads a leading `..` as the XPath
+ * engine, so that was an axis step; `:has(> …)` names the parent directly and is
+ * tag-agnostic. Browser-verified on the tip form and the product checkout, where each
+ * summary row is a label span and an amount span inside one div, resolving to the same
+ * single element the parent step did.
+ */
+export const amountRow = (page: Page, label: string) =>
+  page.locator(`:has(> :text-is("${label}"))`);
