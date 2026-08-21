@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { consultationBuyerDetailData, consultationBuyerSchedulingData, formatConsultationSaveMySpotDate } from '@test-data/buyer/consultation.detail.data';
+import { buyerEventsDetailData } from '@test-data/buyer/events.detail.data';
 import { onlineCourseBuyerDetailData, onlineCourseCheckoutData } from '@test-data/buyer/online-course.detail.data';
 import { amountRow } from '@pages/shared/locators';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
@@ -145,6 +146,211 @@ export class ProductPurchasePage {
     expect(bodyText).toContain(`${dateMatch![0].split(" ")[0]} ${month}`);
     expect(bodyText).toContain(options.startTime);
     expect(bodyText).toContain(options.endTime);
+  }
+
+  async expectEventOverview(options: { title: string; creator: string }) {
+    await expect(
+      this.page.getByText(buyerEventsDetailData.eventBadge, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByText(options.title, { exact: true }).filter({ visible: true }).first()).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(this.page.getByText(options.creator, { exact: true }).filter({ visible: true }).first()).toBeVisible({
+      timeout: 15000,
+    });
+    await expect(
+      locatorChain(this.page, {
+        role: 'tab',
+        name: buyerEventsDetailData.overviewTab,
+        text: buyerEventsDetailData.overviewTab,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'tab',
+        name: buyerEventsDetailData.aboutCreatorTab,
+        text: buyerEventsDetailData.aboutCreatorTab,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'heading',
+        name: buyerEventsDetailData.detailHeading,
+        text: buyerEventsDetailData.detailHeading,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByRole('tabpanel', { name: buyerEventsDetailData.overviewTab }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByText(buyerEventsDetailData.ticketDetailHeading, { exact: true }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'button',
+        name: buyerEventsDetailData.selectTicketAction,
+        text: buyerEventsDetailData.selectTicketAction,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'button',
+        name: buyerEventsDetailData.addToCartAction,
+        text: buyerEventsDetailData.addToCartAction,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectEventCarouselBoundary(expectedSlides: number) {
+    const dots = this.page.getByRole('button', { name: /^Go to slide \d+$/ }).filter({ visible: true });
+    await expect(dots).toHaveCount(expectedSlides, { timeout: 15000 });
+    await expect(this.eventNextSlideButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.eventPreviousSlideButton()).toHaveCount(0);
+
+    for (let index = 1; index < expectedSlides; index++) {
+      await safeClick(this.eventNextSlideButton());
+    }
+
+    await expect(this.eventPreviousSlideButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.eventNextSlideButton()).toHaveCount(0);
+  }
+
+  async expectEventDateAndStatus(options: {
+    datePattern: RegExp;
+    timePattern?: RegExp;
+    allDayText?: string;
+    statusPattern: RegExp;
+  }) {
+    const bodyText = await this.page.getByRole('main').innerText();
+    expect(bodyText).toMatch(options.datePattern);
+    if (options.timePattern) expect(bodyText).toMatch(options.timePattern);
+    if (options.allDayText) expect(bodyText).toContain(options.allDayText);
+    expect(bodyText).toMatch(options.statusPattern);
+  }
+
+  async expectEventVenueLink(venue: string, hrefPattern: RegExp) {
+    const venueLink = locatorChain(this.page, {
+      role: 'link',
+      name: venue,
+      text: venue,
+      selector: 'a[href*="google.com/maps/search"]',
+    }).filter({ visible: true }).first();
+    await expect(venueLink).toBeVisible({ timeout: 10000 });
+    await expect(venueLink).toHaveAttribute('href', hrefPattern);
+    await expect(venueLink).toHaveAttribute('target', '_blank');
+  }
+
+  async expectEventTicketTiers(options: {
+    soldOutTier: string;
+    availableTier: string;
+    soldOutPricePattern: RegExp;
+    availablePricePattern: RegExp;
+    quantityPattern: RegExp;
+  }) {
+    const bodyText = await this.page.getByRole('main').innerText();
+    expect(bodyText).toContain(options.soldOutTier);
+    expect(bodyText).toContain(options.availableTier);
+    expect(bodyText).toMatch(options.soldOutPricePattern);
+    expect(bodyText).toMatch(options.availablePricePattern);
+    expect(bodyText).toMatch(options.quantityPattern);
+    await expect(this.page.getByText('Sold Out', { exact: true }).filter({ visible: true })).toBeVisible({
+      timeout: 10000,
+    });
+    const selectButtons = this.page.getByRole('button', { name: 'Select', exact: true }).filter({ visible: true });
+    await expect(selectButtons).toHaveCount(2, { timeout: 10000 });
+    await expect(selectButtons.nth(0)).toBeDisabled();
+    await expect(selectButtons.nth(1)).toBeEnabled();
+  }
+
+  async expectHybridEventAccess(options: {
+    venue: string;
+    address: string;
+    platform: string;
+    meetingLinkNotice: string;
+    onlineTier: string;
+    offlineTier: string;
+  }) {
+    const bodyText = await this.page.getByRole('main').innerText();
+    expect(bodyText).toContain(options.venue);
+    expect(bodyText).toContain(options.address);
+    expect(bodyText).toContain(options.platform);
+    expect(bodyText).toContain(options.meetingLinkNotice);
+    expect(bodyText).toContain(options.onlineTier);
+    expect(bodyText).toContain(options.offlineTier);
+    expect(bodyText).toMatch(/Online/);
+    expect(bodyText).toMatch(/Offline/);
+  }
+
+  async expectEventDiscountedTier(pricePattern: RegExp) {
+    await expect(this.page.getByText(pricePattern).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectBuyerStartFromAbsent() {
+    await expect(this.page.getByText(/Start From/i).filter({ visible: true })).toHaveCount(0);
+  }
+
+  async expectEventQuantityLabel(quantityPattern: RegExp) {
+    await expect(this.page.getByText(quantityPattern).filter({ visible: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async expectEventAboutCreator() {
+    const overview = locatorChain(this.page, {
+      role: 'tab',
+      name: buyerEventsDetailData.overviewTab,
+      text: buyerEventsDetailData.overviewTab,
+    }).filter({ visible: true });
+    const aboutCreator = locatorChain(this.page, {
+      role: 'tab',
+      name: buyerEventsDetailData.aboutCreatorTab,
+      text: buyerEventsDetailData.aboutCreatorTab,
+    }).filter({ visible: true });
+    await safeClick(aboutCreator);
+    await expect(aboutCreator).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+    await expect(this.page.getByRole('heading', { name: /^Meet .+ — .+$/ }).filter({ visible: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      this.page.getByText(buyerEventsDetailData.creatorBioFallback, { exact: true }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await safeClick(overview);
+    await expect(overview).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
+  }
+
+  async expectOwnerEventView() {
+    await expect(
+      locatorChain(this.page, {
+        role: 'button',
+        name: buyerEventsDetailData.editProductAction,
+        text: buyerEventsDetailData.editProductAction,
+      }).filter({ visible: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      locatorChain(this.page, {
+        role: 'button',
+        name: buyerEventsDetailData.addToCartAction,
+        text: buyerEventsDetailData.addToCartAction,
+      }).filter({ visible: true }),
+    ).toHaveCount(0);
+  }
+
+  private eventNextSlideButton(): Locator {
+    return locatorChain(this.page, {
+      role: 'button',
+      name: 'Next slide',
+      text: 'Next slide',
+      selector: '[data-slot="carousel-next"]',
+    }).filter({ visible: true }).first();
+  }
+
+  private eventPreviousSlideButton(): Locator {
+    return locatorChain(this.page, {
+      role: 'button',
+      name: 'Previous slide',
+      text: 'Previous slide',
+      selector: '[data-slot="carousel-previous"]',
+    }).filter({ visible: true }).first();
   }
 
   async isProductPubliclyPurchasable(): Promise<boolean> {

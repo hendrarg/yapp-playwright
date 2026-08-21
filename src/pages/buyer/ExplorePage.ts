@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { trackAuthToken } from '@helpers/auth/validate-token';
+import { locatorChain } from '@utils/heal-utils';
 import { safeClick, safeFill } from '@utils/playwright.utils';
 
 /**
@@ -50,6 +51,37 @@ export class ExplorePage {
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/explore/);
     expect(this.page.url()).not.toContain('/auth');
+  }
+
+  async selectProductCategory(label: string, query: string) {
+    const category = locatorChain(this.page, {
+      role: 'button',
+      name: label,
+      text: label,
+    });
+    await safeClick(category);
+    await expect(this.page).toHaveURL(new RegExp(`[?&]productType=${encodeURIComponent(query)}(?:&|$)`));
+    await expect(category).toBeVisible();
+  }
+
+  async expectEventCard(options: {
+    title: string;
+    creator: string;
+    badge: string;
+    pricePattern?: RegExp;
+  }) {
+    const card = this.eventCard(options.title);
+    await expect(card).toBeVisible({ timeout: 15000 });
+    await expect(card).toContainText(options.badge);
+    await expect(card).toContainText(options.title);
+    await expect(card).toContainText(options.creator);
+    await expect(card.locator('img').first()).toBeVisible({ timeout: 10000 });
+    if (options.pricePattern) await expect(card).toContainText(options.pricePattern);
+  }
+
+  async openEventCard(title: string, path: string) {
+    await safeClick(this.eventCard(title).getByRole('heading', { name: title, exact: true }));
+    await expect(this.page).toHaveURL(new URL(path.slice(1), this.baseURL).toString());
   }
 
   async expectAuthenticated() {
@@ -129,6 +161,13 @@ export class ExplorePage {
     return this.creatorsGrid
       .getByRole('group')
       .filter({ has: this.page.getByRole('heading', { name, exact: true }) });
+  }
+
+  private eventCard(title: string): Locator {
+    return this.page
+      .getByRole('link', { name: `${title} Events and Tickets` })
+      .filter({ visible: true })
+      .first();
   }
 
   async openRecommendedCreator(creator: { name: string; href: string }) {

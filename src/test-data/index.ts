@@ -13,6 +13,7 @@ export { formLabels, addressTemplate, contactTemplate, paymentTemplate, generate
 export { cartItemTemplates, checkoutData, searchQueries, exploreFilters, generateCartItem, generateCheckoutData } from "./buyer/cart.data";
 export { landingCopy, generateGetYappUsername } from "./buyer/landing.data";
 export { feedsTabs, feedsLabels, scrollRounds, scrollDelayMs, type FeedsTab } from "./buyer/feeds.data";
+export { buyerEventsDetailData } from "./buyer/events.detail.data";
 export {
   creatorProfile,
   membershipCreatorProfile,
