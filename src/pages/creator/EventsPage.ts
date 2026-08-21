@@ -120,10 +120,9 @@ export class EventsPage {
   }
 
   private galleryFileInput(): Locator {
-    return this.page
-      .getByText(eventsMediaData.galleryChooserCopy, { exact: true })
-      .locator("xpath=ancestor::*[.//input[@type='file']][1]//input[@type='file']")
-      .or(galleryInput(this.page));
+    // The multi-file input is unique on the form; browser-verified to be the same
+    // element the old text-anchored XPath resolved to.
+    return galleryInput(this.page);
   }
 
   private afterSalesLabel(text: "Customize Message" | "Links" | "Customize after-sales for this tier"): Locator {
@@ -194,11 +193,23 @@ export class EventsPage {
       .getByRole("button", { name: "Add Link", exact: true });
   }
 
+  /**
+   * The row wrapping a labelled cell. Both after-sales link rows and ticket tier headers
+   * share one shape: the label lives in a `span` beside its own icon button, and the
+   * remaining actions sit on ancestors. Browser-verified to resolve to the same element
+   * as the previous `ancestor::div[3]` step, for every row on the form.
+   */
+  private labelledRow(label: string): Locator {
+    const cell = this.page
+      .locator("div")
+      .filter({ has: this.page.locator(`span:text-is("${label}")`) })
+      .filter({ has: this.page.getByRole("button") })
+      .last();
+    return this.page.locator("div").filter({ has: cell }).last();
+  }
+
   private linkRow(label: string): Locator {
-    return locatorChain(this.page, {
-      text: label,
-      selector: `text="${label}"`,
-    }).locator("xpath=ancestor::div[3]");
+    return this.labelledRow(label);
   }
 
   private linkEditButton(label: string): Locator {
@@ -348,10 +359,13 @@ export class EventsPage {
   }
 
   private discountTypeCombobox(index: number): Locator {
-    return locatorChain(this.page, {
-      text: "Discount",
-      selector: 'text="Discount"',
-    }).nth(index).locator("xpath=following::button[@role='combobox'][1]");
+    // Within the ticket's block two rows match "Discount" — `:has-text` is
+    // case-insensitive so "Set discount" matches as well. The discount row is the one
+    // carrying a combobox; the other carries the switch.
+    return this.ticketBlock(index)
+      .locator('div:has(> label:has-text("Discount"))')
+      .filter({ has: this.page.getByRole("combobox") })
+      .getByRole("combobox");
   }
 
   private discountAmountInput(type: EventsTicketDiscountType): Locator {
@@ -394,24 +408,25 @@ export class EventsPage {
   }
 
   private ticketTierHeader(name: string): Locator {
-    return locatorChain(this.page, {
-      text: name,
-      selector: `text="${name}"`,
-    }).locator("xpath=ancestor::div[3]");
+    return this.labelledRow(name);
+  }
+
+  /**
+   * The tier's header block: the rename button plus the two unlabelled icon buttons.
+   * The app gives those two no accessible name, so they can only be told apart by
+   * position — but the position is now indexed within this tier's own block instead of
+   * walking the whole document as `following::button[N]` did.
+   */
+  private ticketHeaderBlock(name: string): Locator {
+    return this.page.locator("div").filter({ has: this.ticketTierHeader(name) }).last();
   }
 
   private ticketExpandButton(name: string): Locator {
-    return locatorChain(this.page, {
-      text: name,
-      selector: `text="${name}"`,
-    }).locator("xpath=following::button[3]");
+    return this.ticketHeaderBlock(name).getByRole("button").nth(2);
   }
 
   private ticketDeleteButton(name: string): Locator {
-    return locatorChain(this.page, {
-      text: name,
-      selector: `text="${name}"`,
-    }).locator("xpath=following::button[2]");
+    return this.ticketHeaderBlock(name).getByRole("button").nth(1);
   }
 
   async expectTicketConfiguration() {

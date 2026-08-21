@@ -186,7 +186,8 @@ Do not create intermediate Markdown files other than the required short, local t
 - Close the MCP Playwright browser when the browser session is no longer needed: call `browser_close` on the MCP server after finishing the final interaction, so no orphaned tabs are left behind.
 - Do not leave long-lived browser contexts open between unrelated tasks. A leftover context can persist stale state and cause the next session to start on a stale/blank page.
 - After closing, verify with `browser_tabs` that only the default `about:blank` tab remains.
-- Note: the MCP server itself is stateful — a full server restart (Settings → MCP → refresh) is the only way to reload `--storage-state`; `browser_close` only closes the page, not the server.
+- **Recovering auth without a server restart:** `browser_close` followed by a fresh `browser_navigate` re-applies `--storage-state`, because the wrapper runs the server with `--isolated` and a closed session gets a new context. Verified after `clearCookies()` dropped the session: navigating again came back authenticated. Use this instead of restarting the server, and instead of pasting a token into a tool call.
+- A full server restart (Settings → MCP → refresh) is only needed when the storage-state **file** itself must be rebuilt — for example after switching `YAPP_MCP_ACCOUNT`, since `scripts/mcp-auth-storage.mjs` writes that file at server start.
 
 ## Required Tags
 
