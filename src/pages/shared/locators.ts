@@ -307,3 +307,15 @@ export const priceInput = (page: Page) =>
  * to resolve to the same single element as the previous `xpath=..` parent step.
  */
 export const livePreviewCard = (page: Page) => page.locator("div:has(> h3)");
+
+/**
+ * A post card in the feed or on a creator profile.
+ *
+ * Browser-verified: the card is a bare `<div>` — no role, no link, no heading, nothing
+ * addressable. Tailwind classes are the only handle the app offers, so this stays a
+ * class selector, but it lives here as the single definition instead of the identical
+ * constant that used to sit in both FeedsPage and ProfilePage. When the app gains a
+ * `data-testid` on post cards, this is the one line to change.
+ */
+export const POST_CARD_SELECTOR =
+  "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";

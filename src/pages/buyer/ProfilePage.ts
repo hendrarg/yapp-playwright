@@ -3,10 +3,10 @@ import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
 import { locatorChain } from "@utils/heal-utils";
+import { POST_CARD_SELECTOR } from "@pages/shared/locators";
 import { profileTabs, profileLabels, resolveCreatorProfile, type CreatorProfileContext, type ProfileTab } from "@test-data/buyer/profile.data";
 
 const ACTIVE_TAB_CLASS = "primary-text-color";
-const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
 const BUYER_APP_ROUTES = new Set([
   "feeds",
   "explore",
@@ -410,7 +410,7 @@ export class ProfilePage {
   readonly exclusiveOnlyToggle = this.main.getByRole("button", { name: profileLabels.exclusiveOnly, exact: true });
 
   private get creatorFeedPosts(): Locator {
-    return this.main.locator(POST_SELECTOR);
+    return this.main.locator(POST_CARD_SELECTOR);
   }
 
   async expectFeedsTabContent() {

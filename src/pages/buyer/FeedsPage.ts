@@ -3,9 +3,9 @@ import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
 import { locatorChain } from "@utils/heal-utils";
+import { POST_CARD_SELECTOR } from "@pages/shared/locators";
 import { feedsTabs, feedsLabels, scrollRounds, scrollDelayMs, type FeedsTab } from "@test-data/buyer/feeds.data";
 
-const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
 const ACTIVE_TAB_COLOR = "text-[#373737]";
 
 export class FeedsPage {
@@ -127,7 +127,7 @@ export class FeedsPage {
 
   // ── Feed posts ──
   private get feedPosts(): Locator {
-    return this.page.locator("main").locator(POST_SELECTOR);
+    return this.page.locator("main").locator(POST_CARD_SELECTOR);
   }
 
   readonly memberOnlyLabel = locatorChain(this.page, {

@@ -113,13 +113,22 @@ export class CustomizePage {
     return this.page.getByRole("heading", { name: "Profile layout", level: 2 });
   }
 
+  /**
+   * The Profile layout section. Browser-verified to be the same element the previous
+   * `layoutHeading.locator("..")` parent step resolved to — the heading's parent really
+   * is a `<section>`, so naming it is clearer than walking up.
+   */
+  private get layoutSection(): Locator {
+    return this.page.locator('section:has(> h2:text-is("Profile layout"))');
+  }
+
   async selectLayout(name: string) {
-    await this.layoutHeading.locator("..").getByText(name, { exact: true }).click();
+    await this.layoutSection.getByText(name, { exact: true }).click();
   }
 
   async expectLayoutOptionsVisible() {
     await expect(this.layoutHeading).toBeVisible({ timeout: 5000 });
-    const layoutSection = this.layoutHeading.locator("..");
+    const layoutSection = this.layoutSection;
     await expect(layoutSection.getByText("Default", { exact: true })).toBeVisible({ timeout: 5000 });
     await expect(layoutSection.getByText("Simple", { exact: true })).toBeVisible({ timeout: 5000 });
   }
@@ -157,7 +166,9 @@ export class CustomizePage {
   }
 
   get tipButtonCharCount(): Locator {
-    return this.page.locator('[class*="char"]').filter({ hasText: /\d+\/\d+/ });
+    // Matched by its own text: the counter is a plain span with styling-only classes,
+    // so the previous `[class*="char"]` selector depended on Tailwind output.
+    return this.page.getByText(/^\d+\/\d+$/);
   }
 
   async toggleTipButton(enabled: boolean) {

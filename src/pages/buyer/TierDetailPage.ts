@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { waitForLoaded } from "@utils/playwright.utils";
 
@@ -15,9 +15,18 @@ export class TierDetailPage {
   }
 
   // ── Tier detail page ──
-  readonly tierName = this.page.getByText("Tier Name").locator("..").getByText(/.+/).last();
-  readonly billing = this.page.getByText("Billing").locator("..").getByText(/Rp/);
-  readonly creator = this.page.getByText("Creator").locator("..").locator('[class*="cursor-pointer"]');
+  /**
+   * Each detail is a row holding two children: a `<p>` label and its value. Naming the
+   * row that way replaces the previous `locator("..")` parent step, and lets the creator
+   * value be reached as the row's own child instead of by a Tailwind class.
+   */
+  private detailRow(label: string): Locator {
+    return this.page.locator(`div:has(> p:text-is("${label}"))`);
+  }
+
+  readonly tierName = this.detailRow("Tier Name").locator("p").last();
+  readonly billing = this.detailRow("Billing").getByText(/Rp/);
+  readonly creator = this.detailRow("Creator").locator("> div");
   readonly subscribeButton = this.page.getByRole("button", { name: "Subscribe" });
 
   async expectPageLoaded() {
