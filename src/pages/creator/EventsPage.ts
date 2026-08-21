@@ -113,10 +113,10 @@ export class EventsPage {
   }
 
   private heroFileInput(): Locator {
-    return this.page
-      .getByText(eventsMediaData.heroDropHint, { exact: true })
-      .locator("xpath=ancestor::*[.//input[@type='file']][1]//input[@type='file']")
-      .or(heroInput(this.page));
+    // The single-file thumbnail input. It only renders while no thumbnail is set, which
+    // is why the old text-anchored XPath resolved to nothing on an edit form that
+    // already had one — the shared attribute locator identifies it on its own.
+    return heroInput(this.page);
   }
 
   private galleryFileInput(): Locator {

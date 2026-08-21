@@ -23,6 +23,18 @@ const FRAGILE_PATTERNS = [
   },
   { name: 'xpath-locator', regex: /locator\s*\(\s*['"`]xpath=/i },
   { name: 'raw-xpath-string', regex: /['"`]xpath=\.\./ },
+  /*
+   * Playwright infers the XPath engine when a selector starts with `..` or `//`, so
+   * `locator("..")` is an axis walk with no `xpath=` prefix to grep for. These were
+   * invisible to the checks above.
+   */
+  { name: 'implicit-xpath', regex: /locator\s*\(\s*['"`](?:\.\.|\/\/)/ },
+  /*
+   * Attribute selectors on `class` are Tailwind-shaped and churn with styling —
+   * `[class*="cursor-pointer"]` is exactly as fragile as `.cursor-pointer`, but the
+   * css-locator pattern above only sees a leading `.` or `#`.
+   */
+  { name: 'class-attribute-selector', regex: /\[class[*^$~|]?=/ },
 ];
 
 function walkTsFiles(dir) {
