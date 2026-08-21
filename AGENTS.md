@@ -107,26 +107,12 @@ scripts/sync-agent-config.mjs   projects .agents/ into each tool's path (postins
 .claude/skills|commands, .cursor/rules    generated, git-ignored — do not edit
 ```
 
-## Navigation fixtures
+## Navigation and page objects
 
-| Fixture | Domain | Available on | Helper |
-|---------|--------|--------------|--------|
-| `buyerNav` | Buyer (`baseURL`) | `test`, `authTest` | `src/helpers/buyer/nav.ts` |
-| `creatorNav` | Creator (`creatorsBaseURL`) | `test`, `creatorAuthTest` | `src/helpers/creator/nav.ts` |
-
-Prefer `buyerNav.open('feeds')` / `creatorNav.open('products')` over raw `page.goto()` in specs.
-
-**Adding a new route:** follow the domain checklist in `.agents/rules/testing.md`:
-- Buyer → section **Buyer navigation** → **Adding a new buyer route**
-- Creator → section **Creator navigation** → **Adding a new creator route**
-
-Also see `.agents/skills/add-page-object/SKILL.md` step 6 when scaffolding a page object.
-
-## Import Conventions
-
-- Use path aliases: `@pages/`, `@fixtures/`, `@utils/`, `@helpers/`, `@config/`, `@test-data/`.
-- Test specs import from `../test-base`, not `@fixtures/base.fixture`.
-- Page objects receive `baseURL` for buyer pages or `creatorsBaseURL` for creator pages through fixtures.
+Use `buyerNav` and `creatorNav` for route-based navigation instead of raw `page.goto()` in specs.
+The fixture matrix, route list, new-route checklist, import conventions, page-object structure,
+locator rules, and reuse gate are defined in `.agents/rules/code-style.md` and
+`.agents/rules/testing.md`. Keep those files authoritative rather than duplicating their details here.
 
 ## Auth
 
@@ -183,36 +169,23 @@ Do not create intermediate Markdown files other than the required short, local t
 
 ## MCP Playwright Browser Hygiene
 
-- Close the MCP Playwright browser when the browser session is no longer needed: call `browser_close` on the MCP server after finishing the final interaction, so no orphaned tabs are left behind.
-- Do not leave long-lived browser contexts open between unrelated tasks. A leftover context can persist stale state and cause the next session to start on a stale/blank page.
-- After closing, verify with `browser_tabs` that only the default `about:blank` tab remains.
-- **Recovering auth without a server restart:** `browser_close` followed by a fresh `browser_navigate` re-applies `--storage-state`, because the wrapper runs the server with `--isolated` and a closed session gets a new context. Verified after `clearCookies()` dropped the session: navigating again came back authenticated. Use this instead of restarting the server, and instead of pasting a token into a tool call.
-- A full server restart (Settings → MCP → refresh) is only needed when the storage-state **file** itself must be rebuilt — for example after switching `YAPP_MCP_ACCOUNT`, since `scripts/mcp-auth-storage.mjs` writes that file at server start.
+Follow `.agents/rules/mcp-playwright.md` for MCP registration, authentication, and token recovery.
+Close browser sessions after locator exploration and verify that only the default blank tab remains.
 
-## Required Tags
+## Test tags
 
-Every mapped test must include:
-
-- `@<Automation ID>` such as `@AUT-E2E-008` or `@AUT-FV-216` from Automation Mapping
-
-Unmapped tests must be assigned a validated `@AUT-*` ID via Google Sheets before merge.
-
-Every test must also include:
-
-- one feature tag such as `@feeds`
-- one role tag: `@buyer` or `@creator`
-- one priority tag: `@smoke`, `@regression`, or `@sanity`
+Tag categories, AUT ordering, minimum depth, and audit commands are authoritative in
+`.agents/rules/testing.md`. Every mapped test still requires its validated `@AUT-*` tag,
+feature tag, role tag, and priority tag.
 
 ## CI
 
-GitHub Actions workflow: `.github/workflows/playwright.yml`, in two jobs.
+GitHub Actions workflow: `.github/workflows/playwright.yml`. The static checks run before the
+browser test job; tag and locator audits remain advisory while the backlog below exists.
+See `.agents/rules/ci.md` for CI environment, secrets, and validation details.
 
-1. **`static`** — `npm ci` → `typecheck` → `eslint` → `audit:aut-order`, then `audit:tags` and `audit:locators` as **advisory** steps (`continue-on-error`, see backlog below). Needs no browser or credentials, so a bad change fails in under a minute.
-2. **`test`** — needs `static`; installs Chromium and runs `test:smoke` on push/PR, `test:regression` on the nightly schedule (19:00 UTC), or the suite chosen via `workflow_dispatch`. Uploads the HTML report and `test-results/junit.xml`.
-
-**Local gate:** `.githooks/pre-commit` runs the same blocking checks. Enable once per clone with `git config core.hooksPath .githooks`; bypass a single commit with `SKIP_HOOKS=1`.
-
-**Why two audits are advisory:** `audit:tags` and `audit:locators` still report a pre-existing backlog (see **Known backlog**), so blocking on them would fail commits for work they did not cause. Promote each to blocking once it reaches zero findings.
+The local gate is `.githooks/pre-commit`; enable it with
+`git config core.hooksPath .githooks`. Do not bypass it unless explicitly necessary.
 
 ## Known backlog
 
