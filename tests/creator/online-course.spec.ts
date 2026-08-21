@@ -170,8 +170,7 @@ test.describe('Creator Online Course', () => {
       type: 'covers',
       description: 'TC-OC-C-025, TC-OC-C-026, TC-OC-C-035',
     }],
-  }, async ({
-    creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
+  }, async ({creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -419,8 +418,7 @@ test.describe('Creator Online Course', () => {
       type: 'covers',
       description: 'TC-OC-C-027, TC-OC-C-028, TC-OC-C-029, TC-OC-C-030, TC-OC-C-031',
     }],
-  }, async ({
-    creatorNav, productsPage, onlineCoursePage, page }) => {
+  }, async ({creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -528,8 +526,7 @@ test.describe('Creator Online Course', () => {
       type: 'covers',
       description: 'TC-OC-C-022, TC-OC-C-023, TC-OC-C-032, TC-OC-C-034',
     }],
-  }, async ({
-    creatorNav, productsPage, onlineCoursePage, page }) => {
+  }, async ({creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');

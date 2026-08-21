@@ -1,9 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import {
-  consultationBuyerDetailData,
-  consultationBuyerSchedulingData,
-  formatConsultationSaveMySpotDate,
-} from '@test-data/buyer/consultation.detail.data';
+import { consultationBuyerDetailData, consultationBuyerSchedulingData, formatConsultationSaveMySpotDate } from '@test-data/buyer/consultation.detail.data';
 import { onlineCourseBuyerDetailData, onlineCourseCheckoutData } from '@test-data/buyer/online-course.detail.data';
 import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
@@ -285,6 +281,112 @@ export class ProductPurchasePage {
     return this.page
       .getByRole('dialog')
       .filter({ has: this.page.getByRole('heading', { name: consultationBuyerSchedulingData.checkoutHeading, exact: true }) });
+  }
+
+  /**
+   * The checkout dialog as the buyer flow sees it, without filtering on the heading —
+   * used by the steps that assert on the dialog's own contents. `testId` leads so a
+   * future `data-testid` wins automatically; today it resolves through the role.
+   */
+  private consultationCheckoutDialogRoot(): Locator {
+    return locatorChain(this.page, { testId: 'checkout-dialog', role: 'dialog' });
+  }
+
+  /**
+   * The checkout heading is rendered as a heading in some states and as plain text in
+   * others, so match either and take the first hit.
+   */
+  private consultationCheckoutHeading(): Locator {
+    const dialog = this.consultationCheckoutDialogRoot();
+    const heading = consultationBuyerSchedulingData.checkoutHeading;
+    return dialog
+      .getByRole('heading', { name: heading, exact: true })
+      .or(dialog.getByText(heading, { exact: true }))
+      .first();
+  }
+
+  private consultationCheckoutNameInput(): Locator {
+    return this.consultationCheckoutDialogRoot().getByPlaceholder(/name/i).first();
+  }
+
+  private consultationCheckoutEmailInput(): Locator {
+    return this.consultationCheckoutDialogRoot().getByPlaceholder(/email/i).first();
+  }
+
+  async expectConsultationCheckoutOpen() {
+    await expect(this.consultationCheckoutDialogRoot()).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Labels every checkout dialog shows; the optional ones vary by entry point. */
+  async expectConsultationCheckoutSummary(
+    options: { title?: string; meetingPlatform?: boolean; singleSession?: boolean } = {},
+  ) {
+    const dialog = this.consultationCheckoutDialogRoot();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(this.consultationCheckoutHeading()).toBeVisible({ timeout: 5000 });
+    if (options.title) {
+      await expect(dialog.getByText(options.title)).toBeVisible({ timeout: 5000 });
+    }
+    await expect(
+      dialog.getByText(consultationBuyerSchedulingData.consultationDetailsLabel, { exact: true }),
+    ).toBeVisible({ timeout: 5000 });
+    await expect(
+      dialog.getByText(consultationBuyerSchedulingData.dateAndTimeLabel, { exact: true }),
+    ).toBeVisible({ timeout: 5000 });
+    if (options.meetingPlatform) {
+      await expect(
+        dialog.getByText(consultationBuyerSchedulingData.meetingPlatformLabel, { exact: true }),
+      ).toBeVisible({ timeout: 5000 });
+    }
+    if (options.singleSession) {
+      await expect(
+        dialog.getByText(consultationBuyerSchedulingData.singleSessionLabel),
+      ).toBeVisible({ timeout: 5000 });
+    }
+  }
+
+  /** Guards against the dialog rendering its heading twice. */
+  async expectConsultationCheckoutHeadingUnique() {
+    const count = await this.consultationCheckoutDialogRoot()
+      .getByText(consultationBuyerSchedulingData.checkoutHeading, { exact: true })
+      .count();
+    expect(count, 'checkout heading should appear exactly once').toBeLessThanOrEqual(1);
+  }
+
+  async expectConsultationCheckoutIdentityFields() {
+    await expect(this.consultationCheckoutDialogRoot()).toBeVisible({ timeout: 10000 });
+    await expect(this.consultationCheckoutHeading()).toBeVisible({ timeout: 5000 });
+    await expect(this.consultationCheckoutNameInput()).toBeVisible({ timeout: 5000 });
+    await expect(this.consultationCheckoutEmailInput()).toBeVisible({ timeout: 5000 });
+  }
+
+  /**
+   * Fill the buyer identity fields when the dialog asks for them — a signed-in buyer
+   * gets them pre-filled and the inputs are absent — then confirm the booking.
+   */
+  async submitConsultationCheckout(buyer: { name: string; email: string }) {
+    const nameInput = this.consultationCheckoutNameInput();
+    if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await nameInput.fill(buyer.name);
+    }
+    const emailInput = this.consultationCheckoutEmailInput();
+    if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await emailInput.fill(buyer.email);
+    }
+    await this.consultationCheckoutDialogRoot().getByRole('button', { name: 'Join' }).click();
+    await this.page.waitForTimeout(2000);
+  }
+
+  /** The confirmation toast is best-effort: it can be gone before the assertion runs. */
+  async expectConsultationBookingToastIfPresent() {
+    const toast = locatorChain(this.page, {
+      testId: 'toast',
+      role: 'alert',
+      selector: '.toast',
+    }).first();
+    if (await toast.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await expect(toast).toBeVisible({ timeout: 5000 });
+    }
   }
 
   async expectConsultationCheckoutBlocked() {

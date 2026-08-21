@@ -149,32 +149,6 @@ guestTest('Validate Profile Pricing, Vouchers, and Fees — Part 2', {
   });
 });
 
-guestTest('Verify Guest Like Action Requires Sign In', {
-  tag: ['@AUT-FV-303', '@profile', '@auth', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerProfilePage }) => {
-  guestTest.setTimeout(60000);
-
-  await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
-    await buyerNav.goto('profile', { handle: creatorProfile });
-    await buyerProfilePage.expectFeedsTabVisibleOnProfile();
-  });
-
-  await guestTest.step('Switch to Feeds tab', async () => {
-    await buyerProfilePage.switchToTab('feeds');
-    await buyerProfilePage.expectFeedsTabContent();
-  });
-
-  await guestTest.step('Click Like on post and verify sign in dialog', async () => {
-    await buyerProfilePage.clickFirstLikePostAsGuest();
-    await buyerProfilePage.expectLoveThisPostSignInDialog();
-  });
-
-  await guestTest.step('Click Sign in now and verify redirected to login', async () => {
-    await buyerProfilePage.clickSignInNowFromDialog();
-    await expect(buyerProfilePage.page).toHaveURL(/\/auth/, { timeout: 10000 });
-  });
-});
-
 test('Validate Buyer Quick Tip Amount Selection', {
   tag: ['@AUT-FV-234', '@profile', '@tip', '@buyer', '@regression'],
   annotation: [
@@ -213,6 +187,32 @@ guestTest('Validate Public Profile Access and Visible Follower Count', {
 
   await guestTest.step('Verify follower count is visible', async () => {
     await expect(buyerProfilePage.followerCountText.first()).toBeVisible({ timeout: 5000 });
+  });
+});
+
+guestTest('Verify Guest Like Action Requires Sign In', {
+  tag: ['@AUT-FV-303', '@profile', '@auth', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerProfilePage }) => {
+  guestTest.setTimeout(60000);
+
+  await guestTest.step('Open profile as guest and verify Feeds tab visible', async () => {
+    await buyerNav.goto('profile', { handle: creatorProfile });
+    await buyerProfilePage.expectFeedsTabVisibleOnProfile();
+  });
+
+  await guestTest.step('Switch to Feeds tab', async () => {
+    await buyerProfilePage.switchToTab('feeds');
+    await buyerProfilePage.expectFeedsTabContent();
+  });
+
+  await guestTest.step('Click Like on post and verify sign in dialog', async () => {
+    await buyerProfilePage.clickFirstLikePostAsGuest();
+    await buyerProfilePage.expectLoveThisPostSignInDialog();
+  });
+
+  await guestTest.step('Click Sign in now and verify redirected to login', async () => {
+    await buyerProfilePage.clickSignInNowFromDialog();
+    await expect(buyerProfilePage.page).toHaveURL(/\/auth/, { timeout: 10000 });
   });
 });
 });

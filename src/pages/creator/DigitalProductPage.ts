@@ -2,16 +2,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick } from "@utils/playwright.utils";
-import {
-  nextSetDetailsAction,
-  textFeedback,
-  titleInput,
-} from "@pages/shared/locators";
-import {
-  digitalProductPricingData,
-  digitalProductValidationData,
-  productsCreationData,
-} from "@test-data/creator/products.creation.data";
+import { nextSetDetailsAction, textFeedback, titleInput } from "@pages/shared/locators";
+import { digitalProductPricingData, digitalProductValidationData, productsCreationData } from "@test-data/creator/products.creation.data";
 
 export class DigitalProductPage {
   constructor(

@@ -2,23 +2,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
-import {
-  closeProductCompleteModal,
-  expectProductCompleteModal,
-  fillPrice,
-  readProductCompleteSharePath,
-  setPricingEnabled,
-  uploadGallery,
-  uploadHero,
-} from "@helpers/creator/product-editor";
-import {
-  afterSalesSection,
-  descriptionEditor,
-  priceInput,
-  productCompleteDialog,
-  textFeedback,
-  titleInput,
-} from "@pages/shared/locators";
+import { closeProductCompleteModal, expectProductCompleteModal, fillPrice, readProductCompleteSharePath, setPricingEnabled, uploadGallery, uploadHero } from "@helpers/creator/product-editor";
+import { afterSalesSection, descriptionEditor, priceInput, productCompleteDialog, textFeedback, titleInput } from "@pages/shared/locators";
 import { consultationConfigData } from "@test-data/creator/consultation.config.data";
 import { consultationLifecycleData, consultationWeekdayLabel } from "@test-data/creator/consultation.lifecycle.data";
 import { consultationMediaData } from "@test-data/creator/consultation.media.data";

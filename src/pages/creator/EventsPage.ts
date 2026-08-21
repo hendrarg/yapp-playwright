@@ -2,16 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
-import {
-  embedLinkDoneButton,
-  embedLinkLabelInput,
-  embedLinkUrlInput,
-  descriptionEditor,
-  galleryInput,
-  heroInput,
-  nextSetDetailsAction,
-  titleInput,
-} from "@pages/shared/locators";
+import { embedLinkDoneButton, embedLinkLabelInput, embedLinkUrlInput, descriptionEditor, galleryInput, heroInput, nextSetDetailsAction, titleInput } from "@pages/shared/locators";
 import { eventsMediaData } from "@test-data/creator/events.media.data";
 import { eventsAfterSalesData } from "@test-data/creator/events.after-sales.data";
 import { eventsTicketsData, type EventsTicketDiscountType } from "@test-data/creator/events.tickets.data";
@@ -362,7 +353,7 @@ export class EventsPage {
     }).nth(index * 2);
   }
 
-  private salesPeriodEndButton(index: number): Locator {
+  private salesPeriodEndButton(_index: number): Locator {
     return locatorChain(this.page, {
       role: "button",
       name: "Select date",

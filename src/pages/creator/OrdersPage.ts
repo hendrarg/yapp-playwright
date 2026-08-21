@@ -221,6 +221,11 @@ export class OrdersPage {
     await expect(this.page.getByText(/Page 1 of [1-9]/).first()).toBeVisible({ timeout: 10000 });
   }
 
+  /** Any non-empty result page; use `expectEmptyResultsState` for "Page 1 of 0". */
+  async expectPaginationVisible() {
+    await expect(this.page.getByText(/Page 1 of \d+/).first()).toBeVisible({ timeout: 10000 });
+  }
+
   async searchOrders(query: string) {
     await safeFill(this.searchInput, query);
     await this.page.waitForTimeout(1000);

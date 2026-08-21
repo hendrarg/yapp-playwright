@@ -13,8 +13,7 @@ test.describe('Creator Events and Tickets', () => {
       type: 'covers',
       description: 'TC-EVT-C-011, TC-EVT-C-012, TC-EVT-C-013, TC-EVT-C-047, TC-EVT-C-048',
     }],
-  }, async ({
-    eventsPage, creatorNav, productsPage, page }) => {
+  }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const eventsType = productsCreationData.productTypes.find(
@@ -76,8 +75,7 @@ test.describe('Creator Events and Tickets', () => {
       type: 'covers',
       description: 'TC-EVT-C-014, TC-EVT-C-015, TC-EVT-C-049',
     }],
-  }, async ({
-    eventsPage, creatorNav, productsPage, page }) => {
+  }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const eventsType = productsCreationData.productTypes.find(
@@ -156,8 +154,7 @@ test.describe('Creator Events and Tickets', () => {
       type: 'covers',
       description: 'TC-EVT-C-016, TC-EVT-C-017, TC-EVT-C-018, TC-EVT-C-019, TC-EVT-C-020, TC-EVT-C-021, TC-EVT-C-045, TC-EVT-C-046, TC-EVT-C-050',
     }],
-  }, async ({
-    eventsPage, creatorNav, productsPage, page }) => {
+  }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const eventsType = productsCreationData.productTypes.find(
@@ -242,8 +239,7 @@ test.describe('Creator Events and Tickets', () => {
       type: 'covers',
       description: 'TC-EVT-C-022, TC-EVT-C-023, TC-EVT-C-024, TC-EVT-C-025, TC-EVT-C-051, TC-EVT-C-052, TC-EVT-C-053, TC-EVT-C-062',
     }],
-  }, async ({
-    eventsPage, creatorNav, productsPage, page }) => {
+  }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const eventsType = productsCreationData.productTypes.find(

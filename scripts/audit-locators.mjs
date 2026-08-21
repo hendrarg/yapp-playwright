@@ -39,13 +39,16 @@ function auditFile(file, allowedInTests = false) {
     });
   }
 
-  if (!content.includes('smartLocator') && !allowedInTests && rel(file) !== 'src/pages/shared/locators.ts') {
-    const hasLocators = /getBy(Role|Text|Label|Placeholder|TestId)|page\.locator|smartLocator/.test(content);
+  // Require an actual call, not just the identifier: a dead `import { smartLocator }`
+  // used to satisfy this check, which let three page objects pass without using it.
+  const usesSmartLocator = /\bsmartLocator\s*\(/.test(content) || /\blocatorChain\s*\(/.test(content);
+  if (!usesSmartLocator && !allowedInTests && rel(file) !== 'src/pages/shared/locators.ts') {
+    const hasLocators = /getBy(Role|Text|Label|Placeholder|TestId)|page\.locator/.test(content);
     if (hasLocators && !rel(file).includes('auth/LoginPage')) {
       findings.push({
-        kind: 'no-smart-locator-import',
+        kind: 'no-smart-locator',
         line: 1,
-        text: 'Page object defines locators but does not import or use smartLocator',
+        text: 'Page object defines locators but never calls smartLocator/locatorChain',
       });
     }
   }

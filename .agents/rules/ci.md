@@ -2,7 +2,16 @@
 
 ## Workflow Scope
 
-- GitHub Actions workflow lives at `.github/workflows/playwright.yml`.
+- GitHub Actions workflow lives at `.github/workflows/playwright.yml`, split into a
+  credential-free `static` job (typecheck, eslint, AUT order, advisory audits) and a
+  `test` job that needs it. Keep cheap checks in `static` so failures surface fast.
+- `test` picks its suite by trigger: `test:smoke` on push/PR, `test:regression` on the
+  nightly cron, or the `workflow_dispatch` input. Do not hardcode a suite.
+- `audit:tags` and `audit:locators` are deliberately `continue-on-error` while the
+  backlog in `AGENTS.md` → **Known backlog** stands. Removing that flag is only correct
+  once the audit reports zero findings.
+- `.githooks/pre-commit` mirrors the blocking checks locally. It is opt-in per clone
+  (`git config core.hooksPath .githooks`), so never assume it ran.
 - Keep workflow YAML readable; do not use dynamic secret lookups just to silence editor warnings.
 - VS Code Problems from unknown `secrets.*` are editor diagnostics unless GitHub Actions itself fails.
 

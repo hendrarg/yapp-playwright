@@ -1,4 +1,4 @@
-import { testmailEnv } from '../../../config/env';
+import { testmailEnv } from '@config/env';
 import { testAccounts, type TestAccount } from '@test-data/users';
 
 export interface TestmailInbox {

@@ -1,4 +1,4 @@
-import { creatorAuthTest as test, expect } from '../test-base';
+import { creatorAuthTest as test } from '../test-base';
 import { ordersFilterData } from '@test-data/creator/orders.data';
 
 test.describe('Creator Orders', () => {
@@ -159,7 +159,7 @@ test('Validate Orders Time Filter and Combined Filters', {
     await test.step('Apply time and product filters and verify list updates', async () => {
       await ordersPage.selectTimeRange(ordersFilterData.timeRange);
       await ordersPage.expectTimeFilterLabel(ordersFilterData.timeRange);
-      await expect(ordersPage.page.getByText(/Page 1 of \d+/).first()).toBeVisible({ timeout: 10000 });
+      await ordersPage.expectPaginationVisible();
       await ordersPage.expectOrderRowsOnlyProductTypes(ordersFilterData.multiSelectTypes);
     });
 

@@ -196,9 +196,17 @@ npm run test:regression                     # @regression only
 npx playwright test tests/buyer/explore.spec.ts
 npx playwright test --grep @AUT-FV-082      # Single automation by tag
 npx playwright test --ui
-npx tsc --noEmit                            # Type-check only
+npm run typecheck                           # tsc --noEmit
+npx eslint .                                # Lint; add --fix for mechanical fixes
+npm run audit:tags                          # Tag audit
+npm run audit:locators                      # Fragile-locator audit
+npm run audit:aut-order                     # Ascending @AUT-* order
+npm run clean:artifacts                     # Drop MCP dumps older than 7 days
 npm run automation:context -- AUT-E2E-002   # Build automation context from Google Sheets
 ```
+
+Viewport is fixed at 1440x900 to match the MCP browser, because the app renders separate
+mobile and desktop trees. Override with `PW_VIEWPORT=1280x720` or `PW_VIEWPORT=maximized`.
 
 ## Configuration
 
@@ -215,6 +223,7 @@ npm run automation:context -- AUT-E2E-002   # Build automation context from Goog
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
 | `PW_HEADLESS` | No | Run headless (`true`/`false`, default `false` locally) |
 | `PW_WORKERS` | No | Parallel worker count (default `1`) |
+| `PW_VIEWPORT` | No | `1440x900` default; `<w>x<h>` or `maximized` |
 | `GEMINI_API_KEY` | No | Enables AI-assisted test data (Google Gemini). Absent → seeded-Faker only |
 | `GEMINI_MODEL` | No | Gemini model for test data (default `gemini-3.5-flash-lite`) |
 | `YAPP_TEST_SEED` | No | Fixed Faker seed to reproduce a run exactly (default per-run timestamp) |
@@ -222,14 +231,20 @@ npm run automation:context -- AUT-E2E-002   # Build automation context from Goog
 
 ## CI/CD
 
-GitHub Actions workflow in `.github/workflows/playwright.yml` runs on push to `main`/`master` and on pull requests:
+`.github/workflows/playwright.yml` runs on push to `main`/`master`, on pull requests, on a
+nightly cron (19:00 UTC), and on manual dispatch. Two jobs:
 
-1. `npm ci`
-2. `npx playwright install --with-deps chromium`
-3. `npx tsc --noEmit`
-4. `npm run test:smoke` (skipped if `YAPP_TEST_ACCESS_TOKEN` is not configured)
+**`static`** — no browser, no credentials, fails in under a minute:
+`npm ci` → `npm run typecheck` → `npx eslint .` → `npm run audit:aut-order`, then
+`audit:tags` and `audit:locators` as advisory steps (see **Known backlog** in `AGENTS.md`).
 
-CI runs on Ubuntu with 1 retry, headless Chromium, and HTML report artifacts (30-day retention).
+**`test`** — needs `static`: installs Chromium, then runs `test:smoke` on push/PR,
+`test:regression` on the nightly cron, or the suite picked via `workflow_dispatch`.
+Skipped when `YAPP_TEST_ACCESS_TOKEN` is not configured. Uploads the HTML report and
+`test-results/junit.xml` (30-day retention). Ubuntu, headless Chromium, 1 retry.
+
+**Locally**, `.githooks/pre-commit` runs the same blocking checks. Enable it once per
+clone with `git config core.hooksPath .githooks`; bypass with `SKIP_HOOKS=1`.
 
 ## Agent Documentation
 

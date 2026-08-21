@@ -13,8 +13,7 @@ import { addCustomBuyerQuestion, chooseGalleryFiles, chooseHeroFile, closeProduc
 test.describe('Creator Sessions', () => {
   test('Validate Consultation Inputs and Boundary Conditions', {
     tag: ['@AUT-FV-017', '@sessions', '@creator', '@regression'],
-  }, async ({
-    consultationPage, creatorNav, productsPage, page }) => {
+  }, async ({consultationPage, creatorNav, productsPage, page }) => {
     test.setTimeout(120000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -74,8 +73,7 @@ test.describe('Creator Sessions', () => {
 
   test('Upload and Manage Consultation Media and Content', {
     tag: ['@AUT-FV-018', '@sessions', '@creator', '@regression'],
-  }, async ({
-    consultationPage, creatorNav, productsPage, page }) => {
+  }, async ({consultationPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -165,8 +163,7 @@ test.describe('Creator Sessions', () => {
 
   test('Validate Consultation Navigation and Unsaved Warning', {
     tag: ['@AUT-FV-019', '@sessions', '@creator', '@smoke', '@regression'],
-  }, async ({
-    consultationPage, creatorNav, productsPage }) => {
+  }, async ({consultationPage, creatorNav, productsPage }) => {
     const consultationType = productsCreationData.productTypes.find(
       (type) => type.label === 'Consultation',
     )!;
@@ -198,8 +195,7 @@ test.describe('Creator Sessions', () => {
 
   test('Validate Consultation Pricing, Vouchers, and Fees', {
     tag: ['@AUT-FV-020', '@sessions', '@creator', '@regression'],
-  }, async ({
-    consultationPage, creatorNav, productsPage, productPurchasePage, page }) => {
+  }, async ({consultationPage, creatorNav, productsPage, productPurchasePage, page }) => {
     test.setTimeout(300000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -519,8 +515,7 @@ test.describe('Creator Sessions', () => {
 
   test('Create, Update, and Manage Consultation Lifecycle', {
     tag: ['@AUT-FV-024', '@sessions', '@creator', '@regression'],
-  }, async ({
-    consultationPage, creatorNav, productsPage, productPurchasePage, page }) => {
+  }, async ({consultationPage, creatorNav, productsPage, productPurchasePage, page }) => {
     test.setTimeout(240000);
 
     const consultationType = productsCreationData.productTypes.find(
@@ -630,8 +625,7 @@ test.describe('Creator Sessions', () => {
 
   test('Configure and Customize Consultation', {
     tag: ['@AUT-FV-025', '@sessions', '@creator', '@regression'],
-  }, async ({
-    consultationPage, creatorNav, productsPage, page }) => {
+  }, async ({consultationPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');

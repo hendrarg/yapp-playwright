@@ -80,6 +80,10 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npm run test:unit` | Offline AI test-data generator tests |
 | `npm run audit:tags` | Audit TC, feature, role, priority tags |
 | `npm run audit:locators` | Audit fragile locators in page objects |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npx eslint .` | Lint (import rules, locator placement, dead code) |
+| `npm run agents:sync` | Regenerate per-tool agent adapters from `.agents/` |
+| `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
 
 ## Architecture
 
@@ -200,6 +204,18 @@ Every test must also include:
 
 ## CI
 
-GitHub Actions workflow: `.github/workflows/playwright.yml`.
+GitHub Actions workflow: `.github/workflows/playwright.yml`, in two jobs.
 
-Pipeline: `npm ci` -> `npx playwright install --with-deps chromium` -> `npm run test:smoke`.
+1. **`static`** — `npm ci` → `typecheck` → `eslint` → `audit:aut-order`, then `audit:tags` and `audit:locators` as **advisory** steps (`continue-on-error`, see backlog below). Needs no browser or credentials, so a bad change fails in under a minute.
+2. **`test`** — needs `static`; installs Chromium and runs `test:smoke` on push/PR, `test:regression` on the nightly schedule (19:00 UTC), or the suite chosen via `workflow_dispatch`. Uploads the HTML report and `test-results/junit.xml`.
+
+**Local gate:** `.githooks/pre-commit` runs the same blocking checks. Enable once per clone with `git config core.hooksPath .githooks`; bypass a single commit with `SKIP_HOOKS=1`.
+
+**Why two audits are advisory:** `audit:tags` and `audit:locators` still report a pre-existing backlog (see **Known backlog**), so blocking on them would fail commits for work they did not cause. Promote each to blocking once it reaches zero findings.
+
+## Known backlog
+
+Tracked so nobody mistakes these for regressions:
+
+- **10 creator specs carry no `@AUT-*` tag** (`affiliate`, `analytics`, `campaigns`, `feeds`, `membership`, `messages`, `referral`, `settings`, `streaming`, `wallet`). These are **not** a tagging gap: in Automation Mapping every creator row for those domains is still `Planned`, and `Affiliate` / `Campaigns` have no mapping row at all. Tagging a `goto` + `expectLoaded` smoke test with a `Planned` ID would both break the minimum-depth rule and misreport sheet coverage. Fix by automating them through `/automation <AUT-ID>`, one ID at a time — not by adding tags.
+- **~42 fragile locators in page objects.** Most are relational XPath (`ancestor::`, `preceding::`, `following-sibling::`) anchored to a neighbouring element. `smartLocator` takes a `Page` and builds independent page-rooted strategies, so it **cannot express** those relationships; rewriting them needs either real `data-testid` hooks from the app or browser-verified role scoping via `generate-locators-mcp`. Do not mass-rewrite them blind.

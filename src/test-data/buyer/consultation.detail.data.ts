@@ -66,6 +66,16 @@ export function formatConsultationSaveMySpotDate(dayLabel: string): string {
   return `${month} ${Number(match[2])}`;
 }
 
+/**
+ * Buyer identity typed into the consultation checkout dialog. A static template, not a
+ * factory: the address must stay a real testmail inbox so the booking mail has somewhere
+ * to land, so a random address would change behaviour rather than just the data.
+ */
+export const consultationCheckoutBuyer = {
+  name: "Test Buyer",
+  email: "buyer.qa@inbox.testmail.app",
+} as const;
+
 export function generateConsultationBuyerTitle(): string {
   return getAiText("consultation:title", () => faker.commerce.productName());
 }

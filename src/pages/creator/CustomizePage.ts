@@ -1,7 +1,7 @@
 import type { Page, Locator } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
-import { safeClick, safeFill } from "@utils/playwright.utils";
+import { safeFill } from "@utils/playwright.utils";
 
 export class CustomizePage {
   constructor(public readonly page: Page, private readonly baseURL: string) {}

@@ -1,12 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
-import {
-  onlineCourseAfterSalesData,
-  onlineCoursePricingData,
-  onlineCourseValidationData,
-  type OnlineCourseContentType,
-} from "@test-data/creator/products.creation.data";
+import { onlineCourseAfterSalesData, onlineCoursePricingData, onlineCourseValidationData, type OnlineCourseContentType } from "@test-data/creator/products.creation.data";
 
 export class OnlineCoursePage {
   constructor(

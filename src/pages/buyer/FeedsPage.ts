@@ -2,17 +2,10 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
-import { locatorChain, smartLocator } from "@utils/heal-utils";
-import {
-  feedsTabs,
-  feedsLabels,
-  scrollRounds,
-  scrollDelayMs,
-  type FeedsTab,
-} from "@test-data/buyer/feeds.data";
+import { locatorChain } from "@utils/heal-utils";
+import { feedsTabs, feedsLabels, scrollRounds, scrollDelayMs, type FeedsTab } from "@test-data/buyer/feeds.data";
 
 const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
-const POST_FALLBACK_SELECTOR = "main div.cursor-pointer.p-4.flex-row";
 const ACTIVE_TAB_COLOR = "text-[#373737]";
 
 export class FeedsPage {

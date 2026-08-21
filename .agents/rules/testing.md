@@ -123,6 +123,21 @@ See also `.agents/skills/add-page-object/SKILL.md` step 6.
 - When generating locators from the browser, follow `.agents/skills/generate-locators-mcp/SKILL.md` — complete mapped TC steps in MCP Playwright before writing code.
 - **Before MCP browser locator exploration:** if the MCP session redirects to `/auth`, run the full OTP login flow in the MCP browser (fill email → poll testmail API for OTP → fill code → extract `at` cookie → write back to `.env`). Never skip MCP browser exploration because of auth failures — the codebase already has `refreshAccountTokenViaOtp` and the testmail client that can be executed in MCP browser context.
 - Fragile CSS/XPath-only locators are **Extend**, not **Reuse** unchanged (see Mandatory Reuse Gate in `code-style.md`).
+- **Locators in specs are an ESLint error**, not just an audit finding — including locators built on a second tab (`publicTab.getByRole(...)`). When a flow opens a new tab there is no fixture for it, so construct the page object against that `Page`: `new ProfilePage(publicTab, baseURL)`.
+
+### What `smartLocator` cannot do
+
+`smartLocator(page, meta)` builds **independent, page-rooted** strategies and combines
+them. It therefore cannot express a locator defined *relative to another element* —
+`ancestor::`, `preceding::`, `following-sibling::`, `.locator('xpath=..')`. For those,
+`smartLocator` is the wrong tool and wrapping them in it only hides the fragility:
+
+- Prefer asking for a `data-testid` on the element.
+- Otherwise scope from a stable anchor with roles and accessible names
+  (`dialog.getByRole('button', { name: 'Join' })`), verified in the browser first via
+  `generate-locators-mcp`.
+- Never mass-rewrite relational locators without browser verification; they are anchored
+  to live DOM structure and a blind rewrite silently changes which element is targeted.
 
 ## API seeding and cleanup
 

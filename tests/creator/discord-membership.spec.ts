@@ -13,8 +13,7 @@ test.describe('Creator Discord Membership', () => {
       type: 'covers',
       description: 'TC-DM-C-001, TC-DM-C-002, TC-DM-C-003, TC-DM-C-004, TC-DM-C-005, TC-DM-C-006, TC-DM-C-007',
     }],
-  }, async ({
-    discordMembershipPage, creatorNav, productsPage, page }) => {
+  }, async ({discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const discordType = productsCreationData.productTypes.find(
@@ -87,8 +86,7 @@ test.describe('Creator Discord Membership', () => {
   test('Validate Discord Membership Thumbnail Upload and Validation', {
     tag: ['@AUT-FV-040', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-008, TC-DM-C-009' }],
-  }, async ({
-    discordMembershipPage, creatorNav, productsPage, page }) => {
+  }, async ({discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const discordType = productsCreationData.productTypes.find(
@@ -137,8 +135,7 @@ test.describe('Creator Discord Membership', () => {
   test('Validate Discord Membership Pricing Rules', {
     tag: ['@AUT-FV-041', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-010, TC-DM-C-011' }],
-  }, async ({
-    discordMembershipPage, creatorNav, productsPage, page }) => {
+  }, async ({discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
     const discordType = productsCreationData.productTypes.find(
@@ -186,8 +183,7 @@ test.describe('Creator Discord Membership', () => {
   test('Validate Discord Membership Draft, Publish, Edit, and Republish Lifecycle', {
     tag: ['@AUT-FV-042', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-019, TC-DM-C-020, TC-DM-C-026, TC-DM-C-029' }],
-  }, async ({
-    discordMembershipPage, creatorNav, productsPage, productPurchasePage, page }) => {
+  }, async ({discordMembershipPage, creatorNav, productsPage, productPurchasePage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
@@ -311,8 +307,7 @@ test.describe('Creator Discord Membership', () => {
   test('Validate Discord Membership Product Settings Edit', {
     tag: ['@AUT-FV-045', '@membership', '@creator', '@regression'],
     annotation: [{ type: 'covers', description: 'TC-DM-C-027, TC-DM-C-028' }],
-  }, async ({
-    discordMembershipPage, creatorNav, productsPage, page }) => {
+  }, async ({discordMembershipPage, creatorNav, productsPage, page }) => {
     test.setTimeout(300000);
 
     const accessToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');

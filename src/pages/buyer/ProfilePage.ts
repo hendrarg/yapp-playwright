@@ -2,14 +2,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
-import { locatorChain, smartLocator } from "@utils/heal-utils";
-import {
-  profileTabs,
-  profileLabels,
-  resolveCreatorProfile,
-  type CreatorProfileContext,
-  type ProfileTab,
-} from "@test-data/buyer/profile.data";
+import { locatorChain } from "@utils/heal-utils";
+import { profileTabs, profileLabels, resolveCreatorProfile, type CreatorProfileContext, type ProfileTab } from "@test-data/buyer/profile.data";
 
 const ACTIVE_TAB_CLASS = "primary-text-color";
 const POST_SELECTOR = "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
@@ -275,6 +269,48 @@ export class ProfilePage {
 
   async expectSendTipDisabled() {
     await expect(this.sendTipButton).toBeDisabled({ timeout: 5000 });
+  }
+
+  /**
+   * The public profile's tip CTA. Its label alternates between "Send Tip" and
+   * "Send tip" across renders, so the name is matched case-insensitively.
+   */
+  private publicSendTipButton(): Locator {
+    return this.page.getByRole("button", { name: /Send Tip|Send tip/i }).first();
+  }
+
+  async expectPublicSendTipButtonVisible(timeout = 10000) {
+    await expect(this.publicSendTipButton()).toBeVisible({ timeout });
+  }
+
+  async expectPublicSendTipButtonAttached() {
+    await expect(this.publicSendTipButton()).toBeAttached({ timeout: 10000 });
+  }
+
+  async expectHandleVisible(handle: string) {
+    await expect(this.page.getByText(handle, { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Asserts an unsaved draft value never reached the public profile. */
+  async expectTextAbsent(value: string) {
+    await expect(this.page.getByText(value)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /**
+   * Any outbound social link on the public profile. Matched by destination host rather
+   * than by name or role: "a social link, whichever platform" has no accessible name to
+   * key on, so `testId` leads for when the app gains one and the href match is the
+   * working fallback.
+   */
+  private socialLink(): Locator {
+    return locatorChain(this.page, {
+      testId: "profile-social-link",
+      selector: 'a[href*="instagram.com"], a[href*="twitter.com"], a[href*="youtube.com"]',
+    }).first();
+  }
+
+  async expectSocialLinkAttached() {
+    await expect(this.socialLink()).toBeAttached({ timeout: 10000 });
   }
 
   async expectSupportTipFormInitialState() {

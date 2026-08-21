@@ -6,10 +6,7 @@ import { safeClick, safeFill } from "@utils/playwright.utils";
 import { flakyClick } from "@utils/flaky-utils";
 import { productsSearchData } from "@test-data/creator/products.search.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
-import {
-  productsStatusData,
-  type ProductStatusTab,
-} from "@test-data/creator/products.status.data";
+import { productsStatusData, type ProductStatusTab } from "@test-data/creator/products.status.data";
 
 export class ProductsPage {
   constructor(

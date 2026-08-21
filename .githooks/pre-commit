@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# Enforce the gates that .agents/rules/ states in prose. Enable once per clone:
+#   git config core.hooksPath .githooks
+#
+# Skip a single commit with:  SKIP_HOOKS=1 git commit ...
+#
+# Only fast, deterministic checks run here. The E2E suite needs a live environment
+# and credentials, so it stays a CI/manual concern.
+set -e
+
+if [ -n "$SKIP_HOOKS" ]; then
+  echo "pre-commit: skipped (SKIP_HOOKS set)"
+  exit 0
+fi
+
+failed=0
+
+# Blocking: these are green today, so any new violation is something this commit broke.
+block() {
+  printf '  %-22s' "$1"
+  if out=$(eval "$2" 2>&1); then
+    echo 'ok'
+  else
+    echo 'FAILED'
+    echo "$out" | tail -30
+    failed=1
+  fi
+}
+
+# Advisory: these still carry a pre-existing backlog (unmapped @AUT tags, fragile
+# locators inherited from before the audits existed). Blocking on them would make
+# every commit fail for work it did not cause. Promote to `block` once each is clean.
+warn() {
+  printf '  %-22s' "$1"
+  if out=$(eval "$2" 2>&1); then
+    echo 'ok'
+  else
+    echo 'backlog (not blocking)'
+  fi
+}
+
+echo "pre-commit:"
+block 'typecheck'      'npx tsc --noEmit'
+block 'lint'           'npx eslint .'
+block 'agent adapters' 'node scripts/sync-agent-config.mjs --check'
+block 'AUT order'      'npm run --silent audit:aut-order'
+warn  'tag audit'      'npm run --silent audit:tags'
+warn  'locator audit'  'npm run --silent audit:locators'
+
+if [ "$failed" -ne 0 ]; then
+  echo ""
+  echo "pre-commit: blocking checks failed — fix them or re-run with SKIP_HOOKS=1"
+  exit 1
+fi
+
+echo "pre-commit: passed"

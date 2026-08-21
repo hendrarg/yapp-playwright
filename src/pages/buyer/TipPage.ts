@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { tipLabels } from "@test-data/buyer/profile.data";
-import { locatorChain, smartClick, smartLocator } from "@utils/heal-utils";
+import { locatorChain, smartClick } from "@utils/heal-utils";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
 
 type TipReviewData = {

@@ -1,10 +1,5 @@
 import { test, expect } from '../test-base';
-import {
-  getRunSeed,
-  warmAiCache,
-  resetAiCacheForTests,
-  resetRunSeedForTests,
-} from '@test-data/ai';
+import { warmAiCache, resetAiCacheForTests, resetRunSeedForTests } from '@test-data/ai';
 import * as aiGemini from '@test-data/ai/gemini';
 import { generateProduct } from '@test-data/creator/product.data';
 import { generateOnlineCourseChapterTitle } from '@test-data/creator/products.creation.data';

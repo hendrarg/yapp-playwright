@@ -70,9 +70,8 @@ function extractTests(source, filePath) {
     if (insideDescribe && ts.isExpressionStatement(node) && ts.isCallExpression(node.expression)) {
       const name = getCallName(node.expression.expression);
       if (name === 'test' || name === 'guestTest') {
-        const start = node.getFullStart(); // include leading trivia/whitespace carefully
-        // Prefer start of statement without pulling prior test's trailing trivia too far:
-        // use getStart() for code, then expand to line indent.
+        // Use getStart() for the code position, then expand to the line indent, so a
+        // moved test does not drag the previous test's trailing trivia with it.
         let blockStart = node.getStart(sf);
         const lineStart = source.lastIndexOf('\n', blockStart - 1) + 1;
         if (/^[ \t]*$/.test(source.slice(lineStart, blockStart))) {

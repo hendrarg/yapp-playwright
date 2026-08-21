@@ -1,7 +1,7 @@
 import { test, expect } from '../test-base';
-import { baseURL } from '../../config/env';
-import { saveTokenToEnv } from '../../src/helpers/auth/save-token';
-import { testAccounts } from '../../src/test-data/users';
+import { baseURL } from '@config/env';
+import { saveTokenToEnv } from '@helpers/auth/save-token';
+import { testAccounts } from '@test-data/users';
 
 test.describe('OTP Login', () => {
   test('Complete Consultation Booking Lifecycle', {

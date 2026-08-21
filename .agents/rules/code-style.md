@@ -1,5 +1,21 @@
 # Code Style
 
+## Enforcement
+
+Most of this file is machine-checked — do not rely on remembering it:
+
+| Rule | Enforced by |
+|------|-------------|
+| Inline named imports | `@stylistic/object-curly-newline` (ESLint) |
+| No deep relative imports | `no-restricted-imports` (ESLint) |
+| No `@playwright/test` import in specs | `no-restricted-imports`, specs only |
+| No locators in spec files | `no-restricted-syntax`, specs only |
+| No dead imports / unused vars | `@typescript-eslint/no-unused-vars` |
+| Fragile CSS/XPath locators | `npm run audit:locators` (advisory) |
+
+Run `npx eslint .` (and `--fix` for the mechanical ones) before finishing. ESLint is a
+blocking check in CI and in `.githooks/pre-commit`.
+
 ## Before any edit
 - **Always `Read` the file first** before applying any `Edit`. Never apply edits based on memory or assumption — the user may have made manual changes since you last read the file.
 - If an edit fails with "oldString not found", re-read the file to see the current state, then retry.

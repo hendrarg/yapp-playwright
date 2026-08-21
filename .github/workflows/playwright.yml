@@ -4,8 +4,51 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'npm script to run'
+        type: choice
+        default: test:smoke
+        options: [ test:smoke, test:regression, test ]
+  schedule:
+    # Nightly regression at 19:00 UTC (02:00 WIB) — the smoke run on every push is
+    # not broad enough to catch environment drift in the rest of the suite.
+    - cron: '0 19 * * *'
+
 jobs:
+  # Everything that needs neither a browser nor credentials, so a bad PR fails in
+  # under a minute instead of waiting on the E2E job.
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: npm
+    - run: npm ci
+    - name: TypeScript type-check
+      run: npm run typecheck
+    - name: ESLint
+      run: npx eslint .
+    - name: Ascending AUT order
+      run: npm run audit:aut-order
+    # Advisory: both still carry a pre-existing backlog (unmapped @AUT tags, fragile
+    # locators predating the audits). Visible in the log, not yet a merge blocker.
+    # Drop continue-on-error once each reaches zero findings.
+    - name: Tag audit (advisory)
+      run: npm run audit:tags
+      continue-on-error: true
+    - name: Locator audit (advisory)
+      run: npm run audit:locators
+      continue-on-error: true
+
   test:
+    name: E2E
+    needs: static
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -22,15 +65,26 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+        cache: npm
     - name: Install dependencies
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
-    - name: TypeScript type-check
-      run: npx tsc --noEmit
+    - name: Resolve suite
+      id: suite
+      # Nightly runs the full regression tag; push/PR stays on smoke; a manual
+      # dispatch runs whatever the operator picked.
+      run: |
+        if [ -n "${{ inputs.suite }}" ]; then
+          echo "script=${{ inputs.suite }}" >> "$GITHUB_OUTPUT"
+        elif [ "${{ github.event_name }}" = "schedule" ]; then
+          echo "script=test:regression" >> "$GITHUB_OUTPUT"
+        else
+          echo "script=test:smoke" >> "$GITHUB_OUTPUT"
+        fi
     - name: Run Playwright tests
       if: ${{ env.YAPP_TEST_ACCESS_TOKEN != '' }}
-      run: npm run test:smoke
+      run: npm run ${{ steps.suite.outputs.script }}
     - name: Skip Playwright tests
       if: ${{ env.YAPP_TEST_ACCESS_TOKEN == '' }}
       run: echo "Skipping Playwright E2E because YAPP_TEST_ACCESS_TOKEN is not configured."
@@ -39,4 +93,10 @@ jobs:
       with:
         name: playwright-report
         path: playwright-report/
+        retention-days: 30
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() && hashFiles('test-results/junit.xml') != '' }}
+      with:
+        name: junit-results
+        path: test-results/junit.xml
         retention-days: 30

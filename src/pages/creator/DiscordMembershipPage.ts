@@ -1,22 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartClick, smartLocator } from "@utils/heal-utils";
-import {
-  expectDescriptionContains,
-  expectProductCompleteModal,
-  expectTitleValue,
-  readProductCompleteSharePath,
-} from "@helpers/creator/product-editor";
-import {
-  boldAction,
-  italicAction,
-  italicApplied,
-  nextSetDetailsAction,
-  textFeedback,
-  titleInput,
-  underlineAction,
-  underlineApplied,
-} from "@pages/shared/locators";
+import { expectDescriptionContains, expectProductCompleteModal, expectTitleValue, readProductCompleteSharePath } from "@helpers/creator/product-editor";
+import { boldAction, italicAction, italicApplied, nextSetDetailsAction, textFeedback, titleInput, underlineAction, underlineApplied } from "@pages/shared/locators";
 import { discordMembershipValidationData } from "@test-data/creator/membership.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
 

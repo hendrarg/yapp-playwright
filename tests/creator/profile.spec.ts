@@ -3,6 +3,7 @@ import { baseURL } from '@config/env';
 import { customColors, generateProfileFormState, generateProfileName, layoutOptions, themePresets, tipButtonColors, tipButtonData } from '@test-data/creator/profile.data';
 import { creatorProfiles } from '@test-data/buyer/profile.data';
 import { showTipButton } from '@helpers/api/tip-button';
+import { ProfilePage as BuyerProfilePage } from '@pages/buyer/ProfilePage';
 
 test.describe('Creator Profile', () => {
 
@@ -69,7 +70,7 @@ test('Validate Profile Tab Information and Persistence', {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      await expect(publicTab.getByText(unsavedName)).toHaveCount(0, { timeout: 10000 });
+      await new BuyerProfilePage(publicTab, baseURL).expectTextAbsent(unsavedName);
     } finally {
       await publicTab.close();
     }
@@ -312,7 +313,7 @@ test('Validate Customize Live Preview and Save Behavior', {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      await expect(publicTab.getByText(previewName)).toHaveCount(0, { timeout: 10000 });
+      await new BuyerProfilePage(publicTab, baseURL).expectTextAbsent(previewName);
     } finally {
       await publicTab.close();
     }
@@ -401,8 +402,7 @@ test('Validate Profile Social Link External Behavior', {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      const socialLink = publicTab.locator('a[href*="instagram.com"], a[href*="twitter.com"], a[href*="youtube.com"]').first();
-      await expect(socialLink).toBeAttached({ timeout: 10000 });
+      await new BuyerProfilePage(publicTab, baseURL).expectSocialLinkAttached();
     } finally {
       await publicTab.close();
     }
@@ -558,8 +558,9 @@ test('Validate Unsaved Banner Change Stays Private', {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      await expect(publicTab.getByText(creatorHandle, { exact: true })).toBeVisible({ timeout: 10000 });
-      await expect(publicTab.getByRole('button', { name: /Send Tip|Send tip/i }).first()).toBeVisible({ timeout: 5000 });
+      const publicProfile = new BuyerProfilePage(publicTab, baseURL);
+      await publicProfile.expectHandleVisible(creatorHandle);
+      await publicProfile.expectPublicSendTipButtonVisible(5000);
     } finally {
       await publicTab.close();
     }
@@ -604,7 +605,7 @@ test('Validate Tip Button Text Public Persistence', {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      await expect(publicTab.getByRole('button', { name: /Send Tip|Send tip/i }).first()).toBeVisible({ timeout: 10000 });
+      await new BuyerProfilePage(publicTab, baseURL).expectPublicSendTipButtonVisible();
     } finally {
       await publicTab.close();
     }
@@ -666,7 +667,7 @@ test('Validate Creator Quick Tip Amount Configuration', {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      await expect(publicTab.getByRole('button', { name: /Send Tip|Send tip/i }).first()).toBeAttached({ timeout: 10000 });
+      await new BuyerProfilePage(publicTab, baseURL).expectPublicSendTipButtonAttached();
     } finally {
       await publicTab.close();
     }

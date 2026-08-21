@@ -6,8 +6,7 @@ import { titleInput } from '@pages/shared/locators';
 test.describe('Creator Digital Product', () => {
   test('Validate Digital Products Inputs and Boundary Conditions', {
     tag: ['@AUT-FV-188', '@products', '@creator', '@regression'],
-  }, async ({
-    digitalProductPage, creatorNav, productsPage, page }) => {
+  }, async ({digitalProductPage, creatorNav, productsPage, page }) => {
     await test.step('Open Digital Product creation flow', async () => {
       const digitalProductType = productsCreationData.productTypes.find(
         (type) => type.label === 'Digital Product',
@@ -46,14 +45,14 @@ test.describe('Creator Digital Product', () => {
       await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
     });
   });
-  test('Validate Digital Product Navigation and Unsaved Changes', {
+
+  test('Validate Digital Product Navigation and Unsaved Changes', {
     tag: ['@AUT-FV-190', '@products', '@creator', '@regression'],
     annotation: [{
       type: 'covers',
       description: 'TC-PD-C-003',
     }],
-  }, async ({
-    digitalProductPage, creatorNav, productsPage, page }) => {
+  }, async ({digitalProductPage, creatorNav, productsPage, page }) => {
 
     const digitalProductType = productsCreationData.productTypes.find(
       (type) => type.label === 'Digital Product',
@@ -78,14 +77,14 @@ test.describe('Creator Digital Product', () => {
       await page.keyboard.press('Escape');
     });
   });
-  test('Validate Digital Product After Sales Link Validation', {
+
+  test('Validate Digital Product After Sales Link Validation', {
     tag: ['@AUT-FV-191', '@products', '@creator', '@regression'],
     annotation: [{
       type: 'covers',
       description: 'TC-PD-C-027',
     }],
-  }, async ({
-    digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
+  }, async ({digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
     const digitalProductType = productsCreationData.productTypes.find(
       (type) => type.label === 'Digital Product',
     )!;
@@ -124,14 +123,14 @@ test.describe('Creator Digital Product', () => {
       await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
     });
   });
-  test('Validate Digital Product Buyer-Only Description', {
+
+  test('Validate Digital Product Buyer-Only Description', {
     tag: ['@AUT-FV-192', '@products', '@creator', '@regression'],
     annotation: [{
       type: 'covers',
       description: 'TC-PD-C-013',
     }],
-  }, async ({
-    digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
+  }, async ({digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(180000);
 
     const digitalProductType = productsCreationData.productTypes.find(
@@ -175,14 +174,14 @@ test.describe('Creator Digital Product', () => {
       await digitalProductPage.expectDigitalProductSetDetailsLoaded();
     });
   });
-  test('Validate Digital Product Pricing Rules', {
+
+  test('Validate Digital Product Pricing Rules', {
     tag: ['@AUT-FV-193', '@products', '@creator', '@regression'],
     annotation: [{
       type: 'covers',
       description: 'TC-PD-C-018, TC-PD-C-019',
     }],
-  }, async ({
-    digitalProductPage, creatorNav, productsPage, onlineCoursePage, buyerNav, productPurchasePage, page }) => {
+  }, async ({ digitalProductPage, creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
     test.setTimeout(240000);
 
     const digitalProductType = productsCreationData.productTypes.find(
@@ -190,7 +189,6 @@ test.describe('Creator Digital Product', () => {
     )!;
     const [contentLink] = digitalProductValidationData.linkValidation.validLinks;
     const freeTitle = generateDigitalProductTitle();
-    let freeUuid = '';
     let freeSharePath = '';
 
     await test.step('Open Digital Product creation flow with pricing off by default', async () => {
@@ -256,4 +254,5 @@ test.describe('Creator Digital Product', () => {
       await digitalProductPage.expectDigitalProductValidPrice();
     });
   });
-});
+
+});

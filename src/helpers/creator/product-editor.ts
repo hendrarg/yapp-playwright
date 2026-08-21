@@ -5,39 +5,7 @@ import { consultationMediaData } from "@test-data/creator/consultation.media.dat
 import { consultationValidationData } from "@test-data/creator/consultation.validation.data";
 import { eventsBuyerFormData, type EventsBuyerQuestionInputType } from "@test-data/creator/events.buyer-form.data";
 import { digitalProductValidationData } from "@test-data/creator/products.creation.data";
-import {
-  addEmbedLinkAction,
-  addOptionAction,
-  addQuestionDialog,
-  addQuestionsAction,
-  addQuestionsButton,
-  additionalQuestionsHeading,
-  afterSalesSection,
-  cancelQuestionAction,
-  createQuestionAction,
-  createQuestionButton,
-  descriptionEditor,
-  editQuestionDialog,
-  embedLinkDoneButton,
-  embedLinkLabelInput,
-  embedLinkUrlInput,
-  emptyQuestionLabelFeedback,
-  galleryInput,
-  heroInput,
-  livePreviewCard,
-  makeQuestionRequiredCheckbox,
-  priceInput,
-  pricingSwitchAction,
-  productCompleteDialog,
-  questionInputTypeCombobox,
-  questionInputTypeOption,
-  questionLabelInput,
-  questionOptionInput,
-  questionPlaceholderInput,
-  saveAsDraftAction,
-  textFeedback,
-  updateQuestionAction,
-} from "@pages/shared/locators";
+import { addEmbedLinkAction, addOptionAction, addQuestionDialog, addQuestionsAction, addQuestionsButton, additionalQuestionsHeading, afterSalesSection, cancelQuestionAction, createQuestionAction, createQuestionButton, descriptionEditor, editQuestionDialog, embedLinkDoneButton, embedLinkLabelInput, embedLinkUrlInput, emptyQuestionLabelFeedback, galleryInput, heroInput, livePreviewCard, makeQuestionRequiredCheckbox, priceInput, pricingSwitchAction, productCompleteDialog, questionInputTypeCombobox, questionInputTypeOption, questionLabelInput, questionOptionInput, questionPlaceholderInput, saveAsDraftAction, textFeedback, updateQuestionAction } from "@pages/shared/locators";
 
 /**
  * Shared create/edit step sequences across product types (consultation,

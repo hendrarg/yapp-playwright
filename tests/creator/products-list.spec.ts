@@ -132,8 +132,7 @@ test.describe('Creator Products List', () => {
   });
   test('Verify Products Integrations and External Services', {
     tag: ['@AUT-FV-214', '@products', '@creator', '@regression'],
-  }, async ({
-    discordMembershipPage, creatorNav, productsPage }) => {
+  }, async ({discordMembershipPage, creatorNav, productsPage }) => {
     await test.step('Open Products and product type selection', async () => {
       await creatorNav.open('products');
       await productsPage.expectLoaded();
