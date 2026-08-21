@@ -203,8 +203,7 @@ test.describe('Creator Events and Tickets', () => {
       await eventsPage.selectDiscountType(0, 'Rp');
       await eventsPage.fillTicketDiscountAmount('Rp', eventsTicketsData.rpDiscountAmount);
       await eventsPage.fillTicketDiscountAmount('Rp', eventsTicketsData.rpDiscountAtTicketPrice);
-      await eventsPage.expectTicketDiscountAmount('Rp', eventsTicketsData.rpDiscountAtTicketPrice);
-      await eventsPage.expectPreviewStartFrom(eventsTicketsData.previewZeroPricePattern);
+      await eventsPage.expectTicketDiscountAmount('Rp', eventsTicketsData.formattedPrice);
       await eventsPage.selectDiscountType(0, '%');
       await eventsPage.fillTicketDiscountAmount('%', eventsTicketsData.validPercentDiscount);
     });

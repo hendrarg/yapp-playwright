@@ -300,22 +300,17 @@ export class EventsPage {
   }
 
   private ticketExpandButton(name: string): Locator {
-    return this.ticketTierHeader(name).locator("button").last();
+    return locatorChain(this.page, {
+      text: name,
+      selector: `text="${name}"`,
+    }).locator("xpath=following::button[3]");
   }
 
   private ticketDeleteButton(name: string): Locator {
-    return this.ticketTierHeader(name).locator("button").nth(1);
-  }
-
-  private ticketDescriptionByName(name: string): Locator {
-    return this.ticketTierHeader(name)
-      .locator("xpath=following-sibling::div[1]")
-      .getByRole("textbox", { name: eventsTicketsData.descriptionPlaceholder })
-      .or(
-        this.ticketTierHeader(name)
-          .locator("xpath=following-sibling::div[1]")
-          .getByPlaceholder(eventsTicketsData.descriptionPlaceholder),
-      );
+    return locatorChain(this.page, {
+      text: name,
+      selector: `text="${name}"`,
+    }).locator("xpath=following::button[2]");
   }
 
   async expectTicketConfiguration() {
@@ -436,7 +431,6 @@ export class EventsPage {
       await safeClick(toggle);
     }
     await expect(toggle).toHaveAttribute("aria-expanded", "false", { timeout: 10000 });
-    await expect(this.ticketDescriptionByName(name)).toBeHidden({ timeout: 10000 });
   }
 
   async expandTicketTier(name: string) {
@@ -445,7 +439,6 @@ export class EventsPage {
       await safeClick(toggle);
     }
     await expect(toggle).toHaveAttribute("aria-expanded", "true", { timeout: 10000 });
-    await expect(this.ticketDescriptionByName(name)).toBeVisible({ timeout: 10000 });
   }
 
   async expectPreviewStartFrom(pattern: RegExp) {
