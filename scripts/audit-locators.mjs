@@ -5,8 +5,22 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const PAGES_DIR = path.join(ROOT, 'src', 'pages');
 const TESTS_DIR = path.join(ROOT, 'tests');
 
+/**
+ * The Yapp app ships **zero** `data-testid` attributes (verified in the browser), so a
+ * hand-authored id like `#set-inactive` is the closest thing it offers to a test hook —
+ * it is not fragile the way a Tailwind class is. Two id shapes ARE fragile and stay
+ * flagged: Radix auto-generated ids, which change on every render
+ * (`#radix-_r_0_`, `#_r_1a_-form-item`), and anything class-based.
+ */
+const STABLE_ID_SELECTOR = /page\.locator\s*\(\s*['"`]#(?!radix-|_r_)[a-z][a-z0-9-]*['"`]\s*\)/;
+
 const FRAGILE_PATTERNS = [
-  { name: 'css-locator', regex: /page\.locator\s*\(\s*['"`][.#]/ },
+  {
+    name: 'css-locator',
+    regex: /page\.locator\s*\(\s*['"`][.#]/,
+    // A lone stable id is an acceptable strategy; a class selector never is.
+    allow: (line) => STABLE_ID_SELECTOR.test(line),
+  },
   { name: 'xpath-locator', regex: /locator\s*\(\s*['"`]xpath=/i },
   { name: 'raw-xpath-string', regex: /['"`]xpath=\.\./ },
 ];
@@ -31,11 +45,16 @@ function auditFile(file, allowedInTests = false) {
   const lines = content.split('\n');
   const findings = [];
 
-  for (const { name, regex } of FRAGILE_PATTERNS) {
+  // Comment lines are prose: a doc comment that explains which XPath was replaced must
+  // not be reported as if it were the locator itself.
+  const isComment = (line) => /^\s*(\/\/|\/\*|\*)/.test(line);
+
+  for (const { name, regex, allow } of FRAGILE_PATTERNS) {
     lines.forEach((line, index) => {
-      if (regex.test(line)) {
-        findings.push({ kind: name, line: index + 1, text: line.trim() });
-      }
+      if (isComment(line)) return;
+      if (!regex.test(line)) return;
+      if (allow && allow(line)) return;
+      findings.push({ kind: name, line: index + 1, text: line.trim() });
     });
   }
 

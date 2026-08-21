@@ -62,11 +62,13 @@ export class ConsultationPage {
       .first();
   }
 
+  /**
+   * The After Sales toggle. Browser-verified: the label's own row holds exactly one
+   * switch, so this replaces the `preceding::*[@role='switch'][1]` axis, which searched
+   * backwards through the whole document from the label.
+   */
   private afterSalesCustomizeSwitch(): Locator {
-    return this.page
-      .getByLabel("Details")
-      .getByText("Customize Message")
-      .locator("xpath=preceding::*[@role='switch'][1]");
+    return this.page.locator('div:has(> label:has-text("Customize Message"))').getByRole("switch");
   }
 
   private afterSalesMessageEditor(): Locator {

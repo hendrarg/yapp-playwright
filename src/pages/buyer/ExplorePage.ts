@@ -2,6 +2,15 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { trackAuthToken } from '@helpers/auth/validate-token';
 import { safeClick, safeFill } from '@utils/playwright.utils';
 
+/**
+ * Explore renders each section as a header row (`div` whose direct child is the `h2`)
+ * followed by a sibling grid `div`. Browser-verified: `:has(> h2)` plus the CSS sibling
+ * combinator expresses exactly that, replacing `xpath=../following-sibling::div[1]`
+ * without an axis walk.
+ */
+const sectionHeader = (title: string) => `div:has(> h2:text-is(${JSON.stringify(title)}))`;
+const sectionGrid = (title: string) => `${sectionHeader(title)} + div`;
+
 type ProductCard = { href: string; title: string };
 type VisibleProducts = { popular: ProductCard[]; recommended: ProductCard[] };
 
@@ -23,11 +32,11 @@ export class ExplorePage {
     this.creatorsHeading = page.getByRole('heading', { name: 'Creators For You', exact: true });
     this.popularHeading = page.getByRole('heading', { name: 'Popular Products', exact: true });
     this.recommendedHeading = page.getByRole('heading', { name: 'Recommended For You!!', exact: true });
-    this.creatorsGrid = this.creatorsHeading.locator('xpath=../following-sibling::div[1]');
-    this.popularGrid = this.popularHeading.locator('xpath=../following-sibling::div[1]');
-    this.recommendedGrid = this.recommendedHeading.locator('xpath=../following-sibling::div[1]');
-    this.creatorsSeeMore = this.creatorsHeading.locator('xpath=..').getByRole('link', { name: 'See More', exact: true });
-    this.popularSeeMore = this.popularHeading.locator('xpath=..').getByRole('link', { name: 'See More', exact: true });
+    this.creatorsGrid = page.locator(sectionGrid('Creators For You'));
+    this.popularGrid = page.locator(sectionGrid('Popular Products'));
+    this.recommendedGrid = page.locator(sectionGrid('Recommended For You!!'));
+    this.creatorsSeeMore = page.locator(sectionHeader('Creators For You')).getByRole('link', { name: 'See More', exact: true });
+    this.popularSeeMore = page.locator(sectionHeader('Popular Products')).getByRole('link', { name: 'See More', exact: true });
     this.searchInput = page.getByRole('textbox', { name: 'Search', exact: true });
     this.searchCreatorLinks = page.locator(
       'main a[href^="/"]:has(h3):not([href*="/product/"]):not([href^="/campaign/"])',
@@ -95,7 +104,7 @@ export class ExplorePage {
   }[]) {
     for (const creator of creators) {
       const heading = this.creatorsGrid.getByRole('heading', { name: creator.name, exact: true });
-      const card = heading.locator('xpath=ancestor::*[@role="group"][1]');
+      const card = this.creatorCard(creator.name);
       await expect(heading).toBeVisible();
       await expect(card).toContainText(creator.username);
       const metadata = await card.evaluate((element) => ({
@@ -115,9 +124,17 @@ export class ExplorePage {
     await expect(this.page).toHaveURL(new URL(href.slice(1), this.baseURL).toString());
   }
 
+  /** The creator card is the grid group containing that creator's heading. */
+  private creatorCard(name: string): Locator {
+    return this.creatorsGrid
+      .getByRole('group')
+      .filter({ has: this.page.getByRole('heading', { name, exact: true }) });
+  }
+
   async openRecommendedCreator(creator: { name: string; href: string }) {
-    const heading = this.creatorsGrid.getByRole('heading', { name: creator.name, exact: true });
-    await safeClick(heading.locator('xpath=../../..').locator('div.absolute.inset-0'));
+    // The card has no anchor; its click handler sits on the group, so clicking the card
+    // navigates without needing the hover overlay the old locator reached for.
+    await safeClick(this.creatorCard(creator.name));
     await expect(this.page).toHaveURL(new URL(creator.href.slice(1), this.baseURL).toString());
   }
 

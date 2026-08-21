@@ -1,6 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { smartLocator } from "@utils/heal-utils";
+import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeFill } from "@utils/playwright.utils";
 
 export class CustomizePage {
@@ -153,7 +153,7 @@ export class CustomizePage {
   }
 
   get tipButtonTextInput(): Locator {
-    return this.page.locator("#tip-button-label");
+    return locatorChain(this.page, { label: "Button Text", selector: "#tip-button-label" });
   }
 
   get tipButtonCharCount(): Locator {
@@ -216,15 +216,15 @@ export class CustomizePage {
   }
 
   get tipButtonTextColorInput(): Locator {
-    return this.page.locator("#tip-button-text-color");
+    return locatorChain(this.page, { label: "Text Color", selector: "#tip-button-text-color" });
   }
 
   get tipButtonLeftColorInput(): Locator {
-    return this.page.locator("#tip-button-left-color");
+    return locatorChain(this.page, { label: "Button Left", selector: "#tip-button-left-color" });
   }
 
   get tipButtonRightColorInput(): Locator {
-    return this.page.locator("#tip-button-right-color");
+    return locatorChain(this.page, { label: "Button Right", selector: "#tip-button-right-color" });
   }
 
   async fillTipButtonTextColor(value: string) {
@@ -288,7 +288,7 @@ export class CustomizePage {
   });
 
   get yourNameInput(): Locator {
-    return this.page.locator("#design-profile-name");
+    return locatorChain(this.page, { label: "Your Name", selector: "#design-profile-name" });
   }
 
   get linkPrefix(): Locator {
@@ -296,11 +296,11 @@ export class CustomizePage {
   }
 
   get linkInput(): Locator {
-    return this.page.locator("#design-profile-username");
+    return locatorChain(this.page, { label: "Link", selector: "#design-profile-username" });
   }
 
   get bioTextarea(): Locator {
-    return this.page.locator("#design-profile-bio");
+    return locatorChain(this.page, { label: "Bio", selector: "#design-profile-bio" });
   }
 
   get saveButton(): Locator {

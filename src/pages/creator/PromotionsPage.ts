@@ -138,10 +138,9 @@ export class PromotionsPage {
   }
 
   private selectedProductChip(productName: string): Locator {
-    return this.page
-      .locator('label:has-text("Product Type")')
-      .locator("xpath=ancestor::div[contains(@class,'space')][1]")
-      .getByText(productName, { exact: true });
+    // Scoped to the promo form, which is where the old ancestor-axis XPath actually
+    // landed anyway — minus its dependency on a Tailwind `space-*` class.
+    return this.page.locator("form").getByText(productName, { exact: true });
   }
 
   readonly startDateTrigger = this.page.locator(
@@ -343,9 +342,12 @@ export class PromotionsPage {
   }
 
   private affiliateCommissionInput(): Locator {
+    // This field's <label for> points at a <div>, not the input, so `getByLabel` can
+    // never resolve it. Bind to the label's own container rather than the previous
+    // `following::input[1]`, which scanned every input after the label in the document.
     return this.page
-      .locator('label:has-text("Affiliate Commission")')
-      .locator("xpath=following::input[1]");
+      .locator('div:has(> label:has-text("Affiliate Commission"))')
+      .getByRole("textbox");
   }
 
   private creatorAssignmentPopover(): Locator {
@@ -460,9 +462,18 @@ export class PromotionsPage {
     await expect(this.nameInput).toBeVisible({ timeout: 15000 });
   }
 
+  /**
+   * The Set Inactive control in the row actions menu is a `role="switch"` button with no
+   * accessible name, so it is located by scoping to the open menu — which holds exactly
+   * one switch. The app's own `#set-inactive` id stays as a second strategy.
+   */
+  private setInactiveToggle(): Locator {
+    return this.page.getByRole("menu").getByRole("switch").or(this.page.locator("#set-inactive"));
+  }
+
   async setPromotionInactive(rowQuery: string) {
     await this.openPromotionActions(rowQuery);
-    const toggle = this.page.locator("#set-inactive");
+    const toggle = this.setInactiveToggle();
     await expect(toggle).toBeVisible({ timeout: 10000 });
     const responsePromise = this.page.waitForResponse(
       (response) =>
@@ -490,7 +501,7 @@ export class PromotionsPage {
 
   async setPromotionActive(rowQuery: string) {
     await this.openPromotionActions(rowQuery);
-    const toggle = this.page.locator("#set-inactive");
+    const toggle = this.setInactiveToggle();
     await expect(toggle).toBeVisible({ timeout: 10000 });
     await expect(toggle).toHaveAttribute("aria-checked", "true");
     const responsePromise = this.page.waitForResponse(

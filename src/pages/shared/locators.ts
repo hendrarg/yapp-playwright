@@ -302,5 +302,8 @@ export const priceInput = (page: Page) =>
     selector: 'input[placeholder="10,000"]',
   });
 
-export const livePreviewCard = (page: Page) =>
-  page.getByRole("heading", { level: 3 }).locator("xpath=..");
+/**
+ * The product live-preview card, whose only `h3` is the product title. Browser-verified
+ * to resolve to the same single element as the previous `xpath=..` parent step.
+ */
+export const livePreviewCard = (page: Page) => page.locator("div:has(> h3)");

@@ -601,11 +601,13 @@ test('Validate Tip Button Text Public Persistence', {
     await customizePage.expectTipButtonText(tipLabel);
   });
 
-  await test.step('Open public profile and verify tip button label is present', async () => {
+  await test.step('Open public profile and verify the saved tip button label is shown', async () => {
     const publicTab = await page.context().newPage();
     try {
       await publicTab.goto(new URL(creatorHandle, baseURL).toString(), { waitUntil: 'domcontentloaded' });
-      await new BuyerProfilePage(publicTab, baseURL).expectPublicSendTipButtonVisible();
+      // This test exists to prove the creator's custom text reaches the public profile,
+      // so assert that exact label — asserting the default "Send Tip" checked nothing.
+      await new BuyerProfilePage(publicTab, baseURL).expectPublicTipCtaLabel(tipLabel);
     } finally {
       await publicTab.close();
     }

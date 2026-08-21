@@ -133,16 +133,39 @@ export class EventsPage {
     });
   }
 
+  /**
+   * The row holding one after-sales toggle: the `div` whose direct child is that
+   * section's `<label>`. Browser-verified to contain exactly one switch, which is why
+   * this replaces the old `preceding::*[@role='switch'][1]` document-wide axis walk.
+   */
+  private afterSalesToggleRow(label: string): Locator {
+    return this.page.locator(`div:has(> label:has-text("${label}"))`);
+  }
+
+  /**
+   * The whole after-sales block for a section: the innermost `div` holding both the
+   * section label and its rich-text editor. Browser-verified to contain exactly one
+   * editor, toolbar, checkbox, and Add Link button — so the previous `following::`
+   * axes, which scanned the rest of the document, are unnecessary.
+   */
+  private afterSalesBlock(label: string): Locator {
+    return this.page
+      .locator("div")
+      .filter({ has: this.page.locator(`label:has-text("${label}")`) })
+      .filter({ has: this.page.locator('[contenteditable="true"]') })
+      .last();
+  }
+
   private afterSalesCustomizeMessageSwitch(): Locator {
-    return this.afterSalesLabel("Customize Message").locator("xpath=preceding::*[@role='switch'][1]");
+    return this.afterSalesToggleRow("Customize Message").getByRole("switch");
   }
 
   private afterSalesMessageEditor(): Locator {
-    return this.afterSalesLabel("Customize Message").locator("xpath=following::*[@contenteditable='true'][1]");
+    return this.afterSalesBlock("Customize Message").locator('[contenteditable="true"]');
   }
 
   private afterSalesMessageToolbar(): Locator {
-    return this.afterSalesLabel("Customize Message").locator("xpath=following::*[@role='toolbar'][1]");
+    return this.afterSalesBlock("Customize Message").getByRole("toolbar");
   }
 
   private afterSalesImageButton(): Locator {
@@ -150,26 +173,25 @@ export class EventsPage {
   }
 
   private afterSalesLinksCheckbox(): Locator {
-    return this.afterSalesLabel("Links").locator("xpath=preceding::*[@role='checkbox'][1]");
+    // The Links checkbox lives in the same after-sales block as the message editor.
+    return this.afterSalesBlock("Customize Message").getByRole("checkbox");
   }
 
   private afterSalesAddLinkButton(): Locator {
-    return this.afterSalesLinksCheckbox().locator("xpath=following::button[normalize-space()='Add Link'][1]");
+    return this.afterSalesBlock("Customize Message").getByRole("button", { name: "Add Link", exact: true });
   }
 
   private perTierAfterSalesSwitch(): Locator {
-    return this.afterSalesLabel("Customize after-sales for this tier")
-      .locator("xpath=preceding::*[@role='switch'][1]");
+    return this.afterSalesToggleRow("Customize after-sales for this tier").getByRole("switch");
   }
 
   private perTierAfterSalesEditor(): Locator {
-    return this.afterSalesLabel("Customize after-sales for this tier")
-      .locator("xpath=following::*[@contenteditable='true'][1]");
+    return this.afterSalesBlock("Customize after-sales for this tier").locator('[contenteditable="true"]');
   }
 
   private perTierAfterSalesAddLinkButton(): Locator {
-    return this.afterSalesLabel("Customize after-sales for this tier")
-      .locator("xpath=following::button[normalize-space()='Add Link'][1]");
+    return this.afterSalesBlock("Customize after-sales for this tier")
+      .getByRole("button", { name: "Add Link", exact: true });
   }
 
   private linkRow(label: string): Locator {
@@ -265,15 +287,31 @@ export class EventsPage {
     await expect(calendar).toBeHidden({ timeout: 10000 });
   }
 
-  private ticketRenameButton(name: string): Locator {
+  /**
+   * One ticket's field block, identified by that ticket's description textarea — the
+   * only ticket field the app gives a stable `name` attribute.
+   */
+  private ticketBlock(index: number): Locator {
     return this.page
-      .getByText(name, { exact: true })
-      .locator("xpath=ancestor::div[1]/following-sibling::button[1]")
-      .or(
-        this.page.locator(
-          `xpath=//*[normalize-space()="${name}"]/ancestor::div[1]/following-sibling::button[1]`,
-        ),
-      );
+      .locator("div")
+      .filter({ has: this.page.locator(`textarea[name="ticketPriceConfigurations.${index}.description"]`) })
+      .filter({ has: this.page.getByRole("switch") })
+      .last();
+  }
+
+  /** A labelled row inside one ticket's block. */
+  private ticketFieldRow(index: number, label: string): Locator {
+    return this.ticketBlock(index).locator(`div:has(> label:has-text("${label}"))`);
+  }
+
+  /**
+   * The rename (pencil) button for a ticket tier. The tier name sits in a `span` inside
+   * its own wrapper, and the rename button is that wrapper's next sibling — verified in
+   * the browser to resolve to the same element as the previous ancestor/sibling XPath,
+   * for every tier on the form.
+   */
+  private ticketRenameButton(name: string): Locator {
+    return this.page.locator(`div:has(> span:text-is("${name}")) + button`);
   }
 
   private ticketTitleInput(index: number): Locator {
@@ -302,18 +340,11 @@ export class EventsPage {
   }
 
   private ticketQuantityInput(index: number): Locator {
-    return locatorChain(this.page, {
-      text: eventsTicketsData.quantityHelper,
-      selector: `p:has-text("${eventsTicketsData.quantityHelper}")`,
-    }).nth(index).locator("xpath=preceding::input[1]");
+    return this.ticketFieldRow(index, "Ticket Quantity").getByRole("textbox");
   }
 
   private setDiscountSwitch(index: number): Locator {
-    return locatorChain(this.page, {
-      text: eventsTicketsData.setDiscountLabel,
-      selector: `text="${eventsTicketsData.setDiscountLabel}"`,
-    }).nth(index)
-      .locator("xpath=preceding::*[@role='switch'][1]")
+    return this.ticketFieldRow(index, eventsTicketsData.setDiscountLabel).getByRole("switch");
   }
 
   private discountTypeCombobox(index: number): Locator {

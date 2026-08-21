@@ -27,8 +27,9 @@ export class MembershipPage {
   }
 
   async clickFirstTier() {
-    const card = this.subscribeButtons.first().locator("xpath=../..");
-    await safeClick(card);
+    // Browser-verified: the Subscribe button itself opens that tier's detail page, so
+    // the old `xpath=../..` walk up to the surrounding card was never needed.
+    await safeClick(this.subscribeButtons.first());
     await this.page.waitForURL(/\/membership\/[a-f0-9-]+/, { timeout: 15000 });
     await waitForLoaded(this.page);
   }

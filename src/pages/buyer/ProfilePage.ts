@@ -243,18 +243,33 @@ export class ProfilePage {
     name: profileLabels.inputTipPlaceholder,
   });
   readonly tipSuggestions = this.main.getByRole("button", { name: /^Rp[\d.]+$/ });
-  // FLAKY_FIX: scope to tip form — page also renders a sticky duplicate "Send Tip" CTA
+  /**
+   * The tip form itself. FLAKY_FIX: the page also renders a sticky duplicate CTA, so the
+   * form is pinned by the three things only it holds together — the currency group, the
+   * amount input, and the quick-amount chips. The quick-amount filter plus `.last()`
+   * matter: without them this resolved to an outer wrapper holding the whole page's
+   * buttons, which only appeared to work because the CTA was then matched by its label.
+   */
   private get tipFormRoot() {
     return this.main
       .locator("div")
       .filter({ has: this.page.getByRole("group", { name: "Tip currency" }) })
       .filter({ has: this.page.getByPlaceholder(profileLabels.inputTipPlaceholder) })
-      .first();
+      .filter({ has: this.page.getByRole("button", { name: /^Rp[\d.]+$/ }) })
+      .last();
   }
+
+  /**
+   * The tip CTA, identified without its label. Creators can rename this button
+   * ("Support Me", "TipMe 1234", ...), so matching the default "Send Tip" made every
+   * assertion depend on the creator's current configuration — and any test that saved a
+   * custom label permanently broke the others. Inside the form the CTA is the only
+   * button that is neither a currency toggle nor a quick-amount chip.
+   */
   private get sendTipButton() {
     return this.tipFormRoot
-      .getByRole("button", { name: profileLabels.sendTip, exact: true })
-      .or(this.tipFormRoot.locator(`button:has(:text-is("${profileLabels.sendTip}"))`));
+      .getByRole("button")
+      .filter({ hasNotText: /^(IDR|USDT|Rp[\d.,]+|\$[\d.,]+)$/ });
   }
 
   async expectSupportSectionVisible() {
@@ -271,20 +286,20 @@ export class ProfilePage {
     await expect(this.sendTipButton).toBeDisabled({ timeout: 5000 });
   }
 
-  /**
-   * The public profile's tip CTA. Its label alternates between "Send Tip" and
-   * "Send tip" across renders, so the name is matched case-insensitively.
-   */
-  private publicSendTipButton(): Locator {
-    return this.page.getByRole("button", { name: /Send Tip|Send tip/i }).first();
-  }
-
   async expectPublicSendTipButtonVisible(timeout = 10000) {
-    await expect(this.publicSendTipButton()).toBeVisible({ timeout });
+    await expect(this.sendTipButton).toBeVisible({ timeout });
   }
 
   async expectPublicSendTipButtonAttached() {
-    await expect(this.publicSendTipButton()).toBeAttached({ timeout: 10000 });
+    await expect(this.sendTipButton).toBeAttached({ timeout: 10000 });
+  }
+
+  /**
+   * Assert the tip CTA carries a specific label — for the test that exists to prove a
+   * creator's custom button text reaches the public profile.
+   */
+  async expectPublicTipCtaLabel(expected: string) {
+    await expect(this.sendTipButton).toHaveText(expected, { timeout: 10000 });
   }
 
   async expectHandleVisible(handle: string) {

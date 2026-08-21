@@ -46,10 +46,14 @@ export class ProductPurchasePage {
     await this.expectLoaded(product);
 
     if (product.option) {
+      // The innermost card that shows this option label and carries a Select button.
+      // Browser-verified equivalent to the old `ancestor::div[.//button[...]]` step.
+      const selectAction = this.page.getByRole('button', { name: 'Select', exact: true });
       const optionCard = this.page
-        .getByText(product.option, { exact: true })
-        .filter({ visible: true })
-        .locator('xpath=ancestor::div[.//button[normalize-space(.)="Select"]][1]');
+        .locator('div')
+        .filter({ hasText: product.option })
+        .filter({ has: selectAction })
+        .last();
       // FLAKY_FIX: product hydration can replace the option button after navigation.
       await flakyClick(optionCard.getByRole('button', { name: 'Select', exact: true }));
     }

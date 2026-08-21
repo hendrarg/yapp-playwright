@@ -1,4 +1,24 @@
 import { faker } from "@faker-js/faker";
+import { tipButtonData } from "@test-data/creator/profile.data";
+
+/**
+ * The creator suite writes hendrarg's quick tip amounts from `tipButtonData` (AUT-FV-222
+ * saves idrAmount1..3), so the buyer expectations must come from that same source. They
+ * used to be a separate hardcoded list, which meant every creator run left the buyer
+ * quick-amount assertions failing against values the app no longer showed.
+ *
+ * `tipButtonData` holds input-format amounts ("15,000"); the profile renders them as
+ * "Rp15.000".
+ */
+function toDisplayedIdr(inputAmount: string): string {
+  return `Rp${inputAmount.replace(/,/g, ".")}`;
+}
+
+const hendrargQuickTips = [
+  tipButtonData.idrAmount1,
+  tipButtonData.idrAmount2,
+  tipButtonData.idrAmount3,
+].map(toDisplayedIdr);
 
 export type CreatorProfileContext = {
   handle: string;
@@ -16,7 +36,7 @@ export const creatorProfiles = {
     bioTags: ["Software Developer", "Tester"],
     supportHeading: "Support Hendra Rizal",
     tierPricePattern: "IDR",
-    tipSuggestions: { idr: ["Rp12.000", "Rp50.000", "Rp200.000"] },
+    tipSuggestions: { idr: hendrargQuickTips },
   },
   davidalfasunarna: {
     handle: "davidalfasunarna",
