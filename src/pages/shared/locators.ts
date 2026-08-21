@@ -328,6 +328,12 @@ export const POST_CARD_SELECTOR =
  * tag-agnostic. Browser-verified on the tip form and the product checkout, where each
  * summary row is a label span and an amount span inside one div, resolving to the same
  * single element the parent step did.
+ *
+ * The visibility filter restores something the TipPage locator this replaced relied on:
+ * that summary can be collapsed behind "Detail Transactions", and the old code checked
+ * `isVisible()` on the label before deriving the row from it. Without the filter a hidden
+ * collapsed row — or the app's duplicate mobile/desktop render — could match a second
+ * element and trip strict mode. A row that is already visible is unaffected.
  */
 export const amountRow = (page: Page, label: string) =>
-  page.locator(`:has(> :text-is("${label}"))`);
+  page.locator(`:has(> :text-is("${label}"))`).filter({ visible: true });
