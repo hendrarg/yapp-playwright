@@ -4,5 +4,11 @@
     ".agents/runtime.md",
     ".agents/rules/*.md",
     ".agents/skills/registry.md"
-  ]
+  ],
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["node", "scripts/playwright-mcp.mjs"]
+    }
+  }
 }

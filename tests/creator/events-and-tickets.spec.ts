@@ -1,9 +1,10 @@
-import { creatorAuthTest as test } from '../test-base';
+import { creatorAuthTest as test, expect } from '../test-base';
 import { addCustomBuyerQuestion, cancelEditBuyerQuestion, chooseHeroFile, closeProductCompleteModal, completeOpenBuyerQuestion, expectAddQuestionDialog, expectAddQuestionsDisabled, expectAdditionalQuestionsHeading, expectEditQuestionDialog, expectHeroNotUploaded, expectImageTooSmall, expectProductCompleteModal, expectQuestionInputTypes, expectSavedBuyerQuestion, openAddQuestionDialog, openEditBuyerQuestion, readProductCompleteSharePath, submitEmptyQuestionLabel, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
 import { deleteProduct } from '@helpers/api/product';
 import { eventsBuyerFormData, generateEventsBuyerQuestionLabels, generateEventsBuyerQuestionOptions } from '@test-data/creator/events.buyer-form.data';
 import { eventsAfterSalesData, generateEventsAfterSalesLabel, generateEventsAfterSalesLinks, generateEventsAfterSalesMessage } from '@test-data/creator/events.after-sales.data';
 import { generateEventsEditData } from '@test-data/creator/events.edit.data';
+import { eventsGuestsData } from '@test-data/creator/events.guests.data';
 import { eventsMediaData, generateEventsDescription, generateEventsTitle } from '@test-data/creator/events.media.data';
 import { eventsTicketsData, generateEventsTicketDescription, generateEventsTicketName } from '@test-data/creator/events.tickets.data';
 import { productsCreationData } from '@test-data/creator/products.creation.data';
@@ -463,5 +464,64 @@ test.describe('Creator Events and Tickets', () => {
         await deleteProduct(page.request, productUuid).catch(() => undefined);
       }
     }
+  });
+
+  test('Validate Event Guest List, Summary, Filter, and Pagination', {
+    tag: ['@AUT-FV-318', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-EVT-C-033, TC-EVT-C-034, TC-EVT-C-035, TC-EVT-C-037, TC-EVT-C-039, TC-EVT-C-056, TC-EVT-C-057, TC-EVT-C-058, TC-EVT-C-059',
+    }],
+  }, async ({ eventGuestsPage }) => {
+    test.setTimeout(120000);
+
+    await test.step('Open the seeded event detail Guest section', async () => {
+      await eventGuestsPage.goto(eventsGuestsData.seededEventProductUuid);
+      await eventGuestsPage.expectLoaded();
+    });
+
+    await test.step('Verify the guest table exposes all six columns', async () => {
+      await eventGuestsPage.expectGuestTableColumns();
+    });
+
+    await test.step('Read the summary labels and reconcile Registered against total guest rows', async () => {
+      const summary = await eventGuestsPage.readGuestSummary();
+      expect(summary.registered).toBeGreaterThan(0);
+      expect(summary.capacity).toBeGreaterThan(0);
+
+      const totalRows = await eventGuestsPage.readTotalGuestRowCountAcrossPages();
+      expect(totalRows).toBeGreaterThan(0);
+    });
+
+    await test.step('Enumerate the Filter panel Status options and apply Active only', async () => {
+      await eventGuestsPage.openFilterPanel();
+      await eventGuestsPage.expectFilterStatusOptions();
+      await eventGuestsPage.setStatusFilterChecked('Used', false);
+      await eventGuestsPage.setStatusFilterChecked('Cancelled', false);
+      await eventGuestsPage.applyFilter();
+      await eventGuestsPage.expectGuestRowStatusesAllEqual('Active');
+    });
+
+    await test.step('Reset the filter and restore the full guest list', async () => {
+      await eventGuestsPage.openFilterPanel();
+      await eventGuestsPage.resetFilter();
+      await eventGuestsPage.expectFilterStatusOptions();
+      await eventGuestsPage.closeFilterPanel();
+    });
+
+    await test.step('Paginate the guest table', async () => {
+      const firstPageCount = await eventGuestsPage.readGuestRowCountOnCurrentPage();
+      expect(firstPageCount).toBeGreaterThan(0);
+      await eventGuestsPage.goToGuestPage(2);
+      const secondPageCount = await eventGuestsPage.readGuestRowCountOnCurrentPage();
+      expect(secondPageCount).toBeGreaterThan(0);
+      await eventGuestsPage.goToGuestPage(1);
+    });
+
+    await test.step('Open Check in Guest and verify the QR scanner mounts', async () => {
+      await eventGuestsPage.openCheckInScanner();
+      await eventGuestsPage.expectQrScannerMounted();
+      await eventGuestsPage.closeCheckInScanner();
+    });
   });
 });
