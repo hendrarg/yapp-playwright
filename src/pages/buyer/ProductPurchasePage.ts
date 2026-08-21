@@ -7,7 +7,7 @@ import type { PurchaseProduct } from '@test-data/buyer/promotion.data';
 import { consultationLifecycleData } from '@test-data/creator/consultation.lifecycle.data';
 import { parseConsultationDayButtonLabel } from '@test-data/creator/consultation.pricing.data';
 import { flakyClick } from '@utils/flaky-utils';
-import { locatorChain, smartClick, smartLocator } from '@utils/heal-utils';
+import { buildSmartStrategies, locatorChain, smartClick, smartLocator } from '@utils/heal-utils';
 import { safeClick, safeFill, waitForLoaded } from '@utils/playwright.utils';
 
 export type OrderSummary = {
@@ -333,6 +333,201 @@ export class ProductPurchasePage {
         text: buyerEventsDetailData.addToCartAction,
       }).filter({ visible: true }),
     ).toHaveCount(0);
+  }
+
+  async expectEventStickyBarBeforeSelection() {
+    await expect(this.eventSelectTicketButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.eventSelectTicketButton()).toBeDisabled();
+    await expect(this.eventAddToCartButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.eventAddToCartButton()).toBeDisabled();
+  }
+
+  async selectEventTicket(tierName: string) {
+    const eventMain = locatorChain(this.page, {
+      role: 'main',
+      selector: 'main',
+    });
+    await expect(eventMain).toBeVisible({ timeout: 10000 });
+    expect(await eventMain.innerText()).toContain(tierName);
+
+    const [selectButtonStrategy] = buildSmartStrategies(this.page, {
+      role: 'button',
+      name: 'Select',
+      text: 'Select',
+      exact: true,
+    });
+    const count = await selectButtonStrategy.count();
+    for (let index = 0; index < count; index++) {
+      const button = selectButtonStrategy.nth(index);
+      if (await button.isVisible() && await button.isEnabled()) {
+        await flakyClick(button);
+        await expect(this.eventAddToCartButton()).toBeEnabled({ timeout: 10000 });
+        return;
+      }
+    }
+    throw new Error(`No available ticket tier found for "${tierName}"`);
+  }
+
+  async expectEventStickyBarEnabledAfterScroll() {
+    await expect(this.eventAddToCartButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.eventAddToCartButton()).toBeEnabled();
+    await this.page.evaluate(() => {
+      const w = globalThis as unknown as {
+        scrollTo: (x: number, y: number) => void;
+        document: { body: { scrollHeight: number } };
+      };
+      w.scrollTo(0, w.document.body.scrollHeight);
+    });
+    await expect(this.eventAddToCartButton()).toBeVisible({ timeout: 10000 });
+    await expect(this.eventAddToCartButton()).toBeEnabled();
+  }
+
+  async openEventCheckout() {
+    await safeClick(this.eventAddToCartButton());
+    await expect(this.eventCheckoutDialog()).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectEventCheckoutForm(options: { title: string; tierName: string; subtotal: string }) {
+    const dialog = this.eventCheckoutDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('heading', { name: buyerEventsDetailData.checkout.heading, exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(dialog.getByText('Fill in your ticket info for', { exact: false })).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('heading', { name: options.title, exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('heading', { name: 'Contact Detail', exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.eventCheckoutNameInput()).toHaveValue(/.+/);
+    await expect(this.eventCheckoutEmailInput()).toHaveValue(/.+@.+/);
+    await expect(dialog.getByRole('heading', { name: buyerEventsDetailData.checkout.attendeeDetailsHeading, exact: true }))
+      .toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(options.tierName, { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(buyerEventsDetailData.checkout.useContactDetails, { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(dialog.getByRole('switch')).toBeChecked();
+    await expect(
+      dialog.getByText(buyerEventsDetailData.checkout.subtotalLabel, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(options.subtotal, { exact: true }).filter({ visible: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
+  }
+
+  async expectEventPhoneValidation() {
+    await safeFill(this.eventCheckoutPhoneInput(), buyerEventsDetailData.checkout.invalidPhone);
+    await safeClick(this.eventCheckoutSubmitButton());
+    await expect(
+      this.eventCheckoutDialog().getByText(buyerEventsDetailData.checkout.phoneError, { exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await safeFill(this.eventCheckoutPhoneInput(), buyerEventsDetailData.checkout.validPhone);
+  }
+
+  async submitEventCheckout() {
+    await safeClick(this.eventCheckoutSubmitButton());
+    await expect(this.eventProductAddedDialog()).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectEventProductAdded(options: { title: string; creator: string }) {
+    const dialog = this.eventProductAddedDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('heading', { name: buyerEventsDetailData.checkout.productAddedHeading, exact: true }))
+      .toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('img', { name: options.title, exact: true }).filter({ visible: true }).first())
+      .toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('heading', { name: options.title, exact: true }).filter({ visible: true }).first())
+      .toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(options.creator, { exact: true }).filter({ visible: true }).first()).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(dialog.getByRole('button', { name: buyerEventsDetailData.checkout.seeCartAction, exact: true }))
+      .toBeVisible({ timeout: 10000 });
+    await expect(
+      dialog.getByRole('heading', { name: buyerEventsDetailData.checkout.recommendationsHeading, exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  async clickEventSeeCart() {
+    await safeClick(this.eventProductAddedDialog().getByRole('button', {
+      name: buyerEventsDetailData.checkout.seeCartAction,
+      exact: true,
+    }));
+    await expect(this.page).toHaveURL(/\/cart/);
+  }
+
+  private eventSelectTicketButton(): Locator {
+    const [primary] = buildSmartStrategies(this.page, {
+      role: 'button',
+      name: buyerEventsDetailData.selectTicketAction,
+      text: buyerEventsDetailData.selectTicketAction,
+      exact: true,
+    });
+    return primary.filter({ visible: true }).first();
+  }
+
+  private eventAddToCartButton(): Locator {
+    const [primary] = buildSmartStrategies(this.page, {
+      role: 'button',
+      name: buyerEventsDetailData.addToCartAction,
+      text: buyerEventsDetailData.addToCartAction,
+      exact: true,
+    });
+    return primary.filter({ visible: true }).first();
+  }
+
+  private eventCheckoutDialog(): Locator {
+    return locatorChain(this.page, {
+      role: 'dialog',
+      selector: '[role="dialog"]',
+    }).filter({
+      has: this.page.getByRole('heading', {
+        name: buyerEventsDetailData.checkout.heading,
+        exact: true,
+      }),
+    }).last();
+  }
+
+  private eventCheckoutNameInput(): Locator {
+    return locatorChain(this.page, {
+      role: 'textbox',
+      name: buyerEventsDetailData.checkout.contactNamePlaceholder,
+      placeholder: buyerEventsDetailData.checkout.contactNamePlaceholder,
+    }).filter({ visible: true }).first();
+  }
+
+  private eventCheckoutPhoneInput(): Locator {
+    return locatorChain(this.page, {
+      role: 'textbox',
+      name: buyerEventsDetailData.checkout.phonePlaceholder,
+      placeholder: buyerEventsDetailData.checkout.phonePlaceholder,
+    }).filter({ visible: true }).first();
+  }
+
+  private eventCheckoutEmailInput(): Locator {
+    return locatorChain(this.page, {
+      role: 'textbox',
+      name: buyerEventsDetailData.checkout.emailPlaceholder,
+      placeholder: buyerEventsDetailData.checkout.emailPlaceholder,
+    }).filter({ visible: true }).first();
+  }
+
+  private eventCheckoutSubmitButton(): Locator {
+    return this.eventCheckoutDialog().getByRole('button', {
+      name: 'Add to Cart',
+      exact: true,
+    });
+  }
+
+  private eventProductAddedDialog(): Locator {
+    return locatorChain(this.page, {
+      role: 'dialog',
+      selector: '[role="dialog"]',
+    }).filter({
+      has: this.page.getByRole('heading', {
+        name: buyerEventsDetailData.checkout.productAddedHeading,
+        exact: true,
+      }),
+    }).last();
   }
 
   private eventNextSlideButton(): Locator {

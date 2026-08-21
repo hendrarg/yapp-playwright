@@ -127,4 +127,58 @@ test.describe('Buyer Events and Tickets', () => {
       await productPurchasePage.expectOwnerEventView();
     });
   });
+
+  test('Validate Event Ticket Selection, Buyer Form, and Add to Cart', {
+    tag: ['@AUT-FV-320', '@cart', '@buyer', '@smoke'],
+  }, async ({ productPurchasePage, cartPage }) => {
+    test.setTimeout(180000);
+
+    const { hybridEvent, checkout } = buyerEventsDetailData;
+
+    await test.step('Open an event and verify ticket selection gates the sticky actions', async () => {
+      await productPurchasePage.gotoSharePath(hybridEvent.path);
+      await productPurchasePage.expectEventStickyBarBeforeSelection();
+      await productPurchasePage.selectEventTicket(hybridEvent.onlineTier);
+      await productPurchasePage.expectEventStickyBarEnabledAfterScroll();
+    });
+
+    await test.step('Complete the event buyer form with contact and attendee details', async () => {
+      await productPurchasePage.openEventCheckout();
+      await productPurchasePage.expectEventCheckoutForm({
+        title: hybridEvent.title,
+        tierName: hybridEvent.onlineTier,
+        subtotal: checkout.subtotalAmount,
+      });
+      await productPurchasePage.expectEventPhoneValidation();
+      await productPurchasePage.submitEventCheckout();
+    });
+
+    await test.step('Verify the Product Added confirmation', async () => {
+      await productPurchasePage.expectEventProductAdded({
+        title: hybridEvent.title,
+        creator: hybridEvent.creator,
+      });
+    });
+
+    await test.step('Open Cart and verify the selected event ticket details', async () => {
+      await productPurchasePage.clickEventSeeCart();
+      await cartPage.expectLoaded();
+      await cartPage.expectEventTicketItem({
+        title: hybridEvent.title,
+        creator: hybridEvent.creator,
+        badge: buyerEventsDetailData.eventBadge,
+        schedule: hybridEvent.allDayText,
+        venue: hybridEvent.venue,
+        address: hybridEvent.address,
+        platform: hybridEvent.platform,
+        tierName: hybridEvent.onlineTier,
+        tierPrice: 'IDR10.000',
+        quantityLabel: 'Ticket 1',
+        attendeeName: checkout.attendeeName,
+        attendeeEmail: checkout.attendeeEmail,
+        attendeePhone: checkout.cartAttendeePhone,
+        totalAmount: checkout.cartTotal,
+      });
+    });
+  });
 });
