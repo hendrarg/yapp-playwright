@@ -95,12 +95,9 @@ export class ProductsPage {
     selector: '[role="menuitem"]:has-text("Set Inactive") [role="switch"]',
   });
 
-  private readonly editProductAction = smartLocator(this.page, {
-    role: "menuitem",
-    name: "Edit",
-    text: "Edit",
-    selector: '[role="menuitem"]:has-text("Edit")',
-  });
+  private productActionMenuItem(name: string): Locator {
+    return this.productActionMenu().getByRole("menuitem", { name, exact: true });
+  }
 
   private addProductSheet(): Locator {
     return this.page.getByRole("dialog", { name: "Add New Product" });
@@ -309,8 +306,14 @@ export class ProductsPage {
 
   async openProductActionsMenu(productName: string) {
     // FLAKY_FIX: product rows can re-render once after the filtered list response settles.
-    await flakyClick(this.productActionsTrigger(productName), { retries: 3, timeout: 5000 });
-    await expect(this.productActionMenu()).toBeVisible({ timeout: 10000 });
+    const trigger = this.productActionsTrigger(productName);
+    const menu = this.productActionMenu();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await flakyClick(trigger, { retries: 3, timeout: 5000 });
+      if (await menu.isVisible().catch(() => false)) return;
+      await this.page.waitForTimeout(500);
+    }
+    await expect(menu).toBeVisible({ timeout: 10000 });
   }
 
   async openShareDialog(productName: string) {
@@ -458,12 +461,24 @@ export class ProductsPage {
 
   async openEditProduct(productName: string) {
     await this.openProductActionsMenu(productName);
-    await this.editProductAction.text({ timeout: 10000 });
-    await this.editProductAction.click({ timeout: 10000 });
+    const editAction = this.productActionMenu().getByRole("menuitem", { name: "Edit", exact: true });
+    await expect(editAction).toBeVisible({ timeout: 10000 });
+    await editAction.click({ timeout: 10000 });
     await expect(this.page).toHaveURL(
-      /\/products\/update\/(?:appointment|discord-membership|online-course|digital-downloads)\//,
+      /\/products\/update\/(?:appointment|discord-membership|online-course|digital-downloads|events-ticket)\//,
       { timeout: 30000 },
     );
+  }
+
+  async expectProductActionMenuItems(productName: string, itemNames: readonly string[]) {
+    await this.openProductActionsMenu(productName);
+    await expect(this.productActionMenu().getByRole("menuitem")).toHaveCount(itemNames.length, {
+      timeout: 10000,
+    });
+    for (const name of itemNames) {
+      await expect(this.productActionMenuItem(name)).toBeVisible({ timeout: 10000 });
+    }
+    await this.page.keyboard.press("Escape");
   }
 
   async expectProductRowStatus(

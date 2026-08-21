@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Dialog, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
@@ -16,8 +16,9 @@ export class EventsPage {
 
   private readonly pageHeading = smartLocator(this.page, {
     role: "heading",
-    name: "New Event Ticket",
-    text: "New Event Ticket",
+    name: "Event Ticket",
+    text: "Event Ticket",
+    selector: 'h1:has-text("Event Ticket")',
   });
 
   private readonly nextPublishAction = smartLocator(this.page, {
@@ -47,6 +48,48 @@ export class EventsPage {
     selector: 'button:has-text("Select event date")',
   });
 
+  private eventDateAction(): Locator {
+    return this.page
+      .getByRole("button", { name: "Select event date", exact: true })
+      .or(this.page.getByRole("button", { name: /^\d{1,2} [A-Za-z]+ \d{4}$/ }))
+      .filter({ visible: true })
+      .first();
+  }
+
+  private eventTimeButton(index: number): Locator {
+    return this.page
+      .getByRole("button", { name: /^(Event (start|end) time|\d{2}:\d{2})$/ })
+      .filter({ visible: true })
+      .nth(index);
+  }
+
+  private venueNameInput(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "Venue Name *",
+      placeholder: "Enter venue name",
+      selector: 'input[placeholder="Enter venue name"]',
+    });
+  }
+
+  private venueAddressInput(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "Address *",
+      placeholder: "Enter venue address",
+      selector: 'input[placeholder="Enter venue address"]',
+    });
+  }
+
+  private onSiteRadio(): Locator {
+    return locatorChain(this.page, {
+      role: "radio",
+      name: "On-site · In-person attendances",
+      text: "On-site",
+      selector: '[role="radio"]:has-text("On-site")',
+    });
+  }
+
   private readonly addAnotherTicketTypeAction = smartLocator(this.page, {
     role: "button",
     name: eventsTicketsData.addAnotherTicketType,
@@ -62,11 +105,6 @@ export class EventsPage {
   private readonly percentDiscountError = locatorChain(this.page, {
     text: eventsTicketsData.percentDiscountError,
     selector: `[data-slot="form-message"]:has-text("${eventsTicketsData.percentDiscountError}")`,
-  });
-
-  readonly thumbnailSectionHeading = locatorChain(this.page, {
-    text: "Thumbnail",
-    selector: 'p:has-text("Thumbnail")',
   });
 
   readonly chooseThumbnailLabel = locatorChain(this.page, {
@@ -283,15 +321,48 @@ export class EventsPage {
   }
 
   async selectFutureEventDate() {
-    await this.selectEventDateAction.click({ timeout: 10000 });
-    await this.pickEnabledCalendarDay("last");
-    await expect(this.page.getByRole("button", { name: "Select event date" })).toHaveCount(0, {
+    await this.selectEventDate("last");
+  }
+
+  async selectEventDate(position: "first" | "last") {
+    await this.eventDateAction().click({ timeout: 10000 });
+    await this.pickEnabledCalendarDay(position);
+    await expect(this.page.getByRole("button", { name: "Select event date", exact: true })).toHaveCount(0, {
       timeout: 10000,
     });
   }
 
+  async selectEventDateNextMonth() {
+    await this.eventDateAction().click({ timeout: 10000 });
+    const calendarDialog = this.page.getByRole("dialog").last();
+    await calendarDialog.getByRole("button", { name: "Go to the Next Month" }).click({ timeout: 10000 });
+    await this.pickEnabledCalendarDay("first");
+    await expect(this.page.getByRole("button", { name: "Select event date", exact: true })).toHaveCount(0, {
+      timeout: 10000,
+    });
+  }
+
+  async selectEventTime(index: 0 | 1, time: string) {
+    await this.eventTimeButton(index).click({ timeout: 10000 });
+    const dialog = this.page.getByRole("dialog").last();
+    const pickerInput = dialog.getByRole("combobox").first();
+    await safeFill(pickerInput, time);
+    const suggestions = dialog.getByRole("listbox", { name: "Suggestions" }).first();
+    await expect(suggestions.getByRole("option", { name: time, exact: true })).toBeVisible({ timeout: 10000 });
+    await suggestions.getByRole("option", { name: time, exact: true }).click({ timeout: 10000 });
+    await expect(this.eventTimeButton(index)).toContainText(time, { timeout: 10000 });
+  }
+
+  async readEventDateText() {
+    return this.eventDateAction().innerText({ timeout: 10000 });
+  }
+
+  async readEventTimeText(index: 0 | 1) {
+    return this.eventTimeButton(index).innerText({ timeout: 10000 });
+  }
+
   private async pickEnabledCalendarDay(position: "first" | "last") {
-    const calendar = this.page.getByRole("dialog").getByRole("grid");
+    const calendar = this.page.getByRole("dialog").last().getByRole("grid");
     await expect(calendar).toBeVisible({ timeout: 10000 });
     const days = calendar.getByRole("button", { disabled: false });
     await safeClick(position === "first" ? days.first() : days.last());
@@ -477,6 +548,19 @@ export class EventsPage {
     await this.pickEnabledCalendarDay("first");
     await this.salesPeriodEndButton(index).click({ timeout: 10000 });
     await this.pickEnabledCalendarDay("last");
+    await expect(this.page.getByRole("button", { name: "Select date" })).toHaveCount(0, {
+      timeout: 10000,
+    });
+  }
+
+  async fillTicketSalesPeriodThroughNextMonth(index: number) {
+    const dateButtons = this.page.getByRole("button", {
+      name: /^(Select date|\d{1,2} [A-Za-z]+ \d{4})$/,
+    });
+    await dateButtons.nth(index * 2 + 1).click({ timeout: 10000 });
+    const calendarDialog = this.page.getByRole("dialog").last();
+    await calendarDialog.getByRole("button", { name: "Go to the Next Month" }).click({ timeout: 10000 });
+    await this.pickEnabledCalendarDay("first");
     await expect(this.page.getByRole("button", { name: "Select date" })).toHaveCount(0, {
       timeout: 10000,
     });
@@ -730,6 +814,76 @@ export class EventsPage {
     await expect(dialog.getByRole("textbox")).toHaveCount(0);
   }
 
+  async fillEditableEventsStep1(options: {
+    title: string;
+    description: string;
+    venue: string;
+    address: string;
+    startTime: string;
+    endTime: string;
+    datePosition?: "first" | "last" | "next-month";
+  }) {
+    await this.fillEventsTitle(options.title);
+    await this.fillEventsDescription(options.description);
+    if (options.datePosition === "next-month") {
+      await this.selectEventDateNextMonth();
+    } else {
+      await this.selectEventDate(options.datePosition ?? "last");
+    }
+    if ((await this.allDaySwitch.getAttribute("aria-checked")) === "true") {
+      await safeClick(this.allDaySwitch);
+    }
+    await this.selectEventTime(0, options.startTime);
+    await this.selectEventTime(1, options.endTime);
+    const onSite = this.onSiteRadio();
+    if ((await onSite.getAttribute("aria-checked")) !== "true") {
+      await safeClick(onSite);
+    }
+    await safeFill(this.venueNameInput(), options.venue);
+    await safeFill(this.venueAddressInput(), options.address);
+  }
+
+  async expectEventsStep1Values(options: {
+    title: string;
+    description: string;
+    venue: string;
+    address: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+  }) {
+    await expect(titleInput(this.page)).toHaveValue(options.title, { timeout: 10000 });
+    await expect(descriptionEditor(this.page)).toContainText(options.description, { timeout: 10000 });
+    await expect(this.eventDateAction()).toContainText(options.eventDate, { timeout: 10000 });
+    await expect(this.eventTimeButton(0)).toContainText(options.startTime, { timeout: 10000 });
+    await expect(this.eventTimeButton(1)).toContainText(options.endTime, { timeout: 10000 });
+    await expect(this.onSiteRadio())
+      .toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    await expect(this.venueNameInput()).toHaveValue(options.venue);
+    await expect(this.venueAddressInput()).toHaveValue(options.address);
+  }
+
+  async expectEventsStep2Prepopulated(ticketDescription: string, price: string) {
+    await this.expectTicketConfiguration();
+    await expect(this.ticketDescriptionInput(0)).toHaveValue(ticketDescription, { timeout: 10000 });
+    await this.expectTicketPriceValue(0, price);
+    await this.expectTicketQuantity(0, eventsTicketsData.quantity);
+    await expect(
+      this.page.getByRole("button", { name: /^\d{1,2} [A-Za-z]+ \d{4}$/ }),
+    ).toHaveCount(2, { timeout: 10000 });
+  }
+
+  async goBackToEventsStep1() {
+    await this.page.getByRole("button", { name: "Back", exact: true }).click({ timeout: 10000 });
+    await expect(titleInput(this.page)).toBeVisible({ timeout: 10000 });
+  }
+
+  async readEventProductUuidFromUrl(): Promise<string> {
+    const match = this.page.url().match(/\/products\/update\/events-ticket\/([^/?#]+)/);
+    expect(match?.[1], "expected event product uuid in update URL").toBeTruthy();
+    return match![1];
+  }
+
   async fillMinimalEventsStep1(options: { title: string; description: string }) {
     await this.fillEventsTitle(options.title);
     await this.fillEventsDescription(options.description);
@@ -746,13 +900,17 @@ export class EventsPage {
   async expectEventsDetailsStep() {
     await expect(this.ticketConfigHeading).toBeVisible({ timeout: 20000 });
     await this.nextPublishAction.text({ timeout: 15000 });
-    await expect(this.thumbnailSectionHeading).toBeVisible({ timeout: 10000 });
     await expect(this.chooseThumbnailLabel).toBeVisible({ timeout: 10000 });
     await expect(this.thumbnailHelperText).toBeVisible({ timeout: 10000 });
   }
 
   async submitEventsPublishDetails() {
+    const dialogHandler = async (dialog: Dialog) => {
+      await dialog.accept();
+    };
+    this.page.once("dialog", dialogHandler);
     await this.nextPublishAction.click({ timeout: 10000 });
+    this.page.removeListener("dialog", dialogHandler);
   }
 
   async expectThumbnailRequired() {

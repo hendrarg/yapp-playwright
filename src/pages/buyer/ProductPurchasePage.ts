@@ -107,6 +107,46 @@ export class ProductPurchasePage {
     await waitForLoaded(this.page);
   }
 
+  async expectEventsBuyerDetails(options: {
+    title: string;
+    description: string;
+    venue: string;
+    address: string;
+    eventDate: string;
+    startTime: string;
+    endTime: string;
+  }) {
+    const details = smartLocator(this.page, {
+      role: "main",
+      text: "Product Detail",
+      selector: "main",
+    });
+    const bodyText = await details.text({ timeout: 15000 });
+    const dateMatch = options.eventDate.match(/^\d{1,2} ([A-Za-z]+) \d{4}$/);
+    expect(dateMatch, "expected a readable event date").not.toBeNull();
+    const month = new Map([
+      ["January", "Jan"],
+      ["February", "Feb"],
+      ["March", "Mar"],
+      ["April", "Apr"],
+      ["May", "May"],
+      ["June", "Jun"],
+      ["July", "Jul"],
+      ["August", "Aug"],
+      ["September", "Sep"],
+      ["October", "Oct"],
+      ["November", "Nov"],
+      ["December", "Dec"],
+    ]).get(dateMatch![1]);
+    expect(bodyText).toContain(options.title);
+    expect(bodyText).toContain(options.description);
+    expect(bodyText).toContain(options.venue);
+    expect(bodyText).toContain(options.address);
+    expect(bodyText).toContain(`${dateMatch![0].split(" ")[0]} ${month}`);
+    expect(bodyText).toContain(options.startTime);
+    expect(bodyText).toContain(options.endTime);
+  }
+
   async isProductPubliclyPurchasable(): Promise<boolean> {
     try {
       await this.purchaseAction.text({ timeout: 1500 });

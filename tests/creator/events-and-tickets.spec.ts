@@ -1,7 +1,9 @@
 import { creatorAuthTest as test } from '../test-base';
-import { addCustomBuyerQuestion, cancelEditBuyerQuestion, chooseHeroFile, completeOpenBuyerQuestion, expectAddQuestionDialog, expectAddQuestionsDisabled, expectAdditionalQuestionsHeading, expectEditQuestionDialog, expectHeroNotUploaded, expectImageTooSmall, expectQuestionInputTypes, expectSavedBuyerQuestion, openAddQuestionDialog, openEditBuyerQuestion, submitEmptyQuestionLabel, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
+import { addCustomBuyerQuestion, cancelEditBuyerQuestion, chooseHeroFile, closeProductCompleteModal, completeOpenBuyerQuestion, expectAddQuestionDialog, expectAddQuestionsDisabled, expectAdditionalQuestionsHeading, expectEditQuestionDialog, expectHeroNotUploaded, expectImageTooSmall, expectProductCompleteModal, expectQuestionInputTypes, expectSavedBuyerQuestion, openAddQuestionDialog, openEditBuyerQuestion, readProductCompleteSharePath, submitEmptyQuestionLabel, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
+import { deleteProduct } from '@helpers/api/product';
 import { eventsBuyerFormData, generateEventsBuyerQuestionLabels, generateEventsBuyerQuestionOptions } from '@test-data/creator/events.buyer-form.data';
 import { eventsAfterSalesData, generateEventsAfterSalesLabel, generateEventsAfterSalesLinks, generateEventsAfterSalesMessage } from '@test-data/creator/events.after-sales.data';
+import { generateEventsEditData } from '@test-data/creator/events.edit.data';
 import { eventsMediaData, generateEventsDescription, generateEventsTitle } from '@test-data/creator/events.media.data';
 import { eventsTicketsData, generateEventsTicketDescription, generateEventsTicketName } from '@test-data/creator/events.tickets.data';
 import { productsCreationData } from '@test-data/creator/products.creation.data';
@@ -320,5 +322,146 @@ test.describe('Creator Events and Tickets', () => {
       await eventsPage.expectAfterSalesPreviewReadOnly(afterSalesMessage, [firstLink.label, thirdLink.label]);
       await page.keyboard.press('Escape');
     });
+  });
+
+  test('Validate Event Edit Persistence and Product Row Actions', {
+    tag: ['@AUT-FV-317', '@products', '@creator', '@smoke', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-EVT-C-030, TC-EVT-C-060',
+    }],
+  }, async ({ eventsPage, creatorNav, productsPage, productPurchasePage, page }) => {
+    test.setTimeout(300000);
+
+    const data = generateEventsEditData();
+    let productUuid = '';
+    let sharePath = '';
+    let baselineDate = '';
+    let editedDate = '';
+
+    try {
+      await test.step('Create and publish a baseline event', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.openAddProductSheet();
+        await productsPage.selectProductType(productsCreationData.productTypes[4].buttonName);
+        await eventsPage.expectEventsCreateFlow();
+        await eventsPage.fillEditableEventsStep1({
+          title: data.baselineTitle,
+          description: data.baselineDescription,
+          venue: data.baselineVenue,
+          address: data.baselineAddress,
+          startTime: data.baselineStartTime,
+          endTime: data.baselineEndTime,
+        });
+        baselineDate = await eventsPage.readEventDateText();
+        await eventsPage.continueToEventsDetails();
+        await eventsPage.fillTicketDescription(0, data.baselineTicketDescription);
+        await eventsPage.fillTicketSalesPeriod(0);
+        await uploadHero(page, eventsMediaData.heroImagePath);
+        await eventsPage.submitEventsPublishDetails();
+        await expectProductCompleteModal(page);
+        sharePath = await readProductCompleteSharePath(page);
+        await closeProductCompleteModal(page);
+      });
+
+      await test.step('Open the published event and verify Step 1 is pre-populated', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProductsUntilVisible(data.baselineTitle);
+        await productsPage.openEditProduct(data.baselineTitle);
+        await eventsPage.expectLoaded();
+        productUuid = await eventsPage.readEventProductUuidFromUrl();
+        await eventsPage.expectEventsStep1Values({
+          title: data.baselineTitle,
+          description: data.baselineDescription,
+          venue: data.baselineVenue,
+          address: data.baselineAddress,
+          eventDate: baselineDate,
+          startTime: data.baselineStartTime,
+          endTime: data.baselineEndTime,
+        });
+      });
+
+      await test.step('Continue and verify Step 2 values are pre-populated', async () => {
+        await eventsPage.continueToEventsDetails();
+        await eventsPage.expectEventsStep2Prepopulated(data.baselineTicketDescription, '0');
+      });
+
+      await test.step('Edit title, description, schedule, and venue', async () => {
+        await eventsPage.goBackToEventsStep1();
+        await eventsPage.fillEditableEventsStep1({
+          title: data.editedTitle,
+          description: data.editedDescription,
+          venue: data.editedVenue,
+          address: data.editedAddress,
+          startTime: data.editedStartTime,
+          endTime: data.editedEndTime,
+          datePosition: 'next-month',
+        });
+        editedDate = await eventsPage.readEventDateText();
+        await eventsPage.continueToEventsDetails();
+        await eventsPage.fillTicketDescription(0, data.editedDescription);
+        await eventsPage.fillTicketSalesPeriodThroughNextMonth(0);
+        await eventsPage.submitEventsPublishDetails();
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        let savedAsDraft = false;
+        try {
+          await productsPage.searchProductsUntilVisible(data.editedTitle);
+        } catch {
+          savedAsDraft = true;
+        }
+        if (savedAsDraft) {
+          await productsPage.selectStatusTab('Draft', { waitForRender: false });
+          try {
+            await productsPage.searchProductsUntilVisible(data.editedTitle);
+            await productsPage.expectProductRowStatus(data.editedTitle, 'DRAFT');
+            await productsPage.openEditProduct(data.editedTitle);
+            await eventsPage.expectLoaded();
+            await eventsPage.continueToEventsDetails();
+            await eventsPage.submitEventsPublishDetails();
+            await creatorNav.open('products');
+            await productsPage.expectLoaded();
+            await productsPage.selectStatusTab('Active', { waitForRender: false });
+            await productsPage.searchProductsUntilVisible(data.editedTitle);
+          } catch {
+            await productsPage.selectStatusTab('Inactive', { waitForRender: false });
+            await productsPage.searchProductsUntilVisible(data.editedTitle);
+          }
+        }
+      });
+
+      await test.step('Verify edited details on the buyer-facing event page', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectEventsBuyerDetails({
+          title: data.editedTitle,
+          description: data.editedDescription,
+          venue: data.editedVenue,
+          address: data.editedAddress,
+          eventDate: editedDate,
+          startTime: data.editedStartTime,
+          endTime: data.editedEndTime,
+        });
+      });
+
+      await test.step('Verify the event row action menu inventory', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProductsUntilVisible(data.editedTitle);
+        await productsPage.expectProductActionMenuItems(data.editedTitle, [
+          'Set Inactive',
+          'Hide from Profile',
+          'Edit',
+          'Share',
+          'Hide',
+          'Delete',
+        ]);
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid).catch(() => undefined);
+      }
+    }
   });
 });
