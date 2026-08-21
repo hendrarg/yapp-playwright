@@ -160,6 +160,16 @@ export class ProductsPage {
     });
   }
 
+  async waitForListResponse() {
+    const response = await this.page.waitForResponse(
+      (candidate) =>
+        candidate.url().includes("/api/v1/shop/products") &&
+        candidate.request().method() === "GET",
+      { timeout: 30000 },
+    );
+    expect(response.ok()).toBeTruthy();
+  }
+
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/products/);
     expect(this.page.url()).not.toContain("/auth");
@@ -206,6 +216,13 @@ export class ProductsPage {
   async expectActiveCount(count: number | RegExp) {
     const pattern = count instanceof RegExp ? count : new RegExp(`Active \\(${count}\\)`);
     await expect(this.page.getByText(pattern).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async readActiveCount(): Promise<number> {
+    const text = await this.statusTab("Active").first().textContent({ timeout: 10000 });
+    const match = text?.match(/\((\d+)\)/);
+    expect(match?.[1], "expected a numeric Active tab count").toBeTruthy();
+    return Number(match![1]);
   }
 
   async expectProductVisible(productName: string) {
@@ -488,6 +505,10 @@ export class ProductsPage {
     await expect(this.productRow(productName).getByText(status, { exact: true })).toBeVisible({
       timeout: 10000,
     });
+  }
+
+  async expectProductRowPrice(productName: string, pattern: RegExp) {
+    await expect(this.productRow(productName).getByText(pattern)).toBeVisible({ timeout: 10000 });
   }
 
   async readProductSharePath(productName: string): Promise<string> {

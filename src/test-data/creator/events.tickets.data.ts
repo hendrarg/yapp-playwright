@@ -22,6 +22,8 @@ export const eventsTicketsData = {
   addAnotherTicketType: "+ Add Another Ticket Type",
   addAnotherTicketTypeText: "Add Another Ticket Type",
   previewZeroPricePattern: /IDR\s*0/,
+  previewPricePattern: /IDR\s*150,000/,
+  rowPricePattern: /Rp150\.000,00/,
   afterSalesOff: (name: string) =>
     `Off — buyers of ${name} get the default after-sales content below.`,
   afterSalesOn: (name: string) =>

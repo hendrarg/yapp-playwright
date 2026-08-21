@@ -7,15 +7,12 @@ import { generateEventsEditData } from '@test-data/creator/events.edit.data';
 import { eventsGuestsData } from '@test-data/creator/events.guests.data';
 import { eventsMediaData, generateEventsDescription, generateEventsTitle } from '@test-data/creator/events.media.data';
 import { eventsTicketsData, generateEventsTicketDescription, generateEventsTicketName } from '@test-data/creator/events.tickets.data';
+import { eventsPublishData } from '@test-data/creator/events.publish.data';
 import { productsCreationData } from '@test-data/creator/products.creation.data';
 
 test.describe('Creator Events and Tickets', () => {
   test('Validate Event Thumbnail and Additional Image Upload', {
     tag: ['@AUT-FV-312', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-EVT-C-011, TC-EVT-C-012, TC-EVT-C-013, TC-EVT-C-047, TC-EVT-C-048',
-    }],
   }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
@@ -74,10 +71,6 @@ test.describe('Creator Events and Tickets', () => {
 
   test('Validate Event Buyer Form Custom Questions Configuration', {
     tag: ['@AUT-FV-313', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-EVT-C-014, TC-EVT-C-015, TC-EVT-C-049',
-    }],
   }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
@@ -153,10 +146,6 @@ test.describe('Creator Events and Tickets', () => {
 
   test('Validate Event Ticket Tier Configuration, Pricing, and Discounts', {
     tag: ['@AUT-FV-314', '@products', '@creator', '@smoke', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-EVT-C-016, TC-EVT-C-017, TC-EVT-C-018, TC-EVT-C-019, TC-EVT-C-020, TC-EVT-C-021, TC-EVT-C-045, TC-EVT-C-046, TC-EVT-C-050',
-    }],
   }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
@@ -238,10 +227,6 @@ test.describe('Creator Events and Tickets', () => {
 
   test('Validate Event After-Sales Configuration and Preview', {
     tag: ['@AUT-FV-315', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-EVT-C-022, TC-EVT-C-023, TC-EVT-C-024, TC-EVT-C-025, TC-EVT-C-051, TC-EVT-C-052, TC-EVT-C-053, TC-EVT-C-062',
-    }],
   }, async ({eventsPage, creatorNav, productsPage, page }) => {
     test.setTimeout(180000);
 
@@ -323,6 +308,109 @@ test.describe('Creator Events and Tickets', () => {
       await eventsPage.expectAfterSalesPreviewReadOnly(afterSalesMessage, [firstLink.label, thirdLink.label]);
       await page.keyboard.press('Escape');
     });
+  });
+
+  test('Validate Event Publishing, Draft, and Preview Panel', {
+    tag: ['@AUT-FV-316', '@products', '@creator', '@regression'],
+  }, async ({ eventsPage, creatorNav, productsPage, productPurchasePage, page }) => {
+    test.setTimeout(180000);
+
+    const eventsType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Events and Tickets',
+    )!;
+    const title = generateEventsTitle();
+    let productUuid = '';
+    let sharePath = '';
+    let activeCountBefore = 0;
+
+    try {
+      await test.step('Read the baseline Active count', async () => {
+        const listResponse = productsPage.waitForListResponse();
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await listResponse;
+        await expect.poll(() => productsPage.readActiveCount()).toBeGreaterThan(0);
+        activeCountBefore = await productsPage.readActiveCount();
+      });
+
+      await test.step('Open Events and Tickets create flow', async () => {
+        await productsPage.openAddProductSheet();
+        await productsPage.selectProductType(eventsType.buttonName);
+        await eventsPage.expectEventsCreateFlow();
+      });
+
+      await test.step('Confirm Save as Draft is absent on Step 1, before and after filling the title', async () => {
+        await eventsPage.expectSaveAsDraftAbsent();
+        await eventsPage.fillEventsTitle(title);
+        await eventsPage.expectSaveAsDraftAbsent();
+      });
+
+      await test.step('Fill All Day online details and continue to ticket configuration', async () => {
+        await eventsPage.fillMinimalEventsStep1({
+          title,
+          description: generateEventsDescription(),
+        });
+        await eventsPage.continueToEventsDetails();
+      });
+
+      await test.step('Confirm Save as Draft is available on Step 2', async () => {
+        await eventsPage.expectSaveAsDraftAvailable();
+      });
+
+      await test.step('Read the completion meter before required fields are filled', async () => {
+        const before = await eventsPage.readCompletionPercentage();
+        expect(before).toBeGreaterThan(0);
+        expect(before).toBeLessThan(100);
+      });
+
+      await test.step('Fill ticket price, sales period, and thumbnail', async () => {
+        await eventsPage.fillTicketDescription(0, generateEventsTicketDescription());
+        await eventsPage.fillTicketPrice(0, eventsTicketsData.rawPrice);
+        await eventsPage.fillTicketSalesPeriod(0);
+        await uploadHero(page, eventsMediaData.heroImagePath);
+      });
+
+      await test.step('Confirm the completion meter rises once required fields are filled', async () => {
+        const after = await eventsPage.readCompletionPercentage();
+        expect(after).toBe(100);
+      });
+
+      await test.step('Verify the preview panel shows thumbnail, badge, title, price, and creator identity', async () => {
+        await eventsPage.expectPreviewPanelDetails(title);
+        await eventsPage.expectPreviewStartFrom(eventsTicketsData.previewPricePattern);
+      });
+
+      await test.step('Publish the event and verify the Product Complete modal', async () => {
+        await eventsPage.submitEventsPublishDetails();
+        await expectProductCompleteModal(page);
+        sharePath = await readProductCompleteSharePath(page);
+        await closeProductCompleteModal(page);
+      });
+
+      await test.step('Verify the Active count incremented and the row shows price and status', async () => {
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await productsPage.searchProductsUntilVisible(title);
+        await productsPage.expectProductRowStatus(title, 'ACTIVE');
+        await productsPage.expectProductRowPrice(title, eventsTicketsData.rowPricePattern);
+        await productsPage.openEditProduct(title);
+        productUuid = await eventsPage.readEventProductUuidFromUrl();
+        const listResponse = productsPage.waitForListResponse();
+        await creatorNav.open('products');
+        await productsPage.expectLoaded();
+        await listResponse;
+        await expect.poll(() => productsPage.readActiveCount()).toBe(activeCountBefore + 1);
+      });
+
+      await test.step('Resolve the canonical product URL from the share link', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await expect(page).toHaveURL(eventsPublishData.canonicalProductUrlPattern, { timeout: 15000 });
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid).catch(() => undefined);
+      }
+    }
   });
 
   test('Validate Event Edit Persistence and Product Row Actions', {

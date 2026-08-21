@@ -2,11 +2,13 @@ import type { Dialog, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
-import { embedLinkDoneButton, embedLinkLabelInput, embedLinkUrlInput, descriptionEditor, galleryInput, heroInput, nextSetDetailsAction, titleInput } from "@pages/shared/locators";
+import { embedLinkDoneButton, embedLinkLabelInput, embedLinkUrlInput, descriptionEditor, galleryInput, heroInput, livePreviewCard, nextSetDetailsAction, saveAsDraftAction, titleInput } from "@pages/shared/locators";
 import { eventsMediaData } from "@test-data/creator/events.media.data";
 import { eventsAfterSalesData } from "@test-data/creator/events.after-sales.data";
 import { eventsTicketsData, type EventsTicketDiscountType } from "@test-data/creator/events.tickets.data";
+import { eventsPublishData } from "@test-data/creator/events.publish.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
+import { creatorProfile } from "@test-data/buyer/profile.data";
 
 export class EventsPage {
   constructor(
@@ -644,6 +646,53 @@ export class EventsPage {
   async expectPreviewStartFrom(pattern: RegExp) {
     await expect(this.page.getByText("Start From", { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(this.page.getByText(pattern)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectPreviewPanelDetails(title: string) {
+    const preview = livePreviewCard(this.page);
+    await expect(preview).toBeVisible({ timeout: 10000 });
+    await expect(preview.getByRole("img").first()).toBeVisible({ timeout: 15000 });
+    await expect(preview.getByText(eventsPublishData.previewBadgeText, { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(preview.getByRole("heading", { name: title, exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(preview.getByText(creatorProfile)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectSaveAsDraftAbsent() {
+    await expect.poll(() => saveAsDraftAction(this.page).count(), { timeout: 5000 }).toBe(0);
+  }
+
+  async expectSaveAsDraftAvailable() {
+    await expect
+      .poll(() => saveAsDraftAction(this.page).visibleCount(), { timeout: 10000 })
+      .toBeGreaterThan(0);
+  }
+
+  private completionMeterText(): Locator {
+    return this.page.getByText(/^\d+% completed$/).filter({ visible: true });
+  }
+
+  /**
+   * The "% completed" meter only renders below the `md` breakpoint, so this
+   * temporarily resizes to a mobile viewport to read it, then restores the
+   * original size for the rest of the test.
+   */
+  async readCompletionPercentage(): Promise<number> {
+    const originalViewport = this.page.viewportSize();
+    await this.page.setViewportSize(eventsPublishData.mobileViewport);
+    try {
+      const meter = this.completionMeterText().first();
+      await expect(meter).toBeVisible({ timeout: 10000 });
+      const text = await meter.textContent();
+      const match = text?.match(/(\d+)% completed/);
+      expect(match?.[1], "expected a completion percentage on the mobile completion meter").toBeTruthy();
+      return Number(match![1]);
+    } finally {
+      if (originalViewport) {
+        await this.page.setViewportSize(originalViewport);
+      }
+    }
   }
 
   async expectAfterSalesDefaultState() {
