@@ -24,6 +24,8 @@ export const eventsTicketsData = {
   previewZeroPricePattern: /IDR\s*0/,
   afterSalesOff: (name: string) =>
     `Off — buyers of ${name} get the default after-sales content below.`,
+  afterSalesOn: (name: string) =>
+    `On — buyers of ${name} get the message and links below instead of the default.`,
 } as const;
 
 export type EventsTicketDiscountType = (typeof eventsTicketsData.discountTypes)[number];

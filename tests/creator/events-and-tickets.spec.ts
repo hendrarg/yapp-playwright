@@ -1,6 +1,7 @@
 import { creatorAuthTest as test } from '../test-base';
 import { addCustomBuyerQuestion, cancelEditBuyerQuestion, chooseHeroFile, completeOpenBuyerQuestion, expectAddQuestionDialog, expectAddQuestionsDisabled, expectAdditionalQuestionsHeading, expectEditQuestionDialog, expectHeroNotUploaded, expectImageTooSmall, expectQuestionInputTypes, expectSavedBuyerQuestion, openAddQuestionDialog, openEditBuyerQuestion, submitEmptyQuestionLabel, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
 import { eventsBuyerFormData, generateEventsBuyerQuestionLabels, generateEventsBuyerQuestionOptions } from '@test-data/creator/events.buyer-form.data';
+import { eventsAfterSalesData, generateEventsAfterSalesLabel, generateEventsAfterSalesLinks, generateEventsAfterSalesMessage } from '@test-data/creator/events.after-sales.data';
 import { eventsMediaData, generateEventsDescription, generateEventsTitle } from '@test-data/creator/events.media.data';
 import { eventsTicketsData, generateEventsTicketDescription, generateEventsTicketName } from '@test-data/creator/events.tickets.data';
 import { productsCreationData } from '@test-data/creator/products.creation.data';
@@ -232,6 +233,96 @@ test.describe('Creator Events and Tickets', () => {
       await eventsPage.expectTicketTier(thirdTierName);
       await eventsPage.collapseTicketTier(paidTierName);
       await eventsPage.expandTicketTier(paidTierName);
+    });
+  });
+
+  test('Validate Event After-Sales Configuration and Preview', {
+    tag: ['@AUT-FV-315', '@products', '@creator', '@regression'],
+    annotation: [{
+      type: 'covers',
+      description: 'TC-EVT-C-022, TC-EVT-C-023, TC-EVT-C-024, TC-EVT-C-025, TC-EVT-C-051, TC-EVT-C-052, TC-EVT-C-053, TC-EVT-C-062',
+    }],
+  }, async ({
+    eventsPage, creatorNav, productsPage, page }) => {
+    test.setTimeout(180000);
+
+    const eventsType = productsCreationData.productTypes.find(
+      (type) => type.label === 'Events and Tickets',
+    )!;
+    const tierName = eventsTicketsData.defaultTierName(0);
+    const afterSalesMessage = generateEventsAfterSalesMessage();
+    const validationLabel = generateEventsAfterSalesLabel();
+    const [firstLink, secondLink, thirdLink] = generateEventsAfterSalesLinks();
+
+    await test.step('Open a new Events and Tickets Step 2 flow', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.openAddProductSheet();
+      await productsPage.selectProductType(eventsType.buttonName);
+      await eventsPage.expectEventsCreateFlow();
+      await eventsPage.fillMinimalEventsStep1({
+        title: generateEventsTitle(),
+        description: generateEventsDescription(),
+      });
+      await eventsPage.continueToEventsDetails();
+    });
+
+    await test.step('Verify Customize Message defaults on and exposes the editor', async () => {
+      await eventsPage.expectAfterSalesDefaultState();
+    });
+
+    await test.step('Track plain text and embedded-image character budgets', async () => {
+      await eventsPage.fillAfterSalesMessage(afterSalesMessage);
+      await eventsPage.expectAfterSalesMessageCounter(`${afterSalesMessage.length}/1000 characters`);
+      await eventsPage.insertAfterSalesImage(eventsMediaData.heroImagePath);
+      await eventsPage.expectAfterSalesImageBudgetConsumed();
+      await eventsPage.removeAfterSalesImage();
+      await eventsPage.expectAfterSalesMessageCounter(eventsAfterSalesData.emptyCounter);
+      await eventsPage.fillAfterSalesMessage(afterSalesMessage);
+      await eventsPage.expectAfterSalesMessageCounter(`${afterSalesMessage.length}/1000 characters`);
+    });
+
+    await test.step('Validate link dialog order, URL validation, and label counter', async () => {
+      await eventsPage.enableAfterSalesLinks();
+      await eventsPage.openGlobalAfterSalesLinkDialog();
+      await eventsPage.fillAfterSalesLink('not-a-url', validationLabel);
+      await eventsPage.expectInvalidAfterSalesLink(validationLabel.length);
+      await eventsPage.fillAfterSalesLink(firstLink.url, firstLink.label);
+      await eventsPage.saveAfterSalesLink();
+    });
+
+    await test.step('Enforce three global links and manage saved links', async () => {
+      await eventsPage.openGlobalAfterSalesLinkDialog();
+      await eventsPage.fillAfterSalesLink(secondLink.url, secondLink.label);
+      await eventsPage.saveAfterSalesLink();
+      await eventsPage.openGlobalAfterSalesLinkDialog();
+      await eventsPage.fillAfterSalesLink(thirdLink.url, thirdLink.label);
+      await eventsPage.saveAfterSalesLink();
+      await eventsPage.expectAfterSalesLinks([firstLink.label, secondLink.label, thirdLink.label]);
+      await eventsPage.expectGlobalAfterSalesLinkLimit();
+      await eventsPage.editAfterSalesLink(firstLink.label);
+      await eventsPage.closeAfterSalesLinkDialog();
+      await eventsPage.deleteAfterSalesLink(secondLink.label);
+      await eventsPage.expectAfterSalesLinks([firstLink.label, thirdLink.label]);
+    });
+
+    await test.step('Enable per-tier after-sales content and name its helper state', async () => {
+      await eventsPage.enablePerTierAfterSales(tierName);
+      await eventsPage.fillPerTierAfterSalesMessage(`Per-tier message for ${tierName}`);
+      await eventsPage.openPerTierAfterSalesLinkDialog();
+      await eventsPage.fillAfterSalesLink('https://example.com/tier-details', 'Tier Details');
+      await eventsPage.saveAfterSalesLink();
+    });
+
+    await test.step('Assert the known Add Link title on edit mode', async () => {
+      await eventsPage.openAfterSalesLinkEditAndAssertKnownTitle(firstLink.label);
+      await eventsPage.closeAfterSalesLinkDialog();
+    });
+
+    await test.step('Preview staged global content as read-only buyer content', async () => {
+      await eventsPage.openAfterSalesPreview();
+      await eventsPage.expectAfterSalesPreviewReadOnly(afterSalesMessage, [firstLink.label, thirdLink.label]);
+      await page.keyboard.press('Escape');
     });
   });
 });

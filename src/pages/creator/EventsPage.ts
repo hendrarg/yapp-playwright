@@ -3,6 +3,9 @@ import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
 import {
+  embedLinkDoneButton,
+  embedLinkLabelInput,
+  embedLinkUrlInput,
   descriptionEditor,
   galleryInput,
   heroInput,
@@ -10,6 +13,7 @@ import {
   titleInput,
 } from "@pages/shared/locators";
 import { eventsMediaData } from "@test-data/creator/events.media.data";
+import { eventsAfterSalesData } from "@test-data/creator/events.after-sales.data";
 import { eventsTicketsData, type EventsTicketDiscountType } from "@test-data/creator/events.tickets.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
 
@@ -129,6 +133,81 @@ export class EventsPage {
       .getByText(eventsMediaData.galleryChooserCopy, { exact: true })
       .locator("xpath=ancestor::*[.//input[@type='file']][1]//input[@type='file']")
       .or(galleryInput(this.page));
+  }
+
+  private afterSalesLabel(text: "Customize Message" | "Links" | "Customize after-sales for this tier"): Locator {
+    return locatorChain(this.page, {
+      text,
+      selector: `text="${text}"`,
+    });
+  }
+
+  private afterSalesCustomizeMessageSwitch(): Locator {
+    return this.afterSalesLabel("Customize Message").locator("xpath=preceding::*[@role='switch'][1]");
+  }
+
+  private afterSalesMessageEditor(): Locator {
+    return this.afterSalesLabel("Customize Message").locator("xpath=following::*[@contenteditable='true'][1]");
+  }
+
+  private afterSalesMessageToolbar(): Locator {
+    return this.afterSalesLabel("Customize Message").locator("xpath=following::*[@role='toolbar'][1]");
+  }
+
+  private afterSalesImageButton(): Locator {
+    return this.afterSalesMessageToolbar().getByRole("button", { name: "Insert image" });
+  }
+
+  private afterSalesLinksCheckbox(): Locator {
+    return this.afterSalesLabel("Links").locator("xpath=preceding::*[@role='checkbox'][1]");
+  }
+
+  private afterSalesAddLinkButton(): Locator {
+    return this.afterSalesLinksCheckbox().locator("xpath=following::button[normalize-space()='Add Link'][1]");
+  }
+
+  private perTierAfterSalesSwitch(): Locator {
+    return this.afterSalesLabel("Customize after-sales for this tier")
+      .locator("xpath=preceding::*[@role='switch'][1]");
+  }
+
+  private perTierAfterSalesEditor(): Locator {
+    return this.afterSalesLabel("Customize after-sales for this tier")
+      .locator("xpath=following::*[@contenteditable='true'][1]");
+  }
+
+  private perTierAfterSalesAddLinkButton(): Locator {
+    return this.afterSalesLabel("Customize after-sales for this tier")
+      .locator("xpath=following::button[normalize-space()='Add Link'][1]");
+  }
+
+  private linkRow(label: string): Locator {
+    return locatorChain(this.page, {
+      text: label,
+      selector: `text="${label}"`,
+    }).locator("xpath=ancestor::div[3]");
+  }
+
+  private linkEditButton(label: string): Locator {
+    return this.linkRow(label).getByRole("button", { name: "edit", exact: true });
+  }
+
+  private linkDeleteButton(label: string): Locator {
+    return this.linkRow(label).getByRole("button").nth(1);
+  }
+
+  private afterSalesPreviewButton() {
+    return smartLocator(this.page, {
+      role: "button",
+      name: "Preview",
+      exact: true,
+      text: "Preview",
+      selector: 'button:has-text("Preview")',
+    });
+  }
+
+  private afterSalesPreviewDialog(): Locator {
+    return this.page.getByRole("dialog").filter({ hasText: "Links" });
   }
 
   async goto() {
@@ -444,6 +523,174 @@ export class EventsPage {
   async expectPreviewStartFrom(pattern: RegExp) {
     await expect(this.page.getByText("Start From", { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(this.page.getByText(pattern)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectAfterSalesDefaultState() {
+    await expect(this.afterSalesCustomizeMessageSwitch()).toHaveAttribute("aria-checked", "true", {
+      timeout: 10000,
+    });
+    await expect(this.afterSalesMessageEditor()).toBeVisible({ timeout: 10000 });
+    await this.expectAfterSalesMessageCounter(eventsAfterSalesData.emptyCounter);
+  }
+
+  async fillAfterSalesMessage(message: string) {
+    await safeFill(this.afterSalesMessageEditor(), message);
+  }
+
+  async expectAfterSalesMessageCounter(expected: string) {
+    await expect(
+      locatorChain(this.page, {
+        text: expected,
+        selector: `text="${expected}"`,
+      }),
+    ).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectAfterSalesImageBudgetConsumed() {
+    const counter = locatorChain(this.page, {
+      text: "/1000 characters",
+      selector: 'text=/^\\d+\\/1000 characters$/',
+    });
+    const value = await counter.textContent({ timeout: 10000 });
+    const count = Number(value?.match(/(\d+)\/1000/)?.[1] ?? 0);
+    expect(count, "embedded image should consume more than half of the character budget").toBeGreaterThan(
+      eventsAfterSalesData.imageBudgetMinimum,
+    );
+  }
+
+  async insertAfterSalesImage(filePath: string) {
+    const chooser = this.page.waitForEvent("filechooser");
+    await this.afterSalesImageButton().click({ timeout: 10000 });
+    await (await chooser).setFiles(filePath);
+    await expect(this.afterSalesMessageEditor().getByRole("img", { name: /.+/ })).toBeVisible({ timeout: 15000 });
+  }
+
+  async removeAfterSalesImage() {
+    await safeFill(this.afterSalesMessageEditor(), "");
+    await this.afterSalesMessageEditor().getByRole("button", { name: "Delete image" }).click({
+      timeout: 10000,
+    });
+    await this.expectAfterSalesMessageCounter(eventsAfterSalesData.emptyCounter);
+  }
+
+  async enableAfterSalesLinks() {
+    if ((await this.afterSalesLinksCheckbox().getAttribute("aria-checked")) !== "true") {
+      await safeClick(this.afterSalesLinksCheckbox());
+    }
+    await expect(this.afterSalesLinksCheckbox()).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    await expect(this.afterSalesAddLinkButton()).toBeVisible({ timeout: 10000 });
+  }
+
+  async openGlobalAfterSalesLinkDialog() {
+    await this.afterSalesAddLinkButton().click({ timeout: 10000 });
+    await this.expectAfterSalesLinkDialog();
+  }
+
+  async expectAfterSalesLinkDialog() {
+    const dialog = this.page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Add Link", exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(embedLinkUrlInput(this.page)).toBeVisible({ timeout: 10000 });
+    await expect(embedLinkLabelInput(this.page)).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillAfterSalesLink(url: string, label: string) {
+    await safeFill(embedLinkUrlInput(this.page), url);
+    await safeFill(embedLinkLabelInput(this.page), label);
+  }
+
+  async expectInvalidAfterSalesLink(labelLength: number) {
+    await expect(this.page.getByText(eventsAfterSalesData.invalidUrlError, { exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(
+      locatorChain(this.page, {
+        text: `${labelLength}/40 characters`,
+        selector: `text="${labelLength}/40 characters"`,
+      }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(embedLinkDoneButton(this.page)).toBeDisabled();
+  }
+
+  async saveAfterSalesLink() {
+    await expect(embedLinkDoneButton(this.page)).toBeEnabled({ timeout: 10000 });
+    await embedLinkDoneButton(this.page).click({ timeout: 10000 });
+  }
+
+  async expectAfterSalesLinks(labels: readonly string[]) {
+    for (const label of labels) {
+      await expect(
+        locatorChain(this.page, {
+          text: label,
+          selector: `text="${label}"`,
+        }),
+      ).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async expectGlobalAfterSalesLinkLimit() {
+    await expect(this.afterSalesAddLinkButton()).toBeDisabled({ timeout: 10000 });
+  }
+
+  async editAfterSalesLink(label: string) {
+    await this.linkEditButton(label).click({ timeout: 10000 });
+    await this.expectAfterSalesLinkDialog();
+    await expect(embedLinkUrlInput(this.page)).toHaveValue(eventsAfterSalesData.firstLinkUrl, { timeout: 10000 });
+    await expect(embedLinkLabelInput(this.page)).toHaveValue(label, { timeout: 10000 });
+  }
+
+  async deleteAfterSalesLink(label: string) {
+    await this.linkDeleteButton(label).click({ timeout: 10000 });
+    await expect(this.page.getByText(label, { exact: true })).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async enablePerTierAfterSales(name: string) {
+    const toggle = this.perTierAfterSalesSwitch();
+    if ((await toggle.getAttribute("aria-checked")) !== "true") {
+      await safeClick(toggle);
+    }
+    await expect(toggle).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    await expect(
+      this.page.getByText(eventsTicketsData.afterSalesOn(name), { exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(this.perTierAfterSalesEditor()).toBeVisible({ timeout: 10000 });
+    await expect(this.perTierAfterSalesAddLinkButton()).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillPerTierAfterSalesMessage(message: string) {
+    await safeFill(this.perTierAfterSalesEditor(), message);
+  }
+
+  async openPerTierAfterSalesLinkDialog() {
+    await this.perTierAfterSalesAddLinkButton().click({ timeout: 10000 });
+    await this.expectAfterSalesLinkDialog();
+  }
+
+  async openAfterSalesLinkEditAndAssertKnownTitle(label: string) {
+    await this.linkEditButton(label).click({ timeout: 10000 });
+    await expect(this.page.getByRole("dialog").getByRole("heading", { name: "Add Link", exact: true }))
+      .toBeVisible({ timeout: 10000 });
+    await expect(embedLinkLabelInput(this.page)).toHaveValue(label, { timeout: 10000 });
+  }
+
+  async closeAfterSalesLinkDialog() {
+    await embedLinkDoneButton(this.page).click({ timeout: 10000 });
+  }
+
+  async openAfterSalesPreview() {
+    await this.afterSalesPreviewButton().click({ timeout: 10000 });
+    await expect(this.afterSalesPreviewDialog()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectAfterSalesPreviewReadOnly(message: string, labels: readonly string[]) {
+    const dialog = this.afterSalesPreviewDialog();
+    await expect(dialog.getByText(message, { exact: true })).toBeVisible({ timeout: 10000 });
+    for (const label of labels) {
+      await expect(dialog.getByRole("link", { name: label, exact: true })).toBeVisible({ timeout: 10000 });
+    }
+    await expect(dialog.locator('[contenteditable="true"]')).toHaveCount(0);
+    await expect(dialog.getByRole("textbox")).toHaveCount(0);
   }
 
   async fillMinimalEventsStep1(options: { title: string; description: string }) {
