@@ -16,7 +16,9 @@
         "mcp-gsheets@latest"
       ],
       "env": {
-        "GSHEETS_TOOLSETS": "core,sheets"
+        "GSHEETS_TOOLSETS": "core,sheets,formatting,analysis",
+        "GOOGLE_APPLICATION_CREDENTIALS": ".google-sheets-service-account.json",
+        "GOOGLE_PROJECT_ID": "key-cistern-500713-k8"
       }
     }
   }

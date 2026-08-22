@@ -30,3 +30,4 @@ node_modules/
 .env.*
 !.env.example
 .google-sheets-token.json
+.google-sheets-service-account.json

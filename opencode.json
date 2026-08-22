@@ -9,6 +9,15 @@
     "playwright": {
       "type": "local",
       "command": ["node", "scripts/playwright-mcp.mjs"]
+    },
+    "google-sheets": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-gsheets@latest"],
+      "environment": {
+        "GSHEETS_TOOLSETS": "core,sheets,formatting,analysis",
+        "GOOGLE_APPLICATION_CREDENTIALS": ".google-sheets-service-account.json",
+        "GOOGLE_PROJECT_ID": "key-cistern-500713-k8"
+      }
     }
   }
 }
