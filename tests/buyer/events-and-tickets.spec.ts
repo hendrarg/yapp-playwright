@@ -45,8 +45,8 @@ test.describe('Buyer Events and Tickets', () => {
         const carouselProduct = await createEventProduct(page.request, {
           title: seedData.carouselEvent.title,
           description: seedData.carouselEvent.description,
-          thumbnailImagePath: seedData.thumbnailImagePath,
-          productImagePaths: [seedData.thumbnailImagePath, seedData.thumbnailImagePath],
+          thumbnailImagePath: seedData.carouselEvent.thumbnailImagePath,
+          productImagePaths: seedData.carouselEvent.imagePaths,
           eventDate: seedData.carouselEvent.eventDate,
           venueType: 'on_site',
           venueName: seedData.carouselEvent.venueName,

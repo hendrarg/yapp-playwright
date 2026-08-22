@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { eventsMediaData, generateEventsDescription, generateEventsTitle } from "@test-data/creator/events.media.data";
 import { generateEventsTicketDescription, generateEventsTicketName } from "@test-data/creator/events.tickets.data";
+import { testImages } from "@test-data/creator/post.data";
 
 /** Stable shared-dev event fixtures used by AUT-FV-319. */
 export const buyerEventsDetailData = {
@@ -188,6 +189,10 @@ export function generateBuyerEventDiscoverySeedData() {
       venueName: carouselVenue,
       venueAddress: carouselAddress,
       slideCount: 3,
+      // One distinct image per slide — the thumbnail plus these two. Seeding the same
+      // file three times made the carousel assertions pass without proving anything.
+      imagePaths: [testImages.gallery2, testImages.gallery3],
+      thumbnailImagePath: testImages.gallery1,
       soldOutTier: {
         title: generateEventsTicketName(),
         description: generateEventsTicketDescription(),

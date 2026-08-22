@@ -19,6 +19,14 @@ export const testImages = {
   hermes: 'src/test-data/assets/hermes.jpg',
   openclaw: 'src/test-data/assets/openclaw.png',
   qwen: 'src/test-data/assets/qwen.png',
+  /**
+   * Gallery fixtures: 600x600 solid colours, each with a marker block in a different
+   * corner, so a carousel slide is identifiable in a trace. 600px clears the app's
+   * "at least 500 x 500 pixels" rule, and each file is ~2 KB.
+   */
+  gallery1: 'src/test-data/assets/gallery-1.png',
+  gallery2: 'src/test-data/assets/gallery-2.png',
+  gallery3: 'src/test-data/assets/gallery-3.png',
 } as const;
 
 export const testVideos = {
