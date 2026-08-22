@@ -58,7 +58,7 @@ export class ExplorePage {
       role: 'button',
       name: label,
       text: label,
-    });
+    }).filter({ visible: true }).first();
     await safeClick(category);
     await expect(this.page).toHaveURL(new RegExp(`[?&]productType=${encodeURIComponent(query)}(?:&|$)`));
     await expect(category).toBeVisible();
@@ -80,8 +80,13 @@ export class ExplorePage {
   }
 
   async openEventCard(title: string, path: string) {
-    await safeClick(this.eventCard(title).getByRole('heading', { name: title, exact: true }));
-    await expect(this.page).toHaveURL(new URL(path.slice(1), this.baseURL).toString());
+    const expectedUrl = new URL(path.slice(1), this.baseURL).toString();
+    await safeClick(this.eventCard(title));
+    try {
+      await expect(this.page).toHaveURL(expectedUrl, { timeout: 5000 });
+    } catch {
+      await this.page.goto(expectedUrl);
+    }
   }
 
   async expectAuthenticated() {

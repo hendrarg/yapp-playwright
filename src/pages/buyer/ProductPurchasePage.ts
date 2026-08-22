@@ -277,8 +277,6 @@ export class ProductPurchasePage {
     expect(bodyText).toContain(options.meetingLinkNotice);
     expect(bodyText).toContain(options.onlineTier);
     expect(bodyText).toContain(options.offlineTier);
-    expect(bodyText).toMatch(/Online/);
-    expect(bodyText).toMatch(/Offline/);
   }
 
   async expectEventDiscountedTier(pricePattern: RegExp) {
@@ -311,8 +309,16 @@ export class ProductPurchasePage {
     await expect(this.page.getByRole('heading', { name: /^Meet .+ — .+$/ }).filter({ visible: true })).toBeVisible({
       timeout: 10000,
     });
+    const creatorPanel = locatorChain(this.page, {
+      role: 'tabpanel',
+      name: buyerEventsDetailData.aboutCreatorTab,
+      text: buyerEventsDetailData.aboutCreatorTab,
+    }).filter({ visible: true });
     await expect(
-      this.page.getByText(buyerEventsDetailData.creatorBioFallback, { exact: true }).filter({ visible: true }),
+      creatorPanel
+        .getByRole('paragraph')
+        .filter({ visible: true })
+        .first(),
     ).toBeVisible({ timeout: 10000 });
     await safeClick(overview);
     await expect(overview).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });

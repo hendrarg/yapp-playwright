@@ -106,6 +106,42 @@ export interface CreatedConsultationProduct extends CreatedProduct {
   sharePath: string;
 }
 
+export interface CreateEventProductOptions {
+  title: string;
+  description: string;
+  thumbnailImagePath: string;
+  eventDate: string;
+  isAllDay?: boolean;
+  eventTimeStart?: string;
+  eventTimeEnd?: string;
+  timezone?: string;
+  venueType?: 'on_site' | 'online' | 'hybrid';
+  venueName?: string;
+  venueAddress?: string;
+  platform?: 'google_meet' | 'custom';
+  meetingLink?: string;
+  productImagePaths?: string[];
+  tickets: Array<{
+    title: string;
+    description: string;
+    price: number;
+    maxQuantity: number;
+    periodStart: string;
+    periodEnd: string;
+    venueType?: 'on_site' | 'online' | 'hybrid';
+    isSetDiscount?: boolean;
+    discount?: number | null;
+    discountType?: 'percentage' | 'flat' | null;
+  }>;
+}
+
+export interface CreatedEventProduct extends CreatedProduct {
+  shortUrl: string;
+  sharePath: string;
+  creatorName: string;
+  creatorUsername: string;
+}
+
 const WEEKDAY_NAMES = [
   'sunday',
   'monday',
@@ -230,6 +266,129 @@ export async function createConsultationProduct(
     body,
     shortUrl,
     sharePath: `/s/${shortUrl}`,
+  };
+}
+
+export async function createEventProduct(
+  request: APIRequestContext,
+  options: CreateEventProductOptions,
+  token?: string,
+): Promise<CreatedEventProduct> {
+  const headers = getCreatorHeaders(token);
+  const thumbnail = await uploadFile(request, {
+    filePath: options.thumbnailImagePath,
+    token,
+    headers,
+  });
+  const galleryUploads: { uploadId: string }[] = [];
+  for (const filePath of options.productImagePaths ?? []) {
+    galleryUploads.push(
+      await uploadFile(request, {
+        filePath,
+        token,
+        headers,
+      }),
+    );
+  }
+  const venueType = options.venueType ?? 'hybrid';
+  const response = await request.post(apiUrl('/api/v1/shop/products'), {
+    headers,
+    data: {
+      title: options.title,
+      description: options.description,
+      thumbnailImage: thumbnail.uploadId,
+      productImages: galleryUploads.map((upload) => ({
+        title: '',
+        description: '',
+        feedAssetType: 'image',
+        url: upload.uploadId,
+        uuid: '',
+      })),
+      shortUrl: '',
+      isSchedulePublish: false,
+      schedulePublishAt: null,
+      isHideFromExplore: false,
+      isAvailability: false,
+      isSetPrice: options.tickets.some((ticket) => ticket.price > 0),
+      price: 0,
+      availibityStartAt: null,
+      availibityEndAt: null,
+      status: 'active',
+      ticketConfiguration: {
+        eventDate: options.eventDate,
+        isAllDay: options.isAllDay ?? true,
+        eventTimeStart: options.eventTimeStart ?? '',
+        eventTimeEnd: options.eventTimeEnd ?? '',
+        timezone: options.timezone ?? 'Asia/Jakarta',
+        venueType,
+        venueName: options.venueName ?? '',
+        venueAddress: options.venueAddress ?? '',
+        platform: options.platform ?? 'custom',
+        meetingLink: options.meetingLink ?? '',
+      },
+      ticketPriceConfigurations: options.tickets.map((ticket) => ({
+        title: ticket.title,
+        description: ticket.description,
+        price: ticket.price,
+        cryptoPrice: null,
+        maxQuantity: ticket.maxQuantity,
+        periodStart: ticket.periodStart,
+        periodEnd: ticket.periodEnd,
+        isSetDiscount: ticket.isSetDiscount ?? false,
+        discount: ticket.discount ?? null,
+        discountType: ticket.discountType ?? null,
+        purchaseButtonText: 'Buy Now',
+        venueType: ticket.venueType ?? 'online',
+        isCustomAfterSales: false,
+      })),
+      additionalQuestions: [],
+      thankYouNote: '',
+      salesLinks: [],
+      isFlexiblePrice: false,
+      isSetDiscount: false,
+      isAllowCustomerChooseQuantity: false,
+      isLimitProductSales: false,
+      productType: 'ticket_event',
+    },
+  });
+  if (!response.ok()) {
+    throw new Error(`Create event product failed: ${response.status()} ${await response.text()}`);
+  }
+
+  const body = await response.json();
+  const productUuid = productUuidFromBody(body);
+  if (!productUuid) {
+    throw new Error(`Create event product response did not include product uuid: ${JSON.stringify(body)}`);
+  }
+
+  const createdShortUrl =
+    body.data?.shortUrl ?? body.data?.product?.shortUrl ?? body.shortUrl;
+  if (!createdShortUrl || typeof createdShortUrl !== 'string') {
+    throw new Error(`Create event product response did not include shortUrl: ${JSON.stringify(body)}`);
+  }
+
+  const detailResponse = await request.get(apiUrl(`/api/v1/products/${productUuid}`), {
+    headers: getHeaders(token, creatorOrigin()),
+  });
+  if (!detailResponse.ok()) {
+    throw new Error(`Read event product failed: ${detailResponse.status()} ${await detailResponse.text()}`);
+  }
+  const detailBody = await detailResponse.json();
+  const creatorUsername = detailBody.data?.creator?.username;
+  if (!creatorUsername || typeof creatorUsername !== 'string') {
+    throw new Error(`Event product response did not include creator username: ${JSON.stringify(detailBody)}`);
+  }
+  const creatorName = detailBody.data?.creator?.name || creatorUsername;
+
+  return {
+    productUuid,
+    uploadId: thumbnail.uploadId,
+    key: thumbnail.key,
+    body,
+    shortUrl: createdShortUrl,
+    sharePath: `/s/${createdShortUrl}`,
+    creatorName,
+    creatorUsername,
   };
 }
 
