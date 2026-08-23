@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test';
 import { testAccounts, type TestAccount } from '@test-data/users';
-import { testmailConfig, markInboxStart, fetchOtpCode } from '../otp/testmail';
+import { humanClick } from '@utils/playwright.utils';
+import { testmailConfig, markInboxStart } from '../otp/testmail';
+import { resolveOtpCode } from '../otp/otp-code';
 import { extractAccessToken } from './save-token';
 
 export type OtpLoginResult = {
@@ -20,17 +22,20 @@ export async function signInWithEmailOtp(
 
   await page.goto(new URL('auth', baseURL).toString());
   await page.getByPlaceholder('Enter your email').fill(inbox.email);
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  const continueButton = page.getByRole('button', { name: 'Continue', exact: true });
+  // Invisible reCAPTCHA scores a submit that arrives with no pointer trail as a
+  // bot, so approach the button like a person rather than clicking it cold.
+  await humanClick(page, continueButton);
 
   // reCAPTCHA's invisible check occasionally takes longer to resolve; one retry covers that.
   try {
     await page.waitForURL(/step=input-otp/, { timeout: 20000 });
   } catch {
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await humanClick(page, continueButton);
     await page.waitForURL(/step=input-otp/, { timeout: 20000 });
   }
 
-  const otp = await fetchOtpCode(inbox, sentAtMs);
+  const otp = await resolveOtpCode(inbox, sentAtMs);
 
   await page.locator('input[data-input-otp="true"]').pressSequentially(otp);
   await page.waitForURL(/\/explore/);

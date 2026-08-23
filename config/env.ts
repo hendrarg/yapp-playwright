@@ -47,3 +47,17 @@ export function dbConfig() {
     ssl: sslMode === 'disable' ? false : { rejectUnauthorized: false },
   };
 }
+
+/**
+ * Where OTP codes are read from. `auto` tries the testmail.app inbox first and
+ * falls back to the `otp_codes` table; `db` skips testmail entirely (use while
+ * the testmail monthly quota is exhausted); `testmail` disables the fallback.
+ * Read at call time so a spec or script can flip it per run.
+ */
+export type OtpSource = 'auto' | 'testmail' | 'db';
+
+export function otpSource(): OtpSource {
+  const raw = (process.env.YAPP_OTP_SOURCE ?? 'auto').toLowerCase();
+  if (raw === 'testmail' || raw === 'db' || raw === 'auto') return raw;
+  throw new Error(`YAPP_OTP_SOURCE must be auto, testmail, or db (got "${raw}")`);
+}
