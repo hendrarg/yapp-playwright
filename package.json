@@ -13,6 +13,7 @@
     "audit:locators": "node scripts/audit-locators.mjs",
     "audit:aut-order": "node scripts/reorder-aut-ascending.mjs --check",
     "token:inspect": "node scripts/inspect-tokens.mjs",
+    "token:refresh": "tsx scripts/refresh-token.ts",
     "db:shell": "tsx scripts/db-shell.ts",
     "test:unit": "playwright test --project=chromium tests/unit",
     "agents:sync": "node scripts/sync-agent-config.mjs",

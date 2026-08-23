@@ -7,7 +7,7 @@ import { baseURL, creatorsBaseURL } from '../config/env';
 import { loginWithToken } from '../src/helpers/auth/token-login';
 import { waitForAuthResponse } from '../src/helpers/auth/validate-token';
 import { primaryTokenNeedsRefresh, assertPrimaryTestToken } from '../src/helpers/auth/save-token';
-import { refreshAccountTokenViaOtp } from '../src/helpers/auth/refresh-token-otp';
+import { refreshAccountTokenViaOtp, ensureSecondaryToken } from '../src/helpers/auth/refresh-token-otp';
 import { testAccounts } from '../src/test-data/users';
 import { getRunSeed, warmAiCache } from '../src/test-data/ai';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
@@ -89,6 +89,10 @@ test.afterEach(async ({ page }) => {
 // Warm the per-run AI content pool before any factory runs (no-op without GEMINI_API_KEY).
 test.beforeAll(async () => {
   await warmAiCache();
+  // token2 has no auth fixture of its own, so refresh it here the way
+  // ensureFreshToken covers token1 — otherwise a stale token silently
+  // skips every spec that seeds creator-owned data through it.
+  await ensureSecondaryToken();
 });
 
 export { expect, headless };
