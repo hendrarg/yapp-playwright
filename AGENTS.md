@@ -85,6 +85,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npx eslint .` | Lint (import rules, locator placement, dead code) |
 | `npm run agents:sync` | Regenerate per-tool agent adapters from `.agents/` |
 | `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
+| `npm run mcp:clean` | Close leftover MCP Playwright browsers and this repo's MCP servers |
 | `npm run db:shell -- "<SQL>"` | Read-only SQL against the dev database (needs `PSQL_*` in `.env`) |
 
 ## Architecture
@@ -173,7 +174,7 @@ Do not create intermediate Markdown files other than the required short, local t
 ## MCP Playwright Browser Hygiene
 
 Follow `.agents/rules/mcp-playwright.md` for MCP registration, authentication, and token recovery.
-Close browser sessions after locator exploration and verify that only the default blank tab remains.
+Close browser sessions after locator exploration. `browser_close` only closes the *page* — the browser process the MCP server launched stays alive as a blank window — so finish with `npm run mcp:clean`.
 
 ## Test tags
 

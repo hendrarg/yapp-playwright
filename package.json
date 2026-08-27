@@ -21,7 +21,8 @@
     "postinstall": "node scripts/sync-agent-config.mjs --quiet",
     "typecheck": "tsc --noEmit",
     "clean:artifacts": "node scripts/clean-artifacts.mjs",
-    "clean:all": "node scripts/clean-artifacts.mjs --days=0 --reports"
+    "clean:all": "node scripts/clean-artifacts.mjs --days=0 --reports",
+    "mcp:clean": "node scripts/mcp-clean.mjs"
   },
   "keywords": [],
   "author": "",

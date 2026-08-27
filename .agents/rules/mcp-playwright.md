@@ -2,10 +2,11 @@
 
 ## Server registration
 
-The `@playwright/mcp` npm package (`^0.0.76` in `package.json`) ships the `playwright-mcp` CLI. Registering it as an MCP server is separate from having the dependency installed:
+The `@playwright/mcp` npm package (`^0.0.76` in `package.json`) ships the `playwright-mcp` CLI, but `.mcp.json` does **not** invoke it directly — it runs a repo wrapper so every session gets the same browser, viewport, and account:
 
-- **Registered in `.mcp.json`** (project scope), run via the **local pinned binary** `npx playwright-mcp` — do NOT use `@playwright/mcp@latest`, which can drift from the locked version.
-- Verify health: `claude mcp list` should report `playwright: npx playwright-mcp - ✔ Connected`.
+- **Registered in `.mcp.json`** (project scope) as `node scripts/playwright-mcp.mjs`. The wrapper loads `.env`, pins the browser cache through `applyPlaywrightBrowsersPath()`, then spawns the **locally installed** `node_modules/@playwright/mcp/cli.js` with `--browser=chromium --viewport-size=1440,900 --isolated`. Do NOT register `npx @playwright/mcp@latest` — it drifts from the locked version and bypasses the wrapper entirely.
+- `--isolated` keeps the profile in memory, so the `--storage-state` file that `scripts/mcp-auth-storage.mjs` writes from `YAPP_MCP_ACCOUNT` is applied to a fresh context on every start.
+- Verify health: `claude mcp list` should report `playwright: node scripts/playwright-mcp.mjs - ✔ Connected`.
 - Tools appear as `mcp__playwright__*` (e.g. `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_run_code_unsafe`). A session restart + one-time MCP approval prompt may be required before they are available.
 
 ## Browser inspection vs API inspection
@@ -15,7 +16,9 @@ The `@playwright/mcp` npm package (`^0.0.76` in `package.json`) ships the `playw
 
 ## Token injection (authenticated pages)
 
-The creator/buyer apps share one `at` cookie on the apex domain (`.yapp.ink`) — the same mechanism as `loginWithToken` in `src/helpers/auth/token-login.ts`. The browser MCP session starts logged-out; inject the cookie to reach authenticated pages without OTP:
+The creator/buyer apps share one `at` cookie on the apex domain (`.yapp.ink`) — the same mechanism as `loginWithToken` in `src/helpers/auth/token-login.ts`.
+
+The MCP browser normally starts **already authenticated**: the wrapper writes a storage state for `YAPP_MCP_ACCOUNT` (`qa` by default → `YAPP_TEST_ACCESS_TOKEN`) and the server loads it. Inject the cookie by hand only when that did not happen — `YAPP_MCP_ACCOUNT=guest`, a missing or expired token (the wrapper logs which), or when you need to switch accounts without restarting the server:
 
 ```javascript
 // browser_run_code_unsafe
@@ -47,3 +50,17 @@ If the MCP browser session redirects to `/auth` and the `at` token in `.env` is 
 4. **Re-inject the refreshed token** into the MCP browser context via `context.addCookies` (see Token injection above), then navigate again.
 
 Quick path: run the OTP login spec (`npx playwright test tests/auth/otp-login.spec.ts --project=chromium`) — it logs in as QA Tester and saves the token to `.env` in one go. `refreshAccountTokenViaOtp(context, account, baseURL)` wraps login + save for fixture use.
+
+## Session cleanup
+
+`browser_close` is **not** enough. Its tool schema says "Close the page", and its handler only emits `await page.close()` — the browser process the MCP server launched keeps running as an empty window, and a new one is added every time a server restarts. Finish every MCP exploration with:
+
+```powershell
+npm run mcp:clean
+```
+
+- Closes browsers under the Playwright cache (`resolvePlaywrightBrowsersPath()`) plus this repo's `@playwright/mcp` node servers.
+- **Never** touches a normal Chrome install, a browser owned by a running `playwright test`, or an MCP server started by another tool (Cursor, `npx @playwright/mcp@latest`). Those need `--all-servers`.
+- `--dry-run` lists what would go; `--browsers` keeps the servers up so the next MCP call stays fast.
+
+Duplicate MCP servers are the real leak: one per client, and they outlive the session that started them. Check with `npm run mcp:clean -- --dry-run` when the machine feels heavy.
