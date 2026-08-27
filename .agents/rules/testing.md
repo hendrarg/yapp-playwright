@@ -244,6 +244,8 @@ Keep Automation IDs in test **tags** / annotations only (`@AUT-FV-020`), never a
 
 ## Single-pass Verification
 
+After the isolated `@AUT-*` run passes, set that mapping row to `Automated` via Google Sheets MCP. Only `Planned` rows may be marked; leave `Needs Review` and `Blocked` alone. This is required for `/automation`, not optional.
+
 - Run the isolated target once after the latest code change.
 - A passing run ends verification.
 - After a failure and fix, run the isolated target once again.

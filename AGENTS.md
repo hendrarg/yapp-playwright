@@ -48,7 +48,8 @@ Then work inline and finish through this sequence:
 4. Apply the smallest edit to existing files. **Every new or touched page-object locator must use `smartLocator`** — fragile CSS/XPath-only locators are `Extend`, not `Reuse` unchanged (see `.agents/rules/code-style.md` and `add-test-spec` Step 5).
 5. Run `npx tsc --noEmit`.
 6. Run only the target AUT once.
-7. Stop when it passes.
+7. When it passes, set Automation Mapping status to `Automated` via Google Sheets MCP (only from `Planned`; leave Blocked and Needs Review alone; no-op if already Automated).
+8. Stop.
 
 Do not create long design documents or implementation plans. The short new-automation test-step plan is local-only and must not be committed. Do not create worktrees or subagents, and do not ask the user to choose an execution mode for this fast path.
 
@@ -164,6 +165,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
   -> append to tests/{domain}/{feature}.spec.ts
   -> import data from src/test-data/{domain}/{feature}.data.ts
   -> run only the mapped automation with --grep @<AUT-ID>
+  -> set Automation Mapping status to Automated (Google Sheets MCP; only from Planned)
 ```
 
 Do not create intermediate Markdown files other than the required short, local test-step plan for a new AUT. Automation Mapping and its active source TC sheets remain the authoritative inputs.

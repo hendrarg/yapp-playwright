@@ -21,6 +21,7 @@ Check for the exact AUT tag with `rg -n "@<AUT-ID>" tests`. If it does not exist
 6. For `AUT-FV-*`, keep covered manual TCs as ordered `test.step()` calls inside the single test; parameterize only identical flows with different data.
 7. Tag the single generated test with the exact Automation ID, for example `@AUT-E2E-008`.
 8. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
+9. After the isolated run passes, set Automation Mapping status to `Automated` (Step 9).
 
 Do not create intermediate Markdown files other than the required short test-step plan for a new AUT. Keep locators in page objects and never hide ambiguity with `.first()`.
 
@@ -158,8 +159,21 @@ Each round completes only when:
 
 - `npx tsc --noEmit` passes.
 - The isolated Playwright command for `@<AUT-ID>` passes.
+- Automation Mapping **Automation Status** is `Automated` for that ID (or was already `Automated`).
 
 Run the isolated target once after the latest code change and stop when it passes. After a failure and fix, run it once again. Do not use `--repeat-each`, repeated confirmation runs, a full spec, or a broader suite unless the user explicitly requests them.
+
+## Step 9: Close the mapping loop
+
+After the isolated `@<AUT-ID>` run passes, set that row's **Automation Status** to `Automated` in Automation Mapping. This is part of `/automation`, not an optional follow-up.
+
+- Allowed current value: `Planned`.
+- If the status is already `Automated`, do nothing.
+- If the status is `Needs Review` or `Blocked`, stop and report it; do not overwrite.
+- Leave the Notes cell unchanged.
+- Do not mark Automated if the Playwright run failed, was skipped, or was not executed in this session.
+- If more than one row matches the Automation ID, stop and report it; do not guess which row. `npm run automation:context` throws on the same condition.
+- Use the Google Sheets MCP (`google-sheets` in `.mcp.json` / `opencode.json`) to update the matching Automation ID row, then re-read the status cell to confirm.
 
 ## Example
 
@@ -169,3 +183,4 @@ Run the isolated target once after the latest code change and stop when it passe
 - Resolve the active source TC sheets.
 - Update `tests/buyer/feeds.spec.ts`.
 - Run `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008`.
+- After it passes, set that mapping row's Automation Status to Automated via Google Sheets MCP.

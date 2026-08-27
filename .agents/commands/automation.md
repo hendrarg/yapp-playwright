@@ -19,6 +19,11 @@ Run this command inline. If `rg -n "@<AUT-ID>" tests` finds no exact tag, first 
 6. Tag generated tests with the exact Automation ID, such as `@AUT-E2E-008`.
 7. Run `npx tsc --noEmit`, then run only the generated Automation ID once after the latest change. Stop when it passes; do not use `--repeat-each`, a full spec, or a broader suite unless the user explicitly requests it.
 8. Run `npm run audit:tags` when practical. Fix tag gaps before finishing.
+9. After the isolated Playwright run for this AUT ID passes, set that Automation Mapping row's **Automation Status** to `Automated`.
+   - Allowed from: `Planned` only. Already `Automated`: no-op. `Needs Review` or `Blocked`: stop and report, do not overwrite.
+   - Leave Notes unchanged. Do not mark Automated if the run failed, skipped, or was not executed.
+   - If more than one row matches the Automation ID, stop and report it; do not guess which row.
+   - Use the Google Sheets MCP (`google-sheets` in `.mcp.json` / `opencode.json`) and re-read the status cell to confirm.
 
 ```powershell
 npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008
