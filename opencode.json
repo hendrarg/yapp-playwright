@@ -3,7 +3,8 @@
   "instructions": [
     ".agents/runtime.md",
     ".agents/rules/*.md",
-    ".agents/skills/registry.md"
+    ".agents/skills/registry.md",
+    ".agents/domain-knowledge/README.md"
   ],
   "mcp": {
     "playwright": {
