@@ -143,6 +143,16 @@ them. It therefore cannot express a locator defined *relative to another element
 
 Use API helpers when the UI depends on data not reliably present in the environment.
 
+### Buyer and guest flows: create the data, do not hunt for it
+
+**When a buyer or guest test needs a product, post, or promotion, seed it via API with token1 — do not go looking for a matching one in Explore or on a creator profile.** Hunting is slower, and the result is not yours: another session can set that product inactive, edit its price, or delete it, and the test then fails for a reason unrelated to the behavior under test. Seeded data is deterministic, and `deleteProduct` / `deletePost` / `deletePromotion` put the environment back.
+
+This applies to guest flows too. The buyer is anonymous, but the product still has to exist — token1 creates it just the same.
+
+**The exception is state the API cannot manufacture:** a completed order, an active subscription, a settled payment. No endpoint creates those. For anything phrased "as a buyer who already owns X", reuse the existing fixtures instead — token1 holds 17 completed orders and its Library covers Events & Tickets, Digital Download, Discord and Telegram Membership, and Online Course, which is enough for thank-you page, library, re-download, order history, and after-sales assertions without any transaction. The gap is appointments: no consultation booking exists.
+
+So: **need new data → seed it; need already-purchased state → read it from the Library.** Searching Explore for something that will do is neither, and is the slowest of the three.
+
 | Token | Env var | Use for |
 |-------|---------|---------|
 | QA Tester (`x7nv1.qa`) | `YAPP_TEST_ACCESS_TOKEN` | Primary auth + products/promotions/media seeding (OTP: `*.qa@inbox.testmail.app`) |

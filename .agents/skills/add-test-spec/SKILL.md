@@ -74,7 +74,9 @@ rg "createPost|deletePost|depositWebhook|createPromotion" src/helpers/api tests/
 | token1 | `YAPP_TEST_ACCESS_TOKEN` | QA Tester (`x7nv1.qa`) | Primary auth + products, promotions, buyer media seeding (auto OTP refresh when expired) |
 | token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding consumed by buyer tests |
 
-**When to seed via API:** the UI under test depends on data that does not exist reliably in the environment (new post, promotion, exclusive content, order state).
+**When to seed via API:** the UI under test depends on data that does not exist reliably in the environment (new post, promotion, exclusive content, a product of a specific type or price).
+
+**For buyer and guest tests this is the default, not the fallback.** Seed the product/post/promotion with token1 rather than searching Explore or a creator profile for one that fits — hunted data belongs to someone else and can change under the test. The exception is state no endpoint can create (completed order, active subscription, settled payment): read that from the existing fixtures instead, where token1's 17 completed orders and its Library already cover most "as a buyer who already owns X" assertions. See `.agents/rules/testing.md` § *Buyer and guest flows*.
 
 **Pattern:**
 
