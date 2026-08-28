@@ -16,21 +16,20 @@ that as a design question to confirm rather than an assumed exclusion.
 ## The bot permission surface is aggregate only
 
 The Yapp form shows one combined status, `Bot is Ready to Manage Access` — there is
-**no per-permission detail**. Test cases written to assert individual bot permissions
-have no UI to read them from, even with a group whose permissions can be manipulated.
+**no per-permission detail**, so individual bot permissions have no UI surface to read
+from, even with a group whose permissions can be manipulated.
 
 Everything on the Telegram side — pressing Start, token consumption, identity binding,
 invite delivery, join-by-request, in-group mention fallback, bot confirmation — is
-only observable from inside Telegram. It is the single largest blocker in the test
-suite (22 test cases) and belongs in a dedicated session with a real Telegram account,
-or moved to API/webhook testing.
+only observable from inside Telegram, so that surface needs either a real Telegram
+account or API/webhook-level testing — the Yapp web app cannot show it.
 
 ## Dev has no Lifetime tier
 
 All **five** tiers across the three Telegram products carry `isLifetime: false`, and
 the `Lifetime` status filter on the `/telegram` Subscribers table returns
-`No subscribers found`. One Lifetime tier plus one purchase on it unblocks five test
-cases at once.
+`No subscribers found`. Any assertion about Lifetime behaviour needs such a tier to be
+created first.
 
 ## Subscriber row actions
 

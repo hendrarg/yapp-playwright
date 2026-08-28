@@ -47,9 +47,22 @@ validation boundary, a lifecycle rule, and an endpoint that contradicts the UI. 
 **why** it is true, and date anything that could change.
 
 Only create a new file for a feature area none of the above covers, and add it to the
-table. Do not record what the code or git history already says, and do not put
-locator or Playwright technique here — that belongs in
-`.agents/rules/mcp-playwright.md`.
+table.
+
+**Do not record here:**
+
+- **Test-case status** — Passed / Failed / Blocked / Not Run, retest results, which IDs
+  a run closed, which defect was withdrawn. That is sheet state, it changes every run,
+  and Automation Mapping plus the source TC sheets are its only home.
+- **Progress and changelogs** — what was done this session, what is still outstanding,
+  which blocker was lifted. Write the resulting *fact* instead: not "this unblocked 31
+  cases", but what the app actually does.
+- **Locator and Playwright technique** — that belongs in
+  `.agents/rules/mcp-playwright.md`.
+- **Anything the code or git history already says.**
+
+The test is simple: if a line would need editing after the next test run, it does not
+belong here. A note should stay true until the *product* changes.
 
 The app moves. When the browser contradicts a note, fix the note in the same session;
 a stale note is worse than a missing one.

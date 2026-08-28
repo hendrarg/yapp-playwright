@@ -21,7 +21,7 @@ verified on Digital Download and Online Course.
 
 On some forms that message only surfaces after the next-step button is pressed — do
 not conclude there is no validation because typing and blurring produced nothing. A
-test case expecting "zero price is rejected" is wrong; several were rewritten.
+A test case expecting "zero price is rejected" is asserting the wrong rule.
 
 ## Thumbnails
 
@@ -77,9 +77,9 @@ the state lives in the switch, not the label, so reactivation is available from 
 list too.
 
 **`Save and Publish` re-activates the product, and that is intended.** Publishing
-means putting it on sale. Confirmed by the product owner 2026-08-19; the defect
-raised against it was withdrawn and TC-PROD-C-051 is Passed. Practical consequence:
-change status with the switch and navigate away — do not save afterwards.
+means putting it on sale. Confirmed by the product owner 2026-08-19. Practical
+consequence: change status with the switch and navigate away — do not save
+afterwards.
 
 **`Hide from Profile` has an unwired UI, which is expected.** The menu item sends
 nothing, and the product owner classified that as expected on 2026-08-19 — it is not

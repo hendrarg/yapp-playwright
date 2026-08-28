@@ -4,7 +4,7 @@ Checkout, guest verification, promo redemption, and how payments settle on dev.
 
 ## Guests must verify email before buying
 
-Confirmed 2026-08-27, covered by `TC-PD-B-030`.
+Confirmed 2026-08-27.
 
 **A guest buyer can no longer purchase anonymously.** Checkout inserts an OTP step:
 the guest enters an email, receives a code, and the purchase only completes once the
@@ -28,8 +28,8 @@ that a code was not generated.
 
 ## Promo redemption needs no payment
 
-Established 2026-08-19 closing TC-PRM-C-023 to C-026. This is what lets promo tests
-run under the standing "no transactions or payments" constraint.
+Established 2026-08-19. This is what lets promo tests run under the standing
+"no transactions or payments" constraint.
 
 At `/product/{uuid}/checkout`, Choose Voucher then the code then Use Now fires
 `POST /orders/quote/estimation` with `{productUUID, quantity, paymentMethod,
@@ -65,38 +65,19 @@ a pending QRIS order (`/transaction/<orderId>`, Pay Before ~59 min) and **settle
 its own within a few minutes** — no scan, no payment. The page then shows Payment
 Success. Check Status does not force it; wait and reload.
 
-**This converts a whole class of parked test cases into ordinary live tests**, at the
-cost of a few minutes of waiting. Confirmed downstream effects of a real dev tip:
-Spin Wheel progress advanced by the subtotal, the leaderboard reordered, a VIP Queue
-entry was created, the Tips list incremented, and the tip ticker updated.
+So a real paid transaction is reachable on dev at the cost of a few minutes of
+waiting. Confirmed downstream effects of one dev tip: Spin Wheel progress advanced by
+the subtotal, the leaderboard reordered, a VIP Queue entry was created, the Tips list
+incremented, and the tip ticker updated. **Those effects appear only after
+settlement**, so a check made too early looks like nothing happened.
 
-**Still not reachable this way:** a genuinely *failed* payment. Nothing on dev
-produces one, so "do not record on failed payment" test cases stay Not Run.
+**A genuinely failed payment is not reachable.** Nothing on dev produces one.
 
-### The premise reaches past Livestream
-
-**31 test cases across 10 sheets** were parked `Blocked` on the same dead assumption
-that a real payment was required, each annotated
-`PEMBARUAN 27 Agu 2026 - premis "butuh pembayaran" sudah gugur`. Read that annotation
-precisely: it records that the case *became testable*, **not** that it was retested.
-Those 31 are still outstanding work.
-
-**A second fixture makes many of them free.** The QA account (token1) already holds
-**17 completed orders**, so anything phrased as "as a buyer who already owns X" —
-thank-you page, library, re-download, order history, after-sales — needs no
-transaction at all, only the right existing order.
-
-Closed this way on 2026-08-27: Tipping `C-015` and `B-029`, Add to Cart `B-051`,
-Product Digital `B-005` and `B-012`, all `Blocked` to `Passed`.
-
-Still blocked for reasons auto-settle cannot fix: `CART-B-071` / `B-072` (need the
-testmail quota back *and* a multi-product-type order fixture that does not exist);
-`PD-C-020` / `C-029` / `C-030` (pending; `C-030` now has a fresh old-buyer fixture);
-and any failed-payment case.
-
-**Before marking anything `Blocked` for payment, check three things in order** — is
-there an existing completed order that satisfies it, will a dev QRIS tip settle into
-it, and only then is it truly blocked.
+**Existing orders often remove the need for a payment entirely.** The QA account
+(token1) already holds 17 completed orders, so anything phrased as "as a buyer who
+already owns X" — thank-you page, library, re-download, order history, after-sales —
+needs only the right existing order. Its one gap is appointments: none of the 17 is a
+consultation booking.
 
 ## Checkout shape differs by product type
 

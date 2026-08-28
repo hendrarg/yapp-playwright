@@ -21,8 +21,8 @@ curated order instead.
 ## Both test accounts are already creators
 
 token1 (`hendrarg`) and token2 (`anthony_mosciski`) are both `isCreator: true`, so the
-`Be A Creator` CTA always routes to the creator dashboard and the onboarding flow never
-opens. Any test case covering buyer-to-creator onboarding needs a clean buyer account.
+`Be A Creator` CTA always routes to the creator dashboard and the buyer-to-creator
+onboarding flow never opens on either of them.
 
 ## Landing page CTAs are anchor + button pairs
 

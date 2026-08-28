@@ -51,6 +51,7 @@ Single-AUT automation and small Playwright maintenance use the inline fast path 
 - Add to the **existing feature file** that covers the area. Create a new file only for a feature area none of them covers, and add it to the README table. Say **why** the fact is true, and date anything that could change.
 - When the browser contradicts an existing note, fix the note rather than working around it. A stale note is worse than a missing one.
 - Product behavior belongs here; locator and Playwright technique belongs in `.agents/rules/mcp-playwright.md`. Sorting it wrongly is what turned the old notes into a mixed pile.
+- **Never record test-case status or session progress** — Passed/Failed/Blocked/Not Run, retest outcomes, closed IDs, withdrawn defects, or "what is still outstanding". That is sheet state and belongs in Automation Mapping and the source TC sheets. Record the product fact the run established instead. The test: if a line would need editing after the next test run, it does not belong in `.agents/domain-knowledge/`.
 
 ## Commands
 

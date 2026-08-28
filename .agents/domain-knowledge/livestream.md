@@ -71,7 +71,7 @@ creator cannot re-pick the value blocking them and must choose a future date.
 This is a genuine creator-facing blocker: one stale poll silently freezes the entire
 streaming config. It also reads as "settings do not persist" on whatever widget
 happens to be under test, and cost a full round of false conclusions before the
-shared payload was identified. Tracked as TC-LS-C-171.
+shared payload was identified.
 
 **Fix first, then test anything else:** open `?activeTab=voting`, move Start and End
 into the future, and SAVE once (`Stream config saved successfully`). Every widget
