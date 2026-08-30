@@ -13,7 +13,7 @@ Before making changes, every AI agent must read:
 
 When the task matches a workflow in `.agents/skills/registry.md`, read the matching `.agents/skills/*/SKILL.md` before acting. Treat `.agents/commands/` as the command catalog for common project operations.
 
-When the task touches a product area, read the matching note in `.agents/domain-knowledge/` — start from `.agents/domain-knowledge/README.md`. Those notes record how the app actually behaves on dev (defaults, validation boundaries, fixtures, UI traps) and exist because an earlier session assumed the obvious behavior and was wrong. They describe observed behavior, so they rank below this guide and `.agents/rules/`, and below the sheets on anything the sheets state.
+When the task touches a product area, read the matching note in `.agents/domain-knowledge/` — start from `.agents/domain-knowledge/index.md`. Those notes record how the app actually behaves on dev (defaults, validation boundaries, fixtures, UI traps) and exist because an earlier session assumed the obvious behavior and was wrong. They describe observed behavior, so they rank below this guide and `.agents/rules/`, and below the sheets on anything the sheets state.
 
 **Reading is half the rule — write back too.** Whenever the browser or the API contradicts an assumption you started with, or you establish a product fact that is not already recorded, add it to the matching feature file in the same session. Product behavior goes to `.agents/domain-knowledge/`; locator and Playwright technique goes to `.agents/rules/mcp-playwright.md`.
 
@@ -113,7 +113,7 @@ config/env.ts           environment variable access
 
 AGENTS.md               this guide — source of truth for every agent
 .agents/                runtime.md, rules/, skills/, commands/, domain-knowledge/ — the only place to edit
-.agents/domain-knowledge/   junction → Obsidian vault; verified Yapp product behavior (start at README.md)
+.agents/domain-knowledge/   junction → Obsidian vault; verified Yapp product behavior (start at index.md)
 CLAUDE.md               one line (@AGENTS.md) so Claude Code auto-loads the guide
 opencode.json           points OpenCode at .agents/rules/* and .agents/domain-knowledge/
 scripts/sync-agent-config.mjs   projects .agents/ into each tool's path (postinstall)

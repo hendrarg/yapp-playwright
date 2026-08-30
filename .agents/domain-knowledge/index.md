@@ -1,8 +1,17 @@
+---
+title: Domain Knowledge Index
+category: project
+tags: [yapp, product, automation]
+project: yapp
+---
+
 # Domain Knowledge
 
 > **Canonical location:** this Obsidian vault folder (`D:/Knowledge/projects/yapp/domain-knowledge/`).
 > The yapp repo exposes the same files via a directory junction at `D:/yapp/.agents/domain-knowledge/`.
 > Edit here in Obsidian or via the repo path — both update one file.
+
+**Hub:** [[../yapp|yapp project]] · [[../../wiki/entities/yapp|wiki entity]] · [[../../raw/sources/yapp/README|repo README (raw source)]]
 
 How the **Yapp product actually behaves** — the business rules, defaults, limits, and
 lifecycles you cannot derive from this repository's code, one file per feature area.
@@ -29,17 +38,17 @@ the sheet wins.
 
 ## Feature areas
 
-| File | Covers |
+| Note | Covers |
 |------|--------|
-| [products.md](products.md) | Pricing defaults and the Rp10.000 floor, thumbnail capacity and rejection, the status lifecycle, Online Course after-sales |
-| [posts.md](posts.md) | Post visibility tiers, pay-per-view pricing and where it is (and is not) enforced |
-| [messaging.md](messaging.md) | Chat and Broadcast, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
-| [tipping.md](tipping.md) | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
-| [livestream.md](livestream.md) | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |
-| [purchase-and-payment.md](purchase-and-payment.md) | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
-| [membership.md](membership.md) | Discord and Telegram membership, expiry-anchored renewal reminders, the aggregate bot status, Lifetime gaps |
-| [orders-and-reports.md](orders-and-reports.md) | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
-| [explore-and-profile.md](explore-and-profile.md) | Explore feeds and the curated Popular section, dead account fields, landing CTA structure, profile tab order |
+| [[products\|Products]] | Pricing defaults and the Rp10.000 floor, thumbnail capacity and rejection, the status lifecycle, Online Course after-sales |
+| [[posts\|Posts]] | Post visibility tiers, pay-per-view pricing and where it is (and is not) enforced |
+| [[messaging\|Messaging]] | Chat and Broadcast, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
+| [[tipping\|Tipping]] | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
+| [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |
+| [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
+| [[membership\|Membership]] | Discord and Telegram membership, expiry-anchored renewal reminders, the aggregate bot status, Lifetime gaps |
+| [[orders-and-reports\|Orders & reports]] | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
+| [[explore-and-profile\|Explore & profile]] | Explore feeds and the curated Popular section, dead account fields, landing CTA structure, profile tab order |
 
 ## Maintaining these notes
 

@@ -29,7 +29,7 @@ Before changing files or running task-specific commands, read:
 5. `.agents/rules/git-hygiene.md`
 6. `.agents/rules/ci.md`
 
-For task-specific work, also read the matching skill from `.agents/skills/registry.md`, and the matching product note from `.agents/domain-knowledge/README.md`.
+For task-specific work, also read the matching skill from `.agents/skills/registry.md`, and the matching product note from `.agents/domain-knowledge/index.md`.
 
 ## Rules
 
@@ -45,7 +45,7 @@ Single-AUT automation and small Playwright maintenance use the inline fast path 
 ## Domain Notes
 
 - `.agents/domain-knowledge/` records how the Yapp app actually behaves on dev — defaults, validation boundaries, lifecycles, and endpoints that contradict the UI — one file per feature area. **Canonical files:** `D:/Knowledge/projects/yapp/domain-knowledge/` in the Obsidian vault; this repo path is a junction to that folder.
-- Read the matching note **before** opening the MCP browser for a feature and before asserting any default state. `README.md` is the index.
+- Read the matching note **before** opening the MCP browser for a feature and before asserting any default state. `index.md` is the index.
 - These notes describe observed behavior, not policy: they rank **below** `AGENTS.md` and `.agents/rules/`, and below Automation Mapping and the source TC sheets on anything the sheets state.
 - **Write back in the same session, not "next time".** The trigger is concrete: the browser or the API contradicted an assumption you started with, or you had to establish a product fact that is not already recorded. Either one means you write before you stop.
 - Add to the **existing feature file** that covers the area. Create a new file only for a feature area none of them covers, and add it to the README table. Say **why** the fact is true, and date anything that could change.
