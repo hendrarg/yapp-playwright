@@ -11,7 +11,7 @@ project: yapp
 > The yapp repo exposes the same files via a directory junction at `D:/yapp/.agents/domain-knowledge/`.
 > Edit here in Obsidian or via the repo path — both update one file.
 
-**Hub:** [[../yapp|yapp project]] · [[../../wiki/entities/yapp|wiki entity]] · [[../../raw/sources/yapp/README|repo README (raw source)]]
+**Hub:** [[../../home|Vault home]] · [[../yapp|yapp project]] · [[../../wiki/entities/yapp|wiki entity]] · [[../../raw/sources/yapp/README|repo README (raw source)]]
 
 How the **Yapp product actually behaves** — the business rules, defaults, limits, and
 lifecycles you cannot derive from this repository's code, one file per feature area.

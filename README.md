@@ -1,3 +1,5 @@
+> **Obsidian:** Live repo copy — vault canonical: [[../../../raw/sources/yapp/README|raw README]] · [[projects/yapp/yapp|Hub]] · [[home|Vault home]]
+
 # Yapp — End-to-End Test Automation
 
 Playwright-based end-to-end test automation for [Yapp](https://yapp.ink), a content monetization platform. Covers both **Buyer** and **Creator** experiences across two subdomains.

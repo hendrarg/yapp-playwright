@@ -1,3 +1,5 @@
+> **Obsidian:** [[projects/yapp/yapp|yapp vault hub]] · [[../../../AGENTS|Vault wiki schema]] · [[home|Vault home]] · [[../../../raw/sources/yapp/README|Raw README]]
+
 # Yapp Agent Guide
 
 Playwright E2E tests for Yapp. Buyer and creator flows run across two subdomains.
