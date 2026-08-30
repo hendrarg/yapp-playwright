@@ -1,5 +1,9 @@
 # Domain Knowledge
 
+> **Canonical location:** this Obsidian vault folder (`D:/Knowledge/projects/yapp/domain-knowledge/`).
+> The yapp repo exposes the same files via a directory junction at `D:/yapp/.agents/domain-knowledge/`.
+> Edit here in Obsidian or via the repo path — both update one file.
+
 How the **Yapp product actually behaves** — the business rules, defaults, limits, and
 lifecycles you cannot derive from this repository's code, one file per feature area.
 

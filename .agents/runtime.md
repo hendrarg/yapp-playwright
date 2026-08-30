@@ -9,7 +9,7 @@ It is the **only** place to edit agent configuration.
 | `AGENTS.md` | the project guide | Codex, Cursor, OpenCode directly; Claude Code via `CLAUDE.md` |
 | `.agents/runtime.md`, `.agents/rules/` | always-on rules | read on demand (see load order); Cursor and OpenCode get them wired in |
 | `.agents/skills/registry.md` | which skill to read for which task | on demand |
-| `.agents/domain-knowledge/` | verified Yapp product behavior on dev | on demand, per product area |
+| `.agents/domain-knowledge/` | verified Yapp product behavior (Obsidian vault canonical; repo junction) | on demand, per product area |
 | `.agents/skills/*/SKILL.md` | task workflows | synced to each tool's skill path |
 | `.agents/commands/*.md` | operation catalog / slash commands | synced to each tool's command path |
 
@@ -44,7 +44,7 @@ Single-AUT automation and small Playwright maintenance use the inline fast path 
 
 ## Domain Notes
 
-- `.agents/domain-knowledge/` records how the Yapp app actually behaves on dev — defaults, validation boundaries, lifecycles, and endpoints that contradict the UI — one file per feature area.
+- `.agents/domain-knowledge/` records how the Yapp app actually behaves on dev — defaults, validation boundaries, lifecycles, and endpoints that contradict the UI — one file per feature area. **Canonical files:** `D:/Knowledge/projects/yapp/domain-knowledge/` in the Obsidian vault; this repo path is a junction to that folder.
 - Read the matching note **before** opening the MCP browser for a feature and before asserting any default state. `README.md` is the index.
 - These notes describe observed behavior, not policy: they rank **below** `AGENTS.md` and `.agents/rules/`, and below Automation Mapping and the source TC sheets on anything the sheets state.
 - **Write back in the same session, not "next time".** The trigger is concrete: the browser or the API contradicted an assumption you started with, or you had to establish a product fact that is not already recorded. Either one means you write before you stop.
