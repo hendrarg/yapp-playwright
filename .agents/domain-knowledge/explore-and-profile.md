@@ -37,3 +37,35 @@ The profile tab strip is reordered through `PUT /accounts/profile-tabs`; the def
 body is `{"tabs":["product","link","feed","membership"]}`. Product cards on My Page are
 reordered separately through `PATCH /shop/products/reorder`, and toggling a product's
 Hide from Profile flag resets it to the front of that arrangement.
+
+## Customize: what the profile form actually enforces
+
+The creator edits the profile at `/customize` (four section tabs: Theme, Profile, Tip
+Button, Domain), **not** at `/profile` — that route is My Page. Verified 2026-08-31.
+
+**Only Bio has a length limit.** `#design-profile-bio` carries `maxlength=200` and
+shows an `n/200` counter. `#design-profile-name` (Your Name) and
+`#design-profile-username` (Link) have **no `maxlength` and no counter at all** — the
+same shape as the Event title defect.
+
+**Required-ness is asymmetric and invisible.** Clearing Your Name leaves `Save`
+disabled forever with no error message, so the field is effectively required but never
+says so. Clearing Link *enables* `Save`. Nothing in the UI explains the difference.
+
+**Invalid colours are swallowed.** The three custom colour fields
+(`#theme-backgroundColor`, `#theme-primaryColor`, `#theme-secondaryColor`) are plain
+text inputs. A valid hex enables `Save`; `zzzzzz`, `#GGGGGG`, `#12` and `red` are all
+kept verbatim in the field with **no error message**, and `Save` simply stays
+disabled. The disabled button is the only feedback that a value was rejected.
+
+**The palette is 5 + 3, not "about ten".** Theme presets are exactly Default, Sunset,
+Ocean, Forest and Midnight, plus a non-selectable `Custom` entry; the Custom section
+holds exactly three colour controls. There is no ten-colour swatch palette anywhere.
+
+**Preview has two device modes.** The `Preview` dialog holds exactly two toggle
+buttons plus Close: the default renders the iframe at **1222px**, the second at
+**388px**. Neither toggle has an accessible name — they are icon-only.
+
+**Image upload guidance** (Header Background → Upload tab): `accept="image/*"`, single
+file, and the copy states *wider than 1080px*, *maximum file size 20MB*, *recommended
+aspect ratio 1:1*.

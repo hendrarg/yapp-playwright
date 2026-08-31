@@ -41,3 +41,37 @@ zero-order state. token1 holds 200 orders (191 completed, 9 expired). token2 is 
 closest to clean — zero products and `totalEarnings: 0` — but still carries one
 completed order (a free digital download, 7 Aug 2026), reachable with
 `YAPP_MCP_ACCOUNT=sundanese`.
+
+## The export ignores the page filters entirely
+
+Not merely "unsynchronised": the export request is always
+`GET /api/v1/orders/reports?status=completed&start_date=…&end_date=…` with **no
+product-type parameter**, so the CSV follows the dialog's date range alone. The two
+controls do not even share presets — the dialog offers 30 / 60 / 90 days, the page
+filter offers 7 / 14 / 30 / 60 — and the dialog says nothing about this, so a creator
+who filtered the page will assume the filter carried over. Verified 2026-08-14.
+
+## CSV file shape
+
+Filename is `report_YYYYMMDD_HHMMSS_user_{username}.csv` on **server** time, e.g.
+`report_20260813_170314_user_hendrarg.csv`. Comma delimiter, LF line endings, file
+ends with a newline, no UTF-8 BOM, served over a signed URL with no
+`Content-Disposition`.
+
+**The header schema is not fixed.** Product custom questions become columns, so the
+column count varies by dataset — 25 on the baseline data. Any consumer that assumes a
+fixed header will break. Escaping of commas, newlines and quotes inside a field, and
+formula-injection protection, are still untested because no existing order contains
+those characters.
+
+## Orders list pagination
+
+Default 10 rows per page with a `Page X of Y` indicator and first/prev/next/last
+buttons that disable correctly at both ends. Default order is purchase date
+descending and stays stable across pages — a full traversal of 19 pages yielded
+exactly 188 orders with no duplicates or dropped rows. **There is no column sorting
+control at all**, and no loading indicator: the table can sit empty for a few seconds
+after a filter change, so poll rather than assert immediately.
+
+Filters live only in component state — the URL stays `/products?tab=orders` no matter
+what is applied, so a filtered view cannot be shared or bookmarked.

@@ -136,3 +136,36 @@ the description one misleads.
 
 Do not write a test case that treats `n / 500` as a character limit until this is
 fixed.
+
+## Event & Tickets: capabilities the form does not have
+
+Verified in the browser on dev, 2026-08-31, while converting the Event PRD-gap rows
+into test cases. Each of these reads like a missing feature and has already been
+mistaken for one — they are absences, not defects, and a test case should assert the
+absence rather than hunt for a hidden control.
+
+**Step 1 Schedule takes one date only.** The section is exactly Event Date (single
+date picker, past dates disabled), Event Time (start and end), an `All Day` switch,
+and a Timezone that renders as **fixed text** `Jakarta (GMT+07:00)` with no picker.
+There is no repeat, recurrence, or multi-session control, so a recurring event can
+only be modelled as separate events — and no buyer-timezone conversion is possible.
+
+**On-site venue is Venue Name plus Address, nothing else.** There is no map link or
+map URL field, so the buyer-side Google Maps link is derived from the address and
+cannot be customised.
+
+**Online venue forces a platform choice.** `Platform / Streaming Link` is required
+and offers exactly two options, `Google Meet` and `Custom`, with Google Meet
+preselected. There is **no `None` option**, so a creator distributing the access link
+outside Yapp still has to pick one.
+
+**Step 2 has no file upload beyond the Thumbnail.** The sections are Thumbnail, Buyer
+Form, Ticket Configuration, and After Sales. After Sales offers a rich-text message
+with Insert image and Insert YouTube video plus a **maximum of 3 links**, and no
+attachment control — so a post-event recording or follow-up file can only be
+delivered as a link.
+
+**A purchased ticket cannot change hands.** The buyer ticket page (`/product/{uuid}`,
+tabs Overview / Ticket / About Creator) exposes exactly `Share` and `Scan` in Ticket
+Details, alongside Back and View Message. There is no transfer, reassign, or
+change-holder action.
