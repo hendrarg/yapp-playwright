@@ -113,3 +113,22 @@ The order side is already prepared to receive one — `affiliatorCommissionAmoun
 On the buyer Library, the date printed on a card is when the item was **bought**, not
 when the event happens. Two tickets dated June 2026 were for a 1 September 2026 event.
 For any post-event test case, read the date from the ticket page instead.
+
+## The cart has no quantity, and no fee breakdown
+
+Verified 2026-09-01 at `/cart`.
+
+**Quantity is not a concept.** There is no number input, no stepper, no plus/minus
+control anywhere in the cart — every product is one line item. Any test case about
+minimum, maximum, or per-buyer quantity has nothing to act on at the cart level.
+
+**Items are grouped by creator**, and a cart may hold products from several creators
+at once. Selection is three-tiered: `Select All`, one checkbox per creator group, one
+per item. The per-item action button (remove) renders with **no text and no
+`aria-label`**, so it has no accessible name.
+
+**`Cart Summary` is only `Total Amount`** plus the selected-item count and the
+`Check out` button — no subtotal, service fee, platform fee, gateway fee, tax, or
+discount line. The total tracks the checked items (selecting a Rp20.000 item moves it
+from IDR 0 to IDR 20.000). The fee breakdown appears only at checkout, so do not look
+for it on the cart page.

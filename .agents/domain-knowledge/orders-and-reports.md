@@ -75,3 +75,31 @@ after a filter change, so poll rather than assert immediately.
 
 Filters live only in component state — the URL stays `/products?tab=orders` no matter
 what is applied, so a filtered view cannot be shared or bookmarked.
+
+## The Statistics page was redesigned — the Analytics test cases are stale
+
+Verified on dev 2026-09-01 at `/statistics` (there is no `/analytics` route).
+
+The page today is **Statistics**, with one date control (`Last 30 days`) and three
+sections:
+
+- **Audience** — Overview (Profile views, Product views, Wishlist adds, Money left in
+  carts), Activity over time (two daily charts: product views per day, orders per
+  day), and a Buyer journey funnel (Viewed → Wishlisted → Added to cart → Purchased),
+  which is measured only against *signed-in* viewers; anonymous views carry no id and
+  cannot be followed through the stages.
+- **Products** — one table sorted by money left in carts, columns Product / Views /
+  Wishlist / In cart / Left in cart / Sold / Revenue, each column header a sort button.
+  Pagination is `Previous` / `Next` with `Page X of Y` and **no rows-per-page
+  selector** (16 rows per page observed, 358 products across 36 pages).
+- **Reach** — Best time to post, Link performance.
+
+**What is gone:** there are no tabs at all, and **no Export or CSV control anywhere on
+the page**. The `Analytics` sheet's 32 test cases describe Revenue Overview, growth
+percentages, Performance Details category tabs (Products / Tipping / Campaign / PPV /
+Membership / Lifetime Access), Recent-versus-Leaderboard sorting, and a CSV export per
+category. None of that exists on this page any more.
+
+Do not automate against the `Analytics` sheet until it has been re-scoped against this
+page. Orders keeps its own export — see the CSV sections above — so creator CSV export
+still exists there, just not in Statistics.

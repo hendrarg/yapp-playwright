@@ -46,3 +46,25 @@ test cases were written against, so check this before scoping a messaging TC.
 There is no `POST .../messages` to wait on. The stable assertions are the state from
 `GET /api/v1/dm/conversations` (`lastMessage`, `unreadCount`) or the thread DOM —
 never a response wait on the send itself.
+
+## Composer limits (verified 2026-09-01)
+
+**The creator DM composer has no length limit.** `Write a message...` is a plain
+textarea with `maxlength = -1` and no counter anywhere. Emoji, HTML-looking text,
+quotes, backslashes and slashes are all kept verbatim, and **Shift+Enter inserts a
+real newline**, so multiline messages are supported.
+
+**Media is images only — there is no video path.** The composer's file input is
+`accept="image/jpeg,image/png,image/gif,image/webp"`, `multiple`. Opening the
+attachment menu (Link Product / Link Campaign / Request Tip / Link Post) adds **no**
+further file input, so video cannot be attached from the creator side at all. This
+contradicts `TC-MB-C-010` ("Send supported video") — one of the two is stale. No file
+size limit is stated near the composer.
+
+## Broadcast is send-now only
+
+`New Broadcast` opens `Create Broadcast` containing exactly: a `Send to:` audience
+selector, a recipient count, the message textbox, `Open attachment menu`, `Cancel`,
+and `Send Broadcast` (disabled until there is content). **There is no schedule
+control and no save-as-draft control**, and the broadcast list has no Draft or
+Scheduled tab — only sent history with title, date, recipient count and Views.

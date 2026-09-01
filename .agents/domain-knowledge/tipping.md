@@ -51,3 +51,31 @@ actually gates the control.
 
 The Rp10.000 floor is enforced on the IDR path only. The USDT path accepts any amount,
 so the platform minimum is bypassable by switching currency.
+
+## The creator never sees who tipped
+
+Verified 2026-09-01. The only creator-side view of a tip is a **Wallet history row**
+with four columns — `TYPE`, `AMOUNT`, `STATUS`, `DATE`. No sender name, no email, no
+notes, and the row does not open a detail. There is no export for tip data.
+
+`/statistics` does not mention tipping at all any more, so `TC-ANL-C-018`, `C-019` and
+`C-020` (Tipping Records, Recent-versus-Leaderboard sorting) describe a section that
+no longer exists — see the Statistics redesign note in [[orders-and-reports]].
+
+The practical consequence: **`Send as Anonymous` changes nothing on any creator
+surface that exists today**, because the tipper's identity was never displayed there
+in the first place. Anything about anonymity has to be judged on notification email or
+receipt, which is outside these surfaces.
+
+## The two note fields are not symmetric
+
+On the buyer tip page both notes exist, and the placeholder is what states the
+audience:
+
+| Field | Placeholder | Limit |
+|-------|-------------|-------|
+| `Give Notes` | `Notes can be seen by public` | `maxlength=200`, counter `n / 200` |
+| `Add Private Note` | `Notes can only be seen by creator` | **no maxlength, no counter** |
+
+`Your Name or Nickname` also has no maxlength; `Your Email` renders disabled and
+prefilled for a signed-in buyer.

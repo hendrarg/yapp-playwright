@@ -116,3 +116,30 @@ condition.
 
 Alert and Media Share eligibility are also not independent: the Alert threshold can
 suppress Media Share along with it.
+
+## Blocked words strip, they do not block
+
+The Alert/TTS tab states it plainly: `Separate each word with a comma. These are
+stripped from every tip note.` So a blocked word is **removed from the note text**;
+the tip itself still goes through. A neighbouring `Filter repeated words` control
+("Collapses spammed words before they are read") handles repetition and is a separate
+thing from the blocked-word list.
+
+Case sensitivity, substring versus exact matching and cross-language behaviour are
+still undefined — testing them needs a real tip carrying a blocked word.
+
+## Creator uploads are audio-only, and Media Share has no upload at all
+
+The Alert/TTS tab holds four file inputs, every one `accept="audio/*"` and single
+file. **The Media Share tab has no file input whatsoever** — the media comes from the
+buyer, and the creator only configures `MAXIMUM LENGTH` and `COST PER SECOND` ("What
+a fan pays for each second of clip").
+
+**No maximum file size is stated anywhere** on either tab.
+
+## VIP Queue input form
+
+Custom join fields render as `@name` plus a type (e.g. `Number`), with an `Add input`
+control. The configured maximum number of fields could not be established — clicking
+`Add input` repeatedly changed nothing observable, so treat the cap as unknown rather
+than unlimited.
