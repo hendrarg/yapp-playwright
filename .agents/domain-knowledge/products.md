@@ -111,6 +111,25 @@ For an API-seeded course expect OFF unless the seed includes `thankYouNote` and/
 `salesLinks`. Use the `{ title, url }` shape for `salesLinks` — a plain `label`
 causes a 500 `sales link title is required`.
 
+## After Sales is one shared contract on every product type
+
+Verified 2026-08-31 on Discord Membership and Event & Tickets, and consistent with
+what the sheets already record for Digital Download and Online Course. Treat this as
+shared behaviour and reuse the same step and locator intent rather than re-deriving
+it per product type:
+
+- **Message is capped at 1000 characters**, and the counter reads `n/1000 characters`
+  — it counts **characters correctly**. This is the counter to trust; the *description*
+  counter on the same forms counts words (defect M-07 below).
+- **Links are capped at 3**, stated in the UI as `max. 3 links`, described as links the
+  buyer can open straight from the after-sales email.
+- **There is no file-attachment control anywhere in After Sales**, on any product type.
+  A recording or follow-up file can only be delivered as a link. Do not write a test
+  hunting for an upload button here.
+
+The `Customize Message` toggle default is the one thing that is *not* shared — see the
+Online Course section above.
+
 ## Route and label asymmetries
 
 The create and edit routes do not use the same product-type slug:
@@ -146,9 +165,10 @@ absence rather than hunt for a hidden control.
 
 **Step 1 Schedule takes one date only.** The section is exactly Event Date (single
 date picker, past dates disabled), Event Time (start and end), an `All Day` switch,
-and a Timezone that renders as **fixed text** `Jakarta (GMT+07:00)` with no picker.
-There is no repeat, recurrence, or multi-session control, so a recurring event can
-only be modelled as separate events — and no buyer-timezone conversion is possible.
+and a **Timezone picker** defaulting to `Jakarta (GMT+07:00)` — 112 entries with a
+search box, the same control Consultation uses (`TC-CON-C-050`). It reads like static
+text in an accessibility snapshot; it is not. There is no repeat, recurrence, or
+multi-session control, so a recurring event can only be modelled as separate events.
 
 **On-site venue is Venue Name plus Address, nothing else.** There is no map link or
 map URL field, so the buyer-side Google Maps link is derived from the address and

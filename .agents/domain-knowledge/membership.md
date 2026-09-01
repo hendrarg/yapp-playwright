@@ -45,3 +45,18 @@ The QA account is already connected (`Hendra's server`, role `Boss`). Disconnect
 to test the unconnected state risks breaking the published Discord products and their
 buyers' access. The unconnected state is reachable instead through the **create form**,
 where the server list legitimately starts empty.
+
+## No fixture account holds an active membership subscription
+
+Checked 2026-08-31: token1 (`hendrarg` / QA Tester) is the creator of the membership
+tiers, so it cannot subscribe to itself, and token2 (Sundanese) still shows
+`Subscribe` on that profile. The buyer Library lists Discord and Telegram *membership
+products*, which are a different thing from a creator membership subscription.
+
+The practical consequence: **anything that needs a live subscription cannot be tested
+today** — auto-renewal preference, renewal failure, tier upgrade or downgrade,
+post-expiry access. There is also no auto-renewal control visible anywhere on the
+buyer surfaces that do exist, but that is an absence observed without a subscription
+in hand, not a confirmed product decision.
+
+Seed a real subscription first, or expect these to stay blocked.
