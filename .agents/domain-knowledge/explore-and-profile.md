@@ -69,3 +69,31 @@ buttons plus Close: the default renders the iframe at **1222px**, the second at
 **Image upload guidance** (Header Background → Upload tab): `accept="image/*"`, single
 file, and the copy states *wider than 1080px*, *maximum file size 20MB*, *recommended
 aspect ratio 1:1*.
+
+## Explore search fans out to three endpoints
+
+Verified 2026-09-01. One keystroke burst fires **three parallel requests**, and the
+parameter name is not consistent between them:
+
+| Endpoint | Parameter |
+|----------|-----------|
+| `campaign/explore` | `q` |
+| `creators/explore` | **`keyword`** |
+| `products/explore` | `q` |
+
+The input is debounced — six keystrokes produced a single wave of requests, not six —
+and the query **is** reflected in the page URL as `?keyword=`. That is the opposite of
+the creator Products list, whose search never touches the URL (`TC-PROD-C-061`).
+
+Matching is **case-insensitive** and **partial**: `hendrarg`, `HENDRARG`, `HeNdRaRg`
+and `hend` all return the creator. Appending a special character (`hendrarg!`) returns
+zero, so there is no character normalisation.
+
+**Assert on the API response, not the page text.** The QA account is itself a creator,
+so its own name sits in the page header and any `innerText` check for it is a false
+positive. Count the `creators/explore` payload instead.
+
+**Still unknown:** leading/trailing whitespace. Keystrokes were dropped mid-typing in
+testing, so the keyword actually sent was not the one intended and the result is not
+evidence either way. Worth settling, because the creator product search and promo code
+redemption both *reject* padded input.

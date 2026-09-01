@@ -189,3 +189,34 @@ delivered as a link.
 tabs Overview / Ticket / About Creator) exposes exactly `Share` and `Scan` in Ticket
 Details, alongside Back and View Message. There is no transfer, reassign, or
 change-holder action.
+
+## Leaving the create flow discards silently
+
+Verified 2026-09-01 on Digital Download. Pressing `Back` on Step 1 with a filled Title
+navigates straight to `/products` — **no confirmation dialog, no browser
+`beforeunload` prompt** — and **no draft is auto-created**: the typed title does not
+appear on the Draft tab. Explicit `Save as Draft` is the only thing that persists work.
+
+**Method trap:** navigating directly to `/products/create/<slug>` leaves the browser
+with no history, so `Back` lands on `about:blank` and the result is meaningless. Always
+reach the form the way a user does — Products → Add Product → pick a type — before
+testing this.
+
+The create slug for Digital Download is **`digital-downloads`** (plural);
+`digital-product` and `digital-download` both 404. See the route asymmetry section.
+
+## Digital Download content types
+
+Step 1 offers three checkboxes, **all unchecked by default**: `Media` (MP4, MOV, MP3,
+JPG, PNG, etc), `Links` (GDrive, Notion, Youtube, etc), `Digital Files` (PDF, ZIP,
+DOCX, XLS, etc.). Ticking one reveals its section; **unticking removes that section
+immediately with no confirmation and no data-loss warning.**
+
+## Discord scheduled publish is date-only
+
+`Advanced Settings` on Step 2 holds three switches, all off by default: `Schedule
+Publish`, `Availability`, `Hide from Explore`. Enabling `Schedule Publish` reveals a
+single `Pick a date` control — **no timezone indicator and no time-of-day field**, so
+scheduling is date-granular and the zone it resolves against is not stated. This is a
+real inconsistency with Event & Tickets, which exposes a full 112-entry timezone
+picker.
