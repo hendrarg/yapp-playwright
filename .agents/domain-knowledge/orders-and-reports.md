@@ -134,7 +134,7 @@ That table holds only `user_id`, `viewer_user_id` and `created_at` — no sessio
 device fingerprint — and `viewer_user_id` was `NULL` on every row, so there is no
 structural way to deduplicate. The problem is the label: the section is headed
 `Audience` and reads *"How many people came, and whether that is going up or down"*,
-while the number counts page loads. Filed as M-74.
+while the number counts page loads.
 
 Do not use `Profile views` as a unique-visitor assertion in any test.
 

@@ -57,9 +57,9 @@ real newline**, so multiline messages are supported.
 **Media is images only — there is no video path.** The composer's file input is
 `accept="image/jpeg,image/png,image/gif,image/webp"`, `multiple`. Opening the
 attachment menu (Link Product / Link Campaign / Request Tip / Link Post) adds **no**
-further file input, so video cannot be attached from the creator side at all. This
-contradicts `TC-MB-C-010` ("Send supported video") — one of the two is stale. No file
-size limit is stated near the composer.
+further file input, so video cannot be attached from the creator side at all — any
+expectation of a creator-side video attachment is unfounded on this build. No file size
+limit is stated near the composer.
 
 ## Broadcast is send-now only
 

@@ -53,9 +53,9 @@ For USDT the fields are `Chain *`, `Receiver Wallet Address *`, and `Amount *`.
 `!!!!` are all accepted verbatim with no message, and nothing checks the address
 against the selected chain. Do not write a test expecting an inline format error.
 
-The USDT amount placeholder reads `Minimum withdrawal 10,00USDT`, while
-`TC-WLT-C-028` / `TC-WLT-C-029` state a 100 USDT minimum. One of the two is stale —
-confirm before asserting a minimum.
+The USDT amount placeholder reads `Minimum withdrawal 10,00USDT` — that placeholder is
+the only figure the UI puts on screen. Confirm the minimum the server actually enforces
+before asserting one, and do not carry a number over from another surface.
 
 ## Withdraw checks the PIN before it checks the balance
 

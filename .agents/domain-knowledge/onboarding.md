@@ -90,7 +90,7 @@ handle as a "username already taken" fixture.
   social username field *does* treat whitespace-only as empty. Inconsistent on one screen.
 - Social platform: Instagram / TikTok / X / YouTube / Others, default Instagram.
 - Social username is required but otherwise **unvalidated** — `@handle`, a full URL,
-  spaces, 1 char and 200 chars all pass (L-73).
+  spaces, 1 char and 200 chars all pass.
 
 **Step 2 — Choose Tools.** Eleven tools; three carry a `HITS` badge and start selected
 (Livestream, Digital Download, Membership). Counter `n / 3` and the rule is **exactly
@@ -137,10 +137,10 @@ PNG transparency is lost.
 validation. Failure feedback is absent across the board:
 
 - **oversize (13.85 MB vs a stated 5 MB)** → nothing at all: no crop dialog, no toast,
-  no message, no request (M-71);
+  no message, no request;
 - **`.txt` / `.gif`** → the crop dialog *opens*, and `Apply` then dies on
   `InvalidStateError: Failed to execute 'drawImage' … The HTMLImageElement provided is in
-  the 'broken' state`, leaving the dialog stuck open (M-70).
+  the 'broken' state`, leaving the dialog stuck open.
 
 Always run a valid-PNG control before calling this path broken — a 600×600 PNG crops and
 applies correctly.
@@ -190,9 +190,13 @@ after clearing localStorage completely on a fresh creator:
    renders nowhere, `/customize` included.
 
 So a new creator is guided only about Messages; linking social accounts, setting up the
-wallet and creating a first product get no guidance at all. Filed as M-75
-(`TC-ONB-C-047`). Scope of the evidence: dev only, account 498 — whether this guidance was
-ever live elsewhere, or was deliberately switched off, is not established.
+wallet and creating a first product get no guidance at all.
+
+The hooks are simply absent from this build, so nothing is malfunctioning — treating this
+as a regression would assert an intent the evidence does not establish. The inert flags
+and the unrendered social-media string are the open question: whether that guidance was
+once shipped and then withdrawn is for the product owner to answer. Scope of the evidence:
+dev only, account 498.
 
 If you are looking for a tour that "should" be there and cannot find it, clear
 localStorage first, then check the bundle for its hook before assuming a previous session
