@@ -48,6 +48,7 @@ the sheet wins.
 | [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
 | [[membership\|Membership]] | Discord and Telegram membership, expiry-anchored renewal reminders, the aggregate bot status, Lifetime gaps |
 | [[orders-and-reports\|Orders & reports]] | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
+| [[settings\|Settings]] | The two tabs and their URL behaviour, five fee blocks with a display-only split, the auto-saving gateway choice, the bank form with no validation, the five integrations |
 | [[wallet\|Wallet]] | The three disagreeing balance surfaces, history pagination and its filter labels, the withdrawal dialog and its unvalidated address |
 | [[explore-and-profile\|Explore & profile]] | Explore feeds and the curated Popular section, dead account fields, landing CTA structure, profile tab order |
 
