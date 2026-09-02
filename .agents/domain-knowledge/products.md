@@ -4,6 +4,10 @@ How product creation, pricing, media, and status behave across all six Yapp prod
 types — Event & Tickets, Consultation, Discord Membership, Telegram Membership,
 Digital Download, Online Course.
 
+Discord and Telegram membership specifics — renewal reminders, the bot surface,
+subscriber row actions — live in [[membership-products]]. A creator's own subscription
+tiers are **not** a product type at all and are covered by [[membership-tiers]].
+
 ## Pricing: every product starts free
 
 On Add Product for **any** product type the `Add Pricing` toggle defaults to **ON**

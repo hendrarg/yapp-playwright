@@ -46,7 +46,8 @@ the sheet wins.
 | [[tipping\|Tipping]] | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
 | [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |
 | [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
-| [[membership\|Membership]] | Discord and Telegram membership, expiry-anchored renewal reminders, the aggregate bot status, Lifetime gaps |
+| [[membership-tiers\|Membership tiers]] | The creator's own subscription programme at `/membership` — **not a product**: per-duration prices, Perk Hybrid `accessMode` (API-only, and a UI save resets it), tier price display |
+| [[membership-products\|Membership products]] | Discord and Telegram membership **product types** and their chat integrations — expiry-anchored renewal reminders, the aggregate bot status, Telegram product Lifetime gaps, subscriber row actions |
 | [[orders-and-reports\|Orders & reports]] | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
 | [[settings\|Settings]] | The two tabs and their URL behaviour, five fee blocks with a display-only split, the auto-saving gateway choice, the bank form with no validation, the five integrations |
 | [[wallet\|Wallet]] | The three disagreeing balance surfaces, history pagination and its filter labels, the withdrawal dialog and its unvalidated address |
