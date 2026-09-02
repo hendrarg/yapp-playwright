@@ -52,20 +52,23 @@ actually gates the control.
 The Rp10.000 floor is enforced on the IDR path only. The USDT path accepts any amount,
 so the platform minimum is bypassable by switching currency.
 
-## The creator never sees who tipped
+## Creator-side tip visibility
 
-Verified 2026-09-01. The only creator-side view of a tip is a **Wallet history row**
-with four columns — `TYPE`, `AMOUNT`, `STATUS`, `DATE`. No sender name, no email, no
-notes, and the row does not open a detail. There is no export for tip data.
+**Corrected 2026-09-02.** An earlier note here claimed the creator never sees who
+tipped, based on looking only at Wallet and `/statistics`. That was wrong — it missed
+`/analytics`.
 
-`/statistics` does not mention tipping at all any more, so `TC-ANL-C-018`, `C-019` and
-`C-020` (Tipping Records, Recent-versus-Leaderboard sorting) describe a section that
-no longer exists — see the Statistics redesign note in [[orders-and-reports]].
+- **Wallet history** shows tips as four columns only: `TYPE`, `AMOUNT`, `STATUS`,
+  `DATE` — no sender, no notes, and the row does not open a detail.
+- **`/analytics?tab=transactions`** has a dedicated **Tipping** tab under Performance
+  Details, with the transaction table and `Export as CSV`. This is the real tip
+  tracking surface.
+- **`/statistics`** does not mention tipping at all — but that page is a separate,
+  newer product, not a replacement for `/analytics`. See
+  [[orders-and-reports]].
 
-The practical consequence: **`Send as Anonymous` changes nothing on any creator
-surface that exists today**, because the tipper's identity was never displayed there
-in the first place. Anything about anonymity has to be judged on notification email or
-receipt, which is outside these surfaces.
+So any claim about what the creator can or cannot see about a tip has to be made
+against `/analytics?tab=transactions`, not Wallet alone.
 
 ## The two note fields are not symmetric
 

@@ -76,30 +76,28 @@ after a filter change, so poll rather than assert immediately.
 Filters live only in component state — the URL stays `/products?tab=orders` no matter
 what is applied, so a filtered view cannot be shared or bookmarked.
 
-## The Statistics page was redesigned — the Analytics test cases are stale
+## /statistics is a NEW page, not a replacement for /analytics
 
-Verified on dev 2026-09-01 at `/statistics` (there is no `/analytics` route).
+**Corrected 2026-09-02 after an error.** An earlier pass concluded that `/analytics`
+was gone and the `Analytics` sheet's test cases were stale. That was wrong: the probe
+loop stopped at the first route that answered and never opened `/analytics` at all.
 
-The page today is **Statistics**, with one date control (`Last 30 days`) and three
-sections:
+Both pages exist, and they are different products:
 
-- **Audience** — Overview (Profile views, Product views, Wishlist adds, Money left in
-  carts), Activity over time (two daily charts: product views per day, orders per
-  day), and a Buyer journey funnel (Viewed → Wishlisted → Added to cart → Purchased),
-  which is measured only against *signed-in* viewers; anonymous views carry no id and
-  cannot be followed through the stages.
-- **Products** — one table sorted by money left in carts, columns Product / Views /
-  Wishlist / In cart / Left in cart / Sold / Revenue, each column header a sort button.
-  Pagination is `Previous` / `Next` with `Page X of Y` and **no rows-per-page
-  selector** (16 rows per page observed, 358 products across 36 pages).
-- **Reach** — Best time to post, Link performance.
+| Route | Holds |
+|-------|-------|
+| `/analytics?tab=analytics` | **Revenue Overview** — Total Revenue, Tipping Revenue, Product Sales, Campaign Activations, PPV, Membership, Lifetime Access, each with a growth percentage, plus the multi-source revenue graph |
+| `/analytics?tab=transactions` | **Performance Details** — tabs Products / Tipping / Campaigns Activations / PPV / Membership / Lifetime Access, the transaction table, and **Export as CSV** |
+| `/statistics` | A separate, newer page: Audience (profile & product views, wishlist adds, money left in carts), Activity over time, Buyer journey funnel, a Products table with sortable columns, and Reach (best time to post, link performance). No tabs, **no export** |
 
-**What is gone:** there are no tabs at all, and **no Export or CSV control anywhere on
-the page**. The `Analytics` sheet's 32 test cases describe Revenue Overview, growth
-percentages, Performance Details category tabs (Products / Tipping / Campaign / PPV /
-Membership / Lifetime Access), Recent-versus-Leaderboard sorting, and a CSV export per
-category. None of that exists on this page any more.
+The creator **Orders** list also lives under `/analytics` — the sidebar links Orders to
+`/analytics?tab=transactions`, and `/orders` resolves to the same "Payments" screen.
+`/products?tab=orders` does **not** open it.
 
-Do not automate against the `Analytics` sheet until it has been re-scoped against this
-page. Orders keeps its own export — see the CSV sections above — so creator CSV export
-still exists there, just not in Statistics.
+So the `Analytics` sheet is **not** stale, and creator CSV export exists in two places:
+the Orders export documented above and the Performance Details export on
+`/analytics?tab=transactions`.
+
+**The lesson worth keeping:** when checking whether a feature moved, probe every
+candidate route to completion. Breaking out of the loop on the first success is how a
+whole sheet came to be judged obsolete on the strength of the wrong page.
