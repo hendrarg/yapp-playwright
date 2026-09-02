@@ -53,6 +53,23 @@ If the MCP browser session redirects to `/auth` and the `at` token in `.env` is 
 
 Quick path: run the OTP login spec (`npx playwright test tests/auth/otp-login.spec.ts --project=chromium`) — it logs in as QA Tester and saves the token to `.env` in one go. `refreshAccountTokenViaOtp(context, account, baseURL)` wraps login + save for fixture use.
 
+## Do not strip the driver.js overlay by reflex
+
+Helper code in this repo removes `.driver-overlay` / `.driver-popover` and the
+`driver-active` body class so they stop intercepting clicks. That is fine **once you know
+what the overlay is** — but it is also a real product feature: the mandatory creator
+first-run tour (see `.agents/domain-knowledge/onboarding.md`). Stripping it by habit hides
+that feature from testing entirely; it went unexamined for a whole session that way.
+
+Before removing it, capture it: `.driver-popover-title`, `.driver-popover-description`,
+`.driver-popover-progress-text`, and the buttons that are **actually rendered**
+(`getComputedStyle(b).display !== 'none'`). driver.js always emits close and `Previous`
+buttons in markup even when the tour hides them, so DOM presence and `innerText` both
+overstate what the user is offered.
+
+Tour state for the creator tour lives in `localStorage` under `profile-store` and
+`messages-tour-store`; delete both to replay it.
+
 ## Yapp UI traps
 
 Every one of these produces a symptom identical to a product defect. Each has already

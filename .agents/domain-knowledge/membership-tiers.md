@@ -31,22 +31,66 @@ Note the vocabulary trap: `product_telegram_tiers` are tiers **of a Telegram pro
 so a sentence about "tiers" can mean either feature. This note only ever means
 `tier_memberships`.
 
-## No fixture account holds an active membership subscription
+## Subscription fixtures: what exists and what still does not
 
-Checked 2026-08-31: token1 (`hendrarg` / QA Tester) is the creator of the membership
-tiers, so it cannot subscribe to itself, and token2 (Sundanese) still shows
-`Subscribe` on that profile. The buyer Library lists Discord and Telegram *membership
-products* ([[membership-products]]), which are a different thing from a creator
-membership subscription.
+**Corrected 2026-09-02.** An earlier note claimed no fixture account holds an active
+membership subscription. That is wrong — dev carries **96 subscription rows**
+(`tier_membership_users`), and token1 (`hendrarg`, user 317) holds two of them:
 
-The practical consequence: **anything that needs a live subscription cannot be tested
-today** — auto-renewal preference, renewal failure, tier upgrade or downgrade,
-post-expiry access. There is also no auto-renewal control visible anywhere on the
-buyer surfaces that do exist, but that is an absence observed without a subscription
-in hand, not a confirmed product decision.
+| Subscription | Tier | Creator | `expired_at` | State | Product perks |
+|---|---|---|---|---|---|
+| 95 | `satubulan` (id 82) | coba2 (416) | 26 Sep 2026 | **active** | 0 |
+| 91 | `Enable Message` (id 79) | geri (161) | 21 Aug 2026 | **expired** | 0 |
 
-Seed a real subscription first, or expect these to stay blocked.
+So token1 can be used **today** for anything gated on holding an active subscription
+versus an expired one — DM access above all, since both tiers have
+`is_enable_direct_message` on. token1 cannot subscribe to its *own* tiers, but it is
+already subscribed to two other creators'.
 
+What is still missing is a fixture for **product entitlement**: both of token1's tiers
+have zero perks, and no subscription belonging to token1 or token2 has a single product
+benefit row. Auto-renewal preference, upgrade and downgrade also remain untestable.
+To test whether course access survives expiry, seed a subscription to a tier that
+actually carries a product perk.
+
+## The entitlement is a snapshot taken at subscribe time
+
+`tier_membership_user_benefits` is not a view onto the tier's perks — it is a **copy**
+made per subscriber, carrying its own `product_id` / `post_id`, `access_type`,
+`discount_type`, `discount_amount`, and `access_mode`. It has **no expiry column of its
+own**; its validity hangs on the parent `tier_membership_users.expired_at`.
+
+Two consequences worth knowing before writing assertions:
+
+- **Editing a tier does not rewrite existing subscribers' entitlements.** So the reset
+  defect above damages only *future* subscribers, not people already subscribed. That is
+  a real mitigation, not a reason to leave it open.
+- **`permanent` benefits outlive the subscription.** 125 product benefit rows across
+  **54 expired** subscriptions are still present and un-deleted, which is the structural
+  meaning of `permanent`: the row is not cleaned up when `expired_at` passes.
+  Caveat: rows persisting is not the same as the app still honouring them. The read path
+  is unverified, and it cannot be contrasted against `membership_bound` yet because dev
+  has never held a single `membership_bound` row — 0 of 144 tier perks and 0 of 272
+  materialized entitlements.
+
+## The buyer cannot tell a lifetime perk from a subscription-bound one
+
+The buyer-facing payload does carry the field. `GET /api/v1/account/{accountUUID}/tier-memberships`
+returns `accessMode` on every perk (a buyer's own subscriptions are at
+`GET /api/v1/tier-membership-users`). **The buyer UI ignores it.**
+
+Verified 2026-09-02 by publishing one tier holding both modes side by side and reading
+the creator's public profile. The `Rewards` list rendered:
+
+```
+Free access for "Url salah"            <- accessMode: membership_bound
+Free access for "Fresh Aluminum Bike"  <- accessMode: permanent
+```
+
+Identical wording. Nothing distinguishes the course the buyer keeps forever from the one
+they lose the moment the subscription lapses, on the very surface where they decide
+whether to pay. Same for the discount axis: a perk reads `100% discount for "<product>"`
+with no duration qualifier either.
 
 ## Tier price fields are gated by the period checkbox
 

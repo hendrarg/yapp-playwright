@@ -56,3 +56,22 @@ against the selected chain. Do not write a test expecting an inline format error
 The USDT amount placeholder reads `Minimum withdrawal 10,00USDT`, while
 `TC-WLT-C-028` / `TC-WLT-C-029` state a 100 USDT minimum. One of the two is stale —
 confirm before asserting a minimum.
+
+## Withdraw checks the PIN before it checks the balance
+
+On a brand-new creator with `Rp0,00` the `Withdraw` button is **enabled**, and pressing it
+opens `Set Up Your PIN to Continue` — "A PIN is required to secure your transactions and
+withdrawals. Please create one before proceeding" (Cancel / Set Up Now). No message about
+an empty balance appears at all.
+
+So every withdrawal scenario on a fresh account stops at the PIN gate: a PIN must exist
+before any amount validation can be reached. Verified 2026-09-02 on account 498.
+
+## A zero-balance wallet is internally consistent
+
+The fresh account shows `Active Balance` and `Pending Balance` at `Rp0,00` / `$0,00`,
+`Your Assets` empty, and `History` reading `No results.` with the All / Recent / Pending /
+Settled filters and the 10-rows selector still present. Worth contrasting with the
+long-lived QA account, whose three balance surfaces disagree — that disagreement needs
+transaction history to appear, so it cannot be reproduced on a clean account.
+

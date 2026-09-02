@@ -123,6 +123,21 @@ So the `Analytics` sheet is **not** stale, and creator CSV export exists in two 
 the Orders export documented above and the Performance Details export on
 `/analytics?tab=transactions`.
 
+### `Profile views` counts page loads, not people
+
+Verified 2026-09-02 with a controlled experiment on a brand-new creator whose entire
+visit history was known: three deliberate reloads of the same public profile, same
+browser, same person, ~4 seconds apart, moved the figure from **6 to 9**. The UI number
+matches the `user_view_counters` row count exactly.
+
+That table holds only `user_id`, `viewer_user_id` and `created_at` — no session key, no
+device fingerprint — and `viewer_user_id` was `NULL` on every row, so there is no
+structural way to deduplicate. The problem is the label: the section is headed
+`Audience` and reads *"How many people came, and whether that is going up or down"*,
+while the number counts page loads. Filed as M-74.
+
+Do not use `Profile views` as a unique-visitor assertion in any test.
+
 **The lesson worth keeping:** when checking whether a feature moved, probe every
 candidate route to completion. Breaking out of the loop on the first success is how a
 whole sheet came to be judged obsolete on the strength of the wrong page.

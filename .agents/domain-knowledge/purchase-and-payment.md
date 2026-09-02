@@ -44,6 +44,27 @@ it. Never press `Pay IDR ...` — nothing is charged and no order row is created
   `Invalid promo code`. The 500-for-validation is filed as a Low finding — do not
   read it as a broken server.
 
+**A valid code recomputes every line, including the fees.** Verified 2026-09-02 on two
+product types with one 10% `all_product` promo, as a guest, without paying:
+
+| Product | Before | After 10% |
+|---|---|---|
+| Discord Membership Rp25.000 | 25.000 + fee 1.000 + PG 263 = **26.263** | Discount −2.500, subtotal 22.500, fee 900, PG 237 = **23.637** |
+| Online Course Rp100.000 | 100.000 + fee 4.000 + PG 1.051 = **105.051** | Discount −10.000, subtotal 90.000, fee 3.600, PG 946 = **94.546** |
+
+The transaction fee is 4% of the **discounted** subtotal, not of the list price, and
+`POST /orders/quote/estimation` returns matching `promoCodeDiscount`, `subtotal` and
+`amount`. A `Discount` line appears above `Subtotal`.
+
+**Seeding a valid-voucher fixture:** create a promo with `promoProductType: "all_product"`
+(`POST /api/v1/promos` with `name`, `code`, `discountType`, `discount`, `periodStartAt`,
+`periodEndAt`) — no per-product scoping is needed, so one promo covers every product type
+under test. Delete it afterwards with `DELETE /api/v1/promos/{uuid}`.
+
+**API access note:** these endpoints reject a bare Node `fetch` with
+`not allowed to access this API`. Issue them from inside a page context
+(`page.evaluate`) so the browser's origin applies.
+
 **A rejected code drops the fee rows, and that is expected.** On rejection the summary
 re-renders without `Transaction Fee` and `Payment Gateway Fee`, so the displayed total
 falls to the bare subtotal and the CTA follows it — Rp153.000 to Rp150.000 on Digital

@@ -45,6 +45,7 @@ the sheet wins.
 | [[messaging\|Messaging]] | Chat and Broadcast, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
 | [[tipping\|Tipping]] | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
 | [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |
+| [[onboarding\|Onboarding]] | Creator sign-up, username rules, the three-step wizard — the account exists before the username, host-scoped session cookies, exactly-three tools, and a silent profile-picture path |
 | [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
 | [[membership-tiers\|Membership tiers]] | The creator's own subscription programme at `/membership` — **not a product**: per-duration prices, Perk Hybrid `accessMode` (API-only, and a UI save resets it), tier price display |
 | [[membership-products\|Membership products]] | Discord and Telegram membership **product types** and their chat integrations — expiry-anchored renewal reminders, the aggregate bot status, Telegram product Lifetime gaps, subscriber row actions |
