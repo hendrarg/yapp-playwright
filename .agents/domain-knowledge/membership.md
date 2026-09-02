@@ -60,3 +60,16 @@ buyer surfaces that do exist, but that is an absence observed without a subscrip
 in hand, not a confirmed product decision.
 
 Seed a real subscription first, or expect these to stay blocked.
+
+## Tier price fields are gated by the period checkbox
+
+On `/membership/create` the four per-period price fields (1, 3, 6, 12 months, IDR)
+start **disabled**. A field only becomes editable after its own period checkbox is
+ticked, so any test that types a tier price must tick the period first or it will
+silently write nothing.
+
+Once enabled, the field behaves plainly: `Ctrl+A` then `Backspace` leaves it **empty**
+(not a residual `0`), and a typed value is kept exactly, rendered with thousand
+separators — `20000` shows as `20,000`, `5000` as `5,000`, `123` as `123`. There is no
+10× inflation. Verified 2026-09-02; an earlier report of a stuck `0` and 10× inflation
+no longer reproduces.

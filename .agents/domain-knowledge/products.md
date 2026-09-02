@@ -120,7 +120,7 @@ it per product type:
 
 - **Message is capped at 1000 characters**, and the counter reads `n/1000 characters`
   — it counts **characters correctly**. This is the counter to trust; the *description*
-  counter on the same forms counts words (defect M-07 below).
+  counter on the same forms counts words (defect M-06 below).
 - **Links are capped at 3**, stated in the UI as `max. 3 links`, described as links the
   buyer can open straight from the after-sales email.
 - **There is no file-attachment control anywhere in After Sales**, on any product type.
@@ -142,7 +142,7 @@ The create and edit routes do not use the same product-type slug:
 
 ## The description counter counts words, not characters
 
-Open defect M-07, confirmed on **all six product types** in Aug 2026: the
+Open defect M-06, confirmed on **all six product types** in Aug 2026: the
 `n / 500` counter under a product description increments per **word** while the
 displayed unit implies characters, so the limit a creator actually hits is
 unpredictable. Measured: 31 characters / 5 words renders `5 / 500`; 150 characters /

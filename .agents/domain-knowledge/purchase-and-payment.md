@@ -44,6 +44,20 @@ it. Never press `Pay IDR ...` — nothing is charged and no order row is created
   `Invalid promo code`. The 500-for-validation is filed as a Low finding — do not
   read it as a broken server.
 
+**A rejected code drops the fee rows, and that is expected.** On rejection the summary
+re-renders without `Transaction Fee` and `Payment Gateway Fee`, so the displayed total
+falls to the bare subtotal and the CTA follows it — Rp153.000 to Rp150.000 on Digital
+Product, Rp105.051 to Rp100.000 on Discord Membership, Rp102.021 to Rp100.000 on
+Consultation, Rp104.000 to Rp99.000 on the promo fixtures. **This is the product's
+invalid-voucher signal, not a pricing defect** (ruled by the product owner
+2026-09-02), and the payable amount is re-derived server-side at payment.
+
+So never assert "total unchanged" after a rejected code — assert the rejection message,
+that no `Discount` line appears, and that `subtotal` is unchanged. Ruling out the fee
+rows this way retired one bug outright and cleared six test cases; the same expectation
+is still written into the cart-level voucher tests (`TC-CART-B-062/079/080/081/082`),
+which pass as-is because the cart summary is a different surface.
+
 **Promo status** is `PATCH /api/v1/promos/{uuid}/status` with
 `{"isActive": true|false}` giving 200. Manual status **overrides** the period-derived
 status: a promo whose period has not started shows `Not Started`, and turning the
