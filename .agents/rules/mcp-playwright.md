@@ -53,6 +53,56 @@ If the MCP browser session redirects to `/auth` and the `at` token in `.env` is 
 
 Quick path: run the OTP login spec (`npx playwright test tests/auth/otp-login.spec.ts --project=chromium`) — it logs in as QA Tester and saves the token to `.env` in one go. `refreshAccountTokenViaOtp(context, account, baseURL)` wraps login + save for fixture use.
 
+## Diagnosing a bad token: the creator app loops, it does not say "unauthorized"
+
+Established 2026-09-04 after ~40 minutes lost to a mis-pasted token. Symptoms first, so
+you can recognise it:
+
+- **Creator app** (`creators-dev.yapp.ink`) answers any route with
+  `net::ERR_TOO_MANY_REDIRECTS`: `/membership → 307 /auth`, then `/auth → 307 /auth`
+  forever. Nothing on screen names authentication.
+- **Buyer app** (`yapp-dev.yapp.ink`) loads fine and returns HTTP 200 — it just renders
+  the **guest** view (`Yapp Guest`, `Sign in to access your profile!`). A 200 here is
+  not evidence the token works.
+- With **no** cookie at all the creator app renders `/auth` normally. So the loop only
+  appears once a *rejected* token is present, which makes it read like an app bug.
+
+**Get the verdict from the API, not from a page.** Ask it what it thinks of the token:
+
+```javascript
+// browser_evaluate, or page.evaluate in a scratch script
+await fetch('https://staging.yapp.ink/api/v1/accounts', {
+  headers: { Authorization: 'Bearer ' + tok },
+}).then(async r => r.status + ' ' + (await r.text()).slice(0, 140));
+```
+
+Three answers, three different fixes:
+
+| Response | Meaning | Fix |
+|---|---|---|
+| `401 token signature is invalid: crypto/rsa: verification error` | well-formed JWT, wrong signing key — mangled in transit, or copied from another environment (prod signs with a different key) | re-copy from a **dev** login, or run the OTP refresh |
+| `401 Missing authorization header` | the request carried no header — the `at` cookie does **not** authenticate direct API calls | send `Authorization: Bearer` explicitly |
+| `403 not allowed to access this API` | called from bare Node instead of a page origin | issue it from inside a page context |
+
+**Two mechanical traps that produce the same 401.**
+
+- **`.env` values may be wrapped in double quotes.** `dotenv` strips them, so repo code
+  is fine, but a hand-rolled `grep`/regex read is not — `scripts/mcp-auth-storage.mjs`
+  calls `.replace(/"/g, "")` for exactly this reason. Do the same in any scratch script.
+- **A paste-mangled token still parses.** Header and payload decode, `exp` looks fine,
+  and only the signature is wrong. Check its length: an RS256 signature over a 2048-bit
+  key is **exactly 256 bytes** (343 base64url chars decodes to 257 — one stray
+  character):
+
+```javascript
+const seg = tok.split('.');
+Buffer.from(seg[2], 'base64url').length === 256   // false ⇒ corrupted paste
+```
+
+Verify **both** tokens when one fails. On 2026-09-04 `YAPP_TEST_ACCESS_TOKEN_2` was
+valid while `YAPP_TEST_ACCESS_TOKEN` was not, which immediately ruled out the
+environment and pointed at the paste. `npm run token:inspect` checks the mapping.
+
 ## Do not strip the driver.js overlay by reflex
 
 Helper code in this repo removes `.driver-overlay` / `.driver-popover` and the
@@ -230,6 +280,30 @@ need the same treatment.
 for 5 real ones, and `tbody tr` is always twice the true result count. Halve it, or
 filter to the visible copy — and prefer asserting row count against `totalResults`
 from the response.
+
+**Membership perk controls: two surfaces, two shapes, and no ARIA state.** Both expose
+the same `Access Mode` copy but nothing else is shared — see
+`.agents/domain-knowledge/membership-tiers.md` for the product rules.
+
+- **Tier side** (`/membership/create`): `Add Tier Benefit` opens a `dialog "Select
+  Products"`, and `Add` on a card opens a *second* dialog whose fields are real
+  `combobox`es with `option`s — `getByRole('combobox')` / `getByRole('option')` work,
+  and `[selected]` marks the default.
+- **Product side** (`/products/update/online-course/{uuid}`): the `Membership Benefits`
+  block sits on **step 2 only** — step 1 is the course content editor, so click
+  `Next: Edit Details` first or the block is simply absent (`hasSection: false`) and it
+  looks like the feature is missing. `Add Benefit` then **expands the tier row inline**:
+  zero `[role=dialog]`, zero `[role=menu]`, zero `[role=listbox]`, zero
+  `[data-radix-popper-content-wrapper]`. Do not wait for a dialog here.
+- **The inline options are plain `<button>`s with no `role`, no `aria-checked`, and no
+  `data-state`.** Selection state cannot be read from the accessibility tree at all —
+  assert it from what the row renders afterwards (the pill text, the appearance of
+  `Confirm`, the disappearance of the Access Type block) or from the request payload.
+- **`/membership/create` has two `input[type=file]`** — index 0 is the markdown editor's
+  hidden image input, index 1 is the Hero Image dropzone. `setInputFiles` on `.first()`
+  uploads into the description and leaves the form failing `Thumbnail URL is required`
+  with no request fired. A 600×600 PNG generated with `zlib.deflateSync` is enough to
+  satisfy the 500×500 minimum.
 
 ## `/streamer/*` specifics
 
