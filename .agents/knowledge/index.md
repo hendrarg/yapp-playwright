@@ -1,17 +1,20 @@
 ---
 title: Domain Knowledge Index
+type: index
+index_of: knowledge
 category: project
 tags: [yapp, product, automation]
 project: yapp
+updated: 2026-09-04
 ---
 
 # Domain Knowledge
 
-> **Canonical location:** this Obsidian vault folder (`D:/Knowledge/projects/yapp/domain-knowledge/`).
-> The yapp repo exposes the same files via a directory junction at `D:/yapp/.agents/domain-knowledge/`.
-> Edit here in Obsidian or via the repo path — both update one file.
+Jembatan **pengetahuan produk** untuk [[projects/yapp/yapp|yapp]]. Peer: [[projects/yapp/repo/AGENTS|Repo AGENTS]].
 
-**Hub:** [[../../home|Vault home]] · [[../yapp|yapp project]] · [[../../wiki/entities/yapp|wiki entity]] · [[../../raw/sources/yapp/README|repo README (raw source)]]
+> **Canonical location:** this Obsidian vault folder (`D:/Knowledge/projects/yapp/knowledge/`).
+> The yapp repo exposes the same files via a directory junction at `D:/yapp/.agents/knowledge/`.
+> Edit here in Obsidian or via the repo path — both update one file.
 
 How the **Yapp product actually behaves** — the business rules, defaults, limits, and
 lifecycles you cannot derive from this repository's code, one file per feature area.

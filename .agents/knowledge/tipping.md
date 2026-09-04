@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Tipping
 
 Live-verified 2026-08-20 on `creators-dev` / `yapp-dev`, updated 2026-08-27 after the

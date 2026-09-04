@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Orders and reports
 
 The creator Orders list, order details, and the CSV export. Established across the

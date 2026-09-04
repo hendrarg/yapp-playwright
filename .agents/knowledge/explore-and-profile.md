@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Explore, profile, and landing
 
 Buyer discovery surfaces and the creator's public profile.

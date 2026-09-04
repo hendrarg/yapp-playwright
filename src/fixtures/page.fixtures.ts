@@ -33,6 +33,7 @@ import { PromotionsPage } from "@pages/creator/PromotionsPage";
 import { ReferralPage } from "@pages/creator/ReferralPage";
 import { SessionsPage } from "@pages/creator/SessionsPage";
 import { SettingsPage } from "@pages/creator/SettingsPage";
+import { StreamerOverlaysPage } from "@pages/creator/StreamerOverlaysPage";
 import { StreamingPage } from "@pages/creator/StreamingPage";
 import { WalletPage } from "@pages/creator/WalletPage";
 import { baseURL, creatorsBaseURL } from "@config/env";
@@ -87,6 +88,7 @@ export type PageFixtures = {
   referralPage: ReferralPage;
   sessionsPage: SessionsPage;
   settingsPage: SettingsPage;
+  streamerOverlaysPage: StreamerOverlaysPage;
   streamingPage: StreamingPage;
   walletPage: WalletPage;
 };
@@ -130,6 +132,7 @@ export const pageFixtures = {
   referralPage: creatorPage(ReferralPage),
   sessionsPage: creatorPage(SessionsPage),
   settingsPage: creatorPage(SettingsPage),
+  streamerOverlaysPage: creatorPage(StreamerOverlaysPage),
   streamingPage: creatorPage(StreamingPage),
   walletPage: creatorPage(WalletPage),
 };

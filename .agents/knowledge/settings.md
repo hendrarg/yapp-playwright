@@ -5,7 +5,7 @@ tags: [yapp, product, automation, settings]
 project: yapp
 ---
 
-> **Hub:** [[index|Domain knowledge index]] · [[../../yapp|yapp project]]
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
 
 The creator Settings page at `/settings`. Live-verified 2026-09-02, after the sheet's
 earlier test cases were retired as no longer matching the product.

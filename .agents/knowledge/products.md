@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Products
 
 How product creation, pricing, media, and status behave across all six Yapp product

@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Messaging
 
 Creator Messages (`creators-dev.yapp.ink/messages`) and the buyer inbox

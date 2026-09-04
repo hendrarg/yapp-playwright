@@ -9,7 +9,7 @@ It is the **only** place to edit agent configuration.
 | `AGENTS.md` | the project guide | Codex, Cursor, OpenCode directly; Claude Code via `CLAUDE.md` |
 | `.agents/runtime.md`, `.agents/rules/` | always-on rules | read on demand (see load order); Cursor and OpenCode get them wired in |
 | `.agents/skills/registry.md` | which skill to read for which task | on demand |
-| `.agents/domain-knowledge/` | verified Yapp product behavior (Obsidian vault canonical; repo junction) | on demand, per product area |
+| `.agents/knowledge/` | verified Yapp product behavior (Obsidian vault canonical; repo junction) | on demand, per product area |
 | `.agents/skills/*/SKILL.md` | task workflows | synced to each tool's skill path |
 | `.agents/commands/*.md` | operation catalog / slash commands | synced to each tool's command path |
 
@@ -29,7 +29,7 @@ Before changing files or running task-specific commands, read:
 5. `.agents/rules/git-hygiene.md`
 6. `.agents/rules/ci.md`
 
-For task-specific work, also read the matching skill from `.agents/skills/registry.md`, and the matching product note from `.agents/domain-knowledge/index.md`.
+For task-specific work, also read the matching skill from `.agents/skills/registry.md`, and the matching product note from `.agents/knowledge/index.md`.
 
 ## Rules
 
@@ -44,14 +44,14 @@ Single-AUT automation and small Playwright maintenance use the inline fast path 
 
 ## Domain Notes
 
-- `.agents/domain-knowledge/` records how the Yapp app actually behaves on dev — defaults, validation boundaries, lifecycles, and endpoints that contradict the UI — one file per feature area. **Canonical files:** `D:/Knowledge/projects/yapp/domain-knowledge/` in the Obsidian vault; this repo path is a junction to that folder.
+- `.agents/knowledge/` records how the Yapp app actually behaves on dev — defaults, validation boundaries, lifecycles, and endpoints that contradict the UI — one file per feature area. **Canonical files:** `D:/Knowledge/projects/yapp/knowledge/` in the Obsidian vault; this repo path is a junction to that folder.
 - Read the matching note **before** opening the MCP browser for a feature and before asserting any default state. `index.md` is the index.
 - These notes describe observed behavior, not policy: they rank **below** `AGENTS.md` and `.agents/rules/`, and below Automation Mapping and the source TC sheets on anything the sheets state.
 - **Write back in the same session, not "next time".** The trigger is concrete: the browser or the API contradicted an assumption you started with, or you had to establish a product fact that is not already recorded. Either one means you write before you stop.
 - Add to the **existing feature file** that covers the area. Create a new file only for a feature area none of them covers, and add it to the README table. Say **why** the fact is true, and date anything that could change.
 - When the browser contradicts an existing note, fix the note rather than working around it. A stale note is worse than a missing one.
 - Product behavior belongs here; locator and Playwright technique belongs in `.agents/rules/mcp-playwright.md`. Sorting it wrongly is what turned the old notes into a mixed pile.
-- **Never record test-case status or session progress** — Passed/Failed/Blocked/Not Run, retest outcomes, closed IDs, withdrawn defects, or "what is still outstanding". That is sheet state and belongs in Automation Mapping and the source TC sheets. Record the product fact the run established instead. The test: if a line would need editing after the next test run, it does not belong in `.agents/domain-knowledge/`.
+- **Never record test-case status or session progress** — Passed/Failed/Blocked/Not Run, retest outcomes, closed IDs, withdrawn defects, or "what is still outstanding". That is sheet state and belongs in Automation Mapping and the source TC sheets. Record the product fact the run established instead. The test: if a line would need editing after the next test run, it does not belong in `.agents/knowledge/`.
 
 ## Commands
 

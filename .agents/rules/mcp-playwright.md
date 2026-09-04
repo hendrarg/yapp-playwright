@@ -108,7 +108,7 @@ environment and pointed at the paste. `npm run token:inspect` checks the mapping
 Helper code in this repo removes `.driver-overlay` / `.driver-popover` and the
 `driver-active` body class so they stop intercepting clicks. That is fine **once you know
 what the overlay is** — but it is also a real product feature: the mandatory creator
-first-run tour (see `.agents/domain-knowledge/onboarding.md`). Stripping it by habit hides
+first-run tour (see `.agents/knowledge/onboarding.md`). Stripping it by habit hides
 that feature from testing entirely; it went unexamined for a whole session that way.
 
 Before removing it, capture it: `.driver-popover-title`, `.driver-popover-description`,
@@ -281,9 +281,102 @@ for 5 real ones, and `tbody tr` is always twice the true result count. Halve it,
 filter to the visible copy — and prefer asserting row count against `totalResults`
 from the response.
 
+**`/streamer/overlays` hides most of its settings in collapsed accordions — expand them
+or you will undercount controls.** Each widget tab renders a right-hand panel of Radix
+sections (`Overlay link`, `Appearance`, `Custom HTML`, `Message & GIF`, `Thresholds`,
+`Sound & timing`, …) that start **closed**, so a snapshot of the page as loaded shows a
+fraction of what exists: one pass on `?activeTab=alert-tts` read 4.4 KB of text and a
+handful of controls, and the same tab after expanding read 161 distinct lines including
+all three amount thresholds. Click every `button[data-state="closed"]` and repeat two or
+three times for nested sections:
+
+```js
+for (let pass = 0; pass < 5; pass++) {
+  const n = await page.evaluate(() => {
+    const t = [...document.querySelectorAll('button[data-state="closed"]')];
+    t.forEach(e => e.click());
+    return t.length;
+  });
+  await page.waitForTimeout(700);
+  if (!n) break;
+}
+```
+
+**A value you can *read* from a collapsed accordion is a value you cannot *type* into.**
+Established 2026-09-04 after four failed attempts at the same task. Radix keeps a closed
+accordion's content **in the DOM**, so `querySelector` finds the input, reports its
+`value`, `maxlength`, `disabled` and its counter — and every one of those reads is
+correct. But the element is not rendered, so **it cannot take focus**: calling
+`el.focus()` leaves `document.activeElement` as `BODY`, and every subsequent
+`keyboard.type()` goes nowhere while reporting no error. The symptom is an input that
+looks perfectly healthy (`disabled:false`, `readOnly:false`) and silently refuses text.
+
+Check renderedness before typing, not just presence:
+
+```js
+const typeable = await page.evaluate(s => {
+  const el = document.querySelector(s);
+  if (!el || el.disabled || el.readOnly) return false;
+  if (el.offsetParent === null) return false;            // not rendered
+  const r = el.getBoundingClientRect();
+  if (!r.width || !r.height) return false;
+  el.focus();
+  return document.activeElement === el;                  // the only proof that counts
+}, 'input[name="…"]');
+```
+
+If it returns false, the containing accordion is still closed — open **that** accordion
+and re-check. Clicking every `[data-state="closed"]` header is not enough: the headers
+animate, and a pass that returns immediately can leave panels closed while the next read
+still succeeds, which is what makes this so convincing a trap.
+
+Two related facts from the same session, both on `/streamer/overlays`:
+
+- **`SAVE` is gated by `pointer-events`, not by `disabled`.** With no pending edits it is
+  `pointer-events: none` (still `disabled === false`, `opacity: 1`); once the form is
+  dirty it flips to `pointer-events: auto` and an `N unsaved change` counter appears. So
+  never assert on `disabled` here, and never conclude Save is broken from a click that
+  did nothing — check `pointer-events` and the unsaved counter first.
+- **A dispatched `MouseEvent('click', {bubbles:true})` does drive these controls.** It
+  toggled `button[role="switch"]` reliably and fired the Subathon `+ 10 MIN` action
+  (toast confirmed), so it is a sound way past sections that intercept pointer events.
+  It cannot help with typing, which needs real focus.
+
+**Filter destructive triggers out of the expander, or it will fire them.** `ROTATE KEY`
+is a `button[data-state="closed"]` like every accordion header, so a blanket
+"click everything closed" pass **opens its confirm dialog** — and that dialog's
+`[data-slot="alert-dialog-overlay"][data-state="open"]` then intercepts every
+subsequent click, which reads exactly like an unreachable control. This cost a false
+"the date picker cannot be opened" conclusion on 2026-09-04; a targeted click on
+`Schedule` and then the date button worked first time. Rotation itself needs the
+explicit `ROTATE AND BREAK CURRENT KEY` button, so an expander that only clicks
+`[data-state="closed"]` will not rotate a key — but it *can* leave the page unusable,
+and a careless follow-up click could. Exclude the destructive verbs and dismiss any open
+dialog before asserting:
+
+```js
+const t = [...document.querySelectorAll('button[data-state="closed"]')]
+  .filter(e => !/rotate|delete|hapus|remove|discard|reset/i.test(e.innerText || ''));
+```
+
+Prefer a **targeted** path anyway — open the one accordion you need by its name — and keep
+the blanket expander for inventory sweeps only.
+
+**Never conclude "this control does not exist" from the sidebar, the `?activeTab`
+fallback, or the Overlay Studio "Add widget" catalogue.** None of those three surfaces
+lists per-widget settings, so all three can agree a control is gone while it sits in a
+closed accordion one click away. Enumerate the tab list (15 slugs, see
+`.agents/knowledge/livestream.md`), open each, expand everything, then search the
+rendered text.
+
+Corollary that cost a wrong call on 2026-09-04: **matching a keyword is not finding the
+control.** `MINIMUM AMOUNT TO SHOW ALERT` matches `/minimum/` but is not a *GIF* minimum,
+and a `Text to speech` heading is not a per-content-type narration toggle. Check that the
+label names the thing under test, not merely the same noun.
+
 **Membership perk controls: two surfaces, two shapes, and no ARIA state.** Both expose
 the same `Access Mode` copy but nothing else is shared — see
-`.agents/domain-knowledge/membership-tiers.md` for the product rules.
+`.agents/knowledge/membership-tiers.md` for the product rules.
 
 - **Tier side** (`/membership/create`): `Add Tier Benefit` opens a `dialog "Select
   Products"`, and `Add` on a card opens a *second* dialog whose fields are real
@@ -308,7 +401,7 @@ the same `Access Mode` copy but nothing else is shared — see
 ## `/streamer/*` specifics
 
 From the 2026-08-27 live run on the refactored streamer app. See
-`.agents/domain-knowledge/livestream.md` for what these widgets do.
+`.agents/knowledge/livestream.md` for what these widgets do.
 
 **Use the hand-authored kebab-case ids.** The app has no `data-testid` but does have
 stable ids: `media-video-max`, `media-video-cost`, `media-video-min`,

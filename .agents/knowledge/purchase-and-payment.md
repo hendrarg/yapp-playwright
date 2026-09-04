@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Purchase, promo, and payment
 
 Checkout, guest verification, promo redemption, and how payments settle on dev.

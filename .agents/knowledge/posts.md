@@ -1,3 +1,5 @@
+> [[projects/yapp/knowledge/index|Domain knowledge index]]
+
 # Posts and feeds
 
 Creator post composition, visibility tiers, and pay-per-view pricing.
