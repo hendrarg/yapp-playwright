@@ -3,6 +3,11 @@ title: Wallet
 category: project
 tags: [yapp, product, automation, wallet]
 project: yapp
+type: note
+created: 2026-09-04
+updated: 2026-09-04
+sources: 0
+status: active
 ---
 
 > [[projects/yapp/knowledge/index|Knowledge index]]

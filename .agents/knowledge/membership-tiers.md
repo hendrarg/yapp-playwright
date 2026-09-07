@@ -1,3 +1,15 @@
+---
+title: Membership tiers — the creator's own subscription programme
+type: note
+category: project
+tags: [yapp, product, automation, membership-tiers]
+project: yapp
+created: 2026-09-04
+updated: 2026-09-04
+sources: 0
+status: active
+---
+
 > **Obsidian:** [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Membership tiers — the creator's own subscription programme

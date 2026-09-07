@@ -1,3 +1,15 @@
+---
+title: Livestream and the streamer app
+type: note
+category: project
+tags: [yapp, product, automation, livestream]
+project: yapp
+created: 2026-09-04
+updated: 2026-09-04
+sources: 0
+status: active
+---
+
 > [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Livestream and the streamer app

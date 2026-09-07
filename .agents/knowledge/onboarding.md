@@ -1,3 +1,15 @@
+---
+title: Creator sign-up and onboarding
+type: note
+category: project
+tags: [yapp, product, automation, onboarding]
+project: yapp
+created: 2026-09-04
+updated: 2026-09-04
+sources: 0
+status: active
+---
+
 > **Obsidian:** [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Creator sign-up and onboarding

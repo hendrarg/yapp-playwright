@@ -1,3 +1,15 @@
+---
+title: Orders and reports
+type: note
+category: project
+tags: [yapp, product, automation, orders-and-reports]
+project: yapp
+created: 2026-09-04
+updated: 2026-09-04
+sources: 0
+status: active
+---
+
 > [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Orders and reports

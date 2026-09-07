@@ -1,3 +1,15 @@
+---
+title: Tipping
+type: note
+category: project
+tags: [yapp, product, automation, tipping]
+project: yapp
+created: 2026-09-04
+updated: 2026-09-04
+sources: 0
+status: active
+---
+
 > [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Tipping

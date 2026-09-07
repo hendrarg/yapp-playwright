@@ -6,6 +6,9 @@ category: project
 tags: [yapp, product, automation]
 project: yapp
 updated: 2026-09-04
+created: 2026-09-04
+sources: 0
+status: active
 ---
 
 # Knowledge
