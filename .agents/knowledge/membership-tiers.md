@@ -1,4 +1,4 @@
-> **Obsidian:** [[projects/yapp/knowledge/index|Domain knowledge index]]
+> **Obsidian:** [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Membership tiers — the creator's own subscription programme
 

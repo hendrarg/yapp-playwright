@@ -1,4 +1,4 @@
-> [[projects/yapp/knowledge/index|Domain knowledge index]]
+> [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Messaging
 

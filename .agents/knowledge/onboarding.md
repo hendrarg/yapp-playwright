@@ -1,4 +1,4 @@
-> **Obsidian:** [[projects/yapp/knowledge/index|Domain knowledge index]]
+> **Obsidian:** [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Creator sign-up and onboarding
 

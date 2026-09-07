@@ -1,4 +1,4 @@
-> **Obsidian:** [[projects/yapp/knowledge/index|Domain knowledge index]]
+> **Obsidian:** [[projects/yapp/knowledge/index|Knowledge index]]
 
 # Discord and Telegram membership products
 

@@ -1,5 +1,5 @@
 ---
-title: Domain Knowledge Index
+title: Knowledge Index
 type: index
 index_of: knowledge
 category: project
@@ -8,7 +8,7 @@ project: yapp
 updated: 2026-09-04
 ---
 
-# Domain Knowledge
+# Knowledge
 
 Jembatan **pengetahuan produk** untuk [[projects/yapp/yapp|yapp]]. Peer: [[projects/yapp/repo/AGENTS|Repo AGENTS]].
 

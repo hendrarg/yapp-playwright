@@ -5,7 +5,7 @@ tags: [yapp, product, automation, wallet]
 project: yapp
 ---
 
-> [[projects/yapp/knowledge/index|Domain knowledge index]]
+> [[projects/yapp/knowledge/index|Knowledge index]]
 
 The creator Wallet: balances, transaction history, and the withdrawal flow.
 Established 2026-08-31 while converting the Wallet PRD-gap rows into test cases.
