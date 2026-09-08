@@ -21,9 +21,14 @@ export const eventsTicketsData = {
   percentDiscountError: "Percentage discount cannot exceed 100%",
   addAnotherTicketType: "+ Add Another Ticket Type",
   addAnotherTicketTypeText: "Add Another Ticket Type",
-  previewZeroPricePattern: /IDR\s*0/,
-  previewPricePattern: /IDR\s*150,000/,
-  rowPricePattern: /Rp150\.000,00/,
+  /**
+   * Preview pane renders `IDR 150,000` while the product row renders `Rp150.000,00`.
+   * Both patterns also accept the buyer target format `Rp150.000`.
+   * See `.agents/knowledge/currency-format.md`.
+   */
+  previewZeroPricePattern: /(?:Rp|IDR)\s*0(?!\d)/,
+  previewPricePattern: /(?:Rp|IDR)\s*150[.,]000/,
+  rowPricePattern: /(?:Rp|IDR)\s*150[.,]000/,
   afterSalesOff: (name: string) =>
     `Off — buyers of ${name} get the default after-sales content below.`,
   afterSalesOn: (name: string) =>

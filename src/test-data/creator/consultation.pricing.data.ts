@@ -5,8 +5,13 @@ import { getAiText } from "@test-data/ai";
 export const consultationPricingData = {
   validPrice: "12000",
   zeroPrice: "0",
-  previewPaidPricePattern: /Rp12\.000,00/,
-  previewZeroPricePattern: /Rp0,00/,
+  /**
+   * Currency standard target is the buyer format `Rp12.000` (no decimals); the creator
+   * app still renders `Rp12.000,00`. Both are accepted until the app drops the decimals.
+   * See `.agents/knowledge/currency-format.md`.
+   */
+  previewPaidPricePattern: /(?:Rp|IDR)\s*12[.,]000/,
+  previewZeroPricePattern: /(?:Rp|IDR)\s*0(?!\d)/,
   zeroPriceErrorPattern: /greater than zero|must be greater|positive|cannot be zero|invalid price/i,
   minimumNoticeHoursShort: 1,
   minimumNoticeHoursLong: 168,

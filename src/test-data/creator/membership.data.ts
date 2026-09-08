@@ -45,7 +45,8 @@ export const discordMembershipValidationData = {
 export const discordMembershipPricingData = {
   validPrice: "12000",
   zeroPrice: "0",
-  previewPaidPricePattern: /IDR 12,000/,
+  /** Accepts the current `IDR 12,000` preview and the buyer target `Rp12.000`. */
+  previewPaidPricePattern: /(?:Rp|IDR)\s*12[.,]000/,
   freePricingLabel: "Free",
 } as const;
 

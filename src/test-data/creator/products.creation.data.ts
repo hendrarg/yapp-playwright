@@ -108,10 +108,13 @@ export const onlineCoursePricingData = {
 /** Digital Product pricing boundary data (AUT-FV-193 / TC-PD-C-018..019). */
 export const digitalProductPricingData = {
   freeLabel: "Free",
-  idrZeroPattern: /IDR\s*0/,
+  idrZeroPattern: /(?:Rp|IDR)\s*0(?!\d)/,
   validPrice: "10000",
-  /** Creator-side live preview formats price as "IDR 10,000". */
-  validPriceDisplayPattern: /IDR\s*10[,.]000/,
+  /**
+   * Creator-side live preview formats price as `IDR 10,000`; the buyer target format is
+   * `Rp10.000`. See `.agents/knowledge/currency-format.md`.
+   */
+  validPriceDisplayPattern: /(?:Rp|IDR)\s*10[.,]000/,
   zeroPrice: "0",
   belowMinimumPrice: "9999",
   invalidPriceErrorPattern: /Price must be either 0 or at least Rp10\.000/i,

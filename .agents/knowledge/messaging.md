@@ -31,11 +31,22 @@ test cases were written against, so check this before scoping a messaging TC.
   Link Campaign, Request Tip, Link Post, Media, Link Membership. Tipping is a "Tip
   Request" with 10K/25K/50K presets rendering a card CTA `Send Tip IDR <amount>`. The
   product card CTA is **Buy Now**, not "View Product".
-- **Buyer tags** are `Add Mark Badge` → a "Mark Member" modal with a free-text label
-  (max 25 chars, enforced only by hiding the Create option) plus 8 colour swatches.
-  There are no predefined labels and no remove control. Labels live at
-  `GET /api/v1/dm/labels`; assigned labels come back on the conversation **list**
-  endpoint only, never the detail endpoint.
+- **Buyer tags** are a "Mark Member" modal with a label picker (free text, max 25 chars,
+  enforced only by hiding the Create option) plus 8 colour swatches. **Rewritten
+  2026-09-07, re-verified 2026-09-08:** the menu item now switches on state —
+  `Add Mark Badge` when the member has none, `Edit Mark Badge` when they do, and the
+  modal then opens **prefilled** with the current label, colour and a live Preview,
+  next to a `Remove` button. Each saved label in the dropdown carries its own delete
+  control (`aria-label="Delete <name>"`), and typing a new name offers `Create`.
+  Labels live at `GET /api/v1/dm/labels`; **assignments are per buyer at
+  `GET /api/v1/dm/buyers/{buyerUUID}/labels`** — `GET /api/v1/dm/conversations` no
+  longer carries them at all, so do not assert badges from the list payload.
+- **A removed badge cannot be re-applied to the same buyer.** `Remove` soft-deletes the
+  assignment (the GET reports it gone) but `idx_dm_buyer_labels_unique` ignores the soft
+  delete, so `POST /api/v1/dm/buyers/{buyer}/labels/{label}` answers **500 duplicate key
+  (SQLSTATE 23505)** forever after. The UI shows no error — the modal simply closes and
+  no badge appears. The same label on a buyer who never had it returns 200. Filed on
+  YAP-2007, verified 2026-09-08; pick a **fresh** label for any test that removes one.
 - **Broadcast audiences are single-select** — Followers / Subscribers / Custom List.
   There is no Supporters segment and no per-tier filter. Custom-list candidates are
   limited to followers.
@@ -68,12 +79,14 @@ textarea with `maxlength = -1` and no counter anywhere. Emoji, HTML-looking text
 quotes, backslashes and slashes are all kept verbatim, and **Shift+Enter inserts a
 real newline**, so multiline messages are supported.
 
-**Media is images only — there is no video path.** The composer's file input is
-`accept="image/jpeg,image/png,image/gif,image/webp"`, `multiple`. Opening the
-attachment menu (Link Product / Link Campaign / Request Tip / Link Post) adds **no**
-further file input, so video cannot be attached from the creator side at all — any
-expectation of a creator-side video attachment is unfounded on this build. No file size
-limit is stated near the composer.
+**Video is accepted since 2026-09-07.** The creator composer's file input is now
+`accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"`,
+`multiple` — it was images-only before, so the older note that "video cannot be attached"
+is dead. A sent video renders as a real `<video>` element on both apps (first frame as the
+thumbnail plus a play overlay); `poster` is null and `controls` is absent, so assert the
+element and its `readyState`, never a poster attribute. Opening the attachment menu
+(Link Product / Link Campaign / Request Tip / Link Post) still adds no further file input.
+No file size limit is stated near the composer.
 
 ## Broadcast is send-now only
 
@@ -82,3 +95,30 @@ selector, a recipient count, the message textbox, `Open attachment menu`, `Cance
 and `Send Broadcast` (disabled until there is content). **There is no schedule
 control and no save-as-draft control**, and the broadcast list has no Draft or
 Scheduled tab — only sent history with title, date, recipient count and Views.
+
+## Membership cards read the buyer's subscription state (2026-09-08)
+
+A tier card sent through `Link Membership` renders its CTA from the viewer's actual
+subscription: `Subscribed` → `/profile/membership` for a tier the buyer already holds,
+`Subscribe Now` → the tier checkout for one they do not. Verified from the buyer side on
+`kuy` (subscribed) and `Succed` (not) in the same thread. Earlier builds showed
+`Subscribe Now` on both, which is what YAP-2001 was about.
+
+## Long unbroken text wraps on creator, overflows on buyer (2026-09-08)
+
+The two apps do not share the bubble component. A 229-character string with no spaces
+wraps to 9 lines inside the creator's 264px bubble, and blows out to a single 1755px line
+on the buyer, giving the thread a horizontal scrollbar (scroller `overflow-y-auto flex-1
+min-h-0` at scrollWidth 1807 vs clientWidth 799). The buyer's wrapper does carry
+`max-w-[264px]`; it is the text node inside that never breaks. Same for long broadcast
+text.
+
+**The conversation list has the same defect on both apps**, and it is a separate surface
+from the bubble: the last-message preview is never truncated, so the row measures
+scrollWidth 2350 against a 383/384px column. On the creator the row is clipped and the
+**timestamp disappears**; on the buyer the list scroller (`min-h-0 flex-1 overflow-y-auto`,
+`overflow-x: auto`) gains a **horizontal scrollbar**, and the member badge beside the name
+is cut off with it. The buyer preview already sets `overflow: hidden` and
+`-webkit-line-clamp: 1` — they do nothing because the flex child has no `min-width: 0` and
+sizes to its content (2228px). All of this is open on YAP-1984; only the creator **bubble**
+is fixed.

@@ -59,6 +59,7 @@ the sheet wins.
 | [[settings\|Settings]] | The two tabs and their URL behaviour, five fee blocks with a display-only split, the auto-saving gateway choice, the bank form with no validation, the five integrations |
 | [[wallet\|Wallet]] | The three disagreeing balance surfaces, history pagination and its filter labels, the withdrawal dialog and its unvalidated address |
 | [[explore-and-profile\|Explore & profile]] | Explore feeds and the curated Popular section, dead account fields, landing CTA structure, profile tab order |
+| [[currency-format\|Currency format]] | Creator renders `Rp10.000,00` where buyer renders `Rp10.000`, the third `IDR 10,000` preview dialect, and every creator surface that shows the decimals |
 
 ## Maintaining these notes
 
