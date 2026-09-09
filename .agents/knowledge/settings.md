@@ -5,12 +5,14 @@ tags: [yapp, product, automation, settings]
 project: yapp
 type: note
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 sources: 0
 status: active
 ---
 
 > [[projects/yapp/knowledge/index|Knowledge index]]
+
+# Settings
 
 The creator Settings page at `/settings`. Live-verified 2026-09-02, after the sheet's
 earlier test cases were retired as no longer matching the product.

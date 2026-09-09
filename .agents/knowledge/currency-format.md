@@ -5,12 +5,14 @@ tags: [yapp, product, automation, currency, formatting]
 project: yapp
 type: note
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 sources: 0
 status: active
 ---
 
 > [[projects/yapp/knowledge/index|Knowledge index]]
+
+# Currency format
 
 How Yapp renders money, and why the same amount reads differently on the creator app
 than on the buyer app. Established 2026-09-08 by sweeping every creator route and the

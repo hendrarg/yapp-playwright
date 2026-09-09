@@ -8,8 +8,13 @@
  */
 import { queryOne } from '@helpers/db/client';
 
-/** `otp_codes.purpose` values the app writes. */
-export type OtpPurpose = 'verify-login-otp' | 'verify-order-otp';
+/**
+ * `otp_codes.purpose` values the app writes.
+ *
+ * `verify-set-pin` is the final step of creator wallet PIN setup — observed
+ * 2026-09-09 while running the Wallet PIN test cases.
+ */
+export type OtpPurpose = 'verify-login-otp' | 'verify-order-otp' | 'verify-set-pin';
 
 export interface DbOtpOptions {
   /** Which flow the code belongs to. Login OTP by default. */

@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, posts]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 sources: 0
 status: active
 ---
@@ -71,14 +71,55 @@ composer-only** — worth flagging separately, since SVG can carry script.
 field. The composer shows no copy about file size, media count, or video duration.
 `Post` stays disabled until there is content.
 
-## Lifetime unlock has its own price floor
+## Lifetime unlock: the floor moved to Rp10.000, and "off" means price 0
 
-`Configure Lifetime` on `/feeds` states `Min. price: Rp20.000,00` — **double** the
-Rp10.000 floor that applies to ordinary products. Do not reuse the product floor here.
+**Corrected 2026-09-09.** `Configure Lifetime` on `/feeds` now states
+`Min. price: Rp10.000,00` — the same floor as ordinary products, not double it as this
+note previously recorded. The number is enforced, not decorative: `Save` stays disabled
+at 5.000 and 9.999 and enables from 10.000 upward.
+
+**Turning the `Lifetime access` switch off does not disable anything — it writes a price
+of zero.** Saving with the switch off sends `PUT /api/v1/posts/lifetime-prices/me` with
+`{"priceIDR":0}`; the `post_lifetime_prices` row is never deleted and there is no
+active/inactive flag. The creator UI then shows the switch off with an empty price, which
+looks right — but the buyer still sees the lifetime banner and `Unlock now`, and the
+checkout opens at **Price Rp0, Total Rp0, with `Pay Rp0` enabled**. Filed as H-09;
+whether paying Rp0 actually grants access is deliberately untested.
+
+The buyer-facing price itself works correctly when lifetime is on: the `Lifetime Access`
+checkout shows the saved price with its fee breakdown (Rp99.999 → fee Rp1.000 + PG
+Rp1.010 → total Rp102.009), and editing the price propagates — **but only after a page
+reload**; a read taken immediately after Save still returns the old figure.
 
 ## Exclusive is a filter, not a profile tab
 
-On a creator's public profile a buyer sees `Shops`, `Links`, `Feeds`, `Support`,
-`Membership`. There is no top-level Exclusive tab: exclusive posts are reached through
-the `All Feeds` / `Exclusive Only` filter **inside** the Feeds tab. The creator-side
-tab configuration and where exclusive content actually lives are two different things.
+There is no top-level Exclusive tab: exclusive posts are reached through the
+`All Feeds` / `Exclusive Only` filter **inside** the Feeds tab. That holds at every
+viewport width.
+
+**The rest of the tab list is responsive, so pin a viewport before asserting it**
+(measured 2026-09-09): at 1440, 1100 and 900 a buyer sees four tabs — `Shops`, `Links`,
+`Feeds`, `Support` — with Membership rendered as a right-hand sidebar panel. At 700 and
+480 the panel becomes a fifth tab and the list reads `Shops`, `Links`, `Feeds`,
+`Membership`, `Support`. The earlier five-tab note was correct only for the narrow case.
+
+**The creator side has no Exclusive view at all.** `/feeds` offers exactly three tabs —
+`Published`, `Draft`, `Scheduled` — and exclusive posts sit among the public and
+member-only ones, marked only by a pink lock icon (member-only posts carry a
+`Member Only` pill instead). The post cards show no price and no sales count, and the
+chart icon on a row navigates to `/statistics` rather than opening per-post insights.
+
+## A locked post shows its price in a preview dialog
+
+From the buyer side, `Unlock Post` on a locked post opens an `Exclusive Content Preview`
+dialog carrying the post title, `Purchase to unlock the full content`, an `Unlock Now`
+button and the PPV price (verified at Rp60.000). Member-only posts render
+`Subscribe to Unlock` instead. The price is not printed on the feed card itself.
+
+## Every control on the feed is an unlabelled icon
+
+Verified 2026-09-09 while trying to script this area: the post row action buttons and all
+four composer attachment buttons expose **no accessible name** — no text, no `aria-label`,
+only a lucide `svg` class. Locating them needs either real `data-testid` hooks or a
+browser-verified role scope from `generate-locators-mcp`; blind DOM heuristics do not
+reach the post action menu at all.
