@@ -38,6 +38,8 @@ test cases were written against, so check this before scoping a messaging TC.
   modal then opens **prefilled** with the current label, colour and a live Preview,
   next to a `Remove` button. Each saved label in the dropdown carries its own delete
   control (`aria-label="Delete <name>"`), and typing a new name offers `Create`.
+  The colour swatches and `Done` stay **disabled until a label is chosen**, and the
+  modal grows a live `Preview` row plus `Remove` the moment one is set.
   Labels live at `GET /api/v1/dm/labels`; **assignments are per buyer at
   `GET /api/v1/dm/buyers/{buyerUUID}/labels`** — `GET /api/v1/dm/conversations` no
   longer carries them at all, so do not assert badges from the list payload.
@@ -122,3 +124,54 @@ is cut off with it. The buyer preview already sets `overflow: hidden` and
 `-webkit-line-clamp: 1` — they do nothing because the flex child has no `min-width: 0` and
 sizes to its content (2228px). All of this is open on YAP-1984; only the creator **bubble**
 is fixed.
+
+## The second buyer account, and the token trap behind it
+
+Established 2026-09-09. `x7nv1.qa@inbox.testmail.app` — the inbox the OTP helpers use for
+"the QA account" — logs into **user 459 `anthony_mosciski`**, not into token1's user.
+token1 (`YAPP_TEST_ACCESS_TOKEN`) carries `id: 317`, which is **`hendrarg`
+(jendraljohn92@gmail.com)**, the creator every creator-side test uses.
+
+Two consequences:
+
+- **A real second buyer exists and is already useful.** User 459 holds an **active
+  subscription to hendrarg's `kuy` tier** (until 3 Oct 2026, DM enabled), so it is the
+  fixture for everything phrased as "as a subscriber": buyer-side DM, member-only post
+  access, same-tier membership cards, and a second commenter on any post.
+- **Never let the fixtures refresh token1 while that account matters.** The documented
+  refresh path (OTP through the QA testmail inbox, saved back to `YAPP_TEST_ACCESS_TOKEN`)
+  would write user 459's token over hendrarg's and quietly change who the creator tests
+  are. To take a 459 session, call `signInWithEmailOtp` directly and keep the token in a
+  file — it does not touch `.env`; `refreshAccountTokenViaOtp` does.
+
+## Broadcast: one segment at a time, then a per-person trim
+
+Verified 2026-09-09 on `/messages/broadcast`.
+
+`New Broadcast` opens a single dialog holding everything: `Send to: <segment> <N> People`,
+a `Post something here...` composer, `Open attachment menu`, `Cancel`, `Send Broadcast`.
+
+- The **segment control is a radio group**, not a multi-select — `Followers`,
+  `Subscribers`, `Custom List`, with exactly one `data-state="checked"` at any moment.
+  Overlapping segments therefore cannot be combined and no unique-recipient count exists.
+  All three options carry the same wrong subtitle, *"If they click, all followers will be
+  notified."* (`L-76`).
+- The **`N People` button** opens a second panel, `Message recipient`, listing every
+  person in the segment with a checkbox plus `Select All` — the only way to trim a
+  broadcast, and it stays inside one segment.
+- The attachment menu is `Link Product`, `Link Campaign`, `Request Tip`, `Link Post`,
+  `Media`, `Link Membership`, each with its own one-line description.
+- **The pickers do not share a confirm button**: `Select Post` commits with **`Apply`**,
+  `Select Membership Tier` with **`Confirm`**. Clicking the row alone attaches nothing,
+  and the composer behind stays reachable, so a send fired too early goes out empty —
+  check that the dialog closed and the broadcast appears in the list before believing it.
+
+### What the recipient sees
+
+- A **member-only post card** renders the post title under a `Member Only` badge. There is
+  **no `View Post` button** — the card itself is the link, and for a subscriber it opens
+  `/post/{uuid}` with the full content, no unlock prompt.
+- A **membership card is state-aware**: the CTA reads `Subscribe Now` for a tier the buyer
+  does not hold and **`Subscribed`** for one they do. Tapping the subscribed one lands on
+  `/profile/membership` → Active, showing the plan and next billing date rather than a
+  checkout.

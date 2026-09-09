@@ -30,6 +30,23 @@ afterwards does `?step=select-username` run `POST /api/v1/accounts/username`. So
 - `users` carries `is_complete_onboarding` (false until the wizard finishes) and
   `username_changed_at` (stamped when the username is first set).
 
+## The creator app cannot finish an OTP sign-up (9 Sep 2026)
+
+The step above still describes the intended flow, but on `creators-dev` the **`Verify`
+button never enables**: the OTP field is `input[data-input-otp]` with `maxlength="5"`, the
+code the app issues is five digits, and with all five boxes filled the button stays
+`disabled` and `POST /api/v1/auth/login/otp/verify` is **never sent**. Reproduced headless
+and headed across four fresh emails.
+
+The **buyer app** (`yapp-dev/auth`) uses the identical field and code length and works —
+a complete code fires the verify call itself, sets `at`, and moves on to
+`?step=input-username`. So the defect is creator-app only (`H-10`), and it looks like a
+regression against the successful 2 Sep sign-up recorded here.
+
+Two consequences while it is open: no new creator can be registered on dev by email, and
+because the **send** step already inserts the `users` row, every attempt leaves an
+account with no username behind.
+
 ## Real login cookies are host-scoped — the fixture's are not
 
 After a genuine sign-up the cookies are **`at` and `rt` on `creators-dev.yapp.ink`**

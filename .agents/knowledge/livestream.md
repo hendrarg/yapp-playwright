@@ -150,6 +150,12 @@ under the amount field:
 | Song Share | **the creator's configured TITLE** — on the fixture it reads `Request Lagu`, with the subtext `Request a song`. The words "Song Share" appear nowhere |
 | VIP Queue | heading `VIP Queue`, then `Join "<queue name>" Queue` — the quoted name is creator-configured (`Antrian VIP` on the fixture) |
 
+**The poll block is schedule-gated (2026-09-09).** With the Voting switch ON but the
+stored schedule `04 September 2026 00:00–23:30` in the past, the tip page renders **no
+poll at all** — no title, no options, at any amount. That contradicts the older
+`TC-LS-B-003` finding (poll still shown after the end time) and means poll test cases
+need a schedule that covers today, which needs a SAVE and is therefore behind H-04.
+
 So a buyer-side locator must **not** be pinned to the literal widget name for Song Share:
 it renders `songshare-title`, which the creator can change to anything. VIP Queue keeps a
 literal heading but its join label carries the configured queue name. Pin on role plus a
@@ -205,7 +211,11 @@ time**. A clip plays `floor(amount / cost per second)` seconds, capped at the cl
 length and at the configured maximum duration.
 
 Measured at 1.000/s: Rp10.000 gives 0:10, Rp18.999 gives 0:18, Rp19.000 gives the
-whole 19 s clip. Below the creator media floor the attach UI is simply not rendered.
+whole 19 s clip. Re-measured 2026-09-09 with `?v=jNQXAC9IVRw` (19 s) and confirmed
+unchanged, plus Rp40.000 still gives 0:19 — the clip length caps it well below the
+configured 30 s maximum. The panel states both numbers itself: `Rate: Rp1.000/seconds`
+and `Maximum Duration 30 seconds`.
+
 The platform minimum tip is Rp10.000, so any media floor below that is unreachable.
 
 ## One Save for every widget, and Voting can block it
@@ -298,10 +308,24 @@ moderation.
 ## Effective thresholds are always the larger of two numbers
 
 Buyer-facing media and queue thresholds are the maximum of the creator's configured
-floor and the Rp10.000 platform tip minimum (see [tipping.md](tipping.md)). Below the
-effective threshold the control simply is not rendered, with **no error message** and
-the Subtotal shown as `Rp0` — which reads as a broken control rather than an unmet
-condition.
+floor and the Rp10.000 platform tip minimum (see [tipping.md](tipping.md)).
+
+**Rewritten 2026-09-09 — the silent version is gone.** The tip page now renders all
+three add-on blocks at every amount, empty included, each labelled with its own floor:
+`VIP Queue Min. Rp25.000`, `Request Lagu Min. Rp15.000` (plus
+`Tip Rp75.000 or more to jump the queue`), and the Media block with its rate and
+maximum duration. Below the platform minimum the amount field itself says
+`Minimum amount is Rp10.000`, and Subtotal reads `Rp0` only while the amount is empty
+or under that minimum.
+
+**Only Media Share actually gates.** Choosing a media type under the threshold replaces
+the link field with `You need to tip at least Rp5.000 to share this media.` — and that
+message quotes the **creator floor**, not the effective threshold, so at exactly
+Rp5.000 the buyer meets the number in the message and is still refused (`M-75`).
+`Request a song` and the VIP join switch have **no gate at all**: at Rp5.000 both toggle
+on and reveal working controls (the song search returns results and a song can be
+picked) even though their labels say Rp15.000 and Rp25.000 (`M-76`). Treat the `Min.`
+labels as text, not as state.
 
 Alert and Media Share eligibility are also not independent: the Alert threshold can
 suppress Media Share along with it.
@@ -374,3 +398,38 @@ Custom join fields render as `@name` plus a type (e.g. `Number`), with an `Add i
 control. The configured maximum number of fields could not be established — clicking
 `Add input` repeatedly changed nothing observable, so treat the cap as unknown rather
 than unlimited.
+
+## Song search hides what it will not accept
+
+Verified 2026-09-09 in a guest session on `/hendrarg/tip` with `songshare-max-duration`
+420 s and one blocked track.
+
+- A **blocked** track never appears in the search results. Blocking is **per track, not
+  per title**: with `Monokrom - Tulus` blocked, `Monokrom (Live) - Tulus` and other
+  artists' `Monokrom` still come back.
+- A track **longer than MAXIMUM SONG LENGTH** never appears either. Searching
+  `Stairway to Heaven`, `Shine On You Crazy Diamond` and `Dogs Pink Floyd` returns
+  **nothing above 7:00** — the long originals are absent and only shorter covers and
+  edits are listed.
+
+Both rejections therefore happen before payment, which is the right place, but they
+happen by **omission with no message**, so a missing song is indistinguishable from a
+blocked one, an over-long one, or one that is not in the catalogue (`L-75`). A test
+asserting a rejection *message* here will fail by design.
+
+Result rows are plain `<button>` elements whose text is `<title> <artist> m:ss` — they
+carry no `role="option"`, so a cmdk/listbox locator finds nothing.
+
+## Milestone: the end-date picker validates, the start-date picker is dead
+
+Verified 2026-09-09 on `?activeTab=milestone` with the stored schedule
+`24 June 2026 → 25 June 2026`.
+
+- **START DATE**: the calendar opens but **all 35 cells are disabled**, so no start date
+  can be chosen at all (this is `TC-LS-C-152`).
+- **END DATE**: dates before the stored start are properly disabled — May 2026 entirely
+  disabled, June 2026 disabled through the 23rd and enabled from the 24th, July onward
+  fully enabled.
+
+So end-date validation can be tested **without** fixing the start-date picker, as long
+as a start date is already stored.

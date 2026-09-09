@@ -123,3 +123,17 @@ four composer attachment buttons expose **no accessible name** — no text, no `
 only a lucide `svg` class. Locating them needs either real `data-testid` hooks or a
 browser-verified role scope from `generate-locators-mcp`; blind DOM heuristics do not
 reach the post action menu at all.
+
+## Comments: Delete is the only action, and only on your own
+
+Verified 2026-09-09 with two buyer accounts on one public post.
+
+- The comment thread lives on the **post detail page, `/post/{uuid}`** — reachable by
+  clicking the post card. The comment-count button on the feed row opens nothing, so
+  navigate to `/post/{uuid}` directly in a script.
+- The composer is `Add a comment...` with a `Post` button; a comment appears immediately.
+- **Your own comment** carries one control, `aria-label="Open comment actions"`, and its
+  popover offers **`Delete` only — there is no Edit**.
+- **Another buyer's comment carries no control at all**: no kebab, no menu, nothing to
+  click. Authorization is enforced by not rendering, so a test should assert the absence
+  of the button rather than an error message.

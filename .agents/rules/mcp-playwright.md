@@ -480,6 +480,36 @@ overlay.** Several dead ends were self-inflicted: a stale overlay silently drops
 events, an unsaved enable switch leaves the feature off, and a blanket "click every
 collapsed header" loop opened a Rotate-key dialog.
 
+## Radix triggers ignore `element.click()` — use a real mouse click
+
+Established 2026-09-09 while scripting the post action menu and the Mark Member modal.
+Dropdown triggers, `cmdk` items and dialog buttons built on Radix listen for **pointer**
+events, so `page.evaluate(() => el.click())` fires and *nothing opens* — no menu, no
+error, no clue. The same element opens instantly with
+
+```js
+const b = await page.evaluate(() => { const r = el.getBoundingClientRect();
+  return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; });
+await page.mouse.click(b.x, b.y);
+```
+
+Playwright's own `locator.click()` works too, but only when the element can be *named* —
+these triggers are unlabelled icon buttons, and `getByText` misses a `cmdk` item whose
+label spans two text nodes (`Create` + the typed name). The rect-then-mouse pattern
+handles both. Filter the rects to the viewport first: off-screen elements report
+coordinates far outside it, and clicking those hits nothing.
+
+Menu *items* are the easy half — once open they carry real text (`Insights`, `Edit`,
+`Delete`, `Add Mark Badge`), so match on that rather than on position.
+
+## The API answers scripts when they send an Origin header
+
+`GET /api/v1/shop/products` and friends reply `not allowed to access this API` to a bare
+`fetch` with only a bearer token. Adding `Origin: <creators base URL>` (and a `Referer`)
+makes them answer normally. That is the cheapest way to get product UUIDs, tier UUIDs and
+post UUIDs for a script — the products table renders no `a[href]`, so a row click into
+`/products/stats/{uuid}` is the only browser route to a UUID.
+
 ## Session cleanup
 
 `browser_close` is **not** enough. Its tool schema says "Close the page", and its handler only emits `await page.close()` — the browser process the MCP server launched keeps running as an empty window, and a new one is added every time a server restarts. Finish every MCP exploration with:

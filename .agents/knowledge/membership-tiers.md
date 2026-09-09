@@ -251,6 +251,12 @@ Rp25.000 / 1 month, both pointing at its online course `Belajar Openclaw`
 | `MB Dropdown Check 107394` | `53c105e8-ba02-47dc-a2d7-2c46878a26cc` | `membership_bound` + free — built through the UI, so its hero image round-trips and it is editable from the form |
 | `MB Permanent Contrast` | `3533fd40-8fad-4a90-93cd-794a0213e8ab` | `permanent` + free — API-seeded with an empty `thumbnailURL`, so the edit form will refuse to save it (see the seeding trap below) |
 
+**Updated 2026-09-09:** one materialized `membership_bound` entitlement now exists —
+`tier_membership_user_benefits` id 301 on the tier `Live Time and Bound Online Course`
+(hendrarg), held by `faqih49+testcoursemem@gmail.com` and valid to 4 Oct 2026. Nobody in
+this project holds that session, so it can be read in the database but not exercised in a
+browser.
+
 token1 is not subscribed to either, so **these are the fixtures to subscribe token1 to**
 for the product-entitlement gap described above. `access_type='free'` is still stored two
 ways — `discount_type` NULL and `discount_type=''` — so match on `access_type`, never on
@@ -311,3 +317,71 @@ uploads into the description editor and leaves Hero Image empty — the form the
 with `Thumbnail URL is required` and never fires a request. The hero upload itself goes
 `POST /api/v1/file/upload/create` -> PUT to the asset host -> `POST
 /api/v1/file/upload/complete`.
+
+## Which surfaces can attach a perk, and which product types they offer
+
+Enumerated 2026-09-09 across every product type, step 1 and step 2, with all accordions
+open. The two surfaces disagree, and neither matches the test-case assumption that all
+five "supported" types expose tier configuration:
+
+| Product type | `Membership Benefits` on the product editor | Offered in the tier-side `Select Products` dialog |
+|---|---|---|
+| Online Course | yes (step 2) | yes |
+| Digital Download | yes (step 2) | yes |
+| Digital Product | — (not re-checked) | yes |
+| Consultation | **yes** (Details tab) | **no** |
+| Discord Membership | no | no |
+| Telegram Membership | no | no |
+| Events & Tickets | no | no |
+
+So a consultation perk can only be created from the product side, and Discord / Event
+perks cannot be created at all. Filed as `M-77`.
+
+The product-side section is behind a **switch** (`Set benefits for membership`): while it
+is off the block shows only its heading and subtitle, and the tier rows with their
+`Add Benefit` buttons appear only once it is on — reading the block while the switch is
+off looks like an empty or broken section.
+
+**A free (Rp0) non-course product skips the config dialog entirely.** Pressing `Add` on
+`Digital Product / Qase Management Testcase (Rp0)` adds the perk immediately as
+`Free access`, with no Access Type step — only a *priced* non-course product opens the
+Access Type dialog.
+
+## There is no renewal rule, and no per-subscriber price
+
+Checked 2026-09-09 while testing `TC-MEM-C-033`. The tier form (`/membership/{uuid}/update`)
+holds Tier Name, the four period prices, Description, Hero Image, `Enable Direct Message`,
+Tiers Benefit, Exclusive Post, a `Set Inactive` switch and `Save Changes` — and **no
+control or copy about renewal, grandfathering, or existing subscribers**. The database
+agrees: `tier_membership_users` has no price column at all (id, uuid,
+tier_membership_id, user_id, expired_at, timestamps, three reminder-email columns).
+
+Nothing stores what a subscriber paid, so no per-subscriber price can be preserved. Any
+test phrased around a "configured renewal rule" has nothing to configure.
+
+## Disabling a tier: the control and what it does to the public profile
+
+`Set Inactive` on `/membership/{uuid}/update` is a real `role="switch"` next to
+`Save Changes` — an earlier note calling it a non-interactive label was wrong.
+
+An inactive tier **disappears from the public profile**: on `/hendrarg` as a guest the
+Membership section listed the five active tiers with `Subscribe` buttons and omitted the
+one inactive tier entirely. The creator's own `/membership` list still shows it, and
+**without any inactive marker in the card text** — read `is_active` from the API, not from
+the card.
+
+## The price a subscriber pays lives on the purchase, not the subscription
+
+Corrected 2026-09-09. `tier_membership_users` has no price column, but
+`tier_membership_purchases` does — `original_price_idr`, `price_paid_by_buyer`,
+`paid_currency`, `promo_code_discount`, its own `expired_at`.
+
+The buyer surface reads from that purchase: `/profile/membership` → Active showed
+`kuy — IDR 20.000 / 1 month — Next Billing Date 03 Oct 2026` while the tier's 1-month
+price row in `tier_membership_prices` had already been **soft-deleted** and the public
+card advertises `Rp50.000 / 3 months`. So a running plan follows what was bought, not the
+tier's current pricing — and a test comparing the two surfaces will see two different
+numbers by design.
+
+What is still unverified is the **renewal charge**: nothing in the tier form configures a
+renewal rule, and reading which price a renewal picks needs an actual renewal.
