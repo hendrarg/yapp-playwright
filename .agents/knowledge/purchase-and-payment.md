@@ -181,3 +181,12 @@ per item. The per-item action button (remove) renders with **no text and no
 discount line. The total tracks the checked items (selecting a Rp20.000 item moves it
 from IDR 0 to IDR 20.000). The fee breakdown appears only at checkout, so do not look
 for it on the cart page.
+
+**`Check out` is disabled until something is selected** and enables as soon as one item
+is checked; checking an item auto-checks its creator group.
+
+**Locator trap (2026-09-09):** the page renders a **second, hidden `Select All`
+checkbox** for the mobile layout, so a raw `[role="checkbox"]` count is one higher than
+what is on screen (8 items across 5 creators gave 15 nodes, 14 visible). Filter by
+visibility, or index from the top rather than the end of the list — clicking the last
+node toggles everything.

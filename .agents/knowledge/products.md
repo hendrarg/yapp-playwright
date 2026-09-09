@@ -238,3 +238,38 @@ single `Pick a date` control — **no timezone indicator and no time-of-day fiel
 scheduling is date-granular and the zone it resolves against is not stated. This is a
 real inconsistency with Event & Tickets, which exposes a full 112-entry timezone
 picker.
+
+## Reaching the edit form, and the Step 2 gate
+
+Verified 2026-09-09 on dev while testing the Step 2 rows.
+
+**Product rows are not links.** `/products` renders a table with no `a[href]` per row —
+clicking the name cell navigates to `/products/stats/{uuid}`, and that page carries the
+`Edit` button that opens `/products/update/{slug}/{uuid}`. Scraping hrefs off the list
+returns nothing; go through the stats page (or hold the uuid) instead.
+
+Edit slugs seen so far: `appointment` (Consultation), `discord-membership`,
+`events-ticket`, `digital-downloads`. Only Consultation's differs from its create slug.
+
+**The list shows one status at a time.** Tabs are `Active (n)`, `Inactive (n)`,
+`Draft (n)` and the table only holds the selected status — a product missing from the
+default view is usually Draft or Inactive, not deleted.
+
+**A past event date blocks Step 2.** On an Events & Tickets product whose Event Date has
+already passed, Step 1 shows `Event date cannot be in the past` and `Next: Set Details`
+does nothing. Move the date forward in the picker first (open it, advance the month,
+pick a day) or Step 2 is unreachable — this is what makes old seeded events look like a
+broken Next button.
+
+## Promotion: Find Product ignores product status
+
+Verified 2026-09-09 at `/promotions/create` with `Product Type = Selected Product`.
+
+The `Find Product` popover lists **Draft and Inactive products mixed in with Active
+ones and shows no status badge at all** — each row is just name plus price. A promo can
+therefore target a product that is not on sale, with no warning.
+
+The price in that popover is also **`Rp0` for every tiered product** (Consultation with
+tiers, Telegram/Discord membership, Events) because it reads the product-level price
+that tiered products leave at 0; single-price products show correctly. Logged as `M-74`
+on the Bugs sheet.

@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, tipping]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 sources: 0
 status: active
 ---
@@ -96,3 +96,30 @@ audience:
 
 `Your Name or Nickname` also has no maxlength; `Your Email` renders disabled and
 prefilled for a signed-in buyer.
+
+## The Tip Button panel saves through two endpoints at once
+
+Verified 2026-09-09 on `/customize` → `Tip Button`. The panel header carries `Undo`,
+`Redo` and `Save`, all disabled on load — there is **no auto-save**. One press of `Save`
+fires **both** `PUT /api/v1/accounts/tip-button` and `POST /api/v1/quick-amounts` (both
+200), so a test that waits on a single request will miss half the write. No success toast
+appears (consistent with L-01).
+
+`Button Text` is `#tip-button-label` with `maxlength=40` and an `n/40` counter, and the cap
+is hard — a 41st typed character does not enter.
+
+**There is no colour picker.** The three hex fields — `#tip-button-text-color`,
+`#tip-button-left-color`, `#tip-button-right-color` — are plain `type=text` inputs standing
+alone: the page contains **zero** `input[type=color]` and the string "Choose color" appears
+nowhere.
+
+**Unsaved edits survive the section toggle.** Turning `Show Tip Button` off unmounts the
+fields (`#tip-button-label` leaves the DOM) and turning it back on restores them with the
+unsaved value intact, so the draft is held above the section.
+
+## The buyer tip page limits only the public note
+
+`/<handle>/tip` renders two note fields, and only one is capped: `Give Notes`
+(placeholder `Notes can be seen by public`) has `maxlength=200` with an `n / 200` counter,
+while `Add Private Note` (placeholder `Notes can only be seen by creator`) has **no
+maxlength and no counter**. The audience of each is stated only in the placeholder.
