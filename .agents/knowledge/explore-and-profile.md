@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, explore-and-profile]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 sources: 0
 status: active
 ---
@@ -51,6 +51,53 @@ The profile tab strip is reordered through `PUT /accounts/profile-tabs`; the def
 body is `{"tabs":["product","link","feed","membership"]}`. Product cards on My Page are
 reordered separately through `PATCH /shop/products/reorder`, and toggling a product's
 Hide from Profile flag resets it to the front of that arrangement.
+
+## Empty tabs are hidden, not explained — except Links
+
+Measured 2026-09-09 across three creators. A public profile **drops a tab entirely when
+its content is empty** rather than rendering an empty state: `mppp`, who owns no products,
+has no `Shops` tab at all, so a "no products yet" message never appears. The one exception
+is Links, which does render a proper empty state — `No links yet. This creator has not
+added any links.`
+
+**The Exclusive Only empty state is the wrong copy and it lies.** On `owii` — four active
+public posts, zero exclusive ones — selecting `Exclusive Only` inside the Feeds tab shows
+`This creator hasn't posted anything yet. Follow them to get their updates!`. The creator
+has posted; only the exclusive filter is empty. The filter reuses the empty-feed message
+instead of one about exclusive content.
+
+## Only active links reach the Links tab
+
+hendrarg holds 6 active and 4 inactive rows in `user_links`; My Page → `Links` renders
+exactly the 6 active ones, each as title + URL preview + click count with an
+`aria-checked=true` switch. Inactive links are not listed at all, so an "inactive status"
+is never displayed anywhere. The same tab also mixes Campaign blocks above the plain link
+rows.
+
+## There is no UI for configuring profile tabs
+
+`PUT /accounts/profile-tabs` exists (see above) but nothing drives it from the browser.
+Customize's `Profile layout` section offers only the layout styles `Default` and `Simple`;
+My Page's tabs (`Products`, `Links`, `Feeds`, `Memberships`) are not draggable, carry no
+drag handles, and the page contains no configure/arrange/reorder wording. Note the API's
+tab list has no `support` entry either.
+
+## Switch to Buyer is a real role switch, not a preview overlay
+
+My Page's `Switch to Buyer` navigates to the **buyer app** at `/profile` and renders the
+buyer surface — tabs `Shops`, `Links`, `Membership`, `Support`, no `Add Product`, no
+`Customize` — with a `Switch to Creator` control to come back. It lands on the user's own
+buyer profile, so it does not by itself show a creator's locked exclusive content.
+
+## My Page is gated by two stacked first-run dialogs
+
+Verified 2026-09-09 on an account that had long since onboarded, so this is not limited to
+brand-new creators. `/profile` opens behind a `Welcome to Yapp!` modal ("All in one
+platform to become more closer and interact with your fans") whose only action is
+`Let's Get Started!` — and pressing it **starts a second overlay**, the single-step tour
+`💬 New: your Messages` whose only visible button is `Go To Messages`. That tour is closable
+through its `×`. Until both are cleared, every control on the page — tabs included — is
+unclickable, which is the same trap recorded for the Event & Tickets suites.
 
 ## Customize: what the profile form actually enforces
 

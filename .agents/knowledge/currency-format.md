@@ -18,6 +18,28 @@ How Yapp renders money, and why the same amount reads differently on the creator
 than on the buyer app. Established 2026-09-08 by sweeping every creator route and the
 buyer feeds for `/\d,\d{2}(?!\d)/` in a live dev browser.
 
+## Resolved on the creator app, 2026-09-09
+
+**The `,00` is gone.** Re-swept all eight creator surfaces this note lists below and every
+one now renders the buyer format — `/products` `Rp10.000` and `Rp587.146`, `/wallet`
+`Rp16.963.243` / `Rp24.035` / `Rp16.867.243` / `Rp16.891.278`, `/membership` `Rp309.060`,
+`/affiliate`, `/feeds`, `/profile`, `/analytics?tab=transactions`. Zero matches for
+`(?:Rp|IDR)\s?[\d.]+,\d{2}` on any of them, and the `$960,73`-style USD figures on the
+wallet cards are gone too.
+
+So the standard agreed on 2026-09-08 — `Rp` + `.` thousands + no decimals — is what the
+creator app now ships. Filed and verified on YAP-2130.
+
+Still unconfirmed, keep as open questions:
+
+- **USDT surfaces.** `Balance: 0,00USDT` and the placeholder `Minimum withdrawal 10,00USDT`
+  could not be re-read, because the withdrawal dialog now stops earlier (see H-08).
+- **The buyer event detail page**, which renders `IDR100,000 /per pax` rather than
+  `Rp100.000`. Buyer-side, not covered by the creator sweep.
+
+Everything below this section describes the state **before** the fix and is kept because
+it names every surface that had to change.
+
 ## Creator renders 2 decimals, buyer renders 0 — same symbol, same separators
 
 `Rp10.000` on the buyer app is `Rp10.000,00` on the creator app. Both use `Rp`, both use

@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, livestream]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 sources: 0
 status: active
 ---
@@ -167,8 +167,13 @@ exist: `SEARCH A SONG TO BLOCK` and `SEARCH A SONG TO ADD`.
 
 ## Overlay URLs
 
-Overlays moved to `https://widget-dev.yapp.ink/<widget>/<creatorUUID>`, keyed on the
-JWT `uuid` claim. Alert is `/alert/<uuid>?variant=alert`, Media Share is the **same
+Overlays live at `https://widget-dev.yapp.ink/<widget>/<key>`. **The key is not always
+the creator UUID** — corrected 2026-09-09. Subathon still resolved as
+`/subathon/<creatorUUID>`, but the merged Alert overlay is
+`/alert/a6fb55a4c108aef595f19b734578652b`, a 32-character hex key. A hand-built
+`/alert/<uuid>` URL answers `This overlay link was rotated. Copy the new link from your
+Yapp.ink dashboard.` — so **always read the URL from the dashboard** (the eye icon in the
+`Overlay link` accordion reveals it) and never assemble one from the JWT. Alert is `/alert/<uuid>?variant=alert`, Media Share is the **same
 path** with `?variant=media`, and the combined overlay is that path with **no**
 `variant`.
 
@@ -231,6 +236,43 @@ Two consequences worth remembering:
 - **Some controls bypass the save bar and persist immediately** — the Alert enable
   switch and the VIP Queue custom fields (the counter stays at 0). Do not wait for
   SAVE on those.
+
+## The Subathon preview clock is decorative
+
+Verified 2026-09-09. The clock drawn on the dashboard preview card shows the **Starting
+clock** value and nothing else: it sat at `10:00:00` while the real overlay ran down from
+`09:58:40`, moved to `10:08:34` on `+ 10 MIN`, `11:08:28` on `+ 1 HOUR` and `10:58:22` on
+`− 10 MIN`, and froze and resumed correctly under `PAUSE TIMER` / `START TIMER`. Every
+timer assertion must therefore be read **from the overlay page**, never from the
+dashboard. Filed as M-73.
+
+The `Adjust the clock` panel says `Applies straight away — this does not wait for Save`,
+and that is true: the overlay reacts immediately and the unsaved-changes counter never
+moves.
+
+## TRY AN AMOUNT is a pure simulator, and it exposes the tip-to-time mapping
+
+`subathon-illustration` (labelled `TRY AN AMOUNT`) renders a sentence of the form
+`A tip of Rp<amount> adds +<time> to the timer.` without creating a tip, an order, or any
+change to the running clock — the counter stays at `0 unsaved changes`. With a single
+stored rule of `Rp10.000 → + 10 minutes` it reads: Rp5.000 → `+0 sec`, Rp10.000 →
+`+10 min`, Rp25.000 → `+20 min`, Rp100.000 → `+100 min`. So the mapping is
+`floor(amount / rule amount) × rule time`, and this is the cheapest way to test the rules
+without money.
+
+## SAVE was still frozen on 2026-09-09
+
+Re-checked 2026-09-09: the Gacha panel is still shipped with its master switch off on the
+QA creator, so `Wheel Title` and `Minimum tip to spin` both read `disabled: true` — and
+turning the switch on needs a SAVE, which is why four Gacha test cases are blocked behind
+this bug rather than behind the widget itself.
+
+Re-confirmed a year-old-looking blocker is alive: changing a field raises
+`1 unsaved change`, pressing `SAVE` produces **no toast at all**, and the counter stays at
+`1 unsaved change`. The Voting schedule on the QA creator is still `04 September 2026`, in
+the past, which is exactly the H-04 signature described below. Attempts to move it through
+the date picker did not register a change. Ten test cases in the Livestream batch are
+blocked behind this single bug.
 
 ## Widget accounting
 

@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, orders-and-reports]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-09
 sources: 0
 status: active
 ---
@@ -165,3 +165,47 @@ attributes still read `false` after two date cells were clicked, and `Download` 
 `GET /orders/reports` request, so the requested range could not be compared with the
 selected one. Scope the click to the intended month's container and assert the range
 attributes flipped before pressing Download.
+
+## Orders moved out of Products, 2026-09-09
+
+`/products?tab=orders` no longer shows orders — it renders the ordinary Products table.
+`/orders` now **redirects to `/analytics`**, where two header buttons switch between
+**`Orders`** and **`Analytics`**; the Orders list is behind the first. The Analytics side
+carries its own sub-tabs (`Products`, `Tipping`, `Campaigns Activations`, `PPV`,
+`Membership`, `Lifetime Access`) and renders 20 rows, so do not confuse the two views.
+Neither view puts filter state in the URL; only the Analytics side adds
+`?tab=transactions`.
+
+**The Orders list is 5 columns** — `ORDER ID`, `CUSTOMER`, `PRODUCT`, `PURCHASE DATE`,
+`TOTAL PRICE` — with 10 rows per page, `Page X of Y`, working first/prev/next/last
+disabling at both ends, default purchase-date descending that is stable across page
+boundaries, and **no sorting control on any header**. There is **no status anywhere**: not
+a column, not a field on `/orders/{uuid}`, not a CSV column. The only scope marker is
+`status=completed` on the export request.
+
+**Locator trap:** the page renders **two `<table>` elements** (the second looks like a
+sticky-header clone), so a document-wide `tbody tr` count returns 20 when the page really
+shows 10. Scope row counting to the first table.
+
+**The product filter is a type filter, and its trigger renames itself.** Options are
+`All Products`, `Digital Product`, `Digital Download`, `Online Course`,
+`Discord Membership`, `Consultations`, `Events and Tickets`, `Telegram Membership` — eight
+entries, as multi-select checkboxes. Empty reads `All Products`; once a type is ticked the
+trigger shows **that type's name** (e.g. `Consultations`) and a `Reset Filter` button
+appears beside it.
+
+## The CSV export ignores the page filters
+
+Verified by exporting twice on 2026-09-09. The request is always
+`GET /api/v1/orders/reports?status=completed&start_date=…&end_date=…` with **no product
+type parameter**: an unfiltered export produced 36 data rows, and after filtering the list
+down to Consultations (21 pages → 3) the very same URL produced the same 36 rows. The two
+range controls are also separate — the dialog offers `30 days`, `60 days`, `90 days`,
+`Custom Days`, while the page filter offers `All Time`, `Last 7/14/30/60 days`,
+`Custom Date`.
+
+File shape, measured on the bytes: name `report_20260909_082828_user_hendrarg.csv`
+(`report_YYYYMMDD_HHMMSS_user_{username}.csv`, server timestamp), comma delimiter, **LF
+only**, trailing newline, **no UTF-8 BOM**, and 25 columns in both the header and every
+data row. The schema is **dynamic** — the last column was `Siapakah tuhan mu ?`, a product
+custom question — so never assert a fixed header list.
