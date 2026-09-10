@@ -502,6 +502,36 @@ coordinates far outside it, and clicking those hits nothing.
 Menu *items* are the easy half — once open they carry real text (`Insights`, `Edit`,
 `Delete`, `Add Mark Badge`), so match on that rather than on position.
 
+**`[role=checkbox]` belongs to the same family.** The cart's row selectors are Radix
+buttons: `el.click()` leaves `aria-checked="false"`, a rect-then-mouse click flips them
+and the `Total Amount` line updates. (`[role=switch]` is the exception — plain
+`el.click()` does drive those.)
+
+**Do not scope a button search with `offsetParent`, and do not take the first match
+document-wide.** Inside the feed composer both go wrong: the page header has its own
+`Post` button, so a document-wide `^Post$` clicks the wrong one and the dialog just sits
+there. Scope to the dialog whose text matches (`Create Post` vs `Edit Post`), and match
+on `getBoundingClientRect().width > 0` instead of `offsetParent`.
+
+**Radix popovers stack — index them by content, not position.** Opening the schedule
+picker from a card whose kebab menu is still mounted leaves two
+`[data-radix-popper-content-wrapper]` nodes; `[0]` is the stale menu. Pick the one that
+actually contains what you need (`q.querySelector('input[name="minutes"]')`).
+
+**Button labels change under you.** The composer's product picker footer reads
+`Add Products` while nothing is selected and **`Add (1) Product`** once something is —
+a `^Add Products` regex silently stops matching. Prefer `^Add .{0,10}Product`.
+
+**The composer feed has three checkbox layers.** In the cart and in list dialogs there is
+a page-level `Select All`, a per-creator group box whose row text spans every product that
+creator sells, and the product row box. Take the *smallest* ancestor with text longer than
+~12 chars that does not contain `Select All`, or you will toggle the whole group.
+
+**React-controlled inputs: the value setter works for `<textarea>`, not for masked
+fields.** `Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set` +
+an `input` event drives the post body fine, but the schedule picker's `type="tel"`
+hour/minute inputs ignore it — click them and use `page.keyboard.type` with a delay.
+
 ## The API answers scripts when they send an Origin header
 
 `GET /api/v1/shop/products` and friends reply `not allowed to access this API` to a bare

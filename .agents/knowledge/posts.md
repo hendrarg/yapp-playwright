@@ -42,10 +42,10 @@ published.
 **`Edit Price` menu item inside that same visibility dropdown**, which opens a second
 modal.
 
-**The client enforces the Rp20.000 minimum precisely.** The price modal shows
-`Min. price: Rp20.000` and its `Confirm` button is disabled for empty / 0 / 1 / 5.000
-/ 19.999 and enabled at 20.000 / 25.000 — identical on create and edit, so there is
-no UI bypass.
+**The client enforces the minimum precisely — and that minimum is now Rp10.000.**
+Re-read 2026-09-10: the price modal says `Min. price: Rp10.000` (it said Rp20.000 when
+this note was first written). Its `Confirm` button is disabled below the floor and
+enabled above it — identical on create and edit, so there is no UI bypass.
 
 **The server enforces nothing.** `POST /api/v1/posts` with
 `{visibility:"pay_per_view", price:0}` or `price:5000` returns `200 Post created`,
@@ -137,3 +137,75 @@ Verified 2026-09-09 with two buyer accounts on one public post.
 - **Another buyer's comment carries no control at all**: no kebab, no menu, nothing to
   click. Authorization is enforced by not rendering, so a test should assert the absence
   of the button rather than an error message.
+
+## The composer cannot publish anything that is not Public
+
+Established 2026-09-10 across six separate attempts; filed as H-15.
+
+Choosing **`Pay per view`** (price set and `Confirm`ed, pill reading `Exclusive Rp25.000`)
+or **`Member only`** (tier chosen and `Confirm`ed) leaves `Post` enabled but completely
+inert: **no `POST /api/v1/posts`, no toast, no dialog, no `aria-invalid`, no console or
+page error**, and the dialog stays open with the content intact. Nothing is saved —
+not to Published, not to Draft, not to Scheduled.
+
+The control that proves it is not a scripting artefact: the identical flow with
+visibility left **Public** publishes every time (text, text + 3 images, text + video,
+text + image + linked product all returned `200 Post created`), and the failing runs
+included one driven entirely by real mouse clicks and real keystrokes.
+
+Two things still work, so scope the bug narrowly:
+
+- `POST /api/v1/posts` with `visibility: "pay_per_view"` succeeds from the API — that is
+  how exclusive fixtures have to be seeded now.
+- **Editing** an existing exclusive post works: kebab → `Edit` → change the body →
+  `Save` sends `PUT /api/v1/posts/{uuid}` → `200 Post updated`.
+
+## The exclusive "teaser" is just the post body
+
+There is **no dedicated teaser field**. On a locked pay-per-view post a non-buyer sees
+the full body text and the linked-product card, with only the **media blurred** plus
+`Unlock Post` / `Unlock Now`. The feed card for the same post shows `View Products (1)`.
+So the teaser is whatever the creator typed into the body — anything confidential put
+there is exposed.
+
+## Editing a published post: what the dialog offers
+
+Kebab on a feed card → `Insights`, `Edit`, `Delete`. `Edit` opens an **`Edit Post`**
+dialog carrying the body, one `x` per media thumbnail, the media and product toolbar
+icons, the visibility pill and `Save`. Verified 2026-09-10:
+
+- **Removing a media item** fires `DELETE …/assets` (`Asset deleted`) immediately, then
+  `Save` sends `PUT` — 3 images → 2, and the survivors stay on the post detail.
+- **Replacing media** is remove + upload in the same dialog; the asset uuid changes and
+  the buyer surface serves the new file (checked by downloading it — the pixels changed
+  from blue to green).
+- **Products** can be added and removed after publication; the post uuid is unchanged, so
+  no duplicate post is created, and the buyer sees the card appear/disappear.
+- Editing a **scheduled** post's time works through the `Posting on …` chip at the top of
+  the same dialog.
+
+## Scheduling
+
+The composer's fourth toolbar icon (a clock, `size-5.5`) opens a calendar plus two
+`type="tel"` inputs (`name="12hours"`, `name="minutes"`) and an **AM/PM Radix Select**
+(`button[role="combobox"]`, not a toggle — click it and pick from the `[role=option]`
+list). Once a time is chosen the submit button becomes **`Schedule Post`** and the
+composer shows `Posting on 10 Sep 2026, 4:22 PM`.
+
+**Auto-publish works.** A post scheduled for 09:22Z was in the `Scheduled` tab at 09:29Z
+and had moved to `Published` by then, visible on the buyer's post detail and in the
+public feed. `GET /api/v1/posts/my/posts?type=scheduled|published|draft` is the quick way
+to watch the transition.
+
+The `Scheduled` tab card labels a future schedule `Posted on …` (past tense) while the
+composer and the edit chip both say `Posting on …` — filed as L-83.
+
+## Buyer video playback
+
+A video post autoplays **muted and inline** on the post detail. Tapping it opens a
+full-screen modal (`document.fullscreenElement` becomes `<html>`, not the `<video>`), and
+`Escape` exits back to the originating post. Inside that modal the only buttons are
+`Unmute video`, `Close modal` and `Like post` — **no play/pause, no seek bar, no exit
+button**, `video.controls` stays `false`, `Space` and `ArrowRight` do nothing, and even a
+programmatic `currentTime` write is reverted. Filed as M-82. The creator-side card, by
+contrast, does render `Play 00:00 00:30 Mute Enter fullscreen`.

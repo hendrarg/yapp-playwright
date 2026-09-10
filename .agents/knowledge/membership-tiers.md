@@ -385,3 +385,111 @@ numbers by design.
 
 What is still unverified is the **renewal charge**: nothing in the tier form configures a
 renewal rule, and reading which price a renewal picks needs an actual renewal.
+
+## Subscribing: the modal, the voucher, and the Rp0 path
+
+Verified 2026-09-10 end to end on `MB Dropdown Check 107394`.
+
+The tier card's `Subscribe` opens a dialog at `/<creator>/membership` (that URL **404s on
+direct navigation** — it only exists as a client-side transition). It holds the duration
+picker, a required phone number, the payment methods (`QRIS`, `CREDIT CARD`, `VA BRI`,
+`EWALLET SHOPEEPAY`, `Show More →`), `Redeem Voucher`, and a fee breakdown:
+`Price + Transaction Fee + Payment Gateway Fee = Total`, with the CTA carrying the total
+(`Pay Rp25.755`).
+
+**`Redeem Voucher` has two halves and only one works.** `Choose Voucher` lists nothing at
+all — even with an active 100 % promo from that creator — and its `Select` stays disabled
+(`L-81`). Typing the code into the same panel returns `✓ Discount applied` and does apply
+it.
+
+**A 100 % voucher removes the payment step entirely.** The summary collapses to
+`Price − Voucher Discount = Subtotal Rp0 / Total Rp0`, the fee lines disappear, the CTA
+becomes `Pay Rp0`, and pressing it goes straight to `Payment Successful!` — one
+`POST /api/v1/tier-memberships/{uuid}/purchase/fiat`, no QRIS screen. The subscription is
+active immediately for the chosen duration, `tier_membership_purchases` records
+`status=completed, price_paid_by_buyer=0`, and the entitlement snapshot is written just
+like a paid subscription. Promos are created at `POST /api/v1/promos`
+(`promoProductType: all_product`) — the promo form offers only All Product / Selected
+Product, so a tier-scoped promo cannot be made from the UI at all.
+
+## The membership_bound perk is not honoured on the buyer side
+
+Verified 2026-09-10 with an active subscription whose entitlement row exists
+(`tier_membership_user_benefits`, `access_mode=membership_bound`, valid a month out).
+
+The buyer product page asks
+`GET /api/v1/tier-membership-users/products/{productUUID}/benefit-check`, and it answers
+**`{"hasBenefit": false}`** for the very buyer who holds that entitlement, so that page
+keeps its ordinary purchase CTA (`M-81`).
+
+**The perk itself does work — it lives on a different surface.** `/profile/membership`
+→ tap the active membership → the detail panel lists `Rewards` with the perk row
+(`Online Course · <name> · While subscribed`) and an **`Open Course`** button. That button
+goes to `/product/{productUUID}/course?page=…&chapter=…`, served by
+`GET /api/v1/tier-membership-users/products/{uuid}/course` (200, full content). So a member
+reaches the course from *My Memberships*, never from the product page. The same endpoint answers the identical `hasBenefit:false` for a
+`digital_download`, an `appointment`, and a product with no perk at all — so its answer
+currently distinguishes nothing; only an unknown UUID differs (`404 product not found`).
+
+**And such a course can no longer be saved.** Opening an online course that is attached as
+a `membership_bound` perk and pressing `Save` — with no edits — returns
+`500 discount fields must be omitted when accessMode=membership_bound`, with **no toast**
+(`H-12`). So the perk both fails to grant access and locks the product's editor.
+
+## What a subscription can and cannot do after it is bought
+
+Mapped 2026-09-10 across an active subscription and a lapsed one.
+
+`/profile/membership` lists active memberships with `Next Billing Date`. Opening one shows
+Tier Name, Billing, that date, Description, the `Rewards` list (with `Open Course` for a
+course perk) and a `Manage Membership` heading whose only action is **`Upgrade or Add
+Tier`** — which just navigates back to the creator's tier list. There is **no renew, no
+extend, no cancel** anywhere, so renewal is only the automatic billing cycle.
+
+**A tier you already hold shows an inert `Subscribed` button**, and that state is
+*not* cleared when the subscription lapses: an expired subscription still renders
+`Subscribed` on the tier card, and the creator's profile still shows the `Member` badge
+with `Direct Message` enabled — while the chat itself already blocks sending.
+
+The **`History` tab** of `/profile/membership` does list the lapsed membership with a
+`Resubscribe` button, and the chat banner offers `Subscribe` — but both only navigate to
+`/<creator>/membership`, where that same inert `Subscribed` card is waiting. So the
+resubscribe path exists end to end in the UI and still cannot be completed (`H-13`).
+
+## DM access follows the tier flag, live
+
+Verified 2026-09-10 by toggling `Enable Direct Message` on a tier with an active
+subscriber:
+
+- flag **off** → the subscriber's composer disappears on their next load, replaced by
+  `You can't send a message right now` and `Messages only accept from subscribers. Your
+  chat history is saved.`
+- flag **on** again → the composer returns.
+
+An **expired** subscription produces the same block plus its own banner —
+`Your subscription to <creator> ended, resubscribe to keep chatting` — and the API is
+explicit: `POST /api/v1/dm/conversations` returns `canSend: false`, `GET /api/v1/dm/settings`
+reports `accessPolicy: subscriber`. The conversation stays open and is never archived.
+
+The wording is wrong in the creator-disable case: it also says the *subscription ended*
+even though it is active (`L-82`). Do not use that string to detect expiry.
+
+## An expired membership_bound entitlement still opens the course
+
+Verified 2026-09-10 on a subscription that was deliberately expired
+(`tier_membership_users` id 97, expired 3 Sep 2026) whose entitlement row
+(`membership_bound`, free) points at a **paid** course (Rp100.000).
+
+- `GET /api/v1/tier-membership-users/products/{uuid}/course` → **200 with the full course**,
+  a week after the parent subscription lapsed.
+- `/product/{uuid}/course` renders the chapters and lesson content in the browser.
+- The **product page is the only surface that gets it right**: it asks `benefit-check`,
+  is told `hasBenefit:false`, and shows `Purchase`.
+
+Filed as `H-14`. The entitlement row has no expiry column of its own, so the read path is
+where the parent's `expired_at` has to be enforced — and on the `/course` endpoint it is
+not.
+
+**A paid course never shows `Locked`.** For a guest and for the lapsed member alike the CTA
+reads `Purchase` with the price; there is no locked state on the product page, and the
+thumbnail is never blurred (blur is a member-only-*post* behaviour, not a product one).
