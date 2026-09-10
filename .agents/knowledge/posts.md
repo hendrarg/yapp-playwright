@@ -83,7 +83,7 @@ of zero.** Saving with the switch off sends `PUT /api/v1/posts/lifetime-prices/m
 `{"priceIDR":0}`; the `post_lifetime_prices` row is never deleted and there is no
 active/inactive flag. The creator UI then shows the switch off with an empty price, which
 looks right — but the buyer still sees the lifetime banner and `Unlock now`, and the
-checkout opens at **Price Rp0, Total Rp0, with `Pay Rp0` enabled**. Filed as H-09;
+checkout opens at **Price Rp0, Total Rp0, with `Pay Rp0` enabled**. Filed as H-04;
 whether paying Rp0 actually grants access is deliberately untested.
 
 The buyer-facing price itself works correctly when lifetime is on: the `Lifetime Access`

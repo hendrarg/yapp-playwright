@@ -154,7 +154,7 @@ under the amount field:
 stored schedule `04 September 2026 00:00–23:30` in the past, the tip page renders **no
 poll at all** — no title, no options, at any amount. That contradicts the older
 `TC-LS-B-003` finding (poll still shown after the end time) and means poll test cases
-need a schedule that covers today, which needs a SAVE and is therefore behind H-04.
+need a schedule that covers today, which needs a SAVE and is therefore behind H-06.
 
 So a buyer-side locator must **not** be pinned to the literal widget name for Song Share:
 it renders `songshare-title`, which the creator can change to anything. VIP Queue keeps a
@@ -254,7 +254,7 @@ clock** value and nothing else: it sat at `10:00:00` while the real overlay ran 
 `09:58:40`, moved to `10:08:34` on `+ 10 MIN`, `11:08:28` on `+ 1 HOUR` and `10:58:22` on
 `− 10 MIN`, and froze and resumed correctly under `PAUSE TIMER` / `START TIMER`. Every
 timer assertion must therefore be read **from the overlay page**, never from the
-dashboard. Filed as M-73.
+dashboard. Filed as M-29.
 
 The `Adjust the clock` panel says `Applies straight away — this does not wait for Save`,
 and that is true: the overlay reacts immediately and the unsaved-changes counter never
@@ -280,7 +280,7 @@ this bug rather than behind the widget itself.
 Re-confirmed a year-old-looking blocker is alive: changing a field raises
 `1 unsaved change`, pressing `SAVE` produces **no toast at all**, and the counter stays at
 `1 unsaved change`. The Voting schedule on the QA creator is still `04 September 2026`, in
-the past, which is exactly the H-04 signature described below. Attempts to move it through
+the past, which is exactly the H-06 signature described below. Attempts to move it through
 the date picker did not register a change. Ten test cases in the Livestream batch are
 blocked behind this single bug.
 
@@ -321,10 +321,10 @@ or under that minimum.
 **Only Media Share actually gates.** Choosing a media type under the threshold replaces
 the link field with `You need to tip at least Rp5.000 to share this media.` — and that
 message quotes the **creator floor**, not the effective threshold, so at exactly
-Rp5.000 the buyer meets the number in the message and is still refused (`M-75`).
+Rp5.000 the buyer meets the number in the message and is still refused (`M-30`).
 `Request a song` and the VIP join switch have **no gate at all**: at Rp5.000 both toggle
 on and reveal working controls (the song search returns results and a song can be
-picked) even though their labels say Rp15.000 and Rp25.000 (`M-76`). Treat the `Min.`
+picked) even though their labels say Rp15.000 and Rp25.000 (`M-31`). Treat the `Min.`
 labels as text, not as state.
 
 Alert and Media Share eligibility are also not independent: the Alert threshold can
@@ -414,7 +414,7 @@ Verified 2026-09-09 in a guest session on `/hendrarg/tip` with `songshare-max-du
 
 Both rejections therefore happen before payment, which is the right place, but they
 happen by **omission with no message**, so a missing song is indistinguishable from a
-blocked one, an over-long one, or one that is not in the catalogue (`L-75`). A test
+blocked one, an over-long one, or one that is not in the catalogue (`L-35`). A test
 asserting a rejection *message* here will fail by design.
 
 Result rows are plain `<button>` elements whose text is `<title> <artist> m:ss` — they

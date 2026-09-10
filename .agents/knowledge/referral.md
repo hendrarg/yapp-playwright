@@ -42,7 +42,7 @@ mechanism visible to the client.
 The **buyer app ignores the parameter**: `yapp-dev.yapp.ink/auth?c=VDVWLX` sets no `rc`
 cookie, and a signup completed there produces `users.referrer_id = NULL`. So a referral
 can only be earned through the creator domain, which currently cannot finish an OTP
-sign-up at all (see `H-10` and [[onboarding|Onboarding]]) — no attributed referral can be
+sign-up at all (see `H-09` and [[onboarding|Onboarding]]) — no attributed referral can be
 produced on dev today.
 
 ## Apply Referral validates live against the server
@@ -60,7 +60,7 @@ Validation happens as you type:
 
 So codes are **case-sensitive**, and the button is a reliable signal of server-side
 validity. **Your own code is accepted too** — typing the account's own `VDVWLX` enables
-the button, so self-referral is not blocked client-side (`M-78`).
+the button, so self-referral is not blocked client-side (`M-69`).
 
 ## An empty Referral List still says "Page 1 of 0"
 

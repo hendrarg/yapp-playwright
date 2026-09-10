@@ -79,7 +79,7 @@ own**; its validity hangs on the parent `tier_membership_users.expired_at`.
 Two consequences worth knowing before writing assertions:
 
 - **Editing a tier does not rewrite existing subscribers' entitlements.** So while the
-  save-reset defect was live (H-07, renumbered from H-08 on 8 Sep 2026; fixed 4 Sep 2026) it damaged only *future*
+  save-reset defect was live (H-08; fixed 4 Sep 2026) it damaged only *future*
   subscribers. The same rule still matters on its own: removing a perk from a tier does
   not revoke it from people already subscribed — their snapshot keeps it until
   `expired_at` passes or they renew.
@@ -163,7 +163,7 @@ promo estimation endpoint. Only the top-level required-field check
 Superseded 2026-09-04. Until 2026-09-03 there was **no** `access_mode` control anywhere
 in the creator UI: a perk rendered as a static row, the create payload was exactly
 `[{"accessType":"free","productUUID":"…"}]`, and the browser could only ever produce
-`free` + `permanent` (filed as M-65, renumbered from M-68 on 8 Sep 2026). That is fixed. Two surfaces now carry the axis,
+`free` + `permanent` (filed as M-35). That is fixed. Two surfaces now carry the axis,
 and they use **the same copy but different controls** — do not reuse locators between
 them:
 
@@ -265,7 +265,7 @@ application code.
 
 ## Saving a tier from the UI used to reset `membership_bound` — fixed 4 Sep 2026
 
-Recorded 2026-09-02 as H-07 (renumbered from H-08 on 8 Sep 2026): a perk stored as `membership_bound` showed on the edit page
+Recorded 2026-09-02 as H-08: a perk stored as `membership_bound` showed on the edit page
 as `Free access`, indistinguishable from a permanent free perk, and pressing
 `Save Changes` without touching the benefit sent
 `[{"accessType":"free","productUUID":"…"}]` with `accessMode` omitted, so the server
@@ -335,7 +335,7 @@ five "supported" types expose tier configuration:
 | Events & Tickets | no | no |
 
 So a consultation perk can only be created from the product side, and Discord / Event
-perks cannot be created at all. Filed as `M-77`.
+perks cannot be created at all. Filed as `M-37`.
 
 The product-side section is behind a **switch** (`Set benefits for membership`): while it
 is off the block shows only its heading and subtitle, and the tier rows with their

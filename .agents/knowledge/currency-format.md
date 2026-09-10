@@ -33,7 +33,7 @@ creator app now ships. Filed and verified on YAP-2130.
 Still unconfirmed, keep as open questions:
 
 - **USDT surfaces.** `Balance: 0,00USDT` and the placeholder `Minimum withdrawal 10,00USDT`
-  could not be re-read, because the withdrawal dialog now stops earlier (see H-08).
+  could not be re-read, because the withdrawal dialog now stops earlier (see H-10).
 - **The buyer event detail page**, which renders `IDR100,000 /per pax` rather than
   `Rp100.000`. Buyer-side, not covered by the creator sweep.
 

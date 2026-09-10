@@ -103,7 +103,7 @@ Verified 2026-09-09 on `/customize` → `Tip Button`. The panel header carries `
 `Redo` and `Save`, all disabled on load — there is **no auto-save**. One press of `Save`
 fires **both** `PUT /api/v1/accounts/tip-button` and `POST /api/v1/quick-amounts` (both
 200), so a test that waits on a single request will miss half the write. No success toast
-appears (consistent with L-01).
+appears (consistent with L-66).
 
 `Button Text` is `#tip-button-label` with `maxlength=40` and an `n/40` counter, and the cap
 is hard — a 41st typed character does not enter.

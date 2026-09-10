@@ -148,6 +148,14 @@ it per product type:
 The `Customize Message` toggle default is the one thing that is *not* shared — see the
 Online Course section above.
 
+**An empty message is not rejected, it is discarded.** Verified 2026-09-10 on a
+Consultation: turning `Customize Message` on and saving a message persists it (the switch
+still reads ON after a reload). Emptying that message with the switch still ON and saving
+again returns `PUT /api/v1/shop/products` **200** with no validation message and no toast
+— and after a reload the switch is back OFF with the message gone (`L-63`). So "After
+Sales ON" is not a state the product can hold on its own; it is derived from a non-empty
+saved message.
+
 ## Route and label asymmetries
 
 The create and edit routes do not use the same product-type slug:
@@ -271,5 +279,55 @@ therefore target a product that is not on sale, with no warning.
 
 The price in that popover is also **`Rp0` for every tiered product** (Consultation with
 tiers, Telegram/Discord membership, Events) because it reads the product-level price
-that tiered products leave at 0; single-price products show correctly. Logged as `M-74`
+that tiered products leave at 0; single-price products show correctly. Logged as `M-67`
 on the Bugs sheet.
+
+## The Online Course editor is a block editor, not a form
+
+Mapped 2026-09-10 while authoring on a disposable course. Step 1 (`Next: Edit Details`)
+is the content canvas; step 2 is the ordinary product form.
+
+**Structure lives in the right-hand tree**: each chapter lists its pages, every chapter has
+`Add Page`, and the bottom of the panel has `Chapter` and `Page` buttons that append a new
+one (`POST …/products/{uuid}/page`). A tree row's icon opens a menu whose only item is
+**`Delete`** — there is no rename, duplicate, or move item; renaming is done by typing in
+the `Add title` field of the selected page.
+
+**Content blocks** come from two places: the `Insert` button offers `Video`, `Attachment`,
+`Image`, `Carousel`, `Product`; typing `/` opens the usual BlockNote text menu (headings,
+lists, quote, code, table, divider…). Hovering a block reveals a left-side button with
+`aria-label="Open block menu"`, again offering **`Delete` only**. Reordering exists solely
+as HTML5 drag-and-drop on that handle, which Playwright's mouse events cannot drive — do
+not write a test that asserts reorder through the UI.
+
+- **Video block**: `accept="video/mp4,.mp4,video/quicktime,.mov"`. A filled block shows
+  Play / Mute / fullscreen / `Delete Video`; pressing `Delete Video` turns it back into an
+  `Upload Video · Please use .mp4 or .MOV` placeholder that accepts the replacement in
+  place.
+- **Attachment block**: `accept=".pdf,.docx,.xlsx,.csv,.mp3,.wav,.zip"` and
+  **`multiple=false`**, so files go in one block at a time. A filled block shows name, size
+  and `Replace` — and **that `Replace` input is the trap**: a script that grabs "the last
+  file input" keeps overwriting the same block. Target the input inside the empty
+  placeholder instead.
+- **`.wav` is advertised but rejected** — the upload answers `Upload failed` every time
+  (`L-50`). The other six types in that accept list work.
+
+**Deleting a block does not survive Save** (`M-54`): the file disappears from the editor,
+`Save` reports nothing, and a reload brings it back. Text edits, new uploads, chapter adds,
+page renames and chapter deletes all persist through the same button — the defect is
+specific to deleting a block inside a page.
+
+## Publishing a course: what is and is not validated
+
+Verified 2026-09-10.
+
+- On the **create** flow step 2 the buttons are `Next: Publish` and `Save`. **`Save` is the
+  draft save** — it creates the product with `status: "draft"`, which is invisible on the
+  creator's public profile, absent from `/explore/products`, and 404 on its direct link.
+- On an **already active** product there is **no Publish or Republish button at all** —
+  only `Save`, and pressing it produces **no toast and no dialog**; the only feedback is the
+  header stamp `This product is active and was last updated <date>` (`L-62`). Edits go live
+  immediately and `shortUrl` never changes.
+- Publish validates the **thumbnail** (`Thumbnail is required`) and nothing about content:
+  a course whose chapters have all been deleted publishes happily and goes live with zero
+  pages (`M-53`).
