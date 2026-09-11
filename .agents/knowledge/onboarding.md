@@ -30,6 +30,24 @@ afterwards does `?step=select-username` run `POST /api/v1/accounts/username`. So
 - `users` carries `is_complete_onboarding` (false until the wizard finishes) and
   `username_changed_at` (stamped when the username is first set).
 
+## Buyer-app OTP sign-up works — and the disabled `Verify` button is a red herring
+
+Re-established 2026-09-11 by registering user **517** (`qabatchp517`) end to end on
+`yapp-dev/auth`. Two traps cost an hour:
+
+- **Fill the OTP, do not type it.** `locator.pressSequentially()` drops digits (a run
+  landed `801` out of `80147`) because the component re-renders per keystroke.
+  `locator.fill(otp)` on `input[data-input-otp="true"]` sets all five at once and the
+  component **auto-submits** — `POST /api/v1/auth/login/otp/verify` fires by itself and
+  the app moves to `?step=input-username`.
+- **`Verify` reads `disabled` exactly when the code is complete**, because the auto-submit
+  has already started. Do not read that as "the button never enables"; watch the request,
+  not the attribute. (This is worth re-checking against the creator-app claim below.)
+
+Abandoning at the username screen still leaves a usable account: `POST
+/api/v1/accounts/username` with `{username}` sets it afterwards → `200 Update Username
+Successfully`.
+
 ## The creator app cannot finish an OTP sign-up (9 Sep 2026)
 
 The step above still describes the intended flow, but on `creators-dev` the **`Verify`
@@ -284,3 +302,41 @@ so record the count before and after when it matters.
 - To reach the sign-up flow at all, the MCP browser must start unauthenticated:
   set `YAPP_MCP_ACCOUNT=guest` in `.env` **before** the session starts, otherwise the
   wrapper injects token1 and `/auth` redirects straight to `/profile`.
+
+## Becoming a creator: one wizard, three CTA labels, four steps
+
+Verified 2026-09-11 by converting user 517.
+
+**The CTA is labelled differently on every surface** — `Be A Creator` on `/explore`,
+`Become a Creator` on `/profile`, `Become Creator` on `/feeds` — and all three land on
+**`creators-dev.yapp.ink/onboard`**. Never pin a locator to one of those strings.
+
+The wizard now has **four** steps, not three: `1 Set Profile`, `2 Describe Yourself`,
+`3 Choose Tools`, `4 Follow Creators`, with an `I'll do it later` escape. Step 1 saves
+through `PUT /api/v1/accounts` and `PUT /api/v1/accounts/social-link`. Step 2 keeps
+`Next` **disabled until a role card is picked** (Educator, Software Developer, Streamer,
+Financial Creator, Entrepreneur, Content Creator, Artist, Product Designer…), and the
+chosen role lands in `accounts.role`.
+
+Finishing flips `isCreator` and `isCompleteOnboarding` to `true`. After that
+`creators-dev/profile` is My Page (tabs `Links`, `Products`, `Feeds`, `Memberships`), the
+buyer `/feeds` button becomes `Switch as Creator`, and every `Become a Creator` CTA
+disappears.
+
+## What a non-creator buyer's profile actually shows
+
+There are **no `Feed` / `Exclusive` / `Shop` tabs before conversion**. The buyer's own
+`/profile` carries exactly two tabs, `My Memberships` and `Support`; Support renders
+`No support tips yet. Join as a creator and start receiving support tips.` plus the
+conversion CTA. The **public** view (`/{username}`) is thinner still — no tabs at all,
+just the `Send Tip` panel. `Shops` appears only after conversion, empty-stated with
+`No products yet. Create your first product and start selling.`
+
+## Buyer routes: `/profile/membership`, not `/membership`
+
+My Memberships lives at **`/profile/membership`** (tabs `Active` / `History`). On the
+buyer app `/membership`, `/my-membership` and `/library` all render the
+`That page doesn't exist` 404 — checked against two different accounts, so it is not a
+per-user permission thing. Empty Active state reads
+`Start your membership journey…` and is followed by a `Subscribe These Creators!`
+recommendation list, each row carrying `See Membership Tier`.

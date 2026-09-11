@@ -88,7 +88,24 @@ is dead. A sent video renders as a real `<video>` element on both apps (first fr
 thumbnail plus a play overlay); `poster` is null and `controls` is absent, so assert the
 element and its `readyState`, never a poster attribute. Opening the attachment menu
 (Link Product / Link Campaign / Request Tip / Link Post) still adds no further file input.
-No file size limit is stated near the composer.
+No file size limit is stated near the composer — **and none is enforced either.**
+Established 2026-09-11: a `.mp4` of **1 GB + 1 byte** attaches with no error, no toast,
+a staged thumbnail and `Send Broadcast` still enabled. The file input carries only
+`accept` and `multiple`, with no size attribute, and no copy anywhere mentions MB or GB
+(compare the product form's `smaller than 500 MB` and onboarding's `up to 5MB`). Nothing
+uploads at attach time — the transfer starts on `Send` — so the client has the
+opportunity to check and simply does not. Folded into M-43.
+
+Large files that are realistic *do* work: a **42.9 MB** MP4 uploaded through the
+multipart path (`POST /api/v1/file/upload/create` → `/complete`, two create/complete
+pairs for one file) and the broadcast completed with `failedCount: 0` about a second
+after `POST /api/v1/dm/broadcasts`. So the platform handles size fine; it just never
+validates it.
+
+**Testing an oversized boundary without moving gigabytes:** create the fixture with
+`fsutil file createnew <path> <bytes>` + `fsutil sparse setflag` (instant, no real data)
+and route-block `**/api/v1/file/upload/**` plus the S3 host before attaching. The
+client-side gate — which is the part worth asserting — is fully observable that way.
 
 ## Broadcast is send-now only
 

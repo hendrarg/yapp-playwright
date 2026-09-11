@@ -46,13 +46,28 @@ only observable from inside Telegram, so that surface needs either a real Telegr
 account or API/webhook-level testing — the Yapp web app cannot show it.
 
 
-## Dev has no Lifetime tier on any Telegram product
+## Lifetime tiers: how to make one, and why you still cannot finish the test
 
 These are `product_telegram_tiers` — tiers **of a Telegram product**, not tier
-memberships. All **five** tiers across the three Telegram products carry `isLifetime: false`, and
-the `Lifetime` status filter on the `/telegram` Subscribers table returns
-`No subscribers found`. Any assertion about Lifetime behaviour needs such a tier to be
-created first.
+memberships. Dev shipped none with `isLifetime: true`; **create one** instead of
+treating Lifetime as untestable. `Duration` on a plan offers
+`1 month / 3 months / 6 months / 12 months / **Lifetime**`, and a tier can be added
+through `PUT /api/v1/shop/products/{uuid}` by appending to `telegramTiers`
+(`isLifetime: true`, `durationMonth` omitted — it comes back `null`). Price it at
+**Rp0** and the buyer checkout is a single `Pay Rp0` with no payment step, so a
+subscriber row exists in a minute.
+
+What that still does **not** give you is an *active* member: the new row sits at
+`Pending join` (`joinedAt: null`), because going active needs a real Telegram account
+to press Start on the bot and join the group. Everything phrased around an active
+member — the `Lifetime` badge, manual removal, access loss — needs a QA Telegram
+account the project does not currently have.
+
+A `Pending join` **lifetime** row renders `START = Not joined yet`, `EXPIRY = —`,
+`STATUS = Pending join`, with **no Lifetime marker in any column**; the only hint is the
+plan name. The `Lifetime` status filter still returns `No subscribers found` — consistent
+with the filter meaning *active* lifetime, so do not call it a defect until an active
+lifetime member exists.
 
 
 ## Subscriber row actions
@@ -70,3 +85,39 @@ The QA account is already connected (`Hendra's server`, role `Boss`). Disconnect
 to test the unconnected state risks breaking the published Discord products and their
 buyers' access. The unconnected state is reachable instead through the **create form**,
 where the server list legitimately starts empty.
+
+## A tier with subscribers cannot be deleted — and the UI does not say so
+
+Established 2026-09-11 (M-83). `PUT /api/v1/shop/products/{uuid}` with the tier omitted
+returns **HTTP 500** `cannot remove plan "<title>": it has existing purchases or
+subscribers`, from the API directly and from the creator form alike. In the form the plan
+block **disappears the moment you press remove**, and `Save Changes` then produces no
+toast, no inline error and no navigation — the plan is silently still there on reload,
+still on sale. There is also **no disable/archive control for a single plan**, so
+"stop selling this plan" has no route at all short of deactivating the whole product.
+
+## Telegram edit route and event vocabulary
+
+The Telegram product is edited at **`/products/update/telegram-membership/{uuid}`** —
+`telegram` and `telegram_membership` both 404 (compare the `appointment` slug trap in
+[[products]]). Step `2/2` holds `Plan Configuration` with `Add Another Plan`.
+
+The `/telegram` **Activity** tab filters on nine event types: `Joined`, `Left`,
+`Kicked`, `Banned`, `Unbanned`, `Promoted`, `Demoted`, `Restricted`, `Unrestricted`.
+`Kicked` and `Banned` are distinct, and the log names the actor (`By bot (expiry or
+dashboard)` vs a creator's Telegram handle). Note the dashboard itself offers **no plain
+remove**: the row actions are only `Resync with Telegram`, `Re-invite` and `Ban`, so a
+dashboard-driven "manual removal" is really a ban.
+
+## The buyer's bot deep link is per-order and readable without Telegram
+
+After a Telegram-membership purchase the success page's `Open Telegram` button is backed
+by **`GET /api/v1/orders/{orderId}/telegram/start-link`**, which returns
+`{status, ready, startURL, botUsername}` — e.g.
+`https://t.me/YappTestBot?start=b_<32 hex>`. The token is scoped to the order and is
+**stable across repeated reads** (two calls three seconds apart returned the same
+`b_…`), so it is a persistent per-purchase token rather than one minted per click.
+Whether it is single-*use* is a Telegram-side fact and cannot be read from Yapp.
+
+This endpoint is the cheap way to prove the purchase→deep-link half of the flow without
+a Telegram account.

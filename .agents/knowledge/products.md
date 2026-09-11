@@ -165,6 +165,8 @@ The create and edit routes do not use the same product-type slug:
   returns 404.
 - Online Course uses the CTA `Next: Edit Details`, where every other product type uses
   `Next: Set Details`.
+- Telegram Membership is edited at `/products/update/**telegram-membership**/{uuid}` —
+  hyphenated. Both `telegram` and `telegram_membership` return 404.
 
 ## The description counter counts words, not characters
 
