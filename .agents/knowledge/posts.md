@@ -140,7 +140,7 @@ Verified 2026-09-09 with two buyer accounts on one public post.
 
 ## The composer cannot publish anything that is not Public
 
-Established 2026-09-10 across six separate attempts; filed as H-15.
+Established 2026-09-10 across six separate attempts; filed as H-05.
 
 Choosing **`Pay per view`** (price set and `Confirm`ed, pill reading `Exclusive Rp25.000`)
 or **`Member only`** (tier chosen and `Confirm`ed) leaves `Post` enabled but completely
@@ -198,7 +198,7 @@ public feed. `GET /api/v1/posts/my/posts?type=scheduled|published|draft` is the 
 to watch the transition.
 
 The `Scheduled` tab card labels a future schedule `Posted on …` (past tense) while the
-composer and the edit chip both say `Posting on …` — filed as L-83.
+composer and the edit chip both say `Posting on …` — filed as L-20.
 
 ## Buyer video playback
 
@@ -207,5 +207,5 @@ full-screen modal (`document.fullscreenElement` becomes `<html>`, not the `<vide
 `Escape` exits back to the originating post. Inside that modal the only buttons are
 `Unmute video`, `Close modal` and `Like post` — **no play/pause, no seek bar, no exit
 button**, `video.controls` stays `false`, `Space` and `ArrowRight` do nothing, and even a
-programmatic `currentTime` write is reverted. Filed as M-82. The creator-side card, by
+programmatic `currentTime` write is reverted. Filed as M-21. The creator-side card, by
 contrast, does render `Play 00:00 00:30 Mute Enter fullscreen`.

@@ -155,7 +155,7 @@ a `Post something here...` composer, `Open attachment menu`, `Cancel`, `Send Bro
   `Subscribers`, `Custom List`, with exactly one `data-state="checked"` at any moment.
   Overlapping segments therefore cannot be combined and no unique-recipient count exists.
   All three options carry the same wrong subtitle, *"If they click, all followers will be
-  notified."* (`L-46`).
+  notified."* (`L-50`).
 - The **`N People` button** opens a second panel, `Message recipient`, listing every
   person in the segment with a checkbox plus `Select All` — the only way to trim a
   broadcast, and it stays inside one segment.

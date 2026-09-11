@@ -40,7 +40,7 @@ and headed across four fresh emails.
 
 The **buyer app** (`yapp-dev/auth`) uses the identical field and code length and works —
 a complete code fires the verify call itself, sets `at`, and moves on to
-`?step=input-username`. So the defect is creator-app only (`H-09`), and it looks like a
+`?step=input-username`. So the defect is creator-app only (`H-12`), and it looks like a
 regression against the successful 2 Sep sign-up recorded here.
 
 Two consequences while it is open: no new creator can be registered on dev by email, and

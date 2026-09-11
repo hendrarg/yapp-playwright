@@ -47,7 +47,7 @@ the sheet wins.
 | Note | Covers |
 |------|--------|
 | [[products\|Products]] | Pricing defaults and the Rp10.000 floor, thumbnail capacity and rejection, the status lifecycle, Online Course after-sales |
-| [[posts\|Posts]] | Post visibility tiers, pay-per-view pricing and where it is (and is not) enforced |
+| [[posts\|Posts]] | Post visibility tiers, pay-per-view pricing, what the composer can and cannot publish, editing published posts, scheduling and buyer video playback |
 | [[messaging\|Messaging]] | Chat and Broadcast, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
 | [[tipping\|Tipping]] | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
 | [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |

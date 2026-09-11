@@ -79,7 +79,7 @@ own**; its validity hangs on the parent `tier_membership_users.expired_at`.
 Two consequences worth knowing before writing assertions:
 
 - **Editing a tier does not rewrite existing subscribers' entitlements.** So while the
-  save-reset defect was live (H-08; fixed 4 Sep 2026) it damaged only *future*
+  save-reset defect was live (H-09; fixed 4 Sep 2026) it damaged only *future*
   subscribers. The same rule still matters on its own: removing a perk from a tier does
   not revoke it from people already subscribed — their snapshot keeps it until
   `expired_at` passes or they renew.
@@ -163,7 +163,7 @@ promo estimation endpoint. Only the top-level required-field check
 Superseded 2026-09-04. Until 2026-09-03 there was **no** `access_mode` control anywhere
 in the creator UI: a perk rendered as a static row, the create payload was exactly
 `[{"accessType":"free","productUUID":"…"}]`, and the browser could only ever produce
-`free` + `permanent` (filed as M-35). That is fixed. Two surfaces now carry the axis,
+`free` + `permanent` (filed as M-36). That is fixed. Two surfaces now carry the axis,
 and they use **the same copy but different controls** — do not reuse locators between
 them:
 
@@ -265,7 +265,7 @@ application code.
 
 ## Saving a tier from the UI used to reset `membership_bound` — fixed 4 Sep 2026
 
-Recorded 2026-09-02 as H-08: a perk stored as `membership_bound` showed on the edit page
+Recorded 2026-09-02 as H-09: a perk stored as `membership_bound` showed on the edit page
 as `Free access`, indistinguishable from a permanent free perk, and pressing
 `Save Changes` without touching the benefit sent
 `[{"accessType":"free","productUUID":"…"}]` with `accessMode` omitted, so the server
@@ -335,7 +335,7 @@ five "supported" types expose tier configuration:
 | Events & Tickets | no | no |
 
 So a consultation perk can only be created from the product side, and Discord / Event
-perks cannot be created at all. Filed as `M-37`.
+perks cannot be created at all. Filed as `M-38`.
 
 The product-side section is behind a **switch** (`Set benefits for membership`): while it
 is off the block shows only its heading and subtitle, and the tier rows with their
@@ -399,7 +399,7 @@ picker, a required phone number, the payment methods (`QRIS`, `CREDIT CARD`, `VA
 
 **`Redeem Voucher` has two halves and only one works.** `Choose Voucher` lists nothing at
 all — even with an active 100 % promo from that creator — and its `Select` stays disabled
-(`L-81`). Typing the code into the same panel returns `✓ Discount applied` and does apply
+(`L-41`). Typing the code into the same panel returns `✓ Discount applied` and does apply
 it.
 
 **A 100 % voucher removes the payment step entirely.** The summary collapses to
@@ -420,7 +420,7 @@ Verified 2026-09-10 with an active subscription whose entitlement row exists
 The buyer product page asks
 `GET /api/v1/tier-membership-users/products/{productUUID}/benefit-check`, and it answers
 **`{"hasBenefit": false}`** for the very buyer who holds that entitlement, so that page
-keeps its ordinary purchase CTA (`M-81`).
+keeps its ordinary purchase CTA (`M-39`).
 
 **The perk itself does work — it lives on a different surface.** `/profile/membership`
 → tap the active membership → the detail panel lists `Rewards` with the perk row
@@ -434,7 +434,7 @@ currently distinguishes nothing; only an unknown UUID differs (`404 product not 
 **And such a course can no longer be saved.** Opening an online course that is attached as
 a `membership_bound` perk and pressing `Save` — with no edits — returns
 `500 discount fields must be omitted when accessMode=membership_bound`, with **no toast**
-(`H-12`). So the perk both fails to grant access and locks the product's editor.
+(`H-13`). So the perk both fails to grant access and locks the product's editor.
 
 ## What a subscription can and cannot do after it is bought
 
@@ -454,7 +454,7 @@ with `Direct Message` enabled — while the chat itself already blocks sending.
 The **`History` tab** of `/profile/membership` does list the lapsed membership with a
 `Resubscribe` button, and the chat banner offers `Subscribe` — but both only navigate to
 `/<creator>/membership`, where that same inert `Subscribed` card is waiting. So the
-resubscribe path exists end to end in the UI and still cannot be completed (`H-13`).
+resubscribe path exists end to end in the UI and still cannot be completed (`H-10`).
 
 ## DM access follows the tier flag, live
 
@@ -472,7 +472,7 @@ explicit: `POST /api/v1/dm/conversations` returns `canSend: false`, `GET /api/v1
 reports `accessPolicy: subscriber`. The conversation stays open and is never archived.
 
 The wording is wrong in the creator-disable case: it also says the *subscription ended*
-even though it is active (`L-82`). Do not use that string to detect expiry.
+even though it is active (`L-40`). Do not use that string to detect expiry.
 
 ## An expired membership_bound entitlement still opens the course
 
@@ -486,7 +486,7 @@ Verified 2026-09-10 on a subscription that was deliberately expired
 - The **product page is the only surface that gets it right**: it asks `benefit-check`,
   is told `hasBenefit:false`, and shows `Purchase`.
 
-Filed as `H-14`. The entitlement row has no expiry column of its own, so the read path is
+Filed as `H-11`. The entitlement row has no expiry column of its own, so the read path is
 where the parent's `expired_at` has to be enforced — and on the `/course` endpoint it is
 not.
 

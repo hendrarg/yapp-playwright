@@ -152,7 +152,7 @@ Online Course section above.
 Consultation: turning `Customize Message` on and saving a message persists it (the switch
 still reads ON after a reload). Emptying that message with the switch still ON and saving
 again returns `PUT /api/v1/shop/products` **200** with no validation message and no toast
-— and after a reload the switch is back OFF with the message gone (`L-63`). So "After
+— and after a reload the switch is back OFF with the message gone (`L-67`). So "After
 Sales ON" is not a state the product can hold on its own; it is derived from a non-empty
 saved message.
 
@@ -279,7 +279,7 @@ therefore target a product that is not on sale, with no warning.
 
 The price in that popover is also **`Rp0` for every tiered product** (Consultation with
 tiers, Telegram/Discord membership, Events) because it reads the product-level price
-that tiered products leave at 0; single-price products show correctly. Logged as `M-67`
+that tiered products leave at 0; single-price products show correctly. Logged as `M-69`
 on the Bugs sheet.
 
 ## The Online Course editor is a block editor, not a form
@@ -310,9 +310,9 @@ not write a test that asserts reorder through the UI.
   file input" keeps overwriting the same block. Target the input inside the empty
   placeholder instead.
 - **`.wav` is advertised but rejected** — the upload answers `Upload failed` every time
-  (`L-50`). The other six types in that accept list work.
+  (`L-54`). The other six types in that accept list work.
 
-**Deleting a block does not survive Save** (`M-54`): the file disappears from the editor,
+**Deleting a block does not survive Save** (`M-56`): the file disappears from the editor,
 `Save` reports nothing, and a reload brings it back. Text edits, new uploads, chapter adds,
 page renames and chapter deletes all persist through the same button — the defect is
 specific to deleting a block inside a page.
@@ -326,8 +326,8 @@ Verified 2026-09-10.
   creator's public profile, absent from `/explore/products`, and 404 on its direct link.
 - On an **already active** product there is **no Publish or Republish button at all** —
   only `Save`, and pressing it produces **no toast and no dialog**; the only feedback is the
-  header stamp `This product is active and was last updated <date>` (`L-62`). Edits go live
+  header stamp `This product is active and was last updated <date>` (`L-66`). Edits go live
   immediately and `shortUrl` never changes.
 - Publish validates the **thumbnail** (`Thumbnail is required`) and nothing about content:
   a course whose chapters have all been deleted publishes happily and goes live with zero
-  pages (`M-53`).
+  pages (`M-55`).
