@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, membership-tiers]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-16
 sources: 0
 status: active
 ---
@@ -493,3 +493,340 @@ not.
 **A paid course never shows `Locked`.** For a guest and for the lapsed member alike the CTA
 reads `Purchase` with the price; there is no locked state on the product page, and the
 thumbnail is never blurred (blur is a member-only-*post* behaviour, not a product one).
+
+## The tenure gate: working on the creator side, invisible on the buyer side (16 Sep 2026)
+
+A third perk axis, **`Who can access`**, gates a perk by how many months the member has
+paid for. It shipped in three stages — UI first (15 Sep), schema next (15 Sep), write path
+and validation last (16 Sep) — so anything written about it before 16 Sep describes a
+half-deployed feature.
+
+### What the creator configures
+
+`Who can access` is the **first** combobox in the tier-side perk dialog
+(`Add Tier Benefit` → `Select Products` → `Add`), above `Access Mode` and `Access Type`,
+with exactly five options:
+
+| Option | Helper text | Stored |
+|---|---|---|
+| `Everyone active` | All active members get this benefit instantly, including existing members. | `NULL` |
+| `1+ month subscribed` | Members with at least 1 month of paid tenure (1x monthly or longer plan). | `1` |
+| `3+ months subscribed` | Members with at least 3 months paid tenure, or a 3/6/12-month plan. | `3` |
+| `6+ months subscribed` | Members with 6 months paid tenure, or a 6/12-month plan upfront. | `6` |
+| `12 months subscribed` | Members with 12 months paid tenure, or an annual plan upfront. | `12` |
+
+Shape facts that matter for locators:
+
+- **No default.** Unlike `Access Mode`, which opens on `Permanent via purchase`, this one
+  opens on the placeholder `Select who can access` and is required.
+- **Offered for every product type.** A `digital_download` dialog holds **two** comboboxes
+  (`Who can access`, `Access Type`); an `online_course` dialog holds **three**
+  (`Who can access`, `Access Mode`, `Access Type`). So `Access Type` is index 2 on a course
+  and index 1 elsewhere — never reuse a positional combobox locator across product types.
+- **The benefit row names the gate**: `Free access • 1mo+`, `• 3mo+`, `• 6mo+`, `• 12mo+`.
+  `Everyone active` gets **no suffix** — the row is a plain `Free access`, identical to a
+  perk that was never gated.
+- **A free (`Rp0`) non-course product can never be gated from the browser.** Pressing `Add`
+  on it skips the config dialog entirely (see the Perk Hybrid section), so the perk goes out
+  with no `minDurationMonth` and stores `NULL`. The API is the only way to gate one.
+
+### What is stored, and how the field travels
+
+`min_duration_month` is a nullable `integer` on **both**
+`tier_membership_product_and_benefit` and `tier_membership_user_benefits`. The browser sends
+`minDurationMonth` inside the perk entry, and for `Everyone active` it **omits the key**
+rather than sending `null` — both land as `NULL`, so do not assert on the payload key being
+present. `GET /api/v1/tier-memberships/{uuid}` returns the value, and so does the buyer-side
+`GET /api/v1/account/{accountUUID}/tier-memberships`.
+
+Verified end to end 16 Sep 2026: a tier built through the UI with one perk per gate stored
+`1, 3, 6, 12` and `NULL` on the two ungated perks, read straight from the database.
+
+### Validation answers 400, which is the exception here
+
+`2`, `5`, `7`, `0`, `-1` and `13` are all rejected with
+
+```
+400  {"error":["MinDurationMonth must be one of: 1 3 6 12"],"message":"validation failed"}
+```
+
+on **POST and PUT**, and on **post perks as well as product perks**. A wrong *type* (the
+string `"6"`) is caught earlier, as `400 Invalid request` with a Go unmarshal message — type
+and value are guarded separately.
+
+**This is worth noticing because it breaks the endpoint's habit.** Every other perk
+validation here answers `500` (`discount is not allowed when accessMode=membership_bound`
+and friends, listed above). The tenure gate is the one that answers `400`. And a rejected
+`PUT` changes **nothing** — the whole perk list is left at its previous state, not partially
+applied.
+
+### Editing a gate
+
+The edit page **hydrates correctly**: `/membership/{uuid}/update` re-renders each stored
+gate in the benefit row. Pressing `Save Changes` without touching anything re-sends the same
+gates and leaves the database untouched — so this does **not** repeat the H-09 defect that
+silently reset `access_mode`.
+
+Both directions work through `PUT` (raise `1` → `12`, lower `3` → `Everyone active` by
+omitting the key). But **there is no in-place edit control on a benefit row** — only an
+unlabelled `X`. Changing a gate from the browser means removing the perk and adding it back.
+
+All three legal `accessMode` × `accessType` combinations accept a gate
+(`membership_bound`; `permanent` + `free`; `permanent` + `discount`), and the illegal
+`membership_bound` + `discount` is still rejected with its usual `500`. The tenure axis is
+genuinely independent of the other two.
+
+### The buyer cannot see the gate (open defect)
+
+**The public profile renders no tenure condition at all.** On a tier carrying gates
+`NULL, 1, 3, 6, 12`, every perk on the guest-facing card reads the same
+`Free access for "<product>"` — no suffix, no lock marker, nothing distinguishing a perk
+usable today from one that needs a year of tenure. Expanding with `See More` changes
+nothing.
+
+This is a **rendering gap, not a data gap**: the response feeding that card
+(`GET /api/v1/account/{accountUUID}/tier-memberships`) already carries `minDurationMonth`.
+So a buyer cannot learn the condition before paying. Filed as `TC-MEM-C-066` and
+`TC-MEM-B-073`.
+
+Note the two surfaces want **opposite** things, and it is easy to collapse them into one
+rule by mistake: on the **sales** page a locked perk must be *shown* with its condition; in
+the **member's own** benefit list a locked perk must be *filtered out* (`TC-MEM-B-062`).
+
+### How the gate behaves at runtime (verified with a real subscription, 16 Sep 2026)
+
+Fixture: **`QA Tenure Fixture`** (`83510a02-6d4f-4e5e-ad22-ad4a47d7e182`) on hendrarg —
+priced 1 month Rp20.000 and 6 months Rp100.000, six perks: ungated, gate 1, gate 3
+(30 % discount), gate 6 (`membership_bound`), gate 6 (post), gate 12. **token2
+(`sundanese`) holds a real 6-month subscription to it** (`tier_membership_users` id 107,
+tenure 6, expires 16 Mar 2027), bought through the buyer UI with QRIS for Rp103.020.
+
+**Tenure is `SUM(duration_month)` over `completed` purchases, and nothing happens before
+that.** While the purchase sat at `pending`, `paid_at` and `tier_membership_user_id` were
+`NULL` and **no `tier_membership_users` row existed at all** — no subscription, no
+snapshot, no tenure. One 6-month purchase then produced tenure 6 and unlocked the gates
+1, 3 and 6 **at once**: the gate is a `>=` threshold, so a bigger plan never skips a
+smaller one.
+
+**The snapshot only copies perks the buyer has already earned.** `tier_membership_user_benefits`
+for that subscription was created with **five** rows — the gate-12 perk was never copied.
+So the snapshot is built against tenure at purchase time, not as a full copy of the tier.
+
+**But the read path filters by tenure too, and that is what actually governs visibility.**
+Two creator edits, each with the member touching nothing:
+
+| Creator does | Snapshot row | What the member sees |
+|---|---|---|
+| lowers gate `12` → `6` | **written** (new row, `min_duration_month = 6`) | perk appears immediately; `benefit-check` flips to `hasBenefit: true` |
+| raises gate `1` → `12` | **kept**, value updated to `12` | perk disappears from the API response |
+
+So re-locking does **not** delete the row — it updates it, and the read path hides it.
+**Never conclude a perk is still available because its row is still in the table**; compare
+`min_duration_month` against tenure, or read through the API. And saving the tier
+repeatedly does not duplicate rows: four consecutive `PUT`s left exactly six.
+
+A locked perk is refused consistently on every path: absent from
+`GET /api/v1/tier-membership-users` (its product name appears nowhere in the body),
+`hasBenefit: false`, and `GET …/products/{uuid}/course` → **`403`** with
+`{hasAccess:false, accessSource:"none", hasPurchased:false, hasMembershipAccess:false}`.
+An unlocked `membership_bound` course returns `200` with the full course — while
+`benefit-check` still answers `false` for it, which is the old `M-39` defect, not a gate
+problem.
+
+### Isolation and live propagation (verified 16 Sep 2026)
+
+**Tenure is per (buyer, tier), with no leak across a creator's own tiers.** token2 holds
+three different tenures on three of hendrarg's tiers at once — 6, 3 and 1. Adding a gate-6
+perk to the tier where its tenure is 3 left that perk invisible there, while the gate-6
+perks on the tier where its tenure is 6 stayed open. Same buyer, same creator, same gate,
+two different answers.
+
+**A new perk reaches an active member instantly, and the gate still applies.** Two perks
+added in one creator save — one ungated, one gated at 12 — for a member at tenure 6: the
+ungated perk was present on the **very first read after the PUT**, with no delay window at
+all (re-checked at +3 s and +11 s, unchanged), and the gate-12 perk never appeared. So the
+read path merges the tier's live state rather than serving the snapshot alone, and it does
+not synthesize perks the member has not earned.
+
+**An expired subscription is still returned** by `GET /api/v1/tier-membership-users`, with
+its snapshot benefits attached — so an expired member's view can be read from the same
+endpoint as an active one.
+
+### A tier with duplicate perks can no longer be saved at all
+
+Found 16 Sep 2026, and it raises the cost of the `C-062` defect considerably.
+
+`PUT /api/v1/tier-memberships/{uuid}` on the tier `Live Time and Bound Online Course`
+answers **`500 duplicate productUUID … (first at index 0)`** even when the payload is an
+**exact copy of that tier's own current perk list**, unchanged. The tier already holds the
+duplicate `New layout` rows that the product-page save wrote (see the section above), and
+the tier endpoint's duplicate guard now rejects the state the product endpoint created.
+
+The tier is therefore **frozen**: its creator cannot change its name, price, perks or
+anything else until the duplicates are cleared by some other route.
+
+**And payments on that tier do not settle.** A subscription bought on it (`purchase` id 132)
+was still `pending` after 11.5 minutes, while all thirteen other purchases made that session
+settled in 26-192 s — including a **control** placed on a healthy tier *after* the stuck one,
+which settled in 169 s while the stuck one sat through the same sweep unchanged. The sweep is
+clearly running; only that tier's purchase is not processed. The reading that fits the
+evidence is that settlement rebuilds the entitlement snapshot, trips over the duplicate
+perks, and fails — so **a buyer can pay and never receive the membership**. Not fully
+confirmed, because the background job's error is not visible from outside.
+
+So the product-page defect is not merely "writes perks nobody asked for": it can leave a tier
+permanently uneditable *and* unsellable. It also blocks `TC-MEM-B-058` and `TC-MEM-B-065`,
+which both need that tier's expired subscription.
+
+### Where the buyer can and cannot see the gate
+
+Three buyer surfaces, and they do not agree:
+
+| Surface | Shows the gate? |
+|---|---|
+| Profile card (`/<creator>`, Rewards list) | **no** — every perk reads `Free access for "<product>"` |
+| Tier chooser (header `Subscribe` → list, "What you'll get") | **no** — same summary wording |
+| **Tier detail** (`/<creator>/membership/{tierUUID}`) | **yes**, fully |
+
+The detail page is the one that matters, because it is where `Subscribe` actually happens.
+It renders a per-perk badge (`1+ mo`, `3+ mo`, `6+ mo`, `12 mo`), a `Locked` button for
+perks above the viewer's tenure, `See Product` / `Open Course` / `See Post` for the rest,
+the discount as `Special Price` with a struck-through price and a `30% off` badge, and a
+progress line above the list: *"Some perks unlock the longer you stay subscribed — next at
+1+ month subscribed."* (a guest gets `Log in to see your progress`). An ungated perk shows
+no badge at all. Verified as guest, as a non-member, and as the tenure-6 member.
+
+Note the wording differs by role: the creator dashboard writes `6mo+`, the buyer detail
+page writes `6+ mo`.
+
+**Getting there is the awkward part.** `Subscribe` is a **profile-header** button, not a
+tier-card button — the card only has `See More`. And a buyer who already holds *any*
+membership from that creator sees `Member` there instead, which leads nowhere: there is no
+route from the profile to subscribe to a *second* tier of the same creator. The direct URL
+`/<creator>/membership/{tierUUID}` does work and opens the checkout normally, so that is
+the way to drive it in a test. (Related to `H-10`.)
+
+### Buying one through the API
+
+`POST /api/v1/tier-memberships/{uuid}/purchase/fiat` takes `durationMonth`,
+`paymentMethod`, `phoneNumber` and `email` — all four required, and **`paymentMethod` is
+lower-case (`"qris"`)**; `"QRIS"` is rejected with `payment method not valid`. A
+`…/purchase/fiat/estimation` call with the same body returns the fee breakdown
+(`tierPrice`, `transactionFee`, `paymentGatewayFee`, `amount`) without committing.
+
+**Dev QRIS settles by a periodic sweep, roughly every 3-4 minutes** — not per purchase, and
+not instantly (an earlier reading in this file said "instantly"; that was a purchase polled
+several minutes after the fact). Measured over six purchases placed a minute apart: they
+settled in two clusters, members of each cluster a few seconds apart, with individual
+latencies of 26 s to 192 s depending on how close the purchase landed to the next sweep. So
+budget up to ~4 minutes, poll rather than assume, and expect batched settlement.
+
+### Tenure really is a SUM, proven by renewals (16 Sep 2026)
+
+Fixture: **`QA Tenure Ladder`** (`7988fb9f-bac9-4b3e-83e1-a8cd7cd56ecb`, db id 146), priced
+**1 month only**, on which token2 made **six consecutive 1-month purchases** (subscription
+id 108). Every one completed; the subscription's expiry landed on 16 Mar 2027, exactly six
+months out, so renewals stack from the previous end date.
+
+While the ladder was climbed the tier carried a single perk gated at **3**, and the
+entitlement history settles the question:
+
+| After purchase | Tenure | Entitlement rows |
+|---|---|---|
+| 1 | 1 | none |
+| 2 | 2 | none |
+| 3 | 3 | **the gate-3 perk appears** |
+| 4-6 | 4, 5, 6 | same one row, rewritten each time |
+
+**This is what separates `SUM` from `MAX`.** Under `MAX(duration_month)` the value would be
+1 forever and a gate-3 perk could never open through one-month renewals. It opened on the
+third purchase, with the member doing nothing but renewing — so the figure accumulates. It
+also pins the comparison as `>=`: withheld at 2, granted at exactly 3.
+
+**Every settlement rewrites the snapshot rather than amending it.** The row is soft-deleted
+and an identical one inserted (ids 329 → 330 → 331 → 332 across the renewals), so an
+entitlement row's `id` is not a stable handle — match on product, not on id.
+
+### Unsupported product types are dropped from a perk payload in silence
+
+`POST /api/v1/tier-memberships` accepted a payload of five perks and stored **one**. The
+four that vanished were an `appointment`, a `ticket_event` and a `telegram_membership` —
+types the tier-perk system does not support (consistent with the surface table above, where
+those types are not offered in the `Select Products` dialog). There was **no error, no
+warning, and a `200`**: the response simply came back with fewer perks than were sent.
+
+Two consequences. For a creator, perks can silently fail to be created. For a test author,
+**always read back the perk count after seeding a tier** — a fixture that looks configured
+may hold a fraction of what you sent, and every assertion built on it will be measuring the
+wrong thing. This cost a full ladder run before it was spotted.
+
+### Post perks: the gate is enforced in the page, not in the API
+
+Two `membership_only` posts were attached to a tier, gated at 6 and 12, and read at tenure 6.
+
+On `/post/{uuid}` the gate works: a **guest** gets both posts locked (`Member Only`,
+`Unlock post to read & comment`, `Unlock Now`), and the **tenure-6 member** gets the gate-6
+post open with a live comment box while the gate-12 post stays locked — with its own copy,
+`Unlock post to add comments`. The member's benefit list agrees: the gate-6 post is returned,
+the gate-12 one is not.
+
+**`GET /api/v1/posts/{uuid}` does not enforce it.** A guest receives the full `content` of
+both posts, unmasked, with no lock flag — and the response even carries
+`tierMemberships[].minDurationMonth`, so the locking is evidently expected of the client.
+The test posts were text-only, and dev holds no `membership_only` post with media, so whether
+*assets* would be masked is unknown. Worth pursuing under `TC-MEM-B-GAP-009`.
+
+**Two traps around post perks:**
+
+- **Attaching a post to a tier does not make it private.** Visibility is the post's own
+  field. A `public` post attached as a gated perk stays readable by everyone; only the perk
+  row on the tier detail page reacts to the gate.
+- **`PUT /api/v1/posts/{uuid}` with `tierMembershipUuids` creates the tier perk itself**,
+  ungated. Trying to add the same post again from the tier side is then rejected as a
+  duplicate — so to gate a post, edit the perk entry that already exists rather than adding
+  one.
+
+**Removing a post perk prunes the member's snapshot row** (soft-deleted), unlike a locked
+perk, whose row stays and is merely filtered. Two different mechanisms, one identical
+appearance — do not infer the cause from the member's view alone.
+
+### Crypto checkout needs a USD price on the tier
+
+`POST /api/v1/tier-memberships/{uuid}/purchase/crypto` and its `/estimation` sibling exist
+and require `inputCurrency`. With `USDT`, `usdt` or `USDC` they all answer
+`400 tier membership price is not available in USD for crypto checkout` — because the tier
+was priced in IDR only. So a crypto test needs a tier carrying `priceUSD` on its price rows;
+whether the payment can then actually complete on dev is still unknown.
+
+### Fixtures left in place
+
+- **`QA Tenure Fixture`** `83510a02-6d4f-4e5e-ad22-ad4a47d7e182` — six perks across gates
+  `none/1/3/6/12` plus gated posts; token2 holds tenure **6** from one 6-month purchase.
+- **`QA Tenure Ladder`** `7988fb9f-bac9-4b3e-83e1-a8cd7cd56ecb` — priced 1 month only;
+  token2 holds tenure **6+** built from consecutive 1-month renewals.
+
+Both are expensive to rebuild, so they are worth keeping. `tier_membership_purchases` id 132
+is a stuck `pending` row on the frozen tier that cannot be cleaned up from outside.
+
+### What is still unverified
+
+An `Rp0` purchase counting (`B-060`); a crypto purchase counting (`B-061`, now blocked only
+on a USD-priced tier); tenure accumulating across a lapse and what a permanent perk does
+afterwards (`B-058`, `B-069`, both blocked on the unsettleable tier above); and claiming a
+gated product then keeping it once the creator removes the perk (`B-066`, `B-070`).
+Isolation **between buyers** is also still open — only one buyer has ever held tenure on
+these tiers.
+
+**One trap before writing the post test (`TC-MEM-B-071`):** attaching a post to a tier as a
+gated perk does **not** make that post private. The fixture's post is
+`visibility = public`, and `GET /api/v1/posts/{uuid}` returns its full content identically
+to a guest and to the member. The gate only drives the perk row on the tier detail page
+(`See Post` vs `Locked`). Testing post gating needs a `membership_only` post linked to the
+tier — otherwise a green result means nothing.
+
+Also unopened: whether `Add Exclusive Post` on the tier form offers the gate control (a post
+perk gated through the API stores the value fine).
+
+**Aside:** `POST /api/v1/tier-memberships` with `isActive: false` comes back
+`isActive: true`, and a `thumbnailURL` the API accepts is echoed as `""` unless it came from
+the upload flow. Seed an inactive tier by creating then updating it.

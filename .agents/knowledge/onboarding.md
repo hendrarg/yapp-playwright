@@ -340,3 +340,25 @@ buyer app `/membership`, `/my-membership` and `/library` all render the
 per-user permission thing. Empty Active state reads
 `Start your membership journey…` and is followed by a `Subscribe These Creators!`
 recommendation list, each row carrying `See Membership Tier`.
+
+## The OTP step is where a long email is rendered, and it wraps (16 Sep 2026)
+
+Verified on both apps while retesting `YAP-2131`, guest context, at 1440 / 390 / 320 px.
+
+`POST /api/v1/auth/login/otp` moves the buyer app to `?step=input-otp` and the creator app
+to the same query on its own host. The destination address is rendered in a `<span>` under
+`Verification code has been sent to`, and that span carries **`word-break: break-all`**, so
+a long address wraps inside the card instead of running off it: pushed to 80, 160 and 300
+characters the element's width stays pinned to its container (384 px at 1440, 304 at 390,
+238 at 320) and only its height grows. `document.documentElement.scrollWidth` never exceeds
+`clientWidth` at any width. Both apps behave identically, and the left-panel tagline reads
+`The All in One Payment Gateway for Creator` — the `Gateaway` typo is gone.
+
+**The trap, if you drive this flow repeatedly:** asking for an OTP again with the **same
+address** within a short window quietly fails — the click lands, no error appears, and the
+page simply stays on the email step instead of advancing. Switching to a different address
+works on the first try. So a run that "cannot reach the OTP page" is usually the previous
+run's address, not a broken locator; rotate the address between attempts rather than
+retrying the same one. The longest real accounts on dev are only ~44 characters, so anything
+beyond that has to be injected into the rendered node — which is enough to test the layout,
+and avoids creating junk accounts.

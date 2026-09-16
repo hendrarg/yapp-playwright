@@ -551,5 +551,6 @@ npm run mcp:clean
 - Closes browsers under the Playwright cache (`resolvePlaywrightBrowsersPath()`) plus this repo's `@playwright/mcp` node servers.
 - **Never** touches a normal Chrome install, a browser owned by a running `playwright test`, or an MCP server started by another tool (Cursor, `npx @playwright/mcp@latest`). Those need `--all-servers`.
 - `--dry-run` lists what would go; `--browsers` keeps the servers up so the next MCP call stays fast.
+- **Run the bare `npm run mcp:clean` only when you are done exploring.** It kills this session's own MCP server too: every `mcp__playwright__*` tool disconnects immediately and does **not** come back without restarting the client, so a mid-session clean ends browser work for that session. Mid-session, use `npm run mcp:clean -- --browsers`. If it is already too late, a plain Playwright script (`chromium.launch()` plus `context.addCookies` with the `at` cookie) reaches the same pages — you lose `browser_snapshot`, so read the tree with `getByRole` counts and `innerText` instead.
 
 Duplicate MCP servers are the real leak: one per client, and they outlive the session that started them. Check with `npm run mcp:clean -- --dry-run` when the machine feels heavy.
