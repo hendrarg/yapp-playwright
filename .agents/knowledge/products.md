@@ -349,7 +349,12 @@ Verified 2026-09-10.
 **`/product/{uuid}/checkout?quantity=1`** — which opens for a guest too, with the
 `Send Verification Code` guest flow — and **`/product/{uuid}/course`** for course content.
 
-So a test that needs the product detail page has to navigate to it (Explore, the creator's
-shop, a tier's perk row), not type the URL. This cost a full run of `TC-MEM-B-046` before it
+**Correction, 17 Sep 2026 — the detail page does have a direct URL, just a different one:**
+`/{creator}/product/{shortUrl}`, e.g. `/hendrarg/product/OSa-cJqCl2`. `shortUrl` is a column
+on `products`. That route renders the real detail page (Overview / About Creator tabs,
+`Purchase`, `Add To Cart`). What does *not* work is the uuid form, `/product/{uuid}`.
+
+So a test that needs the product detail page should use the creator-handle + shortUrl route,
+or navigate to it (Explore, the creator's shop, a tier's perk row) — not `/product/{uuid}`. This cost a full run of `TC-MEM-B-046` before it
 was spotted: three different viewer states all landed somewhere else, which reads at first
 like the page is broken rather than like the route having moved.

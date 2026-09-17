@@ -158,6 +158,17 @@ restore it to `null` afterwards. The rejection verdict is read from
 | 500 `Cannot use the promo code, already expired` | outside the promo period |
 | 500 `Promo code has reached the maximum usage` | at the usage ceiling |
 
+**That table no longer holds for the expired case (re-measured 17 Sep 2026).** Every
+rejection now answers **`404 record not found`** — a nonexistent code, two genuinely expired
+promos, and an empty string all produced the identical body. The specific "already expired"
+message did not appear. The likely cause is that the lookup began filtering by period, so an
+out-of-period promo is simply not found and its reason is lost.
+
+**And the checkout renders that string to the buyer verbatim**, inline under the code field:
+the shopper literally reads `record not found`. Filed as `YAP-2186`. So do not assert on a
+per-cause message today, and do not use the message to tell a mistyped code from an expired
+one — the API cannot currently distinguish them.
+
 **No affiliate promo exists on dev.** A census of all 9 promos found every one with
 `isSetAffiliate: false`, `affiliatorCommissionPercentage: 0`, and `affiliator: null`.
 The order side is already prepared to receive one — `affiliatorCommissionAmount`,
