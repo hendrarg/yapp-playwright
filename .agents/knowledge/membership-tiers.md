@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, membership-tiers]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-16
+updated: 2026-09-17
 sources: 0
 status: active
 ---
@@ -456,6 +456,39 @@ The **`History` tab** of `/profile/membership` does list the lapsed membership w
 `/<creator>/membership`, where that same inert `Subscribed` card is waiting. So the
 resubscribe path exists end to end in the UI and still cannot be completed (`H-10`).
 
+## DM sending is refused for every pair we can drive (17 Sep 2026)
+
+Superseding the section below for the moment. `POST /api/v1/dm/conversations` now answers
+**`canSend: false`, `readOnlyReason: "dm_access_revoked"`** for every buyer→creator pair
+available to us, and the chat page renders **no composer** at all:
+
+| Buyer | Creator | Subscription | Creator policy | Result |
+|---|---|---|---|---|
+| token1 | sundanese | `QA DM Upgrade`, dm=true, active | `subscriber_only` | refused |
+| token1 | coba2 | `satubulan`, dm=true, active for weeks | — | refused |
+| token1 | geri | `Enable Message`, dm=true, **expired** | — | refused |
+| token2 | hendrarg | `QA Tenure Fixture`, dm=true, active | `followers_and_subscribers` | refused |
+
+The coba2 row is the telling one: that subscription long predates this session and has
+nothing to do with any tier edit made here. So this is not a subscription-evaluation
+problem — the send path refuses across the board.
+
+**Treat it as a suspected regression, not as the norm**: on 10 Sep 2026 DM worked for
+token2 → hendrarg, and the tier flag was toggled off and on with the composer disappearing
+and returning (recorded below). Re-verify before trusting any DM assertion; and note that
+a `canSend:false` here will masquerade as a failure of whatever DM test you are running.
+
+**Locator warning:** on `/direct` the page has a search input, so a naive
+`textarea, [contenteditable]` count finds one element and reads as "composer present". Open
+the conversation itself (`/direct?chatId=…`) before judging — with the chat open the
+composer count is genuinely `0` when access is refused.
+
+**Fixture now in place for the upgrade tests** (`TC-MEM-B-028`, `TC-MB-B-023`): token1 sat
+on sundanese's non-DM tier `MB Permanent Contrast` with `canSend:false` as a clean baseline,
+then subscribed to a purpose-built DM-enabled tier `QA DM Upgrade`
+(`b179173d-3a7f-4861-bedc-18a65c4650aa`, subscription id 109, active to 17 Oct 2026). The
+upgrade half works; only the DM half cannot be observed.
+
 ## DM access follows the tier flag, live
 
 Verified 2026-09-10 by toggling `Enable Direct Message` on a tier with an active
@@ -652,7 +685,7 @@ not synthesize perks the member has not earned.
 its snapshot benefits attached — so an expired member's view can be read from the same
 endpoint as an active one.
 
-### A tier with duplicate perks can no longer be saved at all
+### A tier with duplicate perks could not be saved or sold — fixed 17 Sep 2026
 
 Found 16 Sep 2026, and it raises the cost of the `C-062` defect considerably.
 
@@ -674,9 +707,27 @@ evidence is that settlement rebuilds the entitlement snapshot, trips over the du
 perks, and fails — so **a buyer can pay and never receive the membership**. Not fully
 confirmed, because the background job's error is not visible from outside.
 
-So the product-page defect is not merely "writes perks nobody asked for": it can leave a tier
-permanently uneditable *and* unsellable. It also blocks `TC-MEM-B-058` and `TC-MEM-B-065`,
-which both need that tier's expired subscription.
+So the product-page defect was not merely "writes perks nobody asked for": it could leave a
+tier permanently uneditable *and* unsellable.
+
+**Both halves are fixed, retested 17 Sep 2026** (`YAP-2177`, and its root cause `YAP-2178`).
+
+- The same `PUT` now answers **200**, and **de-duplicates on write**: 9 perks sent, 3 stored.
+  A normal save both unfreezes and repairs the tier — no manual data cleanup needed.
+- Purchases settle again. The originally stuck one completed, and a fresh purchase on that
+  tier was picked up by the **same sweep** as a control purchase on a healthy tier, 7 seconds
+  apart. Note the sweep's cadence varies by day (26-192 s on 16 Sep, 7-16 min on 17 Sep), so
+  **always measure against a control purchase** rather than an absolute stopwatch — a slow day
+  otherwise reads as a stuck tier.
+- The root cause is closed too: the product-page save no longer revives a deleted perk nor
+  writes duplicates, tested with the benefits switch **on** and eight tier rows listed. The
+  product-side row now also names the mode and gate (`Free Access • 1mo+`, `While subscribed`,
+  `Special Price • 3mo+`), which it never used to.
+
+**Still open, and hit during that retest:** an online course attached as a `membership_bound`
+perk on any tier still cannot be saved from its own editor —
+`500 discount fields must be omitted when accessMode=membership_bound`, with no toast. That is
+bug-sheet `H-14`, and it has no ticket of its own.
 
 ### Where the buyer can and cannot see the gate
 
@@ -811,9 +862,14 @@ is a stuck `pending` row on the frozen tier that cannot be cleaned up from outsi
 ### What is still unverified
 
 An `Rp0` purchase counting (`B-060`); a crypto purchase counting (`B-061`, now blocked only
-on a USD-priced tier); tenure accumulating across a lapse and what a permanent perk does
-afterwards (`B-058`, `B-069`, both blocked on the unsettleable tier above); and claiming a
+on a USD-priced tier); what a permanent perk does after a lapse (`B-069`); and claiming a
 gated product then keeping it once the creator removes the perk (`B-066`, `B-070`).
+
+**Tenure across a lapse is now proven** (`B-058`, 17 Sep 2026): a subscription that had
+expired on 3 Sep with tenure 1 was re-bought twice, and tenure went **1 → 2 → 3** rather than
+resetting, while the expiry moved out a month each time. Tenure is purchase history and
+survives the lapse; active access still needs a running subscription. Keep those two apart in
+assertions.
 Isolation **between buyers** is also still open — only one buyer has ever held tenure on
 these tiers.
 

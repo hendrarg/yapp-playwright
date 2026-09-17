@@ -333,3 +333,23 @@ Verified 2026-09-10.
 - Publish validates the **thumbnail** (`Thumbnail is required`) and nothing about content:
   a course whose chapters have all been deleted publishes happily and goes live with zero
   pages (`M-55`).
+
+## The product detail page is no longer reachable by direct URL (17 Sep 2026)
+
+`/product/{uuid}` does **not** open a product detail page any more:
+
+| Viewer | Result |
+|---|---|
+| guest | redirected to `/auth?redirect_url=/product/{uuid}/view` |
+| logged in, not a member | redirected to `/explore`, with a `404` in the console |
+| logged in, active member | redirected to `/explore`, same `404` |
+
+`/product/{uuid}/view` behaves the same way, and neither `/{creator}/{shortUrl}` nor
+`/{shortUrl}` renders it. What still works by direct URL is
+**`/product/{uuid}/checkout?quantity=1`** — which opens for a guest too, with the
+`Send Verification Code` guest flow — and **`/product/{uuid}/course`** for course content.
+
+So a test that needs the product detail page has to navigate to it (Explore, the creator's
+shop, a tier's perk row), not type the URL. This cost a full run of `TC-MEM-B-046` before it
+was spotted: three different viewer states all landed somewhere else, which reads at first
+like the page is broken rather than like the route having moved.
