@@ -259,7 +259,10 @@ clicking the name cell navigates to `/products/stats/{uuid}`, and that page carr
 returns nothing; go through the stats page (or hold the uuid) instead.
 
 Edit slugs seen so far: `appointment` (Consultation), `discord-membership`,
-`events-ticket`, `digital-downloads`. Only Consultation's differs from its create slug.
+`events-ticket`, `digital-downloads`, `telegram-membership`, `online-course`, and
+`exclusive-content` — the Digital Product / **Exclusive Content** type, whose slug matches
+neither its label nor its `product_type` value (`digital_product`), so it is the one route
+that cannot be guessed. Only Consultation's differs from its create slug.
 
 **The list shows one status at a time.** Tabs are `Active (n)`, `Inactive (n)`,
 `Draft (n)` and the table only holds the selected status — a product missing from the
@@ -270,6 +273,64 @@ already passed, Step 1 shows `Event date cannot be in the past` and `Next: Set D
 does nothing. Move the date forward in the picker first (open it, advance the month,
 pick a day) or Step 2 is unreachable — this is what makes old seeded events look like a
 broken Next button.
+
+## Meta Pixel per product (18 Sep 2026)
+
+Mapped on dev while testing YAP-2166 ([FE][BE] Per-Product Pixel Integration). This is the
+product-level companion to the account-level Facebook Pixel in [[settings]], and the two are
+additive, not alternatives.
+
+**Where it is.** A `Meta Pixel` section on the product editor's **Details** step — which is
+step 1 on Consultation and Events & Tickets, step 2 on Digital Download, Discord Membership,
+Telegram Membership and Online Course. Heading `Meta Pixel`, subtitle *"Send this product's
+events to its own Meta pixel, on top of your account pixel."*
+
+**Exclusive Content (`digital_product`) does not have the section**, on either editor step,
+although it is still offered in the `Add New Product` dialog under `Memberships`. Every other
+type has it. Verified 18 Sep 2026 — ticket's stated scope is "all product types", so treat a
+future appearance there as the fix, not as a regression.
+
+**The toggle has no stored state of its own.** `aria-label="Enable Meta Pixel for this
+product"`. Off shows one card line, *"Off — this product's events go to your account pixel
+only."*; on reveals `Pixel ID` (input, placeholder `e.g. 123456789012345`) and `Pixel Access
+Token` (**a `textarea`**, placeholder `Paste your access token here`) — the same input/textarea
+split as the account-level dialog. On reload the toggle is derived from the saved values, so
+**switching it on and saving with both fields empty is silently discarded**: no error, and the
+section comes back Off.
+
+**Validation is client-side only and does not block the step.** A non-numeric Pixel ID shows
+the red message `Pixel ID is the numeric ID from Events Manager`, but `Next` still advances and
+the input gets **no `aria-invalid`**. What it does block is the save: pressing `Save and
+Publish` from step 2 with an invalid Pixel ID left behind on step 1 does nothing at all — no
+toast, no scroll back to the error, `updated_at` unchanged. The Access Token is not validated
+(one character saves).
+
+**Storage has three states, and two of them mean "no pixel".** `products.meta_pixel_id` and
+`products.meta_pixel_token` (both `text`, added at the end of the table) hold the values in
+plaintext. Never configured leaves them `NULL`; turning the toggle **off** and saving writes
+**empty strings**, not `NULL`. Any query or fixture check must treat `''` and `NULL` alike.
+
+**What the buyer page does with it.** The product detail page (`/{creator}/product/{shortUrl}`)
+calls a public, unauthenticated `GET {API}/v1/products/meta-pixels?uuids={uuid}` — plural, so
+it is built for several products at once — which answers with **`metaPixelID` only, never the
+access token**:
+
+```json
+{"status":200,"message":"Get Product Meta Pixels Successfully",
+ "data":[{"uuid":"…","metaPixelID":"123456789012345"}]}
+```
+
+A product with no pixel of its own returns `"data":[]`; the endpoint does **not** fall back to
+the creator's account pixel, so it is strictly per-product. Any uuid can be queried by anyone.
+
+**Nothing fires in the browser.** With a product pixel set, an account pixel set, or both,
+`connect.facebook.net/…/fbevents.js` is never loaded, `window.fbq` stays `undefined`, and the
+checkout route (`/product/{uuid}/checkout?quantity=1`) does not even fetch `meta-pixels`. GA4
+(`G-BFW6EM6XDN`) is the only tracker on the page. So the three tracked events (Page View,
+Initiate Checkout, Purchase — see [[settings]]) are delivered **server-side through the
+Conversions API**, which is why a token is required at all, and why **a test cannot assert
+pixel delivery from the browser**. The one client-side artefact worth asserting is the
+`meta-pixels` request and its payload.
 
 ## Promotion: Find Product ignores product status
 

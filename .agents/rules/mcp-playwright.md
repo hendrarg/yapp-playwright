@@ -33,6 +33,12 @@ await page.context().addCookies([{
 }]);
 ```
 
+`browser_run_code_unsafe` runs Node-side (it gets a real `page`), but in a sandbox with
+**no `process` and no `require`** — `process.env.YAPP_TEST_ACCESS_TOKEN` throws
+`ReferenceError: process is not defined`, so the token cannot be read there and has to be
+pasted in, or injected by the wrapper via `YAPP_MCP_ACCOUNT` at server start (a change to
+which needs an MCP server restart, since `--storage-state` is read once).
+
 Then `browser_navigate` to e.g. `https://creators-dev.yapp.ink/products`. If the page redirects to `/auth`, the cookie was not applied (or the token expired — check the JWT `exp`).
 
 - Because the cookie is written with `httpOnly: false` (see `scripts/mcp-auth-storage.mjs`), `browser_evaluate` can also swap accounts mid-session: navigate to any `*.yapp.ink` page, set `document.cookie = 'at=<token>; domain=.yapp.ink; path=/; secure; samesite=lax'`, then re-navigate. `--storage-state` is read only at server start, so this is what makes paired creator↔buyer testing cheap — otherwise every role switch needs a full MCP server restart. Switch back when done.
@@ -52,6 +58,17 @@ If the MCP browser session redirects to `/auth` and the `at` token in `.env` is 
 4. **Re-inject the refreshed token** into the MCP browser context via `context.addCookies` (see Token injection above), then navigate again.
 
 Quick path: run the OTP login spec (`npx playwright test tests/auth/otp-login.spec.ts --project=chromium`) — it logs in as QA Tester and saves the token to `.env` in one go. `refreshAccountTokenViaOtp(context, account, baseURL)` wraps login + save for fixture use.
+
+**That refresh does not restore the token you had.** Verified 18 Sep 2026: the token kept in
+`.env` as `YAPP_TEST_ACCESS_TOKEN` was user **317 `hendrarg`** (372 products, the account every
+product fixture assumes), while `x7nv1.qa@inbox.testmail.app` — the inbox the refresh logs in
+with — belongs to user **459 `anthony_mosciski`** (104 products). Running the spec therefore
+overwrites token1 with a *different* account that merely shares the QA label, and
+`npm run token:inspect` will not flag it: the JWT carries no username claim, so it prints
+`id`/`uuid` only and reports the swap as success. Check the id against the DB
+(`select id, username from users where uuid = '<uuid from token:inspect>'`) before trusting a
+refreshed token, and prefer asking the token owner for a fresh one when the products of user
+317 are what the task needs.
 
 ## Diagnosing a bad token: the creator app loops, it does not say "unauthorized"
 
@@ -397,6 +414,41 @@ the same `Access Mode` copy but nothing else is shared — see
   uploads into the description and leaves the form failing `Thumbnail URL is required`
   with no request fired. A 600×600 PNG generated with `zlib.deflateSync` is enough to
   satisfy the 500×500 minimum.
+
+## The product editor renders each field twice — one copy hidden
+
+Hit 18 Sep 2026 on the `Meta Pixel` section of the product editor (all types). A plain CSS
+query matches **two** elements and Playwright fails strict mode:
+
+```
+locator('input[id$="-meta-pixel-id"]') resolved to 2 elements
+```
+
+Both carry the same value; only the first has `offsetParent` (the second is `width: 0`, a
+hidden duplicate the responsive layout keeps mounted). The accessible-name query resolves to
+exactly one — `getByRole('textbox', { name: 'Pixel ID' })` returns 1 — so role + name is the
+locator that works here, and an id or CSS selector is not.
+
+Their `id`s are React-generated (`_r_t_-meta-pixel-id`, `_r_mi_-meta-pixel-id`,
+`_r_lf_-…`) and **change between renders of the same page**, so never anchor on them, not even
+with `$=`. The account-level dialog in `/settings?tab=integrations` is the opposite case: its
+fields have the stable hand-written ids `#pixel-id` and `#pixel-token`.
+
+**Count the repeated buttons before clicking one.** The Integrations tab renders two visible
+`Disconnect` buttons (one per connected integration); `.first()` silently hit the wrong
+integration's dialog and the pixel stayed connected, which reads exactly like a broken
+Disconnect. Scope to the section, or assert the count first.
+
+**The `Add New Product` dialog keeps offscreen cards in the DOM.** `Exclusive Content` resolves
+as a `<p>` but never becomes visible, so a click times out after 30s. Navigate straight to
+`/products/create/{slug}` instead of driving that dialog.
+
+**A blocked `Next:` button leaves the step counter at `1/2`.** On an editor whose step 1 has
+unmet required fields (a Digital Product with no file, for example), `Next: Set Details` does
+nothing and any assertion about step 2 silently reads step 1. Use the `Details` tab
+(`getByRole('tab', { name: 'Details' })`) — present in edit mode, absent in create mode — or
+check the `1/2` → `2/2` indicator before trusting what the body text says.
+
 
 ## `/streamer/*` specifics
 
