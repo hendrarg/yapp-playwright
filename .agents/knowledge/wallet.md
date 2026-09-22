@@ -92,21 +92,39 @@ not a single form:
   form — no toast, no confirmation, no success text (checked at 1.5s and 6s). The only
   proof the PIN was created is `users.pin` in the database.
 
-## A wrong PIN answers HTTP 500 and the UI says nothing
+**The endpoints behind the wizard** (observed 2026-09-22):
+
+| Request | Purpose |
+|---|---|
+| `GET /api/v1/accounts/pin/check` | whether a PIN already exists (called on wallet load) |
+| `POST /api/v1/accounts/pin/request` | sends the `verify-set-pin` OTP to the account email |
+| `POST /api/v1/accounts/pin/confirm` | body `{"code":"<otp>","pin":"<6-digit>"}` — verifies the OTP and writes `users.pin` (argon2id) |
+
+There is **no change/reset-PIN UI**. With a PIN already set, `Withdraw` opens the
+destination/amount form directly and never offers a PIN change, so the only way to
+reset a forgotten PIN is to clear `users.pin` and re-run the setup wizard.
+
+## A wrong PIN answers HTTP 500 — the bank message now reaches the user
 
 `POST /api/v1/accounts/financial-info` is where the PIN is checked, and it returns
-validation failures as **500**, which the frontend then swallows whole:
+validation failures as **500**:
 
 | Input | Response | What the user sees |
 |---|---|---|
 | wrong PIN | `500 {"status":500,"message":"Invalid PIN"}` | nothing at all |
-| correct PIN, made-up account number | `500 {"status":500,"message":"Invalid Bank Account. accountNumber is invalid"}` | nothing at all |
+| correct PIN, made-up account number | `500 {"status":500,"message":"Invalid Bank Account. accountNumber is invalid"}` | a **toast** with that raw message (re-checked 2026-09-22) |
 | 4th attempt in a row | `429 Too Many Requests` | nothing at all |
 
+**Corrected 2026-09-22** on creator `v0.4.9-dev-63`: the account-number failure *is*
+surfaced as a toast reading the provider message verbatim, so the earlier note that the
+frontend "swallows it whole" no longer holds for this row. The wrong-PIN and 429 rows
+above were not re-checked that day, so treat their "nothing at all" as older and unverified.
+
 Two consequences for testing. First, the order is **PIN first, bank number second** — so
-the message identifies which one failed, and the network tab is the only way to read it.
-Second, **there is no remaining-attempt counter** anywhere: not in the UI, not in the
-response body. Any test expecting one, or expecting an inline error, fails today.
+the message identifies which one failed, and the network tab is the only way to read the
+full response. Second, **there is no remaining-attempt counter** anywhere: not in the UI,
+not in the response body — the toast carries only the provider message, never an attempt
+count.
 
 ## A bank destination cannot be created on dev
 
@@ -116,6 +134,11 @@ rejected with `Invalid Bank Account. accountNumber is invalid`. The endpoint app
 validate against a real disbursement provider, so invented numbers cannot pass and **no
 withdrawal test that needs a destination is reachable on dev** without a genuinely valid
 Indonesian account number.
+
+Re-confirmed 2026-09-22 (`8930455131`, `BANK CENTRAL ASIA`, account name `HENDRA`) on
+creator `v0.4.9-dev-63` — same rejection, HTTP 500. So the dev block had not changed by
+then. Reported behaviour on prod is **intermittent** (same message, sometimes succeeds);
+that claim is unverified here and needs a prod HAR before it can be relied on.
 
 This blocks more than the destination cases: the withdrawal form validates **destination
 before amount**, so entering an amount and pressing `Withdraw` answers

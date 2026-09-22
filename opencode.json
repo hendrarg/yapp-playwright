@@ -19,6 +19,11 @@
         "GOOGLE_APPLICATION_CREDENTIALS": ".google-sheets-service-account.json",
         "GOOGLE_PROJECT_ID": "key-cistern-500713-k8"
       }
+    },
+    "monkies": {
+      "type": "remote",
+      "url": "https://monkies-mcp.monklabs.io/mcp",
+      "enabled": true
     }
   }
 }
