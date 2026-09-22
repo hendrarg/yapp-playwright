@@ -100,9 +100,23 @@ Facebook Pixel's `Set Up` dialog takes `Pixel ID` (input) and `Pixel Access Toke
 disabled until both are filled.
 
 `See what we track` is a three-step carousel: **Page View**, **Initiate Checkout**,
-**Purchase**, the last step's button reading `Got it`. Those three events are sent
-**server-side** â€” no Facebook script ever loads in the buyer's browser (see
+**Purchase**, the last step's button reading `Got it`.
+
+**Env split (verified 19 Sep 2026):** saving Pixel ID + Access Token in Settings works on
+creators-dev. **Purchase** can still reach Meta on yapp-dev via **backend Conversions API**
+after payment settle (QRIS / deposit-dev webhook). **Page View / Initiate Checkout** are
+buyer-app browser `fbq` events and are **production-only** — on yapp-dev they are gated off
+(`environment: "dev"` unless `NEXT_PUBLIC_META_PIXEL_FORCE` is `1`/`true`/`yes`). Live FE
+product-open tracks **`ViewContent`**, not `PageView`. Settings copy that implies all three
+are always server-side CAPI is ahead of the buyer implementation (see
 [[products#Meta Pixel per product (18 Sep 2026)]]).
+
+**Why the buyer `fbq` gate is off on yapp-dev (Dev, 19 Sep 2026):** pixel credentials are
+still shared with **production** (one pixel). Enabling browser events on dev would mix
+test traffic into the prod funnel. There is also a **Yapp-level** pixel in addition to
+creator/product pixels. So on yapp-dev, expect **Purchase via backend CAPI** for the QA
+pixel; do not expect Page View / Initiate Checkout from the buyer browser unless a
+separate dev pixel (or force flag) is intentionally introduced.
 
 Once saved (verified 18 Sep 2026) the block reads `Connected` / `Your Facebook Pixel is
 active and tracking events.` and **prints the Pixel Access Token back in full, unmasked**,

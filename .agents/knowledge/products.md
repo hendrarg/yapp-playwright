@@ -323,14 +323,17 @@ access token**:
 A product with no pixel of its own returns `"data":[]`; the endpoint does **not** fall back to
 the creator's account pixel, so it is strictly per-product. Any uuid can be queried by anyone.
 
-**Nothing fires in the browser.** With a product pixel set, an account pixel set, or both,
-`connect.facebook.net/…/fbevents.js` is never loaded, `window.fbq` stays `undefined`, and the
-checkout route (`/product/{uuid}/checkout?quantity=1`) does not even fetch `meta-pixels`. GA4
-(`G-BFW6EM6XDN`) is the only tracker on the page. So the three tracked events (Page View,
-Initiate Checkout, Purchase — see [[settings]]) are delivered **server-side through the
-Conversions API**, which is why a token is required at all, and why **a test cannot assert
-pixel delivery from the browser**. The one client-side artefact worth asserting is the
-`meta-pixels` request and its payload.
+**Browser vs server (updated 19 Sep 2026).** On **yapp-dev**, buyer Meta events other than
+Purchase are **not** observed as server CAPI: the live buyer bundle gates `fbq` behind
+`canSendMetaPixelEvents()` which is false when `environment` is `dev`/`development`/`local`
+unless `NEXT_PUBLIC_META_PIXEL_FORCE` is `1`/`true`/`yes`. With the gate off, `window.fbq`
+stays undefined and no `fbevents.js` loads — matching earlier observations. **Purchase** still
+reaches Meta on yapp-dev via **backend Conversions API** after payment settle. On
+**production**, browser `fbq` is expected for funnel events; product-open tracks
+**`ViewContent`** (Settings carousel still says Page View). Checkout may not fetch
+`meta-pixels`. GA4 (`G-BFW6EM6XDN`) remains on the page either way. **A test cannot assert
+pixel delivery from the browser on yapp-dev without force-enable.** The one client-side
+artefact still worth asserting is the `meta-pixels` request and its payload.
 
 ## Promotion: Find Product ignores product status
 
