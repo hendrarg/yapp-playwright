@@ -123,3 +123,61 @@ unsaved value intact, so the draft is held above the section.
 (placeholder `Notes can be seen by public`) has `maxlength=200` with an `n / 200` counter,
 while `Add Private Note` (placeholder `Notes can only be seen by creator`) has **no
 maxlength and no counter**. The audience of each is stated only in the placeholder.
+
+## `isSupportPrivate` hides the supporter list — it is not a separate surface
+
+Established 2026-09-22 while looking for the "PrivateSupport block" the inline-tip test
+list assumes (A-04/A-05). **There is no Private Support page, panel, or block in the
+product.** The flag controls whether the profile's **Support tab** (the supporter list)
+is shown at all, and the tab's presence is what the flag governs:
+
+| Creator | `is_support_private` | tips received | Support tab for a visitor |
+|---|---|---|---|
+| `yoms07`, `hendrarg` | false | yes | **shown** — supporter list renders |
+| `iyansr2222` | true | **65** | **hidden** — no Support tab at all |
+| `abc12`, `anggaecs2` | true | 0 / 1 | hidden |
+
+So spotting this by counting tips is misleading: `iyansr2222` has 65 tips and still shows
+no Support tab, because the flag suppresses it.
+
+**There is no creator toggle for it.** `/settings` carries only Wallet, Payment & Fee,
+Integrations and Bank Account, and `/customize` only Theme, Profile, Tip Button and
+Domain — neither mentions privacy of support. The field therefore looks API/legacy-only,
+which is why it cannot be found in the UI. Whether the creator themselves (owner view)
+still sees their own supporters while the flag is on was **not** verified — no token for a
+private creator was available; only the visitor view was checked.
+
+## The Support tab exists only while the Tip Button is on — turning it off removes the supporter list too
+
+Established 2026-09-22. The profile's **Support tab** is the whole support surface
+(supporter list + inline tip panel); its presence is gated by **two** flags, and the
+visitor sees nothing when either one is off:
+
+| Creator | layout | `is_tip_button` | `is_support_private` | Support tab / Send Tip CTA |
+|---|---|---|---|---|
+| `yoms07` | default | true | false | **shown** |
+| `iyansr2222` | default | true | **true** | hidden |
+| `hendrarg` (after the 22 Sep toggle) | default | **false** | false | hidden |
+| `miltonayler` | **simple** | false | false | n/a — the simple layout renders no support surface at all |
+
+**A `simple`-layout creator is not evidence for this gating.** `miltonayler`
+(`profile_layout_preference = 'simple'`) renders a landing-style page — banner, logo,
+social links, a `Products` tab — and exposes **no tip/support surface regardless of the
+flag**, so its missing Support tab says nothing about `is_tip_button`.
+
+**On a default-layout creator, turning the Tip Button off hides the whole support surface**
+— not only the tip form. Verified 2026-09-22 by toggling `hendrarg` (default layout, 73
+received tips) to `is_tip_button=false`: tabs become `Shops/Links/Feeds/Membership` with
+**no Support tab, no `Send Tip` CTA, no tip panel and no supporter rows** on desktop or
+mobile, and everything returns when the flag is set back to true. **This is the intended
+behaviour, not a defect** — the inline-tip test list's A-02, which expected the supporter
+list to remain "exactly as before the refactor", is the thing that was wrong and has been
+corrected. The creator dashboard `/customize → Tip Button → Show Tip Button` switch is what
+flips `is_tip_button`.
+
+**The list is also missing on mobile even with the Tip Button ON** (same date, measured on
+`hendrarg`, tip on): desktop shows the Support tab as a 3/5 + 2/5 split — left column the
+supporter list (10 rows), right column the inline tip panel — while at 390×844 the Support
+tab carries **only the tip form**. The supporter rows are not merely hidden by CSS: no
+`sent Rp…` node exists in the mobile DOM at all, so the list is never rendered at that
+breakpoint. Tracked as `TIP-5` (`TC-TIP-B-086` / A-03).
