@@ -141,6 +141,11 @@ it per product type:
   counter on the same forms counts words (see below).
 - **Links are capped at 3**, stated in the UI as `max. 3 links`, described as links the
   buyer can open straight from the after-sales email.
+- **A link's `Customize Label Text` is capped at 40 characters** (`maxLength`), across
+  **every** product type — not just Consultation. The input simply stops at 40 and the
+  counter reads `40/40 characters`; there is **no inline error**, and that is the
+  **intended** FE boundary (ruled 2026-09-23, closed `L-07`). Do not write a test expecting
+  an over-length error here — assert the 40-char cap and the `40/40` counter instead.
 - **There is no file-attachment control anywhere in After Sales**, on any product type.
   A recording or follow-up file can only be delivered as a link. Do not write a test
   hunting for an upload button here.
@@ -212,6 +217,15 @@ Form, Ticket Configuration, and After Sales. After Sales offers a rich-text mess
 with Insert image and Insert YouTube video plus a **maximum of 3 links**, and no
 attachment control — so a post-event recording or follow-up file can only be
 delivered as a link.
+
+**A ticket tier has no disable toggle — only Remove — but its sale-window can close it.**
+Confirmed 2026-09-23 against the schema. `ticket_price_configurations` carries no
+`isActive`/`status`/`isEnabled`; the per-tier controls are edit/expand and a destructive
+Remove (delete without confirmation — expected, see `L-12`). Unlike Telegram membership
+plans, though, a ticket tier has `period_start`/`period_end` (a sale window) plus
+`max_quantity`, so a creator can stop selling **one** tier non-destructively by setting its
+period or cap. So "no per-tier disable" is the same absence as Telegram, but only Telegram
+lacks a safe non-destructive close.
 
 **Event tiers have no stock/slot cap, so `Max N tix/user` is a real per-user limit.**
 Ruled 2026-09-23. A tier's creator-side `Ticket Quantity` (e.g. Full packages 100, Tektok

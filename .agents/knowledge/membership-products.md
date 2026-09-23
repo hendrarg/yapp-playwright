@@ -93,8 +93,19 @@ returns **HTTP 500** `cannot remove plan "<title>": it has existing purchases or
 subscribers`, from the API directly and from the creator form alike. In the form the plan
 block **disappears the moment you press remove**, and `Save Changes` then produces no
 toast, no inline error and no navigation — the plan is silently still there on reload,
-still on sale. There is also **no disable/archive control for a single plan**, so
-"stop selling this plan" has no route at all short of deactivating the whole product.
+still on sale. There is also **no disable/archive control for a single plan** — the only
+per-plan control is Remove (destructive), and that absence is **intended** (ruled
+2026-09-23, closed `M-67`; do not re-flag "no per-plan disable" as a bug). So "stop
+selling this plan" non-destructively has no route short of deactivating the whole product,
+and that gap is a PRD decision, not a defect.
+
+**Telegram plans have no sale-window, unlike Event ticket tiers.** `product_telegram_tiers`
+carries no `isActive`/`status` and **no period fields** — the only non-destructive lever is
+capping `slot_quantity`. Event `ticket_price_configurations` *also* has no disable toggle
+(only Remove), but it **does** have `period_start`/`period_end` plus `max_quantity`, so an
+event creator can close one tier's sales by setting its period or cap without deleting it.
+That is why the "no safe way to stop one plan" concern is specific to **Telegram**, not to
+ticket tiers.
 
 ## Telegram edit route and event vocabulary
 

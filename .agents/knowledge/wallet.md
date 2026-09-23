@@ -70,10 +70,10 @@ The USDT amount placeholder reads `Minimum withdrawal 10,00USDT` — that placeh
 the only figure the UI puts on screen. Confirm the minimum the server actually enforces
 before asserting one, and do not carry a number over from another surface.
 
-## The withdrawal PIN: a 3-stage wizard, and every failure is silent
+## The withdrawal PIN: a 3-stage wizard (setup now confirms success)
 
-Established 2026-09-09 running the Wallet PIN test cases. `Set Up Now` opens a wizard,
-not a single form:
+Established 2026-09-09 running the Wallet PIN test cases; success/counter behaviour
+re-verified 2026-09-23 (closed `M-75`). `Set Up Now` opens a wizard, not a single form:
 
 1. `Step 1 of 2` — `Enter a 6-digit number` (one OTP-style input, `maxlength=6`,
    `inputmode=numeric`), `Next` disabled until six digits are in.
@@ -83,14 +83,19 @@ not a single form:
    in `otp_codes` under the purpose **`verify-set-pin`**, a third value beyond the two
    `db-otp.ts` used to know about. It auto-submits on the last digit.
 
-**Only the mismatch talks.** Everything else fails silently:
+**Input is numeric-only by design, and setup now confirms success** (re-verified
+2026-09-23, `M-75` closed):
 
-- Invalid PIN input is filtered rather than reported — letters never reach the field
-  (`abcdef` leaves it empty, `12a45b` becomes `1245`) and short input just leaves `Next`
-  disabled. No message anywhere.
-- **Success is silent too.** After the OTP the dialog jumps straight to the Withdraw
-  form — no toast, no confirmation, no success text (checked at 1.5s and 6s). The only
-  proof the PIN was created is `users.pin` in the database.
+- The PIN field takes **digits only** — letters never reach it (`abcdef` leaves it empty,
+  `12a45b` becomes `1245`) and short input just leaves `Next` disabled. There is no
+  separate validation-error message, and that is **intended**: invalid input cannot be
+  entered or submitted, so no error is needed (`TC-WLT-C-054`, expected).
+- **Setup now shows a success toast.** The full flow is enter PIN → confirm → email OTP →
+  **success toast**, and `POST …/pin/confirm` returns `200 {"message":"Confirm Account's
+  PIN Successfully"}`. The earlier note that success was silent (only provable from
+  `users.pin`) no longer holds (`TC-WLT-C-056`, now passes).
+- The step-2 mismatch still answers with the exact message **`PINs do not match. Please
+  try again.`**
 
 **The endpoints behind the wizard** (observed 2026-09-22):
 
@@ -111,20 +116,24 @@ validation failures as **500**:
 
 | Input | Response | What the user sees |
 |---|---|---|
-| wrong PIN | `500 {"status":500,"message":"Invalid PIN"}` | nothing at all |
+| wrong PIN | `500 {"status":500,"message":"Invalid PIN"}` | a **toast** `Invalid PIN. N attempt(s) remaining before your account is locked` (verified 2026-09-23) |
 | correct PIN, made-up account number | `500 {"status":500,"message":"Invalid Bank Account. accountNumber is invalid"}` | a **toast** with that raw message (re-checked 2026-09-22) |
 | 4th attempt in a row | `429 Too Many Requests` | nothing at all |
 
 **Corrected 2026-09-22** on creator `v0.4.9-dev-63`: the account-number failure *is*
 surfaced as a toast reading the provider message verbatim, so the earlier note that the
-frontend "swallows it whole" no longer holds for this row. The wrong-PIN and 429 rows
-above were not re-checked that day, so treat their "nothing at all" as older and unverified.
+frontend "swallows it whole" no longer holds for this row. **Corrected again 2026-09-23:**
+a wrong PIN now raises a toast **`Invalid PIN. N attempt(s) remaining before your account
+is locked`** — so both a rejection message *and* a remaining-attempt counter now exist, and
+the lockout threshold is confirmed at **10** (`9 remaining` after the first failure). This
+closes the counter half of `M-75` (`TC-WLT-C-058`).
 
 Two consequences for testing. First, the order is **PIN first, bank number second** — so
 the message identifies which one failed, and the network tab is the only way to read the
-full response. Second, **there is no remaining-attempt counter** anywhere: not in the UI,
-not in the response body — the toast carries only the provider message, never an attempt
-count.
+full response. Second, the wrong-PIN toast now **does** carry a remaining-attempt counter
+(`N attempt(s) remaining before your account is locked`, 2026-09-23) — the earlier "no
+counter anywhere" no longer holds. The *response body* was not re-checked that day, so
+whether the count also rides in the JSON is still unverified; read it from the toast.
 
 ## A bank destination cannot be created on dev
 
