@@ -25,7 +25,9 @@ test cases were written against, so check this before scoping a messaging TC.
 - **Group Chat is not a third tab.** Since 2026-09-23 a tier with Enable Group Chat
   adds a `GROUP` row to this same Chat list and opens `/messages/group/{roomUUID}`
   (`GET /api/v1/group-chats`). Details, the freeze banner, and what the composer
-  does not include are in [[membership-tiers]].
+  does not include are in [[membership-tiers]]. On the buyer side the room is a
+  `Group` row above the DMs in `/direct` (`/direct?groupId={roomUUID}`); a non-member
+  deep link to `/direct/group/{roomUUID}` still renders a live composer that fakes a send.
 - **Messaging access is a 3-value radio policy** in the Messaging Settings modal —
   Everyone / Subscribers only / No one — saved instantly with no Save button via
   `PUT /api/v1/dm/settings`, where `accessPolicy` ∈

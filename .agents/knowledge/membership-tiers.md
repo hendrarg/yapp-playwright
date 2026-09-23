@@ -84,10 +84,68 @@ became a single row `contentType: "media"`, `mediaType: "image/png"`,
 `mediaUrls` length 2, and both rendered in the thread. Upload goes through
 `POST /api/v1/file/upload/create`, S3 PUT, then `POST /api/v1/file/upload/complete`.
 
-Still not seen: a buyer opening the room, expiry, or downgrade. The active
-member of `QA Tenure Fixture` is `sundanese` (`Asep pisan`), not the token2
-account, so that path was not driven. `satu tahun` was left **on**. `enam
-bulan` was returned to Group Chat off; its empty read-only room remains.
+### Buyer side and subscribed rooms (2026-09-23 evening)
+
+Driven with three accounts: creator `hendrarg` (token1), `anthony_mosciski` (token2,
+id 459) and `sundanese` (id 345, OTP through the `sdet` inbox without writing `.env`).
+
+- **Membership is derived, not stored.** There is no group-member table: rooms
+  are `group_chat_rooms` (one per tier) and members are the tier's live
+  `tier_membership_users` rows (`expired_at` in the future). Turning Group Chat on
+  for `kuy` gave `memberCount` 4 = its four active subscribers at once; the
+  subscriber who expired in July was left out. No invite step anywhere.
+- **Buyer inbox** is `yapp-dev.yapp.ink/direct`. Group rows sit above the DMs:
+  tier thumbnail, `{creator} — {tier}`, badge `Group`, preview `Creator: …`.
+  Opening one gives `/direct?groupId={roomUUID}`. Header is
+  `{creator} — {tier}` / `Creator + N members · you can't leave while subscribed`
+  with an `N Members` button. Composer placeholder `Write a message...`, media
+  only.
+- **Member panel counts differ by side.** Creator: `Members (N)` counts members
+  only and lists the creator extra. Buyer: `Members (N+1)` counts the creator too,
+  while the buyer header still says `N Members`. Buyer panel footer: "You can't
+  start a private chat with members here." A subscriber with no name/username
+  renders as an empty row with an initial avatar.
+- **Members cannot pin**: no hover or context menu on any message, and
+  `PUT …/pin` as a member returns `403 forbidden: creator only`. The pin shows
+  to members as a pin-icon banner with the text, without the "Pinned message"
+  label. Creator's menu on a member's message is still only `Pin message`.
+- **Member media**: each file sent separately became its own `media` message
+  (`image/png`, `image/gif`, `video/mp4` with `thumbnailUrl`; a video upload hits
+  `/file/upload/complete` twice). All render for the creator.
+- **Frozen by creator, member view**: header "Frozen — showing history up to
+  {date, time}", history and pin kept, marker "{date} · access ended here",
+  "The creator has turned off Group Chat for this tier." / "Group Chat is turned
+  off", no composer. DMs are untouched. The confirm dialog appears on **Save**,
+  not when the switch is clicked. DM on/off on the tier never touched the room.
+- **New member sees full history and the pin** (paid `satu tahun` via dev QRIS,
+  settled in about 2.5 min). The creator's "No one's here yet" state is replaced
+  by the normal thread, header singular `Creator + 1 member` / `1 Member`. A room
+  with members but no messages says "Say hi to your members. Post a welcome and
+  pin it so new members see it first."
+- **Tiers are additive.** `Upgrade or Add Tier` (buyer membership sheet) opens
+  `/{creator}/membership` and adds a tier; the old one stays `Subscribed`. No
+  replace-style downgrade was found, so the PRD's downgrade CTA has no path yet.
+  Buyer reward copy is "Group chat with other members" (creator card: "…with
+  members of this tier").
+- **Non-member deep link is a UI hole.** `/direct/group/{roomUUID}` for a
+  non-member: both APIs 404, yet the page shows an empty thread with a live
+  composer; a sent line shows a time and tick, is never stored, and is gone on
+  reload.
+- **Simultaneous sends**: server order (id/`createdAt`) is identical for every
+  account, but the sender's live client shows its own line first until reload.
+- **Not driven**: expiry (no expired account that can log in; DB is read-only),
+  account DM policy changes (left on "subscribers only" on purpose), email
+  notifications (testmail inbox was empty even for OTP). In-app notifications
+  showed nothing for Group Chat activity.
+- **UI save needs a thumbnail.** An API-seeded tier without one (`QA Tenure
+  Ladder`) fails Save with "Thumbnail URL is required"; one was uploaded. Save
+  recreates perk rows with new UUIDs; `membership_bound` on `kuy` survived five
+  saves.
+
+State left: Group Chat **on** for `kuy` (room `53dd9547-63be-4f27-9282-abe2e6f632c3`,
+pinned creator message), `QA Tenure Ladder` (`29ad579a-d273-4e2b-b806-e39271f6d00b`)
+and `satu tahun` (anthony now subscribed until ~23 Oct 2026, pin on "QA group chat
+probe 23 Sep"). `enam bulan` stays off with its empty read-only room.
 
 ## A tier membership is not a product
 

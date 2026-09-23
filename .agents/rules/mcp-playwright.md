@@ -592,6 +592,21 @@ makes them answer normally. That is the cheapest way to get product UUIDs, tier 
 post UUIDs for a script — the products table renders no `a[href]`, so a row click into
 `/products/stats/{uuid}` is the only browser route to a UUID.
 
+## Switching between three accounts without touching `.env`
+
+Established 2026-09-23 (Group Chat run). `browser_run_code_unsafe` has no `fs`, `process` or
+dynamic import, and its `filename` input only accepts files under `D:\yapp` (including the
+git-ignored `.playwright-mcp/`). Write one file per account under `.playwright-mcp/` whose body
+is `async (page) => { await page.context().addCookies([{ name: "at", value: "<token>", domain: ".yapp.ink", path: "/", secure: true, sameSite: "Lax" }]) }`
+and run it by `filename` to swap roles. The tool echoes the code, so the token still lands in
+the local transcript. A third account (Sundanese, `sdet` inbox) is reachable by calling
+`signInWithEmailOtp(page, baseURL, testAccounts.sundanese)` from a temporary `tsx` script and
+writing the returned token to a scratch file; that helper does not write `.env`.
+
+In Git Bash, arguments starting with `/` (for example `/api/v1/group-chats`) are rewritten into
+Windows paths before they reach `node`, which shows up as a bogus host such as
+`staging.yapp.inkc`. Export `MSYS_NO_PATHCONV=1` before calling an API helper with a path argument.
+
 ## Session cleanup
 
 `browser_close` is **not** enough. Its tool schema says "Close the page", and its handler only emits `await page.close()` — the browser process the MCP server launched keeps running as an empty window, and a new one is added every time a server restarts. Finish every MCP exploration with:
