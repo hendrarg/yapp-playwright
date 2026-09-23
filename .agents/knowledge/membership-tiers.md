@@ -133,10 +133,25 @@ id 459) and `sundanese` (id 345, OTP through the `sdet` inbox without writing `.
   reload.
 - **Simultaneous sends**: server order (id/`createdAt`) is identical for every
   account, but the sender's live client shows its own line first until reload.
-- **Not driven**: expiry (no expired account that can log in; DB is read-only),
-  account DM policy changes (left on "subscribers only" on purpose), email
-  notifications (testmail inbox was empty even for OTP). In-app notifications
-  showed nothing for Group Chat activity.
+- **Expiry picks one of two copies** (driven by setting `tier_membership_users.expired_at`
+  to the past; the `PSQL_*` user can write). If the member still holds **any** other
+  active tier of that creator — even one whose Group Chat is on — the room says
+  `readOnlyReason: "upgrade_required"`: "Group Chat is available on a higher tier." /
+  "Upgrade your membership to continue chatting and receive new messages." with
+  `Upgrade Membership`. With no other active tier it is `membership_expired`: "Your
+  membership has ended" / "Renew your membership to keep chatting and see new
+  messages." with `Renew Membership`. Both CTAs go to `/{creator}/membership`, both
+  show "Frozen — showing history up to {expired_at}" and "{date} · access ended
+  here", and the composer becomes plain text "Upgrade/Renew to send messages…".
+  `visibleUntil` = `expired_at`; later messages are not returned. The room stays
+  active for the creator and remaining members (`memberCount` drops by one).
+- **Renewal reuses the row.** Paying again extends the same `tier_membership_users`
+  row (new `expired_at` = pay time + duration). The room reopens and the messages
+  sent while the member was expired become visible.
+- **Account DM policy is independent.** Switching Messaging Settings to No one and
+  to Everyone changed no tier toggle and no room.
+- **Not driven**: email notifications (left to manual testing). In-app
+  notifications showed nothing for Group Chat activity.
 - **UI save needs a thumbnail.** An API-seeded tier without one (`QA Tenure
   Ladder`) fails Save with "Thumbnail URL is required"; one was uploaded. Save
   recreates perk rows with new UUIDs; `membership_bound` on `kuy` survived five
@@ -144,8 +159,8 @@ id 459) and `sundanese` (id 345, OTP through the `sdet` inbox without writing `.
 
 State left: Group Chat **on** for `kuy` (room `53dd9547-63be-4f27-9282-abe2e6f632c3`,
 pinned creator message), `QA Tenure Ladder` (`29ad579a-d273-4e2b-b806-e39271f6d00b`)
-and `satu tahun` (anthony now subscribed until ~23 Oct 2026, pin on "QA group chat
-probe 23 Sep"). `enam bulan` stays off with its empty read-only room.
+and `satu tahun` (anthony subscribed until 23 Oct 2026 after one expiry + renewal,
+pin on "QA group chat probe 23 Sep"). Every `expired_at` changed by hand was restored. `enam bulan` stays off with its empty read-only room.
 
 ## A tier membership is not a product
 
