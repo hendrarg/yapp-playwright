@@ -304,3 +304,53 @@ not contain `Select All`; clicking the group box selects the whole creator's ite
 that carries one (e.g. the `Discord Membership Germa 66` fixture), `Pay` renders
 `This field is required` and never submits — select only the product under test when
 checking someone else's payment behaviour.
+
+## An ineligible cart item is blocked, but nothing says why
+
+Measured 2026-09-22 on the only live ineligible cart item on dev: hendrarg's
+`Flexible Price` (`digital_download`, `is_limit_product_sales` true, `limit_product_sales`
+18, `product_purchase_counter` 18 — sold out) sitting in token2's cart.
+
+- `GET /api/v1/cart/items` returns `"status": "inactive"` on that item. That computed
+  status is the server's **only** ineligibility signal — `products.status` is still
+  `active` in the database, so never read eligibility from the product row.
+- `/cart` disables the item's own checkbox, `Select All` and the creator-group box leave
+  it unselected, `Total Amount` stays `Rp0` with a count of `0`, `Check out` is disabled,
+  and a forced click on `Check out` does not leave `/cart`.
+- Nothing explains it: no `expired` / `sold out` / `unavailable` / `no longer` text, no
+  tooltip, `title` or `aria-label`, the row is not dimmed (`opacity: 1`), and no prompt
+  asks the buyer to update or remove the item.
+
+Assert this gate through **state** — checkbox `disabled`, `Check out` disabled, total
+unchanged — never through a message.
+
+**A purchased cart row stays in the table.** `cart_items.status` goes to `checked_out` and
+the API returns only `active` rows, so a cart that shows four rows in the database can be
+genuinely empty through `GET /api/v1/cart/items` (hendrarg's is).
+
+## Saving an event recreates its ticket tiers, and a stale cart reference blanks `/cart`
+
+Established 2026-09-22 on `sundanese` (user 345). **Every save of a ticket-event product
+soft-deletes its existing `ticket_price_configurations` rows and inserts new ones with new
+ids.** Product 382 (`Mendaki gunung salak`) accumulated **32 tier rows** over its life; only
+`Full packages` (id 590) and `Tektok` (id 591) are live, every earlier `Tektok`/`Full
+packages` pair is `deleted_at` set. So "the Tektok tier still exists" on the product page is
+a *different row* from the Tektok a cart is holding.
+
+The cart stores the tier **id at add-to-cart time**, and a soft-deleted tier is **not**
+handled like a deleted product. `GET /api/v1/cart/items` answers 200 with a stub ticket:
+
+```json
+"tickets":[{"id":37,"quantity":1,"isAvailable":false,"reason":"ticket configuration not found",
+"ticketPriceConfiguration":{"uuid":"","title":"","price":null,"cryptoPrice":null,...}}]
+```
+
+`price` is `null`, the client calls `.toLocaleString()` on it, and the whole `/cart` page
+dies with `TypeError: Cannot read properties of null (reading 'toLocaleString')` →
+`Application error: a client-side exception has occurred` (blank page). Contrast the
+deleted-**product** case (above), which drops the row silently — a deleted **tier** crashes
+the page instead. Tracked as `ATC-6` / `H-10`.
+
+DB trail for the reproduction: `cart_items` id 59 (user 345, product 382) →
+`cart_item_tickets` id 37 → `ticket_price_id` 336, and `ticket_price_configurations` id 336
+has `deleted_at = 2026-07-31`.

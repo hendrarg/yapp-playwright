@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, explore-and-profile]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-09
+updated: 2026-09-23
 sources: 0
 status: active
 ---
@@ -26,6 +26,41 @@ Buyer discovery surfaces and the creator's public profile.
 Never write a popularity assertion against the Popular Products section; assert the
 curated order instead.
 
+## What discovery actually excludes
+
+Measured 2026-09-22 with a full census of `GET /products/explore` (3 pages, 179 entries)
+against the database. Three independent gates decide whether a product is discoverable,
+and they sit at different levels:
+
+| Gate | Effect |
+|------|--------|
+| `users.is_hide_from_explore` | removes **every** product of that creator — `pier` has 11 active products across 6 types and not one appears in explore |
+| `products.is_hide_from_explore` | removes that single product |
+| past event date | a `ticket_event` whose `ticket_configurations.event_date` has passed is dropped; ~56 active past events are absent while their creators' other products stay listed |
+
+`products.is_hide_from_profile` is **not** one of these gates — six products carrying it
+(`Test`, `Test Discord Member`, `Test Flexible Crypto`, `Test Ganti Title`,
+`Test Resched Consultation`, `Sikancil`) are listed in Recommended anyway, and their public
+product pages load. So a product missing from explore is never explained by that flag
+alone; check the creator flag first.
+
+One product is absent for a reason none of these explain: `GoTC Youth Conference`
+(geri, event 26 Sep 2026, still on sale) is missing from explore **and** its public page
+`/geri/product/o2Slv6ZlQf` returns `That page doesn't exist`. Whatever makes it
+unreachable also keeps it out of discovery, which is at least consistent — do not use it
+as a fixture.
+
+Popular Products applies its own status gate on top of the curation: nine products carry
+`is_featured_product`, and the one in `draft` (`Quick`, position 0) is the one the
+endpoint drops.
+
+## Explore listing totals are not counts of what you get
+
+`GET /products/explore?limit=200` reports `totalResults: 225` and delivers 179 rows over
+its 3 pages; `?product_type=ticket_event` reports `totalResults: 35` and delivers 1 row.
+The total is computed before the eligibility gates above run. **Never assert on
+`totalResults`** — page through `data.data` and count the rows.
+
 ## Dead and misleading fields on the account payload
 
 - `GET /accounts` returns **`interests: null` permanently**. The real data is at
@@ -43,7 +78,20 @@ onboarding flow never opens on either of them.
 Every landing CTA renders an `<a href>` wrapping a `<button>` that has no `href` of its
 own — an environment assertion must target the **anchor**. The footer quick links are
 the opposite: all four are `<button>` elements with **no** `href`, so their destination
-can only be verified by clicking and observing the scroll position.
+can only be verified by clicking and observing the scroll position. Measured 2026-09-23:
+all four (`Digital Products`, `Campaign`, `Stream Overlay`, `Tipping`) scroll to the
+**same** offset — `scrollY` 935, the `Designed for creators, sellers, and community
+builders` section — and none of them selects a tab or a card.
+
+## The landing feature section is an auto-rotating carousel
+
+Five tabs (`Digital Products`, `Exclusive Content`, `Tips & Donations`,
+`Link Page Builder`, `Livestream Overlay`) sit above five cards (`Sell Digital Products`,
+`Monetize Your Exclusive Content`, `Receive Support From Your Fans`,
+`Your Online Hub Simplified`, `Engage Your Viewers In Real Time`), and the card on screen
+**rotates on its own**. Whatever card a snapshot catches is therefore not the one the tab
+selected: the same click yields a different card on every run. Read each card's copy
+straight from the DOM by its title and never pair "tab clicked" with "card shown".
 
 ## Profile tab order is server state
 

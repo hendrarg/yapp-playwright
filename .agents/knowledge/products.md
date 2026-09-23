@@ -378,10 +378,22 @@ not write a test that asserts reorder through the UI.
 - **`.wav` is advertised but rejected** — the upload answers `Upload failed` every time
   (`L-54`). The other six types in that accept list work.
 
-**Deleting a block does not survive Save** (`M-56`): the file disappears from the editor,
-`Save` reports nothing, and a reload brings it back. Text edits, new uploads, chapter adds,
-page renames and chapter deletes all persist through the same button — the defect is
-specific to deleting a block inside a page.
+**Deleting a block does not survive Save** (`M-54`, re-confirmed 2026-09-22): the file
+disappears from the editor, `Save` reports nothing, and a reload brings it back. Text edits,
+new uploads, chapter adds, page renames and chapter deletes all persist through the same
+button — the defect is specific to deleting a block inside a page, and both removal paths
+(block menu `Delete` and the toolbar's `Remove attachment`) behave the same.
+
+**Where page content is actually saved.** The `Save` button on the content step sends
+`PUT /api/v1/shop/products/{uuid}` **with no `pages` key at all** — chapters and pages
+persist through a per-page autosave that fires on edit:
+`PUT /api/v1/shop/products/{productUUID}/pages/{pageUUID}` with
+`{chapterUUID, pageName, content, position, segments}`. That body carries **no `files`
+field**, so a removed attachment is genuinely absent from the request; the server answers
+`200` and re-inserts the file anyway. Removal is therefore a server-side reconciliation
+gap, not an editor bug — and `page_files` rows are **rewritten on every page save**
+(old row soft-deleted, an identical row inserted with a new id), so never treat a
+`page_files` id as stable.
 
 ## Publishing a course: what is and is not validated
 
@@ -396,7 +408,9 @@ Verified 2026-09-10.
   immediately and `shortUrl` never changes.
 - Publish validates the **thumbnail** (`Thumbnail is required`) and nothing about content:
   a course whose chapters have all been deleted publishes happily and goes live with zero
-  pages (`M-55`).
+  pages. **This is intended** — ruled by the product owner on 2026-09-22, so an empty
+  course going live is not a defect to report; do not write a test that expects an
+  episode-count validation.
 
 ## The product detail page is no longer reachable by direct URL (17 Sep 2026)
 
