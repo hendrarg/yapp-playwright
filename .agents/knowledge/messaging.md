@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, messaging]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-09-23
 sources: 0
 status: active
 ---
@@ -22,6 +22,10 @@ test cases were written against, so check this before scoping a messaging TC.
 
 - Tabs are **Chat** and **Broadcast** (not "Direct Messages" / "Broadcasts"); Chat is
   the default. A settings gear sits beside the tablist.
+- **Group Chat is not a third tab.** Since 2026-09-23 a tier with Enable Group Chat
+  adds a `GROUP` row to this same Chat list and opens `/messages/group/{roomUUID}`
+  (`GET /api/v1/group-chats`). Details, the freeze banner, and what the composer
+  does not include are in [[membership-tiers]].
 - **Messaging access is a 3-value radio policy** in the Messaging Settings modal —
   Everyone / Subscribers only / No one — saved instantly with no Save button via
   `PUT /api/v1/dm/settings`, where `accessPolicy` ∈

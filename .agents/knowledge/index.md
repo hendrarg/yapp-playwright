@@ -5,7 +5,7 @@ index_of: knowledge
 category: project
 tags: [yapp, product, automation]
 project: yapp
-updated: 2026-09-04
+updated: 2026-09-23
 created: 2026-09-04
 sources: 0
 status: active
@@ -48,12 +48,12 @@ the sheet wins.
 |------|--------|
 | [[products\|Products]] | Pricing defaults and the Rp10.000 floor, thumbnail capacity and rejection, the status lifecycle, Online Course after-sales |
 | [[posts\|Posts]] | Post visibility tiers, pay-per-view pricing, what the composer can and cannot publish, editing published posts, scheduling and buyer video playback |
-| [[messaging\|Messaging]] | Chat and Broadcast, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
+| [[messaging\|Messaging]] | Chat and Broadcast, Group Chat rows in that same Chat list, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
 | [[tipping\|Tipping]] | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
 | [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |
 | [[onboarding\|Onboarding]] | Creator sign-up, username rules, the three-step wizard — the account exists before the username, host-scoped session cookies, exactly-three tools, and a silent profile-picture path |
 | [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
-| [[membership-tiers\|Membership tiers]] | The creator's own subscription programme at `/membership` — **not a product**: per-duration prices, Perk Hybrid `accessMode` (API-only, and a UI save resets it), tier price display |
+| [[membership-tiers\|Membership tiers]] | The creator's own subscription programme at `/membership` — **not a product**: per-duration prices, Perk Hybrid `accessMode`, and the Enable Group Chat toggle (shared room, frozen when turned off) |
 | [[membership-products\|Membership products]] | Discord and Telegram membership **product types** and their chat integrations — expiry-anchored renewal reminders, the aggregate bot status, Telegram product Lifetime gaps, subscriber row actions |
 | [[orders-and-reports\|Orders & reports]] | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
 | [[settings\|Settings]] | The two tabs and their URL behaviour, five fee blocks with a display-only split, the auto-saving gateway choice, the bank form with no validation, the five integrations |

@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, membership-tiers]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-17
+updated: 2026-09-23
 sources: 0
 status: active
 ---
@@ -17,6 +17,77 @@ status: active
 The tiers a creator sells at `/membership`, their per-duration prices, and the perks
 they unlock. **This is not a product**, and it is not the same feature as a Discord or
 Telegram membership — see [[membership-products]] for those.
+
+## Group Chat is a fourth toggle on the tier, not a DM mode
+
+Live on creators-dev 2026-09-23, account `hendrarg`, tier `satu tahun` (0 members).
+The create and update forms (`/membership/create`, `/membership/{uuid}/update`) now
+show **Enable Group Chat**, badged `NEW`, under Enable Direct Message. Helper copy:
+"Give members of this tier a shared room with you and each other — independent from
+Direct Message". Both switches default **off** on create. The API field is
+`isEnableGroupChat` next to `isEnableDirectMessage`. Flipping Group Chat does not
+flip Direct Message. Saving is still the explicit `Save Changes` button.
+
+Turning Group Chat **off** is not a silent toggle. A confirm dialog reads "Turn off
+Group Chat?" / "Turning off Group Chat freezes the room. Members can still read
+history but no one can send messages." with `Cancel` and `Turn off and save`.
+
+After it is on, the creator membership card lists a reward line **Group chat with
+members of this tier**. The room is not a third Messages tab. It is a row in the
+existing **Chat** list: tier thumbnail, tier name, a `GROUP` badge, the member
+count, and preview `No messages yet` until someone speaks. Route:
+`/messages/group/{roomUUID}`. List and room come from `GET /api/v1/group-chats`
+and `GET /api/v1/group-chats/{roomUUID}`, not from `GET /api/v1/dm/conversations`.
+
+The open room header is `{tier name} — Group Chat` and `Creator + N members`, with
+a `N Members` button. With zero subscribers the body still says "No one's here yet."
+/ "Group Chat activates automatically once a buyer subscribes to this tier." **A
+message from the creator does not remove that empty state.** The member panel
+(`Members (0)`) lists the creator (`Creator`, `@username`) and had no DM action.
+Composer placeholder is `Message your members...`. Enter sends, Shift+Enter breaks
+a line. The send did not show a REST POST; the line still appeared (same shape as
+DM over the socket). Attachment menu is only **Media** — "Upload photos or videos
+to share in this chat" — accept
+`image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime`.
+No Product, Campaign, Tip, Post, or Membership cards. Message actions for the
+creator contained only **Pin message**. The pin renders as "Pinned message / You:
+{text}" and `pinnedMessage` on the room payload.
+
+Disabling the toggle leaves the row in Chat. The room stays readable
+(`canSend: false`, `readOnlyReason: "group_chat_disabled"`, `visibleUntil` set to
+the disable time, pin kept, composer removed). The banner is "Group Chat is turned
+off for this tier" / "Members can still read the history, but no one can send
+messages. Turn it back on in the tier settings to reopen the room." with `Open
+tier settings`. That is not the buyer expiry or downgrade copy from the PRD.
+
+Turning Group Chat **back on** does not confirm, and it reopens the same room:
+`canSend` returns to true, `readOnlyReason` and `visibleUntil` clear, the
+composer and the old history come back, and the pin is still there. Checked
+2026-09-23 by re-enabling `satu tahun`.
+
+A second enabled tier gets its own room. `enam bulan` (already **inactive**,
+0 members) produced a second `GROUP` row. Its history stayed empty while
+`satu tahun` held messages. Because the tier is inactive the room is read-only
+even with the toggle on: `canSend: false`, `readOnlyReason: "tier_unavailable"`,
+no composer, banner "This tier is no longer available" / "The tier is inactive
+or deleted, so the room is read-only." The empty-state copy still sits above
+that banner. After the toggle was turned off again, the list still reported
+`tier_unavailable` rather than `group_chat_disabled`.
+
+Pin is `PUT /api/v1/group-chats/{roomUUID}/pin` with `{messageUUID}`. A second
+pin replaces the first; the menu item stays "Pin message" either way. The
+pinned banner has a separate **Unpin message** button, and using it clears
+`pinnedMessage`.
+
+Media is one message, not one message per file. Two PNGs attached before Send
+became a single row `contentType: "media"`, `mediaType: "image/png"`,
+`mediaUrls` length 2, and both rendered in the thread. Upload goes through
+`POST /api/v1/file/upload/create`, S3 PUT, then `POST /api/v1/file/upload/complete`.
+
+Still not seen: a buyer opening the room, expiry, or downgrade. The active
+member of `QA Tenure Fixture` is `sundanese` (`Asep pisan`), not the token2
+account, so that path was not driven. `satu tahun` was left **on**. `enam
+bulan` was returned to Group Chat off; its empty read-only room remains.
 
 ## A tier membership is not a product
 
