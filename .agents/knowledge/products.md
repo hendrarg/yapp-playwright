@@ -213,10 +213,34 @@ with Insert image and Insert YouTube video plus a **maximum of 3 links**, and no
 attachment control — so a post-event recording or follow-up file can only be
 delivered as a link.
 
+**Event tiers have no stock/slot cap, so `Max N tix/user` is a real per-user limit.**
+Ruled 2026-09-23. A tier's creator-side `Ticket Quantity` (e.g. Full packages 100, Tektok
+10) renders buyer-side as `Max N tix/user`, and that number **equals** the tier's
+`ticket_price_configurations.max_quantity`. This is **not** a mislabelled total stock:
+Event & Tickets has no per-tier stock/slot concept (unlike Online Course, which has slots),
+so one buyer genuinely may purchase up to N tickets — buying for friends is expected. Do
+not re-flag the `/user` wording as a bug (this closed `L-15`).
+
 **A purchased ticket cannot change hands.** The buyer ticket page (`/product/{uuid}`,
 tabs Overview / Ticket / About Creator) exposes exactly `Share` and `Scan` in Ticket
 Details, alongside Back and View Message. There is no transfer, reassign, or
 change-holder action.
+
+**Seeding an event via `POST /api/v1/shop/products` has three date/field traps** (hit
+2026-09-23). `ticketConfiguration.eventDate` must be **`dd-mm-yyyy`** (e.g. `15-12-2026`)
+— an ISO datetime is rejected. Each `ticketPriceConfigurations[].periodStart/periodEnd`
+must instead be **RFC3339** (`2026-10-01T00:00:00Z`) — a bare date is rejected. And with
+`ticketConfiguration.platform: "custom"` a non-empty `meetingLink` is **required** (500
+otherwise). The two tier rows go in `ticketPriceConfigurations`; the helper
+`createEventProduct` hardcodes `salesLinks: []`, so after-sales links must be added in the
+UI or a hand-built payload.
+
+**The after-sales link editor's edit dialog is mistitled.** In Step 2 → a tier's
+`Customize after-sales` → `Add Link`, the dialog fields are **URL first, then
+`Customize Label Text`**, and the confirm button is **`Done`**. A saved link row shows an
+`edit` control (text `edit`, no aria-label) and a separate delete icon; clicking `edit`
+opens a dialog that is prefilled (so it is edit mode) yet still headed **`Add Link`** with
+no delete inside it (`L-14`, still open 2026-09-23).
 
 ## Leaving the create flow discards silently
 
