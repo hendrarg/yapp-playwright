@@ -78,10 +78,11 @@ onboarding flow never opens on either of them.
 Every landing CTA renders an `<a href>` wrapping a `<button>` that has no `href` of its
 own — an environment assertion must target the **anchor**. The footer quick links are
 the opposite: all four are `<button>` elements with **no** `href`, so their destination
-can only be verified by clicking and observing the scroll position. Measured 2026-09-23:
-all four (`Digital Products`, `Campaign`, `Stream Overlay`, `Tipping`) scroll to the
-**same** offset — `scrollY` 935, the `Designed for creators, sellers, and community
-builders` section — and none of them selects a tab or a card.
+can only be verified by clicking and observing the scroll position. Manual verification
+2026-09-23 found the four links **do** land on their matching feature card and work as
+intended — do not trust an automated scroll/snapshot check here, because the feature
+section auto-rotates (below) and an earlier automated run misread all four as landing at
+the same `scrollY` 935 when they were merely caught mid-rotation.
 
 ## The landing feature section is an auto-rotating carousel
 
@@ -91,7 +92,13 @@ Five tabs (`Digital Products`, `Exclusive Content`, `Tips & Donations`,
 `Your Online Hub Simplified`, `Engage Your Viewers In Real Time`), and the card on screen
 **rotates on its own**. Whatever card a snapshot catches is therefore not the one the tab
 selected: the same click yields a different card on every run. Read each card's copy
-straight from the DOM by its title and never pair "tab clicked" with "card shown".
+straight from the DOM by its title, and never conclude a tab or footer link is broken from
+a timed snapshot — the rotation, not the control, is usually what a snapshot caught.
+
+The feature-card copy itself is **intended** as of 2026-09-23 even where it looks wrong:
+the `Monetize Your Exclusive Content` card carrying the Digital-Products description, and
+the `Sell Digital Products` card listing campaign/tipping benefits, were both ruled
+expected by the product owner — not a copy bug.
 
 ## Profile tab order is server state
 
