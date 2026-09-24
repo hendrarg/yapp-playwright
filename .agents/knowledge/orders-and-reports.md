@@ -209,3 +209,85 @@ File shape, measured on the bytes: name `report_20260909_082828_user_hendrarg.cs
 only**, trailing newline, **no UTF-8 BOM**, and 25 columns in both the header and every
 data row. The schema is **dynamic** — the last column was `Siapakah tuhan mu ?`, a product
 custom question — so never assert a fixed header list.
+
+## 2026-09-24: Analytics and Orders split apart again — Performance Details moved wholesale to `/orders`
+
+**Supersedes the "Orders moved out of Products, 2026-09-09" routing above.** The two
+pages un-merged in the other direction. Verified live on creators-dev, account `hendrarg`:
+
+- `/analytics` is now **only** Revenue Overview: Total Revenue, Tipping Revenue, Product
+  Sales, Campaign Activations, PPV, Membership, Lifetime Access, each with a growth
+  percentage, the date-range button (`All time` / `Last 7/14/30/90 days` / `Last 6
+  months` / `Last 1 year` / `Custom Date`), and the multi-source graph with per-source
+  toggle switches. The whole page is ~615 characters of text — no tabs, no "Performance
+  Details" string anywhere, `document.querySelector('main').scrollHeight` equals the
+  viewport height. This matches `TC-ANL-C-001` through `009` and `032` exactly; those
+  stayed in the `Analytics` sheet.
+- `/analytics?tab=transactions` **redirects to `/orders`** (the reverse of the 2026-09-09
+  note — there is no `Orders`/`Analytics` toggle-button pair left).
+- `/orders` now renders `Lifetime Earnings` / `All time earnings` cards plus a
+  **`Performance Details`** section with the tabs `Products`, `Tipping`, `Campaigns
+  Activations`, `PPV`, `Membership`, `Lifetime Access` — the exact tab set the `Analytics`
+  sheet's TC-ANL-C-010 through C-031 used to test at the old `/analytics?tab=transactions`.
+  The `Products` tab is this file's plain Orders list (5 columns, `All Time` / `All
+  Products` filters); the other five tabs are per-category views, each with its **own**
+  time filter and **own** `Export as CSV` (e.g. the PPV tab's filter is a combobox — `Last
+  7/14/30/60 days`, `All time` — separate from the Products tab's button pair, and
+  separate again from the Export dialog's own `Range Time` picker documented above).
+  Tipping's `Recent`/`Leaderboard` sort menu still works from this tab, though
+  `Leaderboard` itself has a bug — see below.
+- Because that section no longer exists on `/analytics`, `TC-ANL-C-010` through `C-031`
+  and `TC-ANL-C-034` (23 TCs — the whole Performance Details cluster, plus the empty-state
+  TC that mixed Analytics and Statistics) were removed from the `Analytics` sheet
+  2026-09-24 as obsolete-by-relocation, not as a feature regression. The `Orders` sheet's
+  `TC-ORD-C-*` already covers the generic list/filter/export behavior on the `Products`
+  tab; the other five tabs had no TC on either sheet, so `TC-ORD-C-072` through `C-084`
+  (13 new TCs) were added the same day to close that gap — see the per-tab notes below.
+- **Bug M-01 (Analytics → Orders) still reproduces at the new location.** Re-verified
+  2026-09-24: PPV tab, custom range 1 Jul–24 Sep 2026, 11 records rendered; `Export as
+  CSV` downloaded a file with the header row only, 0 data rows. The relocation is not a
+  fix. Pinned by `TC-ORD-C-078` (Failed).
+- Automation Mapping `AUT-FV-015` and `AUT-FV-016` had every one of their covered TC IDs
+  removed by this cleanup and briefly covered zero TCs. Retired (rows deleted) 2026-09-24
+  rather than retargeted — no other row's `Covered TC IDs`, and no `Automation
+  Clarifications` row, referenced either ID, so removal left nothing dangling.
+
+## The five relocated Performance Details tabs, one by one (verified 2026-09-24)
+
+- **Tipping** has no search box, no time filter and no `Export as CSV` — just the
+  `Recent`/`Leaderboard` sort control above the list. Each row is supporter name,
+  relative time, tip amount, and the message text when the tip carried one (a private
+  tip shows "Private (this message only available for you)" instead of the text).
+  `Recent` calls `GET /api/v1/supporter?direction=DESC&status=completed&page=1` and is
+  correctly ordered (`createdAt` strictly descending, checked 10 rows deep).
+  `Leaderboard` calls `GET /api/v1/supporter/leaderboard?limit=10` and **is broken**: on
+  an account with at least three distinct supporters (confirmed from the `Recent` data),
+  it returned exactly one row — the creator's own name under a second display alias
+  ("QA Tester"), with an amount that matches the sum of every one of *that one sender's*
+  completed tips. The other two real supporters do not appear at any rank; this is not a
+  low-rank truncation, the endpoint drops them outright. The one row's `timeAt` is the
+  zero-value `0001-01-01T00:00:00Z`, which the frontend then diffs against "now" with no
+  guard, rendering "2026 years ago". Filed as bug `M-80`, pinned by `TC-ORD-C-074`
+  (Failed). `TC-ORD-C-073` (Recent) is Passed.
+  Pagination here is **numbered** (`Previous 1 2 3 … 7 Next`), unlike every other tab's
+  `Rows` / `Page X of Y` / first-prev-next-last control.
+- **Campaigns Activations** has a combobox above the list that picks the **campaign
+  type** (only `Donation` existed on this account, so it could not be checked with more
+  than one option); each row is campaign name, relative time, donor name, and amount —
+  **no message**, and no search/filter/export controls at all. This tab is structurally
+  the odd one out among the six.
+- **PPV**, **Membership** and **Lifetime Access** share one component: a `Search` box,
+  a time-range combobox (`Last 7/14/30/60 days`, `All time` — fewer options than the
+  Revenue Overview date button, and separate from the Export dialog's own `Range Time`
+  picker), an `Export as CSV` button, and the standard pager. Confirmed CSV schemas:
+  - PPV: `uuid, buyer_uuid, buyer_name, buyer_email, post_uuid, post_title,
+    purchase_date, total_price` — **downloads header-only, 0 rows** (bug M-01).
+  - Membership: `uuid, customer_uuid, customer_name, customer_email, membership_uuid,
+    membership_title, membership_thumbnail_image, purchase_date, total_price` — export
+    verified correct (20/20 rows matched the table).
+  - Lifetime Access: `uuid, customer_uuid, customer_email, customer_name, purchase_date,
+    total_amount` — note `customer_email` comes **before** `customer_name`, the reverse
+    of Membership's column order — export verified correct (3/3 rows matched).
+- All three default to `Last 30 days` and can show **0 rows** even when older data
+  exists elsewhere in the account (PPV and Lifetime Access both did on this account) —
+  always switch to `All time` or a wide custom range before judging a tab "empty".
