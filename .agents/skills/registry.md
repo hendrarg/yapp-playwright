@@ -12,6 +12,7 @@ Use this registry to decide which workflow document to read for a task.
 | `generate-locators-mcp` | Generating locators from MCP Playwright browser snapshots during `/automation` |
 | `iterative-e2e-testing` | Developing E2E tests in repeated verify/fix rounds |
 | `migrate-unmapped-aut` | Assigning `@AUT-*` to unmapped or retired-tag smoke tests |
+| `monkies-tickets` | Creating/updating Monkies cards: bug tickets from the Bugs sheet, per-feature test-activity tickets, verify→DONE moves |
 | `network-mocking` | Mocking payment, email, analytics; composing mocks with `authTest` |
 | `resolve-flaky-tests` | Diagnosing and fixing flaky Playwright UI tests |
 | `reuse-patterns` | Looking for shared locators, steps, or helpers before adding new code |
