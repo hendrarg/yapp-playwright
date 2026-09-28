@@ -260,6 +260,11 @@ The `Adjust the clock` panel says `Applies straight away — this does not wait 
 and that is true: the overlay reacts immediately and the unsaved-changes counter never
 moves.
 
+**The `START TIMER` / `PAUSE TIMER` button label now updates live** (fixed, re-verified
+2026-09-28): pressing it flips the label immediately (PAUSE↔START) without a reload, and
+the state survives a reload consistently. The earlier stale-label bug (`L-33`) is gone —
+do not conclude "timer can't resume" from the label any more.
+
 ## TRY AN AMOUNT is a pure simulator, and it exposes the tip-to-time mapping
 
 `subathon-illustration` (labelled `TRY AN AMOUNT`) renders a sentence of the form
@@ -304,6 +309,28 @@ to Rp4.000).
 **Both bypass the word-filter layer**, so neither can be used as a fixture for a
 moderation test — a filtered word passing through a test alert proves nothing about
 moderation.
+
+## The custom HTML alert editor and where alert state is saved
+
+`/streamer/alert-html` is the Custom HTML alert editor (HTML + CSS tabs over a plain
+`<textarea>`, `{{name}}`/`{{amount}}`/`{{message}}` variables, `SAVE DRAFT`,
+`PUBLISH TO OVERLAY`, and a `TURN OFF` control). It is a **separate surface** from the
+Alert tab's appearance, and they persist through **different endpoints** — established
+2026-09-28 while verifying `LIV-18`:
+
+- Custom HTML → `PUT /api/v1/accounts/stream/alert-custom` (save draft) and
+  `POST /api/v1/accounts/stream/alert-custom/publish` (publish). The object carries
+  `enabled`, `html`, `css`, `htmlDraft`. `PUBLISH` sets `enabled: true`; the `TURN OFF`
+  button sends `PUT …/alert-custom` with `enabled: false` (message `Update Custom Mode
+  Successfully`). So custom HTML being off is the default, and publishing is what turns it on.
+- Alert appearance / config (colors, nominal, isAlertActive…) → the shared save bar's
+  `PUT /api/v1/accounts/stream/configuration` (`Set Stream Configuration Successfully`).
+  Appearance colors are hex text inputs under the `Appearance` accordion.
+
+These two no longer clobber each other: changing an appearance colour and saving leaves
+the published custom HTML intact (`LIV-18` fixed, verified 2026-09-28). When a test
+touches either, restore the QA creator afterwards — revert the colour, republish the
+default template, and `TURN OFF` custom mode if it started off.
 
 ## Effective thresholds are always the larger of two numbers
 
@@ -390,7 +417,7 @@ file. **The Media Share tab has no file input whatsoever** — the media comes f
 buyer, and the creator only configures `MAXIMUM LENGTH` and `COST PER SECOND` ("What
 a fan pays for each second of clip").
 
-**No maximum file size is stated anywhere** on either tab.
+**No maximum file size is stated anywhere** on either tab — but there is one: measured 2026-09-28, an alert-sound audio file **≤ 1.9 MB is accepted and ≥ 2.0 MB is rejected**, i.e. a **~2 MB cap**. Over-size files are dropped **silently** (no toast, no filename staged, Save stays disabled), and the 2 MB limit is never shown in the UI (`L-26`, still open).
 
 ## VIP Queue input form
 
@@ -398,6 +425,11 @@ Custom join fields render as `@name` plus a type (e.g. `Number`), with an `Add i
 control. The configured maximum number of fields could not be established — clicking
 `Add input` repeatedly changed nothing observable, so treat the cap as unknown rather
 than unlimited.
+
+**The overlay shows only the configured count; the rest have no `+N` badge — by design.**
+`SHOWN ON THE OVERLAY` sets how many entries render; the field's own help text reads
+*"The rest stay queued, just off screen"*, so there is deliberately **no `+N` overflow
+indicator**. Do not assert one (this closed `L-29` as expected, 2026-09-28).
 
 ## Song search hides what it will not accept
 

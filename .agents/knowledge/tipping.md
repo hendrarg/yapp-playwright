@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, tipping]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-09
+updated: 2026-09-28
 sources: 0
 status: active
 ---
@@ -65,6 +65,38 @@ actually gates the control.
 
 The Rp10.000 floor is enforced on the IDR path only. The USDT path accepts any amount,
 so the platform minimum is bypassable by switching currency.
+
+## The profile inline panel's amount is a gateway, not a real entry — the tip page is where the minimum bites
+
+Established 2026-09-28 (ruled expected, closed `M-50`). Do **not** read the profile inline
+tip panel as the enforcing surface. On the profile panel a `0` / below-minimum amount is
+accepted **only so the visitor can proceed to `/<handle>/tip`**; the value is **not carried
+over** — the tip page opens with an empty amount field and its own validation (`Minimum
+amount is Rp10.000` on IDR, held at `Rp0`). So "the panel accepted 0.01" is not a bypass: the
+panel is a doorway, the page is the gate. A report that the panel took a sub-minimum value is
+**expected**, because entering the page is not the same as submitting a tip. Verify the
+minimum on `/<handle>/tip`, never on the profile panel preview.
+
+## Switching currency and back retains the previous amount — this is intended
+
+Established 2026-09-28 (ruled expected, closed `M-52`). On `/<handle>/tip`, entering an IDR
+amount (e.g. `50000`), switching the currency tab to USDT, then switching **back** to IDR
+**keeps the previously entered value and its Detail Transactions summary** (Subtotal
+`Rp50.000`, Total with fee). The round-trip does not clear the field — value preservation is
+the desired behaviour, so a "stale summary after currency change" report is **expected**, not
+a bug. (Headless reads sometimes show the field momentarily empty while the summary still
+holds the value — that is a timing artefact of the read, not a defect.)
+
+## Quick-amount slots have no min/negative validation (open bug `TIP-8` / `M-50`-renumbered)
+
+Client and server both accept out-of-range quick-amount values. Typing `abc-12.5` into a
+Customize → Tip Button IDR slot leaves `-12` (letters and decimals stripped, the minus
+survives), `POST /api/v1/quick-amounts` answers `200` with `{"assetID":1,"amount":-12}`, and
+the value persists across reload. On the buyer page the invalid preset renders as a chip
+(e.g. `-Rp12`) that is impossible to actually use (clicking it yields Subtotal `Rp0` /
+`Min. Rp10.000`). Below-minimum positives are accepted too. This is a **real defect** (same
+family as the broadcast-length / PPV-price range gaps), tracked as **TIP-8** — distinct from
+the two expected rulings above.
 
 ## Creator-side tip visibility
 
