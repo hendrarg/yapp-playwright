@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, explore-and-profile]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-23
+updated: 2026-09-29
 sources: 0
 status: active
 ---
@@ -128,6 +128,59 @@ exactly the 6 active ones, each as title + URL preview + click count with an
 `aria-checked=true` switch. Inactive links are not listed at all, so an "inactive status"
 is never displayed anywhere. The same tab also mixes Campaign blocks above the plain link
 rows.
+
+## The Links section has a Text block (Add Block → Text)
+
+Shipped to creator dev and verified live 2026-09-29 (PRD "My Page — Links — Text Item",
+parent ticket `CP-10`). `My Page → Links → Add Block` offers **four** Suggested tiles now:
+Folder, Link, Campaign, and **Text** (a fourth green tile), above the embeddable-app list
+(Instagram/TikTok/YouTube/X). Selecting Text opens an **"Add Text"** editor dialog immediately.
+
+**The editor is TipTap/ProseMirror** (`.tiptap.ProseMirror` contenteditable, placeholder
+`Write something…`). Toolbar, left→right: a **paragraph-style** select (default `Normal`),
+**Bold**, **Underline**, **Clear formatting**, **Bulleted list**, **Numbered list**, **Align
+left/center/right**, **Justify**, and a **`</>` HTML code view** toggle (aria-label `HTML code
+view`) at the far right. There is **no colour control, no font-size, and no Italic button** —
+consistent with the PRD scoping colour to Epic 3 (theme tokens, fast-follow) and matching the
+allow-list below.
+
+**Data model — a Text block is a `link` row, not a new table.** It appears in
+`GET /api/v1/accounts/link` with `linkType: "text"` and its HTML in the **`htmlContent`**
+field (other block types leave `htmlContent` empty). Endpoints:
+
+| Action | Request |
+|---|---|
+| Create | `POST /api/v1/accounts/link/text` body `{htmlContent, isActive, position, usedCodeView}` → `{message:"Text block saved", data:{id,…,linkType:"text"}}` |
+| Update | `PUT /api/v1/accounts/link/text/{id}` (same body) |
+| Delete | `DELETE /api/v1/accounts/link/{id}` (the generic link delete, **not** `/link/text/{id}`) |
+
+`usedCodeView` is a boolean the client sends (tracks whether the code view was used — matches a
+PRD success metric).
+
+**The server-side sanitizer is real and correct, on every save.** Verified by POSTing malicious
+`htmlContent` directly to the API (the attacker path) and reading it back, and again on `PUT`
+(re-sanitised, not just first save):
+
+- **Stripped:** `<script>`, `<style>`, `<iframe>`, `<img>`, `<a>`/`href`, `<button>`, every
+  inline event handler (`onerror`, `onclick`, `onmouseover`, …), and `style=`. The tag is
+  removed but its **inner text is kept as plain text** (e.g. `<a href=…>EVILLINK</a>` → `EVILLINK`).
+- **Also stripped:** `<i>` (italic) — italic is not in the toolbar, so it is not in the allow-list.
+- **Kept (allow-list):** `<table>/<thead>/<tbody>/<tr>/<th>/<td>`, `<b>`/`<strong>`, `<u>`,
+  headings (`<h2>`, `<h3>`), `<p>`, and lists. Tables typed as markup in the code view **render
+  as a real table on the public profile.**
+
+**Public rendering is safe and hidden blocks are private.** Public/visitor blocks come from
+`GET /api/v1/account/{uuid}/link-combination` and carry only the sanitised `htmlContent`; a
+headless guest render of the public profile showed the table rendered, `document.querySelectorAll('table')`
+= 1, and none of the injected `window.__pwned/__img/__btn` fired. A **hidden** block
+(`isActive:false`) is **absent** from that endpoint for both a guest and the owner — it does not
+leak.
+
+**Empty-content guard has a gap (`CP-10` subtask, Low).** The editor disables **Add Text** when
+the body is truly empty, but **whitespace-only content re-enables it**, and the server accepts
+empty / whitespace / all-sanitised-away content (`POST …/link/text` → 200, stored `htmlContent:""`),
+creating a blank block. Same "UI guards, server doesn't validate, whitespace bypasses" family as
+the Tipping quick-amount and Event-title gaps.
 
 ## There is no UI for configuring profile tabs
 
