@@ -532,6 +532,24 @@ overlay.** Several dead ends were self-inflicted: a stale overlay silently drops
 events, an unsaved enable switch leaves the feature off, and a blanket "click every
 collapsed header" loop opened a Rotate-key dialog.
 
+## Radix sliders move with the keyboard, not with `fill` or synthetic pointers
+
+Verified 2026-09-30 on every Stream Studio widget slider (`Font size`, `Size`, `Overlay
+opacity`). Target the thumb, `[aria-label="<name>"] [role=slider]`, call `focus()`, then press
+`ArrowRight` / `ArrowLeft` — each press moves one step and `aria-valuenow`, the value label and
+the unsaved-changes counter all update. Read the value back from `aria-valuenow`. An earlier
+note (LIV-25 QA comment, 29 Sep) concluded the slider "does not respond to automation"; that
+came from pointer events, and the keyboard path works.
+
+The same focus-then-type route is what makes Stream Studio's formatted numeric inputs take a
+value (`Minimum tip to spin`, placeholder `50.000`): `fill()` is silently reverted to `0`, while
+`focus()` + `Control+A` + `keyboard.type('20000')` sticks and renders `20.000`. Both controls often
+sit in a collapsed accordion — open it via `button[aria-controls="<closest [id] of the input>"]`
+first, or the click is intercepted.
+
+Stream Studio toasts render as `ol li` (not `[data-sonner-toast]`); a toast selector that finds
+nothing does not mean the app said nothing — screenshot before concluding a save failed silently.
+
 ## Radix triggers ignore `element.click()` — use a real mouse click
 
 Established 2026-09-09 while scripting the post action menu and the Mark Member modal.
@@ -619,5 +637,13 @@ npm run mcp:clean
 - **Never** touches a normal Chrome install, a browser owned by a running `playwright test`, or an MCP server started by another tool (Cursor, `npx @playwright/mcp@latest`). Those need `--all-servers`.
 - `--dry-run` lists what would go; `--browsers` keeps the servers up so the next MCP call stays fast.
 - **Run the bare `npm run mcp:clean` only when you are done exploring.** It kills this session's own MCP server too: every `mcp__playwright__*` tool disconnects immediately and does **not** come back without restarting the client, so a mid-session clean ends browser work for that session. Mid-session, use `npm run mcp:clean -- --browsers`. If it is already too late, a plain Playwright script (`chromium.launch()` plus `context.addCookies` with the `at` cookie) reaches the same pages — you lose `browser_snapshot`, so read the tree with `getByRole` counts and `innerText` instead.
+- **Picking up a new `.env` token without a client reconnect** (verified 2026-09-30). The wrapper writes `.playwright-mcp/auth-storage.json` once at server start, so a token fixed in `.env` afterwards never reaches the browser. Rewrite the file, then close only the browsers — the server re-applies the file when it relaunches the context:
+
+  ```bash
+  node -e 'import("./scripts/mcp-auth-storage.mjs").then(async m=>{(await import("dotenv")).config({quiet:true});m.writeMcpAuthStorageState({root:process.cwd()})})'
+  npm run mcp:clean -- --browsers
+  ```
+
+  The first MCP call afterwards fails with `Target page, context or browser has been closed` and relaunches the browser; the next one runs on the fresh token. Navigate to a real `*.yapp.ink` page before any `fetch` check — on `about:blank` it answers `Failed to fetch`.
 
 Duplicate MCP servers are the real leak: one per client, and they outlive the session that started them. Check with `npm run mcp:clean -- --dry-run` when the machine feels heavy.

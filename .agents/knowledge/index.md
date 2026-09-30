@@ -60,6 +60,7 @@ the sheet wins.
 | [[wallet\|Wallet]] | The three disagreeing balance surfaces, history pagination and its filter labels, the withdrawal dialog and its unvalidated address |
 | [[explore-and-profile\|Explore & profile]] | Explore feeds and the curated Popular section, dead account fields, landing CTA structure, profile tab order |
 | [[referral\|Referral]] | The 1% / 10% two-sided programme, the `?c=` link and its creator-domain-only cookie, live code validation, the empty-list `Page 1 of 0` |
+| [[campaigns\|Campaigns]] | Where Campaigns diverge from the Products standard: no Draft state (draft = inactive), a different row menu with no Delete, no title length rule, inactive links still take donations |
 | [[currency-format\|Currency format]] | Creator renders `Rp10.000,00` where buyer renders `Rp10.000`, the third `IDR 10,000` preview dialect, and every creator surface that shows the decimals |
 
 ## Maintaining these notes

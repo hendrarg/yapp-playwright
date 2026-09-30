@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, livestream]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-09
+updated: 2026-09-30
 sources: 0
 status: active
 ---
@@ -246,6 +246,50 @@ Two consequences worth remembering:
 - **Some controls bypass the save bar and persist immediately** — the Alert enable
   switch and the VIP Queue custom fields (the counter stays at 0). Do not wait for
   SAVE on those.
+
+## Font size and Size are per-widget scale sliders (30 Sep 2026)
+
+The streamer app now answers on **`stream-dev.yapp.ink/overlays?activeTab=<tab>`** (the old
+`/streamer/overlays` path redirects there). Every widget's `Appearance` accordion carries two
+sliders besides `Overlay opacity`:
+
+| Slider | Range | Step | Default | Where |
+|---|---|---|---|---|
+| `Font size` ("every line of text on the overlay") | 70–150 % | 5 | 100 | 13 of 15 tabs |
+| `Size` ("Resizes the widget in OBS. The preview stays at 1×") | 50–500 → 0.5×–5× | 10 | 100 (1×) | 13 of 15 tabs, **Featured Product capped at 50–100** |
+
+**Media Share and Alert & Media Share have neither slider.** The dashboard preview always shows
+`Actual size 1x` — that is by design, not a failed save.
+
+Both are wired end to end, verified on Subathon: Font 120 % + Size 1.5× → SAVE (`PUT
+/api/v1/accounts/stream/configuration` 200) → values survive a reload → the overlay at
+`widget-dev.yapp.ink/subathon/<creatorUUID>` applies **CSS `zoom: 1.5`** on the widget container
+and text scales by the font factor (a 30px label became 36px), so the rendered clock grows by the
+product of both (≈1.8×). Assert Size via `getComputedStyle(container).zoom`, not via `transform`.
+The big clock digits are not plain text nodes — measure them by screenshot or container box.
+
+## Subathon: timer rules vs Gacha is a switch plus a buyer choice (30 Sep 2026)
+
+There is no mode picker. The choice lives in `Time extension rules` as the switch **`Tips add
+time`** (`aria-label="Tips add time to the clock"`), combined with the Gacha master switch
+(`Enable subathon gacha`). Verified on the buyer tip page `/hendrarg/tip` with one rule
+`Rp10.000 → +10 min` and Gacha minimum Rp20.000:
+
+| Tips add time | Gacha | Buyer tip page |
+|---|---|---|
+| ON | OFF | `You're tipping IDR 15.000 will add 10m 0s to the stream` — no chooser |
+| ON | ON | at **≥ Gacha minimum** a chooser `Add subathon time by` **[Timer rules] [Spin gacha]**, default Timer rules; below the minimum no chooser **and no "will add" line at all** |
+| OFF | ON | nothing subathon-related at any amount, although qualifying tips spin the wheel |
+
+- The Gacha minimum is inclusive: Rp19.999 shows no chooser, Rp20.000 does.
+- Picking `Spin gacha` removes the info line; the possible prizes (the wheel's `5 min` /
+  `10 min` slots) are never shown to the buyer.
+- With `Tips add time` OFF, the editor's `TRY AN AMOUNT` still reads `A tip of Rp25.000 adds
+  +20 min to the timer.` — the simulator ignores the switch.
+- The Gacha master switch needs `Minimum tip to spin` > 0 to save: SAVE is refused with the toast
+  `Subathon Gacha minimum tip must be greater than 0` and no request. With Gacha OFF that field is
+  **disabled**, so a value typed while it was on stays stored.
+- Not yet verified with a real settled tip: that the chosen path actually adds time or spins.
 
 ## The Subathon preview clock is decorative
 
