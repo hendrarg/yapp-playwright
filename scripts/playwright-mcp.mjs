@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { config as loadEnv } from "dotenv";
 import { applyPlaywrightBrowsersPath } from "../config/playwright-browsers-path.mjs";
-import { mcpAccounts, resolveMcpAccount, writeMcpAuthStorageState } from "./mcp-auth-storage.mjs";
+import { loadExtraSessions, mcpAccounts, resolveMcpAccount, writeMcpAuthStorageState } from "./mcp-auth-storage.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnv({ path: path.join(root, ".env") });
@@ -19,13 +19,19 @@ const account = resolveMcpAccount();
 const authStoragePath = writeMcpAuthStorageState({ root });
 if (authStoragePath) {
   args.push(`--storage-state=${authStoragePath}`);
+}
+if (account === "guest") {
+  console.log("[playwright-mcp] YAPP_MCP_ACCOUNT=guest — MCP browser starts without a yapp session.");
+} else if (authStoragePath && process.env[mcpAccounts[account]?.envVar]) {
   console.log(`[playwright-mcp] authenticated as ${mcpAccounts[account]?.label ?? account}`);
-} else if (account === "guest") {
-  console.log("[playwright-mcp] YAPP_MCP_ACCOUNT=guest — MCP browser starts unauthenticated.");
 } else {
   console.error(
-    `[playwright-mcp] ${mcpAccounts[account]?.label ?? account} token (${mcpAccounts[account]?.envVar ?? "?"}) not set; MCP browser starts unauthenticated.`,
+    `[playwright-mcp] ${mcpAccounts[account]?.label ?? account} token (${mcpAccounts[account]?.envVar ?? "?"}) not set; MCP browser starts without a yapp session.`,
   );
+}
+const extraCount = loadExtraSessions(root).cookies.length;
+if (extraCount) {
+  console.log(`[playwright-mcp] restored ${extraCount} saved cookie(s) for extra sessions (Monkies).`);
 }
 
 const child = spawn(process.execPath, [mcpCli, ...args], {

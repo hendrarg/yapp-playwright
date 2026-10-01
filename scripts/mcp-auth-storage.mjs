@@ -54,9 +54,46 @@ export function buildMcpAuthStorageState(baseURL, accessToken) {
 }
 
 /**
+ * Sites whose login survives MCP browser restarts. The browser stays `--isolated`
+ * (so the yapp `at` cookie always comes fresh from `.env`); these sessions are
+ * saved once to `.playwright-mcp/extra-sessions.json` and merged back in.
+ */
+const extraSessionHosts = ["monkies.monklabs.io"];
+
+export function extraSessionsPath(root) {
+  return path.join(root, ".playwright-mcp", "extra-sessions.json");
+}
+
+function isExtraSessionHost(hostOrDomain) {
+  const host = hostOrDomain.replace(/^\./, "");
+  return extraSessionHosts.some((h) => host === h || h.endsWith(`.${host}`) || host.endsWith(`.${h}`));
+}
+
+/**
+ * Read the saved extra sessions, keeping only cookies and origins of
+ * `extraSessionHosts` — anything else in the file (e.g. a yapp cookie captured
+ * alongside) is ignored so `.env` stays the only source of the yapp token.
+ */
+export function loadExtraSessions(root) {
+  const file = extraSessionsPath(root);
+  if (!fs.existsSync(file)) return { cookies: [], origins: [] };
+  try {
+    const state = JSON.parse(fs.readFileSync(file, "utf8"));
+    return {
+      cookies: (state.cookies ?? []).filter((c) => isExtraSessionHost(c.domain)),
+      origins: (state.origins ?? []).filter((o) => isExtraSessionHost(new URL(o.origin).hostname)),
+    };
+  } catch (error) {
+    console.error(`[playwright-mcp] ignoring unreadable ${file}: ${error.message}`);
+    return { cookies: [], origins: [] };
+  }
+}
+
+/**
  * Writes MCP auth storage state for the account selected by YAPP_MCP_ACCOUNT
- * (default `qa` = YAPP_TEST_ACCESS_TOKEN). In `guest` mode the storage file is
- * removed so the MCP browser starts unauthenticated.
+ * (default `qa` = YAPP_TEST_ACCESS_TOKEN), plus any saved extra sessions.
+ * In `guest` mode the yapp cookie is left out; if there are no extra sessions
+ * either, the storage file is removed so the MCP browser starts clean.
  *
  * Returns the output path when written, otherwise null.
  */
@@ -66,25 +103,28 @@ export function writeMcpAuthStorageState({
   account = resolveMcpAccount(),
   outputPath = path.join(root, ".playwright-mcp", "auth-storage.json"),
 } = {}) {
-  if (account === "guest") {
+  const extra = loadExtraSessions(root);
+  let state = { cookies: [], origins: [] };
+
+  if (account !== "guest") {
+    const envVar = mcpAccounts[account]?.envVar;
+    const accessToken = envVar ? process.env[envVar]?.replace(/"/g, "") : undefined;
+    if (baseURL && envVar && accessToken) {
+      state = buildMcpAuthStorageState(baseURL, accessToken);
+    }
+  }
+
+  state = { cookies: [...state.cookies, ...extra.cookies], origins: [...state.origins, ...extra.origins] };
+
+  if (!state.cookies.length && !state.origins.length) {
     if (fs.existsSync(outputPath)) {
       fs.unlinkSync(outputPath);
     }
     return null;
   }
 
-  const envVar = mcpAccounts[account]?.envVar;
-  const accessToken = envVar ? process.env[envVar]?.replace(/"/g, "") : undefined;
-  if (!baseURL || !envVar || !accessToken) {
-    return null;
-  }
-
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(
-    outputPath,
-    JSON.stringify(buildMcpAuthStorageState(baseURL, accessToken), null, 2),
-    "utf8",
-  );
+  fs.writeFileSync(outputPath, JSON.stringify(state, null, 2), "utf8");
 
   return outputPath;
 }

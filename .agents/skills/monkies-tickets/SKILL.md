@@ -25,8 +25,12 @@ The account/workspace changed on 22 Sep 2026 and every old id is dead. Start eac
 
 ## MCP call mechanics (gotchas)
 
-- `create_task` **ignores `assigneeIds`** → the card comes back `assigneeId: null`. Set the
-  assignee with a follow-up `update_task { assigneeId }`.
+- `create_task` takes a singular **`assigneeId`** and honours it (verified 30 Sep 2026 on four
+  cards). The plural `assigneeIds` is what gets ignored → `assigneeId: null`; if a card comes back
+  unassigned, fix it with `update_task { assigneeId }`.
+- `create_subtask` may **inherit the parent's assignee** on some subtasks and not others (seen 30
+  Sep 2026: LIV-27/LIV-30 came back assigned to the parent's assignee, LIV-28/29/31 unassigned).
+  Check each subtask's `assigneeId` in the response rather than assuming null.
 - A card gets a **key only when it has a `projectId`**; a workspace-only card is `key: null`.
   Pass `projectId` on create (or `update_task { projectId }`) to mint the key.
 - `update_task` requires **`workspaceId` + `taskIdOrKey`** (not `taskId`). It moves columns via
@@ -39,6 +43,20 @@ The account/workspace changed on 22 Sep 2026 and every old id is dead. Start eac
   user; after a wrong-account login they clear it with `/mcp` and re-authorize.
 
 ## Bug ticket (from a Bugs-sheet row)
+
+**Evidence is mandatory for a fail, and only for a fail (user rule, 30 Sep 2026).** Every bug or
+failed test needs a screenshot of the wrong state, captured when it is observed
+(`browser_take_screenshot`; before + after for a state-change defect), kept as
+`.playwright-mcp/evidence/<YYYY-MM-DD>/<BugID>-<slug>.png`. A pass needs no evidence. The Monkies MCP
+has no upload tool, so save the image first and **copy-paste** it in the Monkies web UI when the
+card is written — into the **description** of a **new bug ticket**, or into a **comment** when
+testing a **dev's ticket**. Upload with `npm run monkies:upload -- --json <files…>` (no browser,
+returns the asset URLs), then write the description via `update_task` or the comment via
+`add_comment` as BlockNote JSON with `image` blocks — details in `.agents/rules/mcp-playwright.md` →
+"Putting evidence images into a Monkies card"; also note the file on the sheet row's Detail (`Evidence:`).
+If the browser cannot reach Monkies, hand the user the file list per card. No screenshot → not
+ready to file, unless the row says why a capture is impossible. Always state in the reply which
+cards and subtasks were created, under which parent.
 
 "Buat ticket bugs `<M-xx>`" =:
 

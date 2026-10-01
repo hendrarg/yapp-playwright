@@ -258,8 +258,13 @@ sliders besides `Overlay opacity`:
 | `Font size` ("every line of text on the overlay") | 70–150 % | 5 | 100 | 13 of 15 tabs |
 | `Size` ("Resizes the widget in OBS. The preview stays at 1×") | 50–500 → 0.5×–5× | 10 | 100 (1×) | 13 of 15 tabs, **Featured Product capped at 50–100** |
 
-**Media Share and Alert & Media Share have neither slider.** The dashboard preview always shows
-`Actual size 1x` — that is by design, not a failed save.
+**Media Share and Alert & Media Share have neither slider, by design:** Media Share "wears the
+alert's frame, so its shape is set there too" (button `SET SHAPE ON ALERT`), and the combined tab
+says "Everything it shows is configured on those two tabs — there is nothing to set here." Set them
+on the Alert tab. **Featured Product's `Size` is a different control:** "Narrows the banner inside
+the OBS source. 100% fills it." — so its 50–100 range is intended, not a missing 5×. Both were filed
+as bugs (L-75/L-76) and withdrawn 30 Sep 2026. The dashboard preview always shows `Actual size 1x` —
+that is by design, not a failed save.
 
 Both are wired end to end, verified on Subathon: Font 120 % + Size 1.5× → SAVE (`PUT
 /api/v1/accounts/stream/configuration` 200) → values survive a reload → the overlay at
@@ -278,10 +283,19 @@ time`** (`aria-label="Tips add time to the clock"`), combined with the Gacha mas
 | Tips add time | Gacha | Buyer tip page |
 |---|---|---|
 | ON | OFF | `You're tipping IDR 15.000 will add 10m 0s to the stream` — no chooser |
-| ON | ON | at **≥ Gacha minimum** a chooser `Add subathon time by` **[Timer rules] [Spin gacha]**, default Timer rules; below the minimum no chooser **and no "will add" line at all** |
+| ON | ON | at **≥ Gacha minimum** a chooser `Add subathon time by` **[Timer rules] [Spin gacha]**, default Timer rules; below the minimum no chooser, but the `will add …` line still shows and the rules still apply |
 | OFF | ON | nothing subathon-related at any amount, although qualifying tips spin the wheel |
 
 - The Gacha minimum is inclusive: Rp19.999 shows no chooser, Rp20.000 does.
+- **Proven with three settled dev tips (30 Sep 2026).** The choice travels as
+  `subathonMode` in `POST /api/v1/tipping/fiat`: `"rules"` → +20 min exactly; `"gacha"` → the
+  wheel picked `10 min`, `Last winner` updated and only those 10 min were added (the paths are
+  exclusive); a below-minimum tip sends **no** `subathonMode` and the rules add +10 min. Read the
+  effect from the overlay's green running total (`+193:20:00` → `+193:40:00` → `+193:50:00` →
+  `+194 hr` — whole hours render as `+194 hr`, not `+194:00:00`), not from the dashboard.
+- **Text-search trap:** the buyer info line reads `You're tipping IDR 15.000 will add 10m 0s to the
+  stream` and contains none of the words subathon/gacha/timer — match on `will add`, or you will
+  "prove" the line is missing.
 - Picking `Spin gacha` removes the info line; the possible prizes (the wheel's `5 min` /
   `10 min` slots) are never shown to the buyer.
 - With `Tips add time` OFF, the editor's `TRY AN AMOUNT` still reads `A tip of Rp25.000 adds
@@ -289,8 +303,6 @@ time`** (`aria-label="Tips add time to the clock"`), combined with the Gacha mas
 - The Gacha master switch needs `Minimum tip to spin` > 0 to save: SAVE is refused with the toast
   `Subathon Gacha minimum tip must be greater than 0` and no request. With Gacha OFF that field is
   **disabled**, so a value typed while it was on stays stored.
-- Not yet verified with a real settled tip: that the chosen path actually adds time or spins.
-
 ## The Subathon preview clock is decorative
 
 Verified 2026-09-09. The clock drawn on the dashboard preview card shows the **Starting

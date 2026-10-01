@@ -72,9 +72,11 @@ live. An unknown slug renders an in-page `Error / Failed to load campaign detail
   (`PUT` 200, `Campaign updated successfully`). On create a 4-character title passes the FE and
   the `POST` is sent. The DB holds 3–4 character titles/slugs (latest Jun 2026); whether the BE
   now rejects short slugs on create was not tested (it would create an undeletable row).
-- Missing required fields give one generic toast, `Please fill in all required fields before
-  proceeding`, with **no inline field errors and no `aria-invalid`**. Goal `0` gives the same
-  toast; goal `1` passes — there is no Rp10.000-style floor (a live campaign has goal `Rp 100`).
+- Missing required fields give the toast `Please fill in all required fields before proceeding`
+  **plus red inline messages** under each empty field — `Campaign title is required`, `Funding goal
+  is required`, `Thumbnail is required` (verified by screenshot 2026-09-30; an earlier DOM colour
+  scan missed them). Goal `1` passes with no message — there is no Rp10.000-style floor (a live
+  campaign has goal `Rp 100`).
 - **The slug is derived from the title and readonly.** On edit the readonly link preview
   follows the title as you type and the request carries the new `shortUrl`, but the server keeps
   the original slug — the preview shows a link that will not exist.

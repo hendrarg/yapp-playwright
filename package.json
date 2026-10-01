@@ -22,7 +22,8 @@
     "typecheck": "tsc --noEmit",
     "clean:artifacts": "node scripts/clean-artifacts.mjs",
     "clean:all": "node scripts/clean-artifacts.mjs --days=0 --reports",
-    "mcp:clean": "node scripts/mcp-clean.mjs"
+    "mcp:clean": "node scripts/mcp-clean.mjs",
+    "monkies:upload": "node scripts/monkies-upload.mjs"
   },
   "keywords": [],
   "author": "",

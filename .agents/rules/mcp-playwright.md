@@ -625,6 +625,67 @@ In Git Bash, arguments starting with `/` (for example `/api/v1/group-chats`) are
 Windows paths before they reach `node`, which shows up as a bogus host such as
 `staging.yapp.inkc`. Export `MSYS_NO_PATHCONV=1` before calling an API helper with a path argument.
 
+## Saved logins for other sites (Monkies)
+
+The browser stays `--isolated`, so a login made in it disappears when it closes. For sites that
+need a human login and are used from the MCP browser — currently **Monkies**
+(`monkies.monklabs.io`, used to paste bug evidence into cards) — the session is saved once to
+`.playwright-mcp/extra-sessions.json` (gitignored, and kept by `clean:artifacts`) and
+`scripts/mcp-auth-storage.mjs` merges it into the storage state on every start. Only cookies and
+origins of the hosts in `extraSessionHosts` are taken from that file; the yapp `at` cookie always
+comes from `.env`.
+
+To (re)create it — first time, or when Monkies redirects to `/login` again:
+
+1. `browser_navigate` to `https://monkies.monklabs.io/login` and let the user log in in that window.
+   Never ask for, or type, their credentials.
+2. Save the whole context (the loader filters it):
+   ```javascript
+   // browser_run_code_unsafe
+   await page.context().storageState({ path: 'D:/yapp/.playwright-mcp/extra-sessions.json' });
+   ```
+3. Nothing else: the next browser (re)launch merges it. To apply it immediately, rewrite the storage
+   file and relaunch as in "Picking up a new `.env` token" below.
+
+The Monkies MCP server has its own auth and does **not** give the browser a web session — the two
+logins are independent.
+
+### Putting evidence images into a Monkies card (verified 2026-10-01)
+
+**Default: no browser.** `npm run monkies:upload -- [--json] <file…>` replays the editor's two upload
+requests from Node (≈0.4 s per image) and prints one `/api/go/asset/object?key=…` URL per file, using
+the saved session above. Then write the card with MCP (step 2 below). It needs only the saved
+session; if it reports `session expired`, re-login in the MCP browser and re-save
+`extra-sessions.json`. The script also rolls the next-auth session forward on every run.
+
+**Trap it encodes:** `/api/go/asset/sign` answers `403 {"message":"Forbidden"}` to any request
+without `Sec-Fetch-Site: same-origin` — a valid cookie is not enough, and Playwright's
+`context.request` fails the same way. Only a fetch from inside the page (or a client that sets that
+header) is accepted.
+
+The browser route below is the fallback (and how the request format was recorded):
+
+1. On `https://monkies.monklabs.io/task/<KEY>`, stage the PNG through a temporary file input
+   (`setInputFiles` reads it from disk), then fire a synthetic paste at the editor:
+   ```javascript
+   await page.evaluate(() => { const i = document.createElement('input'); i.type = 'file'; i.id = '__qa_evidence'; i.style.display = 'none'; document.body.appendChild(i); });
+   await page.setInputFiles('#__qa_evidence', 'D:/yapp/.playwright-mcp/evidence/<date>/<file>.png');
+   await page.locator('.bn-editor').first().click();
+   await page.evaluate(() => { const f = document.getElementById('__qa_evidence').files[0]; const dt = new DataTransfer(); dt.items.add(f);
+     document.querySelector('.bn-editor').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); });
+   ```
+   It uploads via `POST /api/go/asset/sign` + DigitalOcean Spaces, and the new `<img>` gets
+   `src="/api/go/asset/object?key=monkies%2Fimages%2F<userId>%2F<hash>"` — wait for that `src`, read it.
+2. Rewrite the description with `update_task` as **BlockNote JSON** (a JSON array string): the
+   original paragraphs, then a bold `Evidence` paragraph, a caption paragraph and an
+   `{"type":"image","props":{"url":"<that src>","name":"<file>","caption":"","showPreview":true}}`
+   block per file. The server accepts it as-is and the web renders the images.
+
+Why not just let the paste save: the web autosave (`POST /task/<KEY>`) places the image wherever the
+cursor lands — `Ctrl+End` does **not** reach the end of a BlockNote document, so the image ended up
+under the first line — and once it answered **403** (on a card assigned to someone else) while later
+pastes on similar cards saved. The MCP rewrite is deterministic either way.
+
 ## Session cleanup
 
 `browser_close` is **not** enough. Its tool schema says "Close the page", and its handler only emits `await page.close()` — the browser process the MCP server launched keeps running as an empty window, and a new one is added every time a server restarts. Finish every MCP exploration with:
