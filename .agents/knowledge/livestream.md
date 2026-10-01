@@ -218,6 +218,40 @@ and `Maximum Duration 30 seconds`.
 
 The platform minimum tip is Rp10.000, so any media floor below that is unreachable.
 
+## What changed by the 1 Oct 2026 retest
+
+Read this before the older sections below — several described defects are gone:
+
+- **An expired Voting schedule no longer freezes SAVE** (H-03 / LIV-20): with Voting enabled and
+  dated 25–26 Sep, a Leaderboard change still saved (`Stream config saved successfully`). The two
+  sections below ("One Save…", "SAVE was still frozen…") are history.
+- **Adjust the clock works while paused** (M-15): `+ 10 MIN` on a paused timer moved the overlay
+  `125:55:57` → `126:05:57`.
+- **Song Share / VIP Queue below their minimum now block at submit** with visible messages —
+  `Min. Rp25.000 to join the VIP queue` under the amount and `Minimum amount for song share is
+  IDR 15,000` under the song block; no bill is created. The switches still toggle on below the
+  minimum (the gate is at Send Tip, not on the control).
+- **Send Tip without a poll option** shows `Please select a voting option` (L-18).
+- **Alert sound over 2 MB** is refused with the toast `Audio file must be 2MB or smaller.` (L-17).
+- **Media Share `Test`** sends a sample to the media overlay (`Media share test sent to your
+  overlay.`); `Video / TikTok / GIF / Voice note` next to it only switch the on-page preview.
+- **Copy overlay link** toasts `Overlay URL copied!`.
+- **Still broken:** poll offered and charged before its window with the vote dropped (H-02 —
+  enabled + future window: radios live, bill created, `votedCount` unchanged after settle; a
+  *disabled* poll is correctly hidden), Milestone START picker fully disabled (H-04), Media Share
+  message quoting the creator floor (M-14), non-existent YouTube IDs accepted (M-16), and the
+  generic receipt that mentions neither the vote nor the VIP join (L-20/L-21), and the Alert
+  threshold suppressing a paid Media Share (M-17 — two identical Rp15.000 YouTube tips: with
+  `MINIMUM AMOUNT TO SHOW ALERT` Rp50.000 every overlay received the `alert`/`sync media_share`
+  frames but rendered nothing; at Rp10.000 the media and combined overlays played the clip).
+- **How to observe an overlay render reliably:** keep the overlay pages open from before the tip
+  and sample the DOM every second until ~1 min after settle — a clip lasts its own length (15–30
+  s), so a check made after a 20 s payment poll misses it. The media overlay renders fine headless.
+- **QA-account state to expect:** VIP Queue and Song Share were found **disabled** on 1 Oct (they
+  were on 30 Sep) — enable them before any buyer-side add-on test, or the blocks simply don't
+  render. `Replay on stream` from `/tips` produced nothing on the `?variant=media|alert` overlays in
+  a headless context, so don't use it as evidence.
+
 ## One Save for every widget, and Voting can block it
 
 `/streamer/overlays` renders **one form for all widget tabs** with a single sticky
@@ -310,7 +344,7 @@ clock** value and nothing else: it sat at `10:00:00` while the real overlay ran 
 `09:58:40`, moved to `10:08:34` on `+ 10 MIN`, `11:08:28` on `+ 1 HOUR` and `10:58:22` on
 `− 10 MIN`, and froze and resumed correctly under `PAUSE TIMER` / `START TIMER`. Every
 timer assertion must therefore be read **from the overlay page**, never from the
-dashboard. Filed as M-30.
+dashboard. Filed as M-20 and **withdrawn 1 Oct 2026**: the card is an appearance preview (Light/Dark/Transparent backdrop, `Actual size 1x` badge), not a live monitor, so showing the Starting clock is its job.
 
 The `Adjust the clock` panel says `Applies straight away — this does not wait for Save`,
 and that is true: the overlay reacts immediately and the unsaved-changes counter never
@@ -502,7 +536,7 @@ Verified 2026-09-09 in a guest session on `/hendrarg/tip` with `songshare-max-du
 
 Both rejections therefore happen before payment, which is the right place, but they
 happen by **omission with no message**, so a missing song is indistinguishable from a
-blocked one, an over-long one, or one that is not in the catalogue (`L-36`). A test
+blocked one, an over-long one, or one that is not in the catalogue (filed as L-22, **withdrawn 1 Oct 2026** — hiding blocked tracks keeps the creator's blocklist private, and filtering before payment is the right place). A test
 asserting a rejection *message* here will fail by design.
 
 Result rows are plain `<button>` elements whose text is `<title> <artist> m:ss` — they

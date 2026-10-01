@@ -87,16 +87,21 @@ the desired behaviour, so a "stale summary after currency change" report is **ex
 a bug. (Headless reads sometimes show the field momentarily empty while the summary still
 holds the value — that is a timing artefact of the read, not a defect.)
 
-## Quick-amount slots have no min/negative validation (open bug `TIP-8` / `M-50`-renumbered)
+## Quick-amount validation (TIP-8 / M-50, fixed — retested 1 Oct 2026)
 
-Client and server both accept out-of-range quick-amount values. Typing `abc-12.5` into a
-Customize → Tip Button IDR slot leaves `-12` (letters and decimals stripped, the minus
-survives), `POST /api/v1/quick-amounts` answers `200` with `{"assetID":1,"amount":-12}`, and
-the value persists across reload. On the buyer page the invalid preset renders as a chip
-(e.g. `-Rp12`) that is impossible to actually use (clicking it yields Subtotal `Rp0` /
-`Min. Rp10.000`). Below-minimum positives are accepted too. This is a **real defect** (same
-family as the broadcast-length / PPV-price range gaps), tracked as **TIP-8** — distinct from
-the two expected rulings above.
+Before the fix, `abc-12.5` saved as `-12` and rendered to buyers as a `-Rp12` chip. Now:
+
+- **UI:** the minus is stripped while typing (`abc-12.5` → `1,250`), and Save with any IDR slot
+  below Rp10.000 is refused with the toast `Each IDR quick amount must be at least Rp10.000` —
+  no request is sent.
+- **API:** `POST /api/v1/quick-amounts` rejects any amount ≤ 0 (IDR or USDT) with `400 invalid
+  quick amount: amount must be greater than 0`. It still **accepts a positive below-minimum**
+  value (`5000` → 200); only the UI enforces Rp10.000.
+- **Buyer:** `/<handle>/tip` hides presets below the minimum — with a `5000` slot stored via API
+  only the other two chips render.
+- Payload shape: `{"isEnabled":true,"rules":[{assetID:1,amount}×3 (IDR), {assetID:2,amount}×3
+  (USDT)]}` — all six slots in one POST, alongside `PUT /accounts/tip-button`.
+- QA account quick amounts as of 1 Oct 2026: IDR 15.000 / 75.000 / 300.000, USDT 15 / 75 / 300.
 
 ## Creator-side tip visibility
 
