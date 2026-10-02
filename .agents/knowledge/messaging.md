@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, messaging]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-23
+updated: 2026-10-02
 sources: 0
 status: active
 ---
@@ -47,8 +47,16 @@ test cases were written against, so check this before scoping a messaging TC.
   The colour swatches and `Done` stay **disabled until a label is chosen**, and the
   modal grows a live `Preview` row plus `Remove` the moment one is set.
   Labels live at `GET /api/v1/dm/labels`; **assignments are per buyer at
-  `GET /api/v1/dm/buyers/{buyerUUID}/labels`** — `GET /api/v1/dm/conversations` no
-  longer carries them at all, so do not assert badges from the list payload.
+  `GET /api/v1/dm/buyers/{buyerUUID}/labels`** (`data: null` once removed). As of
+  2026-10-02 `GET /api/v1/dm/conversations` **carries them again** as
+  `counterParty.label[]` (it did not on 2026-09-08), so the list payload works for a
+  badge assertion but the per-buyer endpoint is the authority. The badge still renders
+  only on the inbox row, never in the thread header (L-29).
+- **Full badge lifecycle re-verified 2026-10-02** (M-29 closed): Add → `Member marked`;
+  menu flips to `Edit Mark Badge`, modal prefilled with label + colour + `Remove`;
+  `Remove` → `Mark removed` and the row badge disappears; `Delete <name>` in the label
+  dropdown opens an `alertdialog` "Delete label? This label will be removed from all
+  buyers and cannot be undone." There is no rename.
 - **A removed badge cannot be re-applied to the same buyer.** `Remove` soft-deletes the
   assignment (the GET reports it gone) but `idx_dm_buyer_labels_unique` ignores the soft
   delete, so `POST /api/v1/dm/buyers/{buyer}/labels/{label}` answers **500 duplicate key
@@ -58,6 +66,13 @@ test cases were written against, so check this before scoping a messaging TC.
 - **Broadcast audiences are single-select** — Followers / Subscribers / Custom List.
   There is no Supporters segment and no per-tier filter. Custom-list candidates are
   limited to followers.
+- **The inbound DM policy gates the outbound broadcast audience** (2026-10-02, M-59).
+  `accessPolicy` from Messaging Settings changes the `Send to` options on reload:
+  `subscriber_only` → Followers and Custom List **disabled** (`data-disabled`), default
+  Subscribers; `followers_and_subscribers` → all three enabled, default Followers;
+  `none` → all three enabled again, default Followers, and **Subscribers counts 0 People**.
+  So an earlier session's "Followers/Custom List greyed out" screenshot is a policy
+  artefact, not the segment design — note the policy before asserting audience options.
 
 ## Buyer app
 
@@ -161,6 +176,18 @@ Two consequences:
   subscription to hendrarg's `kuy` tier** (until 3 Oct 2026, DM enabled), so it is the
   fixture for everything phrased as "as a subscriber": buyer-side DM, member-only post
   access, same-tier membership cards, and a second commenter on any post.
+- **It holds three DM-enabled hendrarg tiers, not one** (2026-10-02): `kuy` (to 3 Oct
+  2026), `satu tahun` (to 23 Oct 2026) and `Live Time and Bound Online Course` (to 10 Oct
+  2026), read from `GET /api/v1/tier-membership-users` with its own token. DM access is
+  granted if **any** held tier has `isEnableDirectMessage`, so a "creator disabled DM"
+  test (L-26) must switch all three off — and back on. Each toggle saves with the tier's
+  `Save Changes` (`PUT /api/v1/tier-memberships/{uuid}` 200).
+- **Taking its session without touching `.env` or the creator session**: from
+  `browser_run_code_unsafe`, `page.context().browser().newContext()` gives a second,
+  isolated context in the same MCP browser; log in there through `/auth` (pointer-trail
+  click for reCAPTCHA) and read the OTP from `otp_codes` via `npm run db:shell`. The code
+  is **5 digits** (`maxlength="5"`). `globalThis` does not survive between run_code calls,
+  so find the context again with `browser().contexts()`.
 - **Never let the fixtures refresh token1 while that account matters.** The documented
   refresh path (OTP through the QA testmail inbox, saved back to `YAPP_TEST_ACCESS_TOKEN`)
   would write user 459's token over hendrarg's and quietly change who the creator tests
@@ -184,6 +211,14 @@ a `Post something here...` composer, `Open attachment menu`, `Cancel`, `Send Bro
   broadcast, and it stays inside one segment.
 - The attachment menu is `Link Product`, `Link Campaign`, `Request Tip`, `Link Post`,
   `Media`, `Link Membership`, each with its own one-line description.
+- **Broadcast `Request Tip` sends on its own button** (2026-10-02). The Tip Request card
+  now sits inline in the composer (10K/25K/50K + IDR field + `Request Rp<amount>`), and
+  clicking `Request Rp<amount>` fires `POST /api/v1/dm/broadcasts` with
+  `contentType: "tip"` to the **whole current segment** immediately — `Send Broadcast` is
+  never pressed. Today the BE rejects it (400 `ContentType must be one of: text media gif
+  emoticon product campaign post tier_membership`, toast `validation failed`), so nothing
+  goes out. Once M-27 is fixed this will broadcast instantly: trim the recipients to a
+  test account through `N People` **before** clicking it.
 - **The pickers do not share a confirm button**: `Select Post` commits with **`Apply`**,
   `Select Membership Tier` with **`Confirm`**. Clicking the row alone attaches nothing,
   and the composer behind stays reachable, so a send fired too early goes out empty —

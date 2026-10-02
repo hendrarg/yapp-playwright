@@ -95,6 +95,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npx eslint .` | Lint (import rules, locator placement, dead code) |
 | `npm run agents:sync` | Regenerate per-tool agent adapters from `.agents/` |
 | `pwsh scripts/setup-obsidian-junction.ps1` | Link `.agents/knowledge/` to Obsidian vault (after clone) |
+| `npm run tc:ingest` | Regenerate the vault's `projects/yapp/tc-<feature>.md` notes (all TCs of a feature in one note) from the test-case sheet; `-- --check` = dry-run |
 | `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
 | `npm run mcp:clean` | Close leftover MCP Playwright browsers and this repo's MCP servers |
 | `npm run db:shell -- "<SQL>"` | Read-only SQL against the dev database (needs `PSQL_*` in `.env`) |

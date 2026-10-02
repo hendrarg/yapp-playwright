@@ -85,6 +85,11 @@ step 2) fires `PUT /api/v1/shop/products/{uuid}/status` with
 prefills from the stored status, so `aria-checked="true"` means the product is
 currently Inactive.
 
+**A product used as a membership benefit cannot be deactivated** (2026-10-02): the same
+`PUT .../status` answers **500** `cannot deactivate this product because it is set as a
+membership benefit on tier <name>. Remove it from the membership benefits first` (seen on
+`Sikancil`). Pick a product outside every tier's perks when a test needs one inactive.
+
 The same control exists in the Products-list actions menu and works identically:
 toast `Product set to inactive` / `Product set to active` after ~0.5–0.75 s, the row
 changes tab, and tab counts update live. **Promotion uses the same component**:

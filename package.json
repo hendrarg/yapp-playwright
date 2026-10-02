@@ -23,7 +23,8 @@
     "clean:artifacts": "node scripts/clean-artifacts.mjs",
     "clean:all": "node scripts/clean-artifacts.mjs --days=0 --reports",
     "mcp:clean": "node scripts/mcp-clean.mjs",
-    "monkies:upload": "node scripts/monkies-upload.mjs"
+    "monkies:upload": "node scripts/monkies-upload.mjs",
+    "tc:ingest": "node scripts/ingest-testcases.mjs"
   },
   "keywords": [],
   "author": "",
