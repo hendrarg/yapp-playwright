@@ -133,6 +133,17 @@ test('buildAutomationContext resolves covered cases across sheets', () => {
   ]);
 });
 
+test('buildAutomationContext accepts domain-prefixed Automation IDs', () => {
+  const context = buildAutomationContext(
+    'AUT-PD-001',
+    [{ ...mapping, 'Automation ID': 'AUT-PD-001', 'Covered TC IDs': 'TC-PD-C-011', 'TC Count': 1 }],
+    { 'Product Digital': [productCase] },
+    [],
+  );
+  assert.equal(context.automationId, 'AUT-PD-001');
+  assert.throws(() => buildAutomationContext('PD-001', [mapping], {}, []), /Invalid Automation ID/);
+});
+
 test('buildAutomationContext rejects duplicate IDs in Covered TC IDs', () => {
   assert.throws(
     () => buildAutomationContext(

@@ -18,8 +18,9 @@ Check for the exact AUT tag with `rg -n "@<AUT-ID>" tests`. If it does not exist
 3. Complete the blocking Mandatory Reuse Gate in Step 1. Do not edit before it is complete.
 4. For every Automation Mapping ID, generate exactly one Playwright `test()`; the mapping is the automation testcase.
 5. For `AUT-E2E-*`, make the covered journey actions `test.step()` calls. Do not add `covers` annotations — Automation Mapping already holds the covered TC IDs (see `.agents/rules/testing.md`).
-6. For `AUT-FV-*`, keep covered manual TCs as ordered `test.step()` calls inside the single test; parameterize only identical flows with different data.
-7. Tag the single generated test with the exact Automation ID, for example `@AUT-E2E-008`.
+6. For Functional rows `AUT-<DOM>-*` (legacy `AUT-FV-*`), keep covered manual TCs as ordered `test.step()` calls inside the single test; parameterize only identical flows with different data.
+7. Tag the single generated test with the exact Automation ID, for example `@AUT-TIP-004` or `@AUT-E2E-008`. Add `@smoke` only when the row's Run Scope starts with `Smoke`.
+7b. If the row's Notes list a `Known bug:`, write that TC's step to the correct expected behaviour and mark the test `test.fail()` with `annotation: { type: 'issue', description: '<ticket>' }` (see `.agents/rules/testing.md` → Automation strategy). If the row's Notes list `Legacy:` IDs, reuse those tests' code and remove their old tag.
 8. Continue with the fixture, page-object, test-data, type-check, and isolated Playwright steps below.
 9. After the isolated run passes, set Automation Mapping status to `Automated` (Step 9).
 
@@ -111,7 +112,7 @@ try {
 ## Step 5: Insert the mapped automation into its feature spec (ascending AUT order)
 
 - Add to `tests/{domain}/{feature}.spec.ts`; create the feature spec only if it does not exist. Import the fixture from `../test-base`.
-- **Insert the new `test()` in ascending `@AUT-*` order** inside the describe block (`@AUT-E2E-*` before `@AUT-FV-*`, then by numeric ID). Do not append out of order at the bottom — see `.agents/rules/testing.md` → **Ascending AUT order**.
+- **Insert the new `test()` in ascending `@AUT-*` order** inside the describe block (`@AUT-E2E-*` first, then each domain prefix `@AUT-<DOM>-*` by numeric ID). Do not append out of order at the bottom — see `.agents/rules/testing.md` → **Ascending AUT order**.
 - Import test data with `@test-data/{domain}/{feature}.data`.
 - Use the exact `@<AUT-ID>`, one feature tag, `@buyer` or `@creator`, and one priority tag.
 - Use the descriptive automation title as the test title; keep the Automation ID in the tag.
@@ -128,7 +129,7 @@ Every generated `@AUT-*` test must pass this checklist:
 
 - [ ] Every covered manual TC ID from the automation context has a matching `test.step()`, and no TC ID appears in a step title.
 - [ ] **`@AUT-E2E-*`:** full journey from the sheet — smoke-only (`goto` + `expectLoaded`) is **forbidden**.
-- [ ] **`@AUT-FV-*`:** at least one interaction and one assertion beyond `expectLoaded()` per covered TC step.
+- [ ] **`@AUT-<DOM>-*` (legacy `@AUT-FV-*`):** at least one interaction and one assertion beyond `expectLoaded()` per covered TC step.
 - [ ] No locators in the spec file — all UI targeting lives in page objects.
 - [ ] API seeding added when the flow needs pre-created data (Step 4b).
 - [ ] After append, run `npm run audit:tags` — fix any tag gaps before finishing.
@@ -176,6 +177,7 @@ After the isolated `@<AUT-ID>` run passes, set that row's **Automation Status** 
 - Do not mark Automated if the Playwright run failed, was skipped, or was not executed in this session.
 - If more than one row matches the Automation ID, stop and report it; do not guess which row. `npm run automation:context` throws on the same condition.
 - Use the Google Sheets MCP (`google-sheets` in `.mcp.json` / `opencode.json`) to update the matching Automation ID row, then re-read the status cell to confirm.
+- Leave the `TC Fingerprint` column (P) as is — `npm run mapping:sync` owns it and uses it to flag the row `Needs Review` when its TCs change later.
 
 ## Example
 

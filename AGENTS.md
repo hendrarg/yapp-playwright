@@ -96,6 +96,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npm run agents:sync` | Regenerate per-tool agent adapters from `.agents/` |
 | `pwsh scripts/setup-obsidian-junction.ps1` | Link `.agents/knowledge/` to Obsidian vault (after clone) |
 | `npm run tc:ingest` | Regenerate the vault's `projects/yapp/tc-<feature>.md` notes (all TCs of a feature in one note) from the test-case sheet; `-- --check` = dry-run |
+| `npm run mapping:sync` | Sync Automation Mapping with the TC & Bugs sheets (dry-run; `-- --write` to apply, `-- --rebuild` for a full regroup). Strategy: `.agents/rules/testing.md` → Automation strategy |
 | `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
 | `npm run mcp:clean` | Close leftover MCP Playwright browsers and this repo's MCP servers |
 | `npm run db:shell -- "<SQL>"` | Read-only SQL against the dev database (needs `PSQL_*` in `.env`) |
@@ -208,5 +209,11 @@ The local gate is `.githooks/pre-commit`; enable it with
 
 Tracked so nobody mistakes these for regressions:
 
+- **Every existing `@AUT-*` tag in `tests/` is legacy** (pending the Automation Mapping rebuild of
+  2026-10-04). The rebuilt mapping uses `AUT-<DOM>-NNN` and `AUT-E2E-NNN` (E2E renumbered 001–015;
+  001 and 003 keep their old journeys); old `AUT-FV-*` IDs survive only in each new row's Notes (`Legacy:`). The suite is being refactored
+  onto the new IDs feature by feature — a legacy tag that no longer exists in the sheet is expected
+  until then. Livestream / Stream Studio is manual-only and has no mapping rows; its specs
+  (`streaming`, `streamer-overlays`) stay as untagged smoke and are not to be mapped.
 - **10 creator specs carry no `@AUT-*` tag** (`affiliate`, `analytics`, `campaigns`, `feeds`, `membership`, `messages`, `referral`, `settings`, `streaming`, `wallet`). These are **not** a tagging gap: in Automation Mapping every creator row for those domains is still `Planned`, and `Affiliate` / `Campaigns` have no mapping row at all. Tagging a `goto` + `expectLoaded` smoke test with a `Planned` ID would both break the minimum-depth rule and misreport sheet coverage. Fix by automating them through `/automation <AUT-ID>`, one ID at a time — not by adding tags.
 - **~42 fragile locators in page objects.** Most are relational XPath (`ancestor::`, `preceding::`, `following-sibling::`) anchored to a neighbouring element. `smartLocator` takes a `Page` and builds independent page-rooted strategies, so it **cannot express** those relationships; rewriting them needs either real `data-testid` hooks from the app or browser-verified role scoping via `generate-locators-mcp`. Do not mass-rewrite them blind.

@@ -5,7 +5,7 @@ description: Assign @AUT-* tags and business flows to smoke tests that lack Auto
 
 ## When to use
 
-Use when a spec has no `@AUT-E2E-*` or `@AUT-FV-*` tag.
+Use when a spec has no `@AUT-E2E-*` or `@AUT-<DOM>-*` tag.
 
 Do **not** invent an `@AUT-*` ID. The Automation Mapping row must exist in Google Sheets before migration starts.
 
@@ -27,7 +27,7 @@ Do **not** invent an `@AUT-*` ID. The Automation Mapping row must exist in Googl
 4. Replace the unmapped test in place (same spec file) or merge into an existing `@AUT-*` test if the mapping already partially exists.
 
 5. Update tags:
-   - Add exact `@AUT-E2E-*` or `@AUT-FV-*` from the sheet
+   - Add exact `@AUT-E2E-*` or `@AUT-<DOM>-*` from the sheet
    - Keep feature, role, and priority tags
 
 6. Upgrade test depth — smoke-only tests are not acceptable after migration:
@@ -68,7 +68,7 @@ test('injected "at" token loads the products page without redirecting to auth', 
 
 ```typescript
 test('Creator Products — Create and verify digital product in list', {
-  tag: ['@AUT-FV-042', '@products', '@creator', '@smoke'],
+  tag: ['@AUT-PROD-001', '@products', '@creator', '@smoke'],
 }, async ({ productsPage }) => {
   await test.step('Open products page', async () => {
     await productsPage.goto();

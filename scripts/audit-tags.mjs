@@ -4,7 +4,8 @@ import path from 'node:path';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const TESTS_DIR = path.join(ROOT, 'tests');
 
-const TC_TAG = /@AUT-(?:E2E|FV)-\d+/;
+// AUT-E2E-NNN, AUT-<DOM>-NNN (mapping since 2026-10-04) and legacy AUT-FV-NNN.
+const TC_TAG = /@AUT-(?:E2E|[A-Z]+)-\d+/;
 const FEATURE_TAGS = [
   '@cart', '@checkout', '@auth', '@membership', '@products', '@feeds', '@profile',
   '@messages', '@wallet', '@settings', '@analytics', '@campaigns', '@streaming',
@@ -65,7 +66,7 @@ for (const file of files) {
     const issues = [];
 
     if (!tagStrings.some((tag) => TC_TAG.test(tag))) {
-      issues.push('missing @AUT-E2E-* or @AUT-FV-* tag');
+      issues.push('missing @AUT-E2E-* or @AUT-<DOM>-* tag');
     }
     const hasFeatureLike = tagStrings.some(
       (t) =>

@@ -1,0 +1,70 @@
+{
+  "$comment": "Data for scripts/automation-mapping-sync.mjs. Edit here, not in the script. See .agents/rules/testing.md (Automation strategy).",
+  "domains": {
+    "Products": "PROD",
+    "Product Digital": "PD",
+    "Discord Membership": "DM",
+    "Consultation": "CON",
+    "Event & Tickets": "EVT",
+    "Online Course": "OC",
+    "Telegram Membership": "TGM",
+    "Profile": "PRF",
+    "Orders": "ORD",
+    "Explore": "EXP",
+    "Promotion": "PRM",
+    "Messages & Broadcast": "MB",
+    "Add to Cart": "CART",
+    "Tipping": "TIP",
+    "Wallet": "WLT",
+    "Landing Page": "LP",
+    "Analytics": "ANL",
+    "Referral": "REF",
+    "Membership": "MEM",
+    "Feeds and Exclusive": "FE",
+    "Campaigns": "CMP",
+    "Settings": "SET",
+    "Onboarding": "ONB"
+  },
+  "exclude": {
+    "tabs": { "Livestream": "Livestream / Stream Studio: OBS overlay widgets, real QRIS tips, time-based alert rendering" },
+    "rules": [
+      {
+        "reason": "External integration: Telegram bot / group connection",
+        "tabs": ["Telegram Membership"],
+        "pattern": "\\bbot\\b|bot admin|administrator|group connection|connect(ed|ion)? (to |the )?(a |your )?(telegram )?group|invite link|join (the )?group|kick|remove(d)? from (the )?group"
+      },
+      {
+        "reason": "External integration: Discord OAuth / bot role",
+        "tabs": ["Discord Membership"],
+        "pattern": "connect(ed|ion)? (to |with |your )?discord|discord account|oauth|\\bbot\\b|role position|assign(ed)? (the )?role|server role|join (the )?server"
+      },
+      {
+        "reason": "External integration: Google Calendar",
+        "tabs": ["Consultation"],
+        "pattern": "google calendar|calendar (connect|integration|sync)|connect(ed)? (to )?(google )?calendar"
+      },
+      {
+        "reason": "Scheduled job / email delivery",
+        "tabs": "*",
+        "pattern": "reminder|digest|email notification|notification email|e-?mail (is )?(sent|delivered|received)|receives? an? e-?mail|H-\\d|24[- ]hour"
+      }
+    ],
+    "e2e": {
+      "AUT-E2E-004": "Livestream / Stream Studio",
+      "AUT-E2E-013": "External integration: Telegram bot group access"
+    }
+  },
+  "grouping": { "min": 3, "max": 8 },
+  "negativePattern": "invalid|empty|blank|reject|error|cannot|can't|not allowed|without|exceed|over[- ]limit|more than|less than|below|above|maximum|minimum|\\bmax\\b|\\bmin\\b|boundary|negative|prevent|block(ed|s)? |duplicate|validation|required|missing|unauthori[sz]ed|forbidden|expired|wrong|mismatch|too long|too short|limit",
+  "priority": {
+    "p0Tabs": [],
+    "p0Pattern": "checkout|payment|\\bpay\\b|\\bpaid\\b|purchase|\\bbuy\\b|subscribe\\b|unlock|entitle|withdraw|refund|log ?in|sign ?in|sign ?up|\\botp\\b|send tip|tip (payment|flow|checkout)|place order|grant access|access grant",
+    "p2Tabs": ["Analytics", "Landing Page"],
+    "p2Pattern": "copy|label|wording|text|tooltip|display|sort|filter|search|empty state|layout|responsive|accessib|preview|counter|placeholder|icon|badge|style|theme|color"
+  },
+  "smokeOverrides": {
+    "Add to Cart:Buyer": "General Action",
+    "Settings:Creator": "Page Structure",
+    "Discord Membership:Creator": "Membership Information"
+  }
+}

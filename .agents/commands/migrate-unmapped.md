@@ -2,7 +2,7 @@
 description: Assign @AUT-* tags and business flows to unmapped smoke tests
 ---
 
-Use when specs lack `@AUT-E2E-*` / `@AUT-FV-*` tags.
+Use when specs lack `@AUT-E2E-*` / `@AUT-<DOM>-*` tags.
 
 1. Read `.agents/skills/migrate-unmapped-aut/SKILL.md`.
 2. Find affected tests:

@@ -24,7 +24,8 @@
     "clean:all": "node scripts/clean-artifacts.mjs --days=0 --reports",
     "mcp:clean": "node scripts/mcp-clean.mjs",
     "monkies:upload": "node scripts/monkies-upload.mjs",
-    "tc:ingest": "node scripts/ingest-testcases.mjs"
+    "tc:ingest": "node scripts/ingest-testcases.mjs",
+    "mapping:sync": "node scripts/automation-mapping-sync.mjs"
   },
   "keywords": [],
   "author": "",

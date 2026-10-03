@@ -9,7 +9,7 @@ npm run audit:tags
 ```
 
 Every `tag: [...]` block in spec files must include:
-- one `@AUT-E2E-*` or `@AUT-FV-*` tag from Automation Mapping
+- one `@AUT-E2E-*` or `@AUT-<DOM>-*` tag from Automation Mapping
 - one feature tag (e.g. `@feeds`, `@products`)
 - one role tag: `@buyer` or `@creator`
 - one priority tag: `@smoke`, `@regression`, or `@sanity`

@@ -22,16 +22,17 @@ function walk(dir, out = []) {
 }
 
 function autSortKey(aut) {
-  if (!aut) return [99, Number.MAX_SAFE_INTEGER, ''];
-  const m = aut.match(/^AUT-(E2E|FV)-(\d+)$/);
-  if (!m) return [50, Number.MAX_SAFE_INTEGER, aut];
-  return [m[1] === 'E2E' ? 0 : 1, Number(m[2]), aut];
+  if (!aut) return [99, '', Number.MAX_SAFE_INTEGER];
+  const m = aut.match(/^AUT-(E2E|[A-Z]+)-(\d+)$/);
+  if (!m) return [50, aut, Number.MAX_SAFE_INTEGER];
+  // E2E first, then each domain prefix (AUT-<DOM>-NNN, legacy AUT-FV-NNN) in numeric order.
+  return [m[1] === 'E2E' ? 0 : 1, m[1], Number(m[2])];
 }
 
 function compareAut(a, b) {
   const ka = autSortKey(a);
   const kb = autSortKey(b);
-  return ka[0] - kb[0] || ka[1] - kb[1] || String(ka[2]).localeCompare(String(kb[2]));
+  return ka[0] - kb[0] || String(ka[1]).localeCompare(String(kb[1])) || ka[2] - kb[2];
 }
 
 function isSorted(auts) {
@@ -83,7 +84,7 @@ function extractTests(source, filePath) {
         if (source[blockEnd] === '\n') blockEnd++;
 
         const block = source.slice(blockStart, blockEnd);
-        const tagMatch = block.match(/@(AUT-(?:E2E|FV)-\d+)/);
+        const tagMatch = block.match(/@(AUT-(?:E2E|[A-Z]+)-\d+)/);
         tests.push({
           start: blockStart,
           end: blockEnd,

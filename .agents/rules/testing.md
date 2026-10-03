@@ -108,12 +108,43 @@ See also `.agents/skills/add-page-object/SKILL.md` step 6.
 
   Annotations remain available where they genuinely add something the sheet cannot, such as a note about *why* a step exists. They are optional, and nothing audits them. Existing annotations are fine to leave in place; do not go add them, and do not go strip them.
 
+## Automation strategy (Automation Mapping since 2026-10-04)
+
+The mapping is generated and maintained by `npm run mapping:sync` (`scripts/automation-mapping-sync.mjs`,
+data in `scripts/automation-mapping.config.json`). Edit the config, not the sheet layout by hand.
+
+- **Two layers.** *Functional* rows `AUT-<DOM>-NNN` (`<DOM>` = the TC prefix of the tab: `TIP`, `MB`,
+  `PD`, …) cover one cohesive feature slice — grouped Tab → Role → Epic → Feature, 3–8 TCs, one
+  `test()`, one setup/account/fixture state; big epics split positive vs negative/boundary. *E2E* rows
+  `AUT-E2E-NNN` are hand-picked cross-role journeys.
+- **Smoke is a tag, not a layer.** One row per domain × role carries Run Scope `Smoke + Regression`;
+  its test carries `@smoke`. Every other Functional row is `Regression`.
+- **Risk-based priority.** P0 = money and access (checkout, payment, unlock, entitlement, withdraw,
+  login/OTP); P2 = copy, display, filter/sort, analytics; P1 = the rest. Smoke rows are P0.
+- **Out of scope (never mapped):** Livestream / Stream Studio, external integrations (Telegram bot &
+  group connection, Discord OAuth / bot role, Google Calendar) and scheduled jobs / email
+  (reminders, digests, H-x jobs, withdrawal SLA). Keep these manual.
+- **Known bugs.** A covered TC with an open row in the Bugs sheet is listed as `Known bug:` in the row's
+  Notes. Write that step to the **correct expected** behaviour and mark the test
+  `test.fail()` with `annotation: { type: 'issue', description: '<ticket>' }` so CI stays green; when
+  Playwright reports an unexpected pass, the bug is fixed — drop `test.fail()` and rerun
+  `mapping:sync`. If the bug blocks the flow itself, the row is `Blocked` instead.
+- **Lifecycle (run `npm run mapping:sync` after any TC or Bugs change; dry-run by default, `--write`
+  to apply).** New TCs join a Planned row of the same feature or get a new row (never silently
+  widen an Automated row); deleted TCs leave their row (empty Planned rows go, empty Automated rows
+  become `Retired`); a renumbered TC with unchanged content is renamed in place (mapping, Bugs
+  `Related TC`, Clarifications); changed TC content turns an Automated row `Needs Review` via the
+  `TC Fingerprint` column. Automation IDs are never reused.
+- **Legacy tags.** Tests written before the rebuild carry `@AUT-FV-*` tags (and E2E tags whose journey changed) that no
+  longer match the sheet. The row's Notes `Legacy:` list names them — reuse that code when you
+  refactor the test onto its new ID, then remove the old tag.
+
 ## Minimum test depth
 
 | AUT type | Required depth |
 |----------|----------------|
 | `@AUT-E2E-*` | Full journey from Automation Mapping — every covered TC step as `test.step()` with interaction + assertion. Smoke-only (`goto` + `expectLoaded`) is **forbidden**. |
-| `@AUT-FV-*` | At least one interaction and one assertion beyond `expectLoaded()` per covered TC step. |
+| `@AUT-<DOM>-*` (legacy `@AUT-FV-*`) | At least one interaction and one assertion beyond `expectLoaded()` per covered TC step. |
 | Unmapped (no `@AUT-*`) | Not acceptable for new or updated tests. Assign `@AUT-*` from Automation Mapping via `migrate-unmapped-aut` skill. |
 
 ## Locators

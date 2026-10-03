@@ -29,7 +29,7 @@ export function parseGviz(text, sheetName) {
 const splitIds = (value) => String(value).split(',').map((id) => id.trim()).filter(Boolean);
 
 export function buildAutomationContext(automationId, mappings, sourceSheets, clarifications = []) {
-  if (!/^AUT-(E2E|FV)-\d+$/.test(automationId)) throw new Error(`Invalid Automation ID: ${automationId}`);
+  if (!/^AUT-(?:E2E|[A-Z]+)-\d+$/.test(automationId)) throw new Error(`Invalid Automation ID: ${automationId}`);
 
   const matches = mappings.filter((row) => row['Automation ID'] === automationId);
   if (matches.length !== 1) throw new Error(`${automationId} appears ${matches.length} times in Automation Mapping`);
