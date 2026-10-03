@@ -142,7 +142,7 @@ ${steps(t.steps)}
   }).join("\n\n");
 
   return (created, updated) => `---
-title: ${yaml(`${tab} — Test cases`)}
+title: ${yaml(`${tab} - Tc`)}
 type: note
 kind: tc
 feature: ${slug}
@@ -160,7 +160,7 @@ sources: ${1 + gb.length}
 status: active
 ---
 
-# ${tab} — Test cases
+# ${tab} - Tc
 
 > [[${PROJECT_REL}/testcase-index|TestCase index]] · [[${PROJECT_REL}/knowledge/index|Knowledge index]] · GitBook: ${gitbookLinks} · PRD: belum ada · Knowledge: ${knowledge}
 
