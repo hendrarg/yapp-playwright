@@ -132,8 +132,11 @@ data in `scripts/automation-mapping.config.json`). Edit the config, not the shee
   restore them after. Payment completion in Functional tests: mock the payment-status response
   (`network-mocking` skill); real QRIS settlement only in E2E. Wallet withdraw: seed balance and reset
   withdrawal state via the DB; read PIN/OTP codes from the DB as the OTP login does. Aggregated data
-  (rankings, analytics): assert structure and behaviour, not values. `npm run db:shell` is read-only —
-  these fixtures need a separate write-capable DB helper.
+  (rankings, analytics): assert structure and behaviour, not values. DB state goes through the
+  **`dbFixtures`** fixture (`src/helpers/db/fixtures.ts`): off unless `YAPP_DB_FIXTURES=1`, refuses a
+  production-looking DB, writes only whitelisted table/columns of one row by `uuid`, and restores every
+  change in teardown (e.g. `await dbFixtures.expireMembership(subscriptionUuid)`). Extend its
+  `WRITABLE` list only for a column a mapped TC needs. `npm run db:shell` stays for reading.
 - **Known bugs.** A covered TC with an open row in the Bugs sheet is listed as `Known bug:` in the row's
   Notes. Write that step to the **correct expected** behaviour and mark the test
   `test.fail()` with `annotation: { type: 'issue', description: '<ticket>' }` so CI stays green; when

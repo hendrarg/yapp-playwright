@@ -176,7 +176,7 @@ After the isolated `@<AUT-ID>` run passes, set that row's **Automation Status** 
 - Leave the Notes cell unchanged.
 - Do not mark Automated if the Playwright run failed, was skipped, or was not executed in this session.
 - If more than one row matches the Automation ID, stop and report it; do not guess which row. `npm run automation:context` throws on the same condition.
-- Use the Google Sheets MCP (`google-sheets` in `.mcp.json` / `opencode.json`) to update the matching Automation ID row, then re-read the status cell to confirm.
+- Run `npm run mapping:sync -- --set-status <AUT-ID> Automated`. It enforces the rules above (Planned → Automated only, duplicate IDs refused) and re-reads the cell to confirm. The Google Sheets MCP is no longer needed for this step.
 - Leave the `TC Fingerprint` column (P) as is — `npm run mapping:sync` owns it and uses it to flag the row `Needs Review` when its TCs change later.
 
 ## Example
@@ -187,4 +187,4 @@ After the isolated `@<AUT-ID>` run passes, set that row's **Automation Status** 
 - Resolve the active source TC sheets.
 - Update `tests/buyer/feeds.spec.ts`.
 - Run `npx playwright test tests/buyer/feeds.spec.ts --project=chromium --grep @AUT-E2E-008`.
-- After it passes, set that mapping row's Automation Status to Automated via Google Sheets MCP.
+- After it passes, run `npm run mapping:sync -- --set-status AUT-E2E-008 Automated`.

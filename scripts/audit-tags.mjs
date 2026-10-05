@@ -95,4 +95,59 @@ if (exitCode === 0) {
   console.log('All spec tag blocks include @AUT-*, feature, role, and priority tags.');
 }
 
-process.exit(exitCode);
+/**
+ * `--mapping`: compare test tags with Automation Mapping (advisory — never changes the exit code).
+ * Reports legacy tags (IDs no longer in the sheet), tagged tests whose row is not Automated yet,
+ * Automated rows without a test, and @smoke tags that disagree with the row's Run Scope.
+ */
+async function auditAgainstMapping() {
+  const { sheetsClient, quoteTab } = await import('./lib/sheets-client.mjs');
+  const sheets = await sheetsClient();
+  const rows = (await sheets.values(`${quoteTab('Automation Mapping')}!A2:N1000`)).filter((r) => /^AUT-/.test(r[0] ?? ''));
+  const byId = new Map(rows.map((r) => [r[0].trim(), { status: (r[13] ?? '').trim(), smoke: /^Smoke/.test((r[12] ?? '').trim()) }]));
+
+  const tests = [];
+  for (const file of files) {
+    const content = fs.readFileSync(file, 'utf8');
+    const rel = path.relative(ROOT, file).replace(/\\/g, '/');
+    for (const block of extractTagBlocks(content)) {
+      const tagStrings = [...block.tags.matchAll(/'(@[^']+)'|"(@[^"]+)"/g)].map((m) => m[1] ?? m[2]);
+      for (const t of tagStrings.filter((x) => TC_TAG.test(x))) {
+        tests.push({ id: t.slice(1), file: rel, line: lineNumber(content, block.index), smoke: tagStrings.includes('@smoke') });
+      }
+    }
+  }
+  const tagged = new Set(tests.map((t) => t.id));
+  const legacy = tests.filter((t) => !byId.has(t.id));
+  const notAutomated = tests.filter((t) => byId.has(t.id) && byId.get(t.id).status !== 'Automated');
+  const automatedNoTest = rows.filter((r) => r[13]?.trim() === 'Automated' && !tagged.has(r[0].trim())).map((r) => r[0].trim());
+  const smokeMismatch = tests.filter((t) => byId.has(t.id) && byId.get(t.id).smoke !== t.smoke);
+
+  console.log('\nAutomation Mapping audit (--mapping)\n');
+  const automated = rows.filter((r) => r[13]?.trim() === 'Automated').length;
+  console.log(`Mapping: ${automated}/${rows.length} rows Automated · tests tagged with a mapped ID: ${tests.length - legacy.length} · legacy tags: ${legacy.length}`);
+
+  const perFile = legacy.reduce((m, t) => ((m[t.file] = (m[t.file] ?? 0) + 1), m), {});
+  if (legacy.length) {
+    console.log('\nLegacy tags (not in Automation Mapping) per spec:');
+    for (const [f, n] of Object.entries(perFile).sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(3)}  ${f}`);
+  }
+  if (notAutomated.length) {
+    console.log('\nTagged with a mapped ID but the row is not Automated (run it, then `npm run mapping:sync -- --set-status <ID> Automated`):');
+    for (const t of notAutomated) console.log(`  ${t.id} (${byId.get(t.id).status || 'blank'}) — ${t.file}:${t.line}`);
+  }
+  if (automatedNoTest.length) console.log(`\nAutomated rows with no test carrying the tag: ${automatedNoTest.join(', ')}`);
+  if (smokeMismatch.length) {
+    console.log('\n@smoke disagrees with the row Run Scope:');
+    for (const t of smokeMismatch) console.log(`  ${t.id} — test ${t.smoke ? 'has' : 'lacks'} @smoke, row is ${byId.get(t.id).smoke ? 'Smoke' : 'Regression'} — ${t.file}:${t.line}`);
+  }
+  if (!legacy.length && !notAutomated.length && !automatedNoTest.length && !smokeMismatch.length) console.log('Tests and Automation Mapping agree.');
+}
+
+if (process.argv.includes('--mapping')) {
+  auditAgainstMapping()
+    .catch((e) => console.error('[audit-tags --mapping]', e.message))
+    .finally(() => process.exit(exitCode));
+} else {
+  process.exit(exitCode);
+}

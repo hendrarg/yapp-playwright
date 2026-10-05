@@ -6,6 +6,7 @@
  *   npm run mapping:sync -- --write            apply the sync
  *   npm run mapping:sync -- --rebuild          dry-run a full rebuild with the current strategy
  *   npm run mapping:sync -- --rebuild --write  replace the whole mapping (backup first)
+ *   npm run mapping:sync -- --set-status AUT-TIP-004 Automated [--force]   set one row's status
  *
  * Strategy (see .agents/rules/testing.md → Automation strategy):
  * - Functional rows `AUT-<DOM>-NNN`: one cohesive feature slice per row, grouped
@@ -26,6 +27,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { pathToFileURL } from "node:url";
 import "dotenv/config";
+import { sheetsClient } from "./lib/sheets-client.mjs";
 
 const WRITE = process.argv.includes("--write");
 const REBUILD = process.argv.includes("--rebuild");
@@ -371,9 +373,38 @@ function sync(ctx, prev = readState()) {
   return { rows, changes, renames };
 }
 
+// ---------------------------------------------------------------- set one row's status
+const STATUSES = ["Planned", "Automated", "Blocked", "Needs Review", "Retired"];
+
+/**
+ * `--set-status <AUT-ID> <Status> [--force]` — the /automation closing step without the
+ * Google Sheets MCP. Planned → Automated is the normal move; Automated → Automated is a no-op;
+ * anything else needs --force so a Blocked / Needs Review row is never overwritten by accident.
+ */
+async function setStatus(id, status, force) {
+  if (!/^AUT-(?:E2E|[A-Z]+)-\d+$/.test(id || "")) throw new Error(`--set-status needs an Automation ID, got: ${id}`);
+  if (!STATUSES.includes(status)) throw new Error(`Status must be one of ${STATUSES.join(", ")} — got: ${status}`);
+  const sheets = await sheetsClient({ write: true });
+  const col = await sheets.values(range(MAPPING, "A1:A1000"));
+  const rows = col.map((r, i) => (norm(r[0]) === id ? i + 1 : 0)).filter(Boolean);
+  if (rows.length !== 1) throw new Error(`${id} appears ${rows.length} times in ${MAPPING}`);
+  const cellRef = range(MAPPING, `N${rows[0]}`);
+  const current = norm((await sheets.values(cellRef))[0]?.[0]);
+  if (current === status) return console.log(`${id}: already ${status} — no change`);
+  if (!force && !(current === "Planned" && status === "Automated")) {
+    throw new Error(`${id} is ${current || "(blank)"}; only Planned → Automated is allowed without --force`);
+  }
+  await sheets.batchUpdate([{ range: cellRef, values: [[status]] }]);
+  const check = norm((await sheets.values(cellRef))[0]?.[0]);
+  if (check !== status) throw new Error(`${id}: wrote ${status} but the sheet reads ${check}`);
+  console.log(`${id}: ${current || "(blank)"} → ${status} (row ${rows[0]})`);
+}
+
 // ---------------------------------------------------------------- main
 async function main() {
   if (!SHEET_ID) throw new Error("YAPP_AUTOMATION_SHEET_ID is not set");
+  const si = process.argv.indexOf("--set-status");
+  if (si >= 0) return setStatus(process.argv[si + 1], process.argv.slice(si + 2).filter((a) => !a.startsWith("--")).join(" "), process.argv.includes("--force"));
   T = await token();
   const { tcTabs, tcs, mapping, bugs, clar } = await load();
   const tcById = new Map(tcs.map((t) => [t.id, t]));

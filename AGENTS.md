@@ -57,7 +57,7 @@ Then work inline and finish through this sequence:
 5. Apply the smallest edit to existing files. **Every new or touched page-object locator must use `smartLocator`** — fragile CSS/XPath-only locators are `Extend`, not `Reuse` unchanged (see `.agents/rules/code-style.md` and `add-test-spec` Step 5).
 6. Run `npx tsc --noEmit`.
 7. Run only the target AUT once.
-8. When it passes, set Automation Mapping status to `Automated` via Google Sheets MCP (only from `Planned`; leave Blocked and Needs Review alone; no-op if already Automated).
+8. When it passes, set Automation Mapping status to `Automated` with `npm run mapping:sync -- --set-status <AUT-ID> Automated` (only from `Planned`; it refuses Blocked and Needs Review and is a no-op if already Automated).
 9. Write back what the run taught you: anything that contradicted a `.agents/knowledge/` note, and any product fact you had to establish that was not there. Skip only when nothing was learned.
 10. Stop.
 
@@ -89,7 +89,7 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npx playwright test --ui` | Playwright UI mode |
 | `npx tsc --noEmit` | Type-check only |
 | `npm run test:unit` | Offline AI test-data generator tests |
-| `npm run audit:tags` | Audit TC, feature, role, priority tags |
+| `npm run audit:tags` | Audit TC, feature, role, priority tags (`-- --mapping`: compare tags with Automation Mapping — legacy tags, rows not yet Automated, smoke mismatches) |
 | `npm run audit:locators` | Audit fragile locators in page objects |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npx eslint .` | Lint (import rules, locator placement, dead code) |
@@ -166,6 +166,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
 | `PW_WORKERS` | No | Defaults to 1 |
 | `YAPP_MCP_ACCOUNT` | No | Account injected into the MCP Playwright browser session: `qa` (default, token1), `sundanese` (token2), or `guest` (start unauthenticated). |
 | `YAPP_PLAYWRIGHT_BROWSERS_PATH` | No | Optional stable Playwright browser cache. Cursor sandboxes otherwise point at empty Temp paths and re-download Chromium. |
+| `YAPP_DB_FIXTURES` | No | `1` lets the `dbFixtures` fixture change whitelisted dev-DB rows (restored after each test). Off by default; never set against production |
 | `GEMINI_API_KEY` | No | Enables AI-assisted test data (Google Gemini). Absent → seeded-Faker only |
 | `GEMINI_MODEL` | No | Gemini model for test data (default `gemini-3.5-flash-lite`) |
 | `YAPP_TEST_SEED` | No | Fixed Faker seed to reproduce a run exactly (default per-run timestamp) |
@@ -180,7 +181,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
   -> append to tests/{domain}/{feature}.spec.ts
   -> import data from src/test-data/{domain}/{feature}.data.ts
   -> run only the mapped automation with --grep @<AUT-ID>
-  -> set Automation Mapping status to Automated (Google Sheets MCP; only from Planned)
+  -> set Automation Mapping status to Automated (npm run mapping:sync -- --set-status <AUT-ID> Automated)
 ```
 
 Do not create intermediate Markdown files other than the required short, local test-step plan for a new AUT. Automation Mapping and its active source TC sheets remain the authoritative inputs.
