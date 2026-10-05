@@ -40,6 +40,43 @@ quota, exhausted in Aug 2026, resetting monthly — read the code straight from 
 `otp_codes` table with `npm run db:shell`. Absence from an inbox is never evidence
 that a code was not generated.
 
+### Which checkout, and how a guest reaches it (verified 2026-10-05)
+
+- **`/product/{uuid}` is the creator door, not the buyer one.** A guest who opens it is
+  bounced to `/auth?redirect_url=%2Fproduct%2F{uuid}%2Fview`. The guest entry point is the
+  **share path with the `/s/` prefix**: `/{shortUrl}` alone renders "That page doesn't
+  exist", while `/s/{shortUrl}` opens `/{handle}/product/{shortUrl}`. `Purchase` there opens
+  `/product/{uuid}/checkout?quantity=1`.
+- **The cart is not part of the guest path.** `/cart` for an anonymous visitor shows
+  `Your cart is waiting for you. Sign in to see your cart and complete your purchase.` with a
+  `Sign In` button — it is an auth wall, not an empty cart. Driving guest checkout through
+  `/cart` therefore cannot work; go share path → `Purchase` → checkout.
+- That checkout shows the guest's `Email` as a free-text field with the helper
+  `We'll send a 5-digit code to your email.` and the `Send Verification Code` button.
+  Verified as buyer `hendrarg`, product seeded via API (Online Course, Rp25.000).
+
+### The verification-code path is captcha-gated, and slow paths are now surfaced
+
+The checkout mounts the reCAPTCHA provider before the button can succeed (MCP/fix history:
+Monkies `CPA-10`, retested on dev 2026-10-05). Two behaviours are worth asserting separately,
+because they exercise opposite branches:
+
+- **Cold start, script still downloading.** `Send Verification Code` is enabled as soon as the
+  page renders, but the click must not be treated as a failure while reCAPTCHA is still loading:
+  the button switches to a spinner and the request fires when the library is ready.
+  Measured 2026-10-05: `POST /api/v1/orders/quote/otp` answered **200** and the form moved to
+  `Verify your email` + `We sent a 5-digit code to <email>` with five OTP boxes in **≈2.9 s**,
+  with **no** `Please verify that you are human` toast.
+- **Script blocked / `execute` failing** (simulate by aborting `**/recaptcha/**`,
+  `**google.com/recaptcha/**` and `**gstatic.com/recaptcha/**`). After **≈10.6 s** the toast
+  `Please verify that you are human` appears, the button returns to its enabled label and the
+  form is usable again. A silent no-op or a permanently stuck spinner is the defect this
+  branch exists to catch.
+
+Note the button itself is a `role=button` named `Send Verification Code`, but while it is in
+the waiting state it has **no text at all** — assert on the spinner or the network call, never on
+the label staying put.
+
 ## Promo redemption needs no payment
 
 Established 2026-08-19. This is what lets promo tests run under the standing

@@ -575,6 +575,17 @@ buttons: `el.click()` leaves `aria-checked="false"`, a rect-then-mouse click fli
 and the `Total Amount` line updates. (`[role=switch]` is the exception — plain
 `el.click()` does drive those.)
 
+**A `locator.click()` that hangs for the full timeout may be covered by an invisible
+reCAPTCHA badge — use a coordinate click.** On the checkout page the `Send Verification
+Code` button (`role=button`, `Send Verification Code`) sits next to the invisible reCAPTCHA
+v3 badge. Actionability waited for the element to stop being covered and timed out at 20-30 s
+with no dialog and no error message; `button.boundingBox()` + `page.mouse.click(cx, cy)` fired
+it instantly (verified 2026-10-05 while retesting Monkies `CPA-10`). The tell is that
+`boundingBox()` succeeds immediately while `click()` never becomes actionable — so when a
+plain click times out on the checkout, get the rect first instead of assuming the element is
+detached or that the handler is dead. After the click the button is replaced by a spinner and
+has **no text**, so poll the network call or the DOM, never the label.
+
 **Do not scope a button search with `offsetParent`, and do not take the first match
 document-wide.** Inside the feed composer both go wrong: the page header has its own
 `Post` button, so a document-wide `^Post$` clicks the wrong one and the dialog just sits
