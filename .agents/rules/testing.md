@@ -199,8 +199,9 @@ So: **need new data → seed it; need already-purchased state → read it from t
 
 | Token | Env var | Use for |
 |-------|---------|---------|
-| QA Tester (`x7nv1.qa`) | `YAPP_TEST_ACCESS_TOKEN` | Primary auth + products/promotions/media seeding (OTP: `*.qa@inbox.testmail.app`) |
-| Sundanese (`x7nv1.sdet`) | `YAPP_TEST_ACCESS_TOKEN_2` | Creator-post seeding for buyer tests (OTP: `*.sdet@inbox.testmail.app`) |
+| Creator `hendrarg` (token1) | `YAPP_TEST_ACCESS_TOKEN` | `creatorAuthTest` + products/promotions/media seeding (OTP via `YAPP_CREATOR_LOGIN_EMAIL`, code from `otp_codes`) |
+| QA buyer `anthony_mosciski` | `YAPP_TEST_ACCESS_TOKEN_BUYER` | `authTest` — the buyer session (OTP: `*.qa@inbox.testmail.app`) |
+| Sundanese (token2) | `YAPP_TEST_ACCESS_TOKEN_2` | Creator-post seeding for buyer tests, second-account flows (OTP: `*.sdet@inbox.testmail.app`) |
 
 - Search `@helpers/api/` before writing new seed logic.
 - Seed in `test.step()`, clean up in `finally` when delete helpers exist.

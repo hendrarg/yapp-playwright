@@ -7,9 +7,9 @@ import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
 import { loginWithToken } from '../src/helpers/auth/token-login';
 import { waitForAuthResponse } from '../src/helpers/auth/validate-token';
-import { primaryTokenNeedsRefresh, assertPrimaryTestToken } from '../src/helpers/auth/save-token';
+import { tokenNeedsRefresh, assertTokenOwner } from '../src/helpers/auth/save-token';
 import { refreshAccountTokenViaOtp, ensureSecondaryToken } from '../src/helpers/auth/refresh-token-otp';
-import { testAccounts } from '../src/test-data/users';
+import { testAccounts, type TestAccount } from '../src/test-data/users';
 import { getRunSeed, warmAiCache } from '../src/test-data/ai';
 import { pageFixtures } from '../src/fixtures/page.fixtures';
 import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
@@ -32,32 +32,28 @@ export const test = base.extend<MyFixtures>({
 });
 
 /**
- * Ensures YAPP_TEST_ACCESS_TOKEN is a valid QA Tester token for authTest/creatorAuthTest.
- *
- * When token1 is missing, expired, or mapped to another username, refreshes via conventional
- * OTP login (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`) and saves back to token1.
- * Sundanese (`token2`) still uses its own OTP inbox / `otpUserSundanese`.
+ * Returns a valid token for `account`, refreshing it through OTP login when it is missing,
+ * expired, or belongs to another account (checked by JWT uuid), and saving it back to the
+ * account's own .env slot. `authTest` uses the QA buyer, `creatorAuthTest` the creator.
  */
-async function ensureFreshToken(context: BrowserContext): Promise<string> {
-  let token = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
+async function ensureFreshToken(context: BrowserContext, account: TestAccount): Promise<string> {
+  let token = process.env[account.envVar]?.replace(/"/g, '');
 
-  if (primaryTokenNeedsRefresh(token)) {
-    token = await refreshAccountTokenViaOtp(context, testAccounts.qa, baseURL);
+  if (tokenNeedsRefresh(token, account)) {
+    token = await refreshAccountTokenViaOtp(context, account, baseURL);
   }
 
   if (!token) {
-    throw new Error(
-      `Failed to obtain ${testAccounts.qa.envVar} for ${testAccounts.qa.displayName} (${testAccounts.qa.username}).`,
-    );
+    throw new Error(`Failed to obtain ${account.envVar} for ${account.displayName}.`);
   }
 
-  assertPrimaryTestToken(token);
+  assertTokenOwner(token, account);
   return token;
 }
 
 export const authTest = test.extend({
   context: [async ({ context }, use) => {
-    const token = await ensureFreshToken(context);
+    const token = await ensureFreshToken(context, testAccounts.qa);
     await loginWithToken(context, token, baseURL);
     await use(context);
   }, { scope: 'test', timeout: 120000 }],
@@ -71,7 +67,7 @@ export const authTest = test.extend({
 
 export const creatorAuthTest = test.extend({
   context: [async ({ context }, use) => {
-    const token = await ensureFreshToken(context);
+    const token = await ensureFreshToken(context, testAccounts.creator);
     await loginWithToken(context, token, creatorsBaseURL);
     await use(context);
   }, { scope: 'test', timeout: 120000 }],

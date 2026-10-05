@@ -1,8 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { BrowserContext } from '@playwright/test';
-import { testAccounts, type TestTokenEnvVar } from '@test-data/users';
-import { getTokenUsername, isTokenExpired } from './token-utils';
+import { testAccounts, type TestAccount, type TestTokenEnvVar } from '@test-data/users';
+import { decodeTokenClaims, isTokenExpired } from './token-utils';
+
+/** JWT `uuid` claim, or undefined for a malformed token. */
+export function getTokenUuid(token: string): string | undefined {
+  try {
+    const uuid = decodeTokenClaims(token).uuid;
+    return typeof uuid === 'string' ? uuid : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** Extracts the `at` cookie from the browser context after login. */
 export async function extractAccessToken(context: BrowserContext): Promise<string> {
@@ -14,47 +24,32 @@ export async function extractAccessToken(context: BrowserContext): Promise<strin
   return atCookie.value;
 }
 
-/** Maps a JWT to the correct .env key from `testAccounts`. */
+/** Maps a JWT to its .env slot by the account whose `uuid` the token carries. */
 export function resolveTokenEnvVar(token: string): TestTokenEnvVar {
-  const username = getTokenUsername(token);
-  if (!username) {
+  const uuid = getTokenUuid(token);
+  const account = Object.values(testAccounts).find((a) => a.uuid === uuid);
+  if (!account) {
     throw new Error(
-      'Could not read username from JWT. Pass envVar explicitly to saveTokenToEnv ' +
-        `(${testAccounts.qa.envVar} for QA Tester or ${testAccounts.sundanese.envVar} for Sundanese).`,
+      `JWT uuid "${uuid ?? 'unreadable'}" is not a mapped test account ` +
+        `(${Object.values(testAccounts).map((a) => `${a.displayName} → ${a.envVar}`).join(', ')}). Pass envVar explicitly.`,
     );
   }
-  if (username === testAccounts.qa.username) {
-    return testAccounts.qa.envVar;
-  }
-  if (username === testAccounts.sundanese.username) {
-    return testAccounts.sundanese.envVar;
-  }
-  throw new Error(
-    `Unknown JWT username "${username}". Expected QA Tester (${testAccounts.qa.username}) or Sundanese (${testAccounts.sundanese.username}).`,
-  );
+  return account.envVar;
 }
 
-/** True when token1 is missing, expired, or clearly belongs to another mapped username. */
-export function primaryTokenNeedsRefresh(token: string | undefined): boolean {
+/** True when the account's token is missing, expired, or belongs to another account. */
+export function tokenNeedsRefresh(token: string | undefined, account: TestAccount): boolean {
   if (!token) return true;
   if (isTokenExpired(token)) return true;
-  const username = getTokenUsername(token);
-  if (username && username !== testAccounts.qa.username) return true;
-  return false;
+  return getTokenUuid(token) !== account.uuid;
 }
 
-/** Ensures YAPP_TEST_ACCESS_TOKEN belongs to QA Tester when the JWT exposes a username. */
-export function assertPrimaryTestToken(token: string): void {
-  const username = getTokenUsername(token);
-  if (!username) {
-    return;
-  }
-  if (username !== testAccounts.qa.username) {
-    throw new Error(
-      `YAPP_TEST_ACCESS_TOKEN belongs to "${username}", expected QA Tester (${testAccounts.qa.username}). ` +
-        `OTP login for token1 uses testmail tag "${testAccounts.qa.testmailTag}" and saves to ${testAccounts.qa.envVar}. ` +
-        `Sundanese OTP saves to ${testAccounts.sundanese.envVar}.`,
-    );
+/** Throws unless the token belongs to `account` (by JWT uuid). */
+export function assertTokenOwner(token: string, account: TestAccount): void {
+  const uuid = getTokenUuid(token);
+  if (uuid !== account.uuid) {
+    const owner = Object.values(testAccounts).find((a) => a.uuid === uuid)?.displayName ?? `unknown uuid ${uuid}`;
+    throw new Error(`${account.envVar} belongs to ${owner}, expected ${account.displayName} (${account.uuid}).`);
   }
 }
 

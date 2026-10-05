@@ -1,8 +1,9 @@
 import type { Page } from '@playwright/test';
-import { testAccounts, type TestAccount } from '@test-data/users';
+import { accountLoginEmail, testAccounts, type TestAccount } from '@test-data/users';
 import { humanClick } from '@utils/playwright.utils';
 import { testmailConfig, markInboxStart } from '../otp/testmail';
 import { resolveOtpCode } from '../otp/otp-code';
+import { fetchOtpCodeFromDb } from '../otp/db-otp';
 import { extractAccessToken } from './save-token';
 
 export type OtpLoginResult = {
@@ -17,11 +18,11 @@ export async function signInWithEmailOtp(
   baseURL: string,
   account: TestAccount = testAccounts.qa,
 ): Promise<OtpLoginResult> {
-  const inbox = testmailConfig(account);
+  const email = accountLoginEmail(account);
   const sentAtMs = markInboxStart();
 
   await page.goto(new URL('auth', baseURL).toString());
-  await page.getByPlaceholder('Enter your email').fill(inbox.email);
+  await page.getByPlaceholder('Enter your email').fill(email);
   const continueButton = page.getByRole('button', { name: 'Continue', exact: true });
   // Invisible reCAPTCHA scores a submit that arrives with no pointer trail as a
   // bot, so approach the button like a person rather than clicking it cold.
@@ -35,13 +36,17 @@ export async function signInWithEmailOtp(
     await page.waitForURL(/step=input-otp/, { timeout: 20000 });
   }
 
-  const otp = await resolveOtpCode(inbox, sentAtMs);
+  // A testmail account reads its inbox (falling back to the DB); the creator's personal inbox
+  // is not reachable, so its code comes straight from `otp_codes`.
+  const otp = 'testmailTag' in account
+    ? await resolveOtpCode(testmailConfig(account), sentAtMs)
+    : await fetchOtpCodeFromDb(email, sentAtMs);
 
   await page.locator('input[data-input-otp="true"]').pressSequentially(otp);
   await page.waitForURL(/\/explore/);
 
   const token = await extractAccessToken(page.context());
-  return { email: inbox.email, token, account };
+  return { email, token, account };
 }
 
 /** Logs out by navigating to /logout and waiting for redirect. */

@@ -1,59 +1,43 @@
 #!/usr/bin/env node
+/**
+ * Report which account each token slot in .env holds. Yapp JWTs carry `id` + `uuid` only, so the
+ * owner is checked by uuid against src/test-data/users.ts (`testAccounts`). Never prints a token.
+ */
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 
-loadEnv({ path: path.resolve(process.cwd(), '.env') });
+loadEnv({ path: path.resolve(process.cwd(), '.env'), quiet: true });
 
+// Mirrors testAccounts in src/test-data/users.ts.
 const accounts = [
-  { label: 'token1', envVar: 'YAPP_TEST_ACCESS_TOKEN', expected: 'x7nv1.qa', name: 'QA Tester' },
-  { label: 'token2', envVar: 'YAPP_TEST_ACCESS_TOKEN_2', expected: 'x7nv1.sdet', name: 'Sundanese' },
+  { slot: 'creator', envVar: 'YAPP_TEST_ACCESS_TOKEN', uuid: '84ae3e39-ffe3-4d90-994c-413eb3435768', name: 'Creator (hendrarg)', refresh: 'npm run token:refresh -- creator' },
+  { slot: 'buyer', envVar: 'YAPP_TEST_ACCESS_TOKEN_BUYER', uuid: '5bad6f80-dc4a-436e-b7ef-28293b32fa7b', name: 'QA buyer (anthony_mosciski)', refresh: 'npm run token:refresh -- qa' },
+  { slot: 'token2', envVar: 'YAPP_TEST_ACCESS_TOKEN_2', uuid: '184bfcbc-80eb-427d-923d-fd558e4462de', name: 'Sundanese', refresh: 'npm run token:refresh -- sundanese' },
 ];
 
 function decodeClaims(token) {
   const part = token.replace(/^"|"$/g, '').trim().split('.')[1];
   if (!part) return null;
-  const base64 = part.replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
-}
-
-function decodeUsername(token) {
-  const claims = decodeClaims(token);
-  if (!claims) return null;
-  for (const key of ['username', 'preferred_username', 'unique_name', 'sub']) {
-    if (typeof claims[key] === 'string' && claims[key]) return claims[key];
-  }
-  return null;
-}
-
-function status(token, expected) {
-  if (!token) return 'missing';
-  const username = decodeUsername(token);
-  if (!username) return 'JWT has no username claim (id/uuid only)';
-  return username === expected ? 'ok' : `WRONG USER: ${username}`;
+  return JSON.parse(Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
 }
 
 console.log('Test token mapping check\n');
-for (const { label, envVar, expected, name } of accounts) {
+let bad = 0;
+for (const { slot, envVar, uuid, name, refresh } of accounts) {
   const token = process.env[envVar];
-  console.log(`${label} ${envVar}`);
-  console.log(`  expected: ${name} (${expected})`);
-  console.log(`  status:   ${status(token, expected)}`);
+  let status = 'missing';
+  let claims = null;
   if (token) {
-    try {
-      const claims = decodeClaims(token);
-      if (claims?.id != null) console.log(`  id:       ${claims.id}`);
-      if (claims?.uuid) console.log(`  uuid:     ${claims.uuid}`);
-      if (claims?.exp) {
-        const expired = claims.exp * 1000 < Date.now();
-        console.log(`  expires:  ${new Date(claims.exp * 1000).toISOString()}${expired ? ' (expired)' : ''}`);
-      }
-    } catch {
-      // ignore
-    }
+    try { claims = decodeClaims(token); } catch { claims = null; }
+    const owner = accounts.find((a) => a.uuid === claims?.uuid)?.name ?? `unknown uuid ${claims?.uuid ?? '?'}`;
+    const expired = claims?.exp ? claims.exp * 1000 < Date.now() : true;
+    status = claims?.uuid !== uuid ? `WRONG ACCOUNT: ${owner}` : expired ? 'expired' : 'ok';
   }
+  if (status !== 'ok') bad++;
+  console.log(`${slot.padEnd(7)} ${envVar}`);
+  console.log(`  expected: ${name} (${uuid})`);
+  console.log(`  status:   ${status}${status === 'ok' ? '' : `  → ${refresh}`}`);
+  if (claims?.exp) console.log(`  expires:  ${new Date(claims.exp * 1000).toISOString()}`);
   console.log('');
 }
-
-const ns = process.env.TESTMAIL_NAMESPACE ?? '?';
-console.log(`OTP token1 inbox: ${ns}.qa@inbox.testmail.app → YAPP_TEST_ACCESS_TOKEN (QA Tester)`);
-console.log(`OTP token2 inbox: ${ns}.sdet@inbox.testmail.app → YAPP_TEST_ACCESS_TOKEN_2 (Sundanese)`);
+process.exitCode = bad ? 1 : 0;

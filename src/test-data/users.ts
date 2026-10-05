@@ -13,16 +13,36 @@ export const creatorUser = {
   username: faker.internet.username(),
 } as const;
 
-/** JWT-backed test accounts mapped to .env token slots + testmail tags. */
+/**
+ * JWT-backed test accounts mapped to .env token slots.
+ *
+ * Ownership is checked by the JWT `uuid` claim — Yapp tokens carry `id` + `uuid` only, no
+ * username — so a refresh can never silently swap one account's token into another's slot.
+ *
+ * - `creator` (token1) — hendrarg, the creator under test: `creatorAuthTest` and API seeding.
+ *   Logs in with a personal email kept out of the repo (`YAPP_CREATOR_LOGIN_EMAIL`); its OTP is
+ *   read from the dev DB (`otp_codes`) because that inbox is not a testmail inbox.
+ * - `qa` (buyer token) — anthony_mosciski, the login behind the testmail QA inbox: `authTest`.
+ * - `sundanese` (token2) — creator-post seeding and second-account flows.
+ */
 export const testAccounts = {
-  qa: {
-    username: "x7nv1.qa",
+  creator: {
+    uuid: "84ae3e39-ffe3-4d90-994c-413eb3435768",
+    username: "hendrarg",
     envVar: "YAPP_TEST_ACCESS_TOKEN",
-    displayName: "QA Tester",
+    displayName: "Creator (hendrarg)",
+    loginEmailEnv: "YAPP_CREATOR_LOGIN_EMAIL",
+  },
+  qa: {
+    uuid: "5bad6f80-dc4a-436e-b7ef-28293b32fa7b",
+    username: "anthony_mosciski",
+    envVar: "YAPP_TEST_ACCESS_TOKEN_BUYER",
+    displayName: "QA buyer (anthony_mosciski)",
     testmailTag: "qa",
   },
   sundanese: {
-    username: "x7nv1.sdet",
+    uuid: "184bfcbc-80eb-427d-923d-fd558e4462de",
+    username: "sundanese",
     envVar: "YAPP_TEST_ACCESS_TOKEN_2",
     displayName: "Sundanese",
     testmailTag: "sdet",
@@ -32,10 +52,22 @@ export const testAccounts = {
 export type TestAccountKey = keyof typeof testAccounts;
 export type TestAccount = (typeof testAccounts)[TestAccountKey];
 export type TestTokenEnvVar = TestAccount["envVar"];
+/** Accounts whose OTP arrives in a testmail.app inbox. */
+export type TestmailAccount = Extract<TestAccount, { testmailTag: string }>;
+
+/** Email the account signs in with: the testmail inbox, or the env-provided address for `creator`. */
+export function accountLoginEmail(account: TestAccount): string {
+  if ("loginEmailEnv" in account) {
+    const email = process.env[account.loginEmailEnv]?.trim();
+    if (!email) throw new Error(`${account.loginEmailEnv} must be set in .env to sign ${account.displayName} in via OTP.`);
+    return email;
+  }
+  return `${process.env.TESTMAIL_NAMESPACE}.${account.testmailTag}@inbox.testmail.app`;
+}
 
 // ── Login credentials ────────────────────────────────────────────
 
-/** Primary OTP inbox for token1 (`YAPP_TEST_ACCESS_TOKEN`). */
+/** OTP inbox of the QA buyer (`YAPP_TEST_ACCESS_TOKEN_BUYER`). */
 export const otpUser = {
   email: `${process.env.TESTMAIL_NAMESPACE}.${testAccounts.qa.testmailTag}@inbox.testmail.app`,
   timeout: 90000,

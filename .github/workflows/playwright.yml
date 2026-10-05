@@ -59,6 +59,7 @@ jobs:
       TESTMAIL_NAMESPACE: "${{ secrets.TESTMAIL_NAMESPACE }}"
       YAPP_TEST_ACCESS_TOKEN: "${{ secrets.YAPP_TEST_ACCESS_TOKEN }}"
       YAPP_TEST_ACCESS_TOKEN_2: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_2 }}"
+      YAPP_TEST_ACCESS_TOKEN_BUYER: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_BUYER }}"
       PW_HEADLESS: 'true'
     steps:
     - uses: actions/checkout@v4

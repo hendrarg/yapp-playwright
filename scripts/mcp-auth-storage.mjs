@@ -9,26 +9,32 @@ function apexDomain(url) {
  * Account presets for the MCP browser session. Mirrors src/test-data/users.ts.
  */
 export const mcpAccounts = {
-  qa: {
-    label: "QA Tester (token1)",
+  creator: {
+    label: "Creator hendrarg (token1)",
     envVar: "YAPP_TEST_ACCESS_TOKEN",
   },
+  buyer: {
+    label: "QA buyer anthony_mosciski",
+    envVar: "YAPP_TEST_ACCESS_TOKEN_BUYER",
+  },
   sundanese: {
-    label: "Sundanese buyer (token2)",
+    label: "Sundanese (token2)",
     envVar: "YAPP_TEST_ACCESS_TOKEN_2",
   },
 };
 
 /**
  * Resolve which account the MCP browser authenticates as from YAPP_MCP_ACCOUNT.
- * Values: `qa` (default), `sundanese`, or `guest`/`none` for an unauthenticated session.
+ * Values: `creator` (default; `qa`/`token1` are kept as aliases), `buyer`, `sundanese`,
+ * or `guest`/`none` for an unauthenticated session.
  */
 export function resolveMcpAccount(account = process.env.YAPP_MCP_ACCOUNT?.toLowerCase()) {
-  if (!account || account === "qa" || account === "token1") return "qa";
+  if (!account || account === "creator" || account === "qa" || account === "token1") return "creator";
+  if (account === "buyer") return "buyer";
   if (account === "sundanese" || account === "token2") return "sundanese";
   if (account === "guest" || account === "none" || account === "off") return "guest";
   throw new Error(
-    `Unknown YAPP_MCP_ACCOUNT value "${account}". Use "qa", "sundanese", or "guest".`,
+    `Unknown YAPP_MCP_ACCOUNT value "${account}". Use "creator", "buyer", "sundanese", or "guest".`,
   );
 }
 

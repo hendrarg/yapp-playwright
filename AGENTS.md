@@ -139,14 +139,15 @@ locator rules, and reuse gate are defined in `.agents/rules/code-style.md` and
 | `authTest` | Injects `at` cookie for `baseURL` | Buyer pages |
 | `creatorAuthTest` | Injects `at` cookie for `creatorsBaseURL` | Creator pages |
 
-Token injection sets the cookie on the apex domain so one token can serve buyer and creator subdomains. Set `YAPP_TEST_ACCESS_TOKEN` in `.env`.
+Token injection sets the cookie on the apex domain so one token can serve buyer and creator subdomains.
 
-Token mapping:
+Token mapping (`testAccounts` in `src/test-data/users.ts`; owners are checked by the JWT **uuid** — Yapp tokens carry no username):
 
-- `YAPP_TEST_ACCESS_TOKEN` (token1) belongs to QA Tester (`x7nv1.qa`). Use it for `authTest` / `creatorAuthTest` and primary API seeding (products, promotions).
-- `YAPP_TEST_ACCESS_TOKEN_2` (token2) belongs to Sundanese (`x7nv1.sdet`). Use it for creator-post seeding.
+- `YAPP_TEST_ACCESS_TOKEN` (token1) — **creator `hendrarg`** (user 317). `creatorAuthTest` and all creator-side API seeding (products, promotions, consultations). OTP login uses `YAPP_CREATOR_LOGIN_EMAIL`; the code is read from `otp_codes`.
+- `YAPP_TEST_ACCESS_TOKEN_BUYER` — **QA buyer `anthony_mosciski`** (user 459, the login behind `{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`). `authTest`.
+- `YAPP_TEST_ACCESS_TOKEN_2` (token2) — **Sundanese** (user 345, `{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app`). Creator-post seeding and second-account flows.
 
-If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, `authTest` / `creatorAuthTest` refresh it via conventional OTP login using the testmail QA inbox (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`) and save back to token1. Sundanese OTP uses `{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app` → token2. Run `npm run token:inspect` to verify mapping. Prefer `PW_WORKERS=1` when a refresh may run so workers do not race the same OTP inbox.
+When a slot is missing, expired, or holds another account's token, its fixture refreshes it through OTP login and saves it back to **that slot** — a refresh can no longer swap accounts. `npm run token:inspect` checks all three by uuid; `npm run token:refresh -- creator|qa|sundanese` refreshes one. Prefer `PW_WORKERS=1` when a refresh may run so workers do not race the same OTP inbox.
 
 ## Environment Variables
 
@@ -155,7 +156,9 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
 | `YAPP_BASE_URL` | Yes | Buyer app |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app |
 | `YAPP_API_BASE_URL` | Yes | API base URL |
-| `YAPP_TEST_ACCESS_TOKEN` | For QA Tester auth/API setup | Auto-refreshed via OTP (`*.qa@inbox.testmail.app`); do not commit |
+| `YAPP_TEST_ACCESS_TOKEN` | For creator auth/API seeding | Creator `hendrarg`; auto-refreshed via OTP (code from `otp_codes`); do not commit |
+| `YAPP_TEST_ACCESS_TOKEN_BUYER` | For buyer auth | QA buyer `anthony_mosciski`; auto-refreshed via OTP (`*.qa@inbox.testmail.app`); do not commit |
+| `YAPP_CREATOR_LOGIN_EMAIL` | For creator token refresh | Login email of `hendrarg`; do not commit |
 | `YAPP_TEST_ACCESS_TOKEN_2` | Optional Sundanese token | Used to seed creator posts for E2E tests (`*.sdet@inbox.testmail.app`) |
 | `YAPP_AUTOMATION_SHEET_ID` | For `/automation` | Google Spreadsheet ID |
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
@@ -164,7 +167,7 @@ If `YAPP_TEST_ACCESS_TOKEN` is missing, expired, or mapped to another username, 
 | `TESTMAIL_NAMESPACE` | For OTP tests | Do not commit |
 | `PW_HEADLESS` | No | Defaults to `false` |
 | `PW_WORKERS` | No | Defaults to 1 |
-| `YAPP_MCP_ACCOUNT` | No | Account injected into the MCP Playwright browser session: `qa` (default, token1), `sundanese` (token2), or `guest` (start unauthenticated). |
+| `YAPP_MCP_ACCOUNT` | No | Account injected into the MCP Playwright browser session: `creator` (default, token1; `qa` kept as alias), `buyer`, `sundanese` (token2), or `guest` (start unauthenticated). |
 | `YAPP_PLAYWRIGHT_BROWSERS_PATH` | No | Optional stable Playwright browser cache. Cursor sandboxes otherwise point at empty Temp paths and re-download Chromium. |
 | `YAPP_DB_FIXTURES` | No | `1` lets the `dbFixtures` fixture change whitelisted dev-DB rows (restored after each test). Off by default; never set against production |
 | `GEMINI_API_KEY` | No | Enables AI-assisted test data (Google Gemini). Absent → seeded-Faker only |

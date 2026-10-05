@@ -362,7 +362,10 @@ function sync(ctx, prev = readState()) {
     r.cells[6] = r.tcIds.join(", ");
     r.cells[7] = String(r.tcIds.length);
     const fp = r.tcIds.length ? fingerprint(r.tcIds, tcById) : r.cells[15];
-    if (r.cells[15] && fp !== r.cells[15] && r.cells[13] === "Automated") { r.cells[13] = "Needs Review"; changes.push(`${r.id}: TC content changed → Needs Review`); }
+    if (r.cells[15] && fp !== r.cells[15]) {
+      if (r.cells[13] === "Automated") { r.cells[13] = "Needs Review"; changes.push(`${r.id}: TC content changed → Needs Review`); }
+      else changes.push(`${r.id}: TC content changed (fingerprint updated)`);
+    }
     r.cells[15] = fp;
     const known = [...new Set(r.tcIds.flatMap((x) => (bugsByTc.get(x) || []).map((b) => `${b} → ${x}`)))];
     const segs = r.cells[14].split("; ").filter((s) => s && !s.startsWith("Known bug:"));

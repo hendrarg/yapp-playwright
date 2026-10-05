@@ -19,7 +19,7 @@ The `@playwright/mcp` npm package (`^0.0.76` in `package.json`) ships the `playw
 
 The creator/buyer apps share one `at` cookie on the apex domain (`.yapp.ink`) — the same mechanism as `loginWithToken` in `src/helpers/auth/token-login.ts`.
 
-The MCP browser normally starts **already authenticated**: the wrapper writes a storage state for `YAPP_MCP_ACCOUNT` (`qa` by default → `YAPP_TEST_ACCESS_TOKEN`) and the server loads it. Inject the cookie by hand only when that did not happen — `YAPP_MCP_ACCOUNT=guest`, a missing or expired token (the wrapper logs which), or when you need to switch accounts without restarting the server:
+The MCP browser normally starts **already authenticated**: the wrapper writes a storage state for `YAPP_MCP_ACCOUNT` (`creator` by default → `YAPP_TEST_ACCESS_TOKEN`; `buyer` → `YAPP_TEST_ACCESS_TOKEN_BUYER`) and the server loads it. Inject the cookie by hand only when that did not happen — `YAPP_MCP_ACCOUNT=guest`, a missing or expired token (the wrapper logs which), or when you need to switch accounts without restarting the server:
 
 ```javascript
 // browser_run_code_unsafe
@@ -54,21 +54,19 @@ If the MCP browser session redirects to `/auth` and the `at` token in `.env` is 
    - Needs `TESTMAIL_API_KEY` + `TESTMAIL_NAMESPACE` in `.env`.
 2. **Extract the fresh token** from the browser context: `extractAccessToken(context)` reads the `at` cookie.
 3. **Persist it back to `.env`**: `saveTokenToEnv(token, '.env', account.envVar)`.
-   - Account → env var mapping (`src/test-data/users.ts`): QA Tester (`x7nv1.qa`, testmail tag `qa`) → `YAPP_TEST_ACCESS_TOKEN`; SDET (`x7nv1.sdet`, tag `sdet`) → `YAPP_TEST_ACCESS_TOKEN_2`.
+   - Account → env var mapping (`src/test-data/users.ts`, checked by JWT uuid): creator `hendrarg` → `YAPP_TEST_ACCESS_TOKEN`; QA buyer `anthony_mosciski` (testmail tag `qa`) → `YAPP_TEST_ACCESS_TOKEN_BUYER`; Sundanese (tag `sdet`) → `YAPP_TEST_ACCESS_TOKEN_2`.
 4. **Re-inject the refreshed token** into the MCP browser context via `context.addCookies` (see Token injection above), then navigate again.
 
-Quick path: run the OTP login spec (`npx playwright test tests/auth/otp-login.spec.ts --project=chromium`) — it logs in as QA Tester and saves the token to `.env` in one go. `refreshAccountTokenViaOtp(context, account, baseURL)` wraps login + save for fixture use.
+Quick path: `npm run token:refresh -- creator|qa|sundanese` logs one account in and saves its
+token to that account's own slot. `refreshAccountTokenViaOtp(context, account, baseURL)` wraps
+login + save for fixture use.
 
-**That refresh does not restore the token you had.** Verified 18 Sep 2026: the token kept in
-`.env` as `YAPP_TEST_ACCESS_TOKEN` was user **317 `hendrarg`** (372 products, the account every
-product fixture assumes), while `x7nv1.qa@inbox.testmail.app` — the inbox the refresh logs in
-with — belongs to user **459 `anthony_mosciski`** (104 products). Running the spec therefore
-overwrites token1 with a *different* account that merely shares the QA label, and
-`npm run token:inspect` will not flag it: the JWT carries no username claim, so it prints
-`id`/`uuid` only and reports the swap as success. Check the id against the DB
-(`select id, username from users where uuid = '<uuid from token:inspect>'`) before trusting a
-refreshed token, and prefer asking the token owner for a fresh one when the products of user
-317 are what the task needs.
+**Each inbox belongs to one account — keep them in their own slots.** The QA testmail inbox logs
+in as user **459 `anthony_mosciski`** (the buyer), not as the creator **317 `hendrarg`**. Until
+5 Oct 2026 both shared token1, so an expired token1 refreshed itself into the buyer and creator
+tests silently ran as anthony (the JWT has no username, so no check caught it). Since then
+token1 is the creator only, the buyer has `YAPP_TEST_ACCESS_TOKEN_BUYER`, and every fixture and
+`npm run token:inspect` compare the JWT `uuid` with `testAccounts`, so a swap fails loudly.
 
 ## Diagnosing a bad token: the creator app loops, it does not say "unauthorized"
 
@@ -708,3 +706,21 @@ npm run mcp:clean
   The first MCP call afterwards fails with `Target page, context or browser has been closed` and relaunches the browser; the next one runs on the fresh token. Navigate to a real `*.yapp.ink` page before any `fetch` check — on `about:blank` it answers `Failed to fetch`.
 
 Duplicate MCP servers are the real leak: one per client, and they outlive the session that started them. Check with `npm run mcp:clean -- --dry-run` when the machine feels heavy.
+
+## Creator + guest buyer in one MCP browser (verified 2026-10-05)
+
+To watch a creator setting land on the buyer page without swapping the `at` cookie, open an
+isolated guest context from `browser_run_code_unsafe`:
+`const ctx = await page.context().browser().newContext(); const g = await ctx.newPage();`.
+The creator tab keeps its session and the guest one has no cookie at all.
+
+- **Nothing survives between `browser_run_code_unsafe` calls** — `globalThis.__guest = g` is gone by
+  the next call. Find the page again with
+  `page.context().browser().contexts().flatMap(c => c.pages()).find(p => p.url().includes('/tip'))`.
+- Close it with `await g.context().close()` when finished.
+- `browser_run_code_unsafe { filename }` only reads files under `D:\yapp` (or `.playwright-mcp`);
+  a scratchpad path outside the repo is refused with `outside allowed roots`. Keep such snippets
+  in `.playwright-mcp/` (git-ignored), and delete one that embeds a token.
+- Stream Studio panels (`Time extension rules`, Gacha `Title & minimum tip`) are collapsible; a
+  control inside a collapsed panel is "visible" but its click is intercepted by the panel header.
+  Expand the header button first (`aria-expanded`).

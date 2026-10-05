@@ -39,9 +39,13 @@ async function main() {
   const headless = process.env.PW_HEADLESS?.toLowerCase() === 'true';
   const namespace = process.env.TESTMAIL_NAMESPACE ?? '?';
 
-  console.log(`Refreshing ${account.envVar} for ${account.displayName} (${account.username})`);
-  console.log(`  inbox:  ${namespace}.${account.testmailTag}@inbox.testmail.app`);
-  console.log(`  source: YAPP_OTP_SOURCE=${process.env.YAPP_OTP_SOURCE ?? 'auto'}\n`);
+  console.log(`Refreshing ${account.envVar} for ${account.displayName}`);
+  if ('testmailTag' in account) {
+    console.log(`  inbox:  ${namespace}.${account.testmailTag}@inbox.testmail.app`);
+    console.log(`  source: YAPP_OTP_SOURCE=${process.env.YAPP_OTP_SOURCE ?? 'auto'}\n`);
+  } else {
+    console.log(`  login:  ${account.loginEmailEnv} (code read from otp_codes)\n`);
+  }
 
   const browser = await chromium.launch({ headless, args: ['--start-maximized'] });
   const context = await browser.newContext({ viewport: null });

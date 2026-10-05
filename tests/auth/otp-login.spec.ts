@@ -13,6 +13,6 @@ test.describe('OTP Login', () => {
 
     await expect(page).toHaveURL(/\/explore/);
 
-    saveTokenToEnv(token, '.env', account.envVar); // YAPP_TEST_ACCESS_TOKEN (QA Tester)
+    saveTokenToEnv(token, '.env', account.envVar); // YAPP_TEST_ACCESS_TOKEN_BUYER (QA buyer)
   });
 });
