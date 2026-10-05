@@ -12,6 +12,7 @@ import { ProfilePage as BuyerProfilePage } from "@pages/buyer/ProfilePage";
 import { TierDetailPage } from "@pages/buyer/TierDetailPage";
 import { TipPage } from "@pages/buyer/TipPage";
 import { TransactionPage } from "@pages/buyer/TransactionPage";
+import { AccountSettingsPage } from "@pages/buyer/AccountSettingsPage";
 import { AffiliatePage } from "@pages/creator/AffiliatePage";
 import { AnalyticsPage } from "@pages/creator/AnalyticsPage";
 import { CampaignsPage } from "@pages/creator/CampaignsPage";
@@ -67,6 +68,7 @@ export type PageFixtures = {
   tierDetailPage: TierDetailPage;
   tipPage: TipPage;
   transactionPage: TransactionPage;
+  accountSettingsPage: AccountSettingsPage;
   affiliatePage: AffiliatePage;
   analyticsPage: AnalyticsPage;
   campaignsPage: CampaignsPage;
@@ -108,6 +110,7 @@ export const pageFixtures = {
   buyerProfilePage: buyerPage(BuyerProfilePage),
   tipPage: buyerPage(TipPage),
   transactionPage: buyerPage(TransactionPage),
+  accountSettingsPage: buyerPage(AccountSettingsPage),
   buyerMembershipPage: buyerPage(BuyerMembershipPage),
   tierDetailPage: buyerPage(TierDetailPage),
 

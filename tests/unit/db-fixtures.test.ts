@@ -51,3 +51,19 @@ test('DB fixtures restore the previous values', { tag: ['@test-data', '@smoke'] 
   await db.restoreAll();
   expect(row.expired_at).toBe(original);
 });
+
+test('DB fixtures retire only test-created rows of retirable tables, and never restore them', { tag: ['@test-data', '@smoke'] }, async () => {
+  const calls: string[] = [];
+  const exec: Executor = async (sql, params) => {
+    calls.push(sql);
+    return sql.startsWith('UPDATE') && params[0] === UUID ? [{ uuid: UUID }] : [];
+  };
+  const db = new DbFixtures(exec, ENABLED);
+  // @ts-expect-error tier_membership_users rows are restored, not retired
+  await expect(db.retire('tier_membership_users', UUID)).rejects.toThrow(/not retirable/);
+  await expect(db.retire('post_lifetime_purchases', '22222222-2222-2222-2222-222222222222')).rejects.toThrow(/retire one row/);
+  await db.retire('post_lifetime_purchases', UUID);
+  calls.length = 0;
+  await db.restoreAll();
+  expect(calls, 'a retired row is not put back').toEqual([]);
+});

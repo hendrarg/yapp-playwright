@@ -2,8 +2,8 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
-import { locatorChain } from "@utils/heal-utils";
-import { POST_CARD_SELECTOR } from "@pages/shared/locators";
+import { locatorChain, smartLocator } from "@utils/heal-utils";
+import { POST_CARD_SELECTOR, VERIFIED_BADGE_SELECTOR } from "@pages/shared/locators";
 import { feedsTabs, feedsLabels, scrollRounds, scrollDelayMs, type FeedsTab } from "@test-data/buyer/feeds.data";
 
 const ACTIVE_TAB_COLOR = "text-[#373737]";
@@ -204,6 +204,15 @@ export class FeedsPage {
     await expect(this.postByContent(content)).toBeVisible({ timeout: 15000 });
   }
 
+  async expectPostHidden(content: string) {
+    await expect(this.feedPosts.filter({ hasText: content })).toHaveCount(0, { timeout: 15000 });
+  }
+
+  /** Number of post cards currently rendered in the active tab. */
+  async countPosts(): Promise<number> {
+    return this.feedPosts.count();
+  }
+
   async getPostLikeCount(content: string): Promise<number> {
     const text = (await this.postLikeCountEl(this.postByContent(content)).textContent()) ?? "0";
     return parseInt(text.trim(), 10) || 0;
@@ -340,6 +349,110 @@ export class FeedsPage {
     await expect(post.getByRole("button", { name: feedsLabels.unlockPost })).toBeVisible({ timeout: 10000 });
   }
 
+  /** Pink lock pill beside a pay-per-view post's timestamp; it has no accessible name, only the brand gradient. */
+  readonly exclusiveBadges = locatorChain(this.page, { selector: 'span[class*="from-[#FF0090]"]' });
+
+/** A post card shows the Official badge beside its author's name, or not. */
+  async expectPostAuthorOfficial(content: string, official: boolean) {
+    const badge = this.postByContent(content).locator(VERIFIED_BADGE_SELECTOR);
+    if (official) await expect(badge.first()).toBeVisible({ timeout: 10000 });
+    else await expect(badge).toHaveCount(0);
+  }
+
+  async expectOfficialBadgeOnDetail() {
+    await this.expectPostDetailOpen();
+    await expect(this.page.getByRole("main").locator(VERIFIED_BADGE_SELECTOR).first()).toBeVisible({ timeout: 10000 });
+  }
+
+// ── Linked products on a post ──
+  /** A linked-product chip on the post detail: thumbnail (alt = title), title and price. It has no role or link. */
+  private linkedProductChip(title: string): Locator {
+    return this.page
+      .getByRole("main")
+      .locator("div")
+      .filter({ has: this.page.getByRole("img", { name: title, exact: true }) })
+      .filter({ hasText: /Rp/ })
+      .last();
+  }
+
+  async expectLinkedProduct(title: string, price: RegExp) {
+    const chip = this.linkedProductChip(title);
+    await expect(chip).toBeVisible({ timeout: 15000 });
+    await expect(chip).toContainText(title);
+    await expect(chip).toContainText(price);
+    await expect(chip.getByRole("img", { name: title, exact: true })).toBeVisible();
+  }
+
+  async expectLinkedProductHidden(title: string) {
+    await this.expectPostDetailOpen();
+    await expect(this.page.getByRole("main").getByRole("img", { name: title, exact: true })).toHaveCount(0);
+  }
+
+  /** The feed card advertises `View Products (n)` only for posts that link products. */
+  async expectFeedCardProductCount(content: string, count: number | null) {
+    const label = this.postByContent(content).getByText(feedsLabels.viewProducts, { exact: false });
+    if (count === null) await expect(label).toHaveCount(0);
+    else await expect(label).toHaveText(`${feedsLabels.viewProducts} (${count})`, { timeout: 10000 });
+  }
+
+  /** An opened post with no linked product shows no product chip (no price anywhere in the post). */
+  async expectNoLinkedProducts(content: string) {
+    await this.expectPostBodyVisible(content);
+    await expect(this.page.getByRole("main").getByText(/^Rp[\d.,]+$/)).toHaveCount(0);
+  }
+
+  async openLinkedProduct(title: string) {
+    await safeClick(this.linkedProductChip(title).getByText(title, { exact: true }));
+    await expect(this.page).toHaveURL(/\/product\//, { timeout: 15000 });
+  }
+
+/** The feed card names its author. */
+  async expectPostAuthor(content: string, username: string) {
+    await expect(this.postByContent(content)).toContainText(username, { timeout: 10000 });
+  }
+
+  /** A purchased PPV card shows its media without the `Unlock Post` gate. */
+  async expectUnlockedFeedCard(content: string) {
+    const post = this.postByContent(content);
+    await expect(post).toBeVisible({ timeout: 15000 });
+    await expect(post.getByRole("button", { name: feedsLabels.unlockPost })).toHaveCount(0);
+    await expect(post.getByRole("button", { name: feedsLabels.openPostMedia }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+/** At least one post on the page is signed with this username. */
+  async expectPostAuthorOnPage(username: string) {
+    await expect(this.feedPosts.filter({ hasText: username }).first()).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectExclusiveBadge(content: string) {
+    await expect(this.postByContent(content).filter({ has: this.exclusiveBadges })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectExclusiveBadgeOnDetail() {
+    await this.expectPostDetailOpen();
+    await expect(this.page.getByRole("main").locator(this.exclusiveBadges).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  readonly screenshotWarningDialog = this.page.getByRole("dialog", { name: feedsLabels.screenshotWarning });
+
+  readonly screenshotWarningDismiss = smartLocator(this.page, {
+    role: "button",
+    name: feedsLabels.screenshotWarningDismiss,
+    text: feedsLabels.screenshotWarningDismiss,
+  });
+
+  /** Press the OS screenshot key; the Exclusive tab answers with a blocking warning dialog. */
+  async attemptScreenshot() {
+    await this.page.keyboard.press("PrintScreen");
+    await expect(this.screenshotWarningDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.screenshotWarningDialog).toContainText(feedsLabels.screenshotWarningBody);
+  }
+
+  async dismissScreenshotWarning() {
+    await this.screenshotWarningDismiss.click();
+    await expect(this.screenshotWarningDialog).toBeHidden({ timeout: 10000 });
+  }
+
   readonly postDetailDialog = locatorChain(this.page, {
     role: "dialog",
     name: "Post image modal",
@@ -412,6 +525,91 @@ export class FeedsPage {
     await this.page.mouse.move(900, 400, { steps: 8 });
     await this.page.mouse.up();
     await expect(this.postDetailDialog.locator("img").first()).toBeVisible({ timeout: 5000 });
+  }
+
+// ── Media preview (dialog "Post image modal") ──
+  readonly nextImageButton = smartLocator(this.page, { role: "button", name: feedsLabels.nextImage, text: feedsLabels.nextImage });
+  readonly previousImageButton = smartLocator(this.page, { role: "button", name: feedsLabels.previousImage, text: feedsLabels.previousImage });
+
+  /** File names of a post's images, in order; Next serves them through `/_next/image?url=…`. */
+  private static imageKeys(imgs: Locator): Promise<string[]> {
+    return imgs.evaluateAll((els) =>
+      els.map((el) => {
+        const src = el.getAttribute("src") ?? "";
+        const url = new URL(src, (globalThis as any).location.href).searchParams.get("url") ?? src;
+        return url.split("?")[0].split("/").pop() ?? "";
+      }),
+    );
+  }
+
+  postImageKeys(content: string): Promise<string[]> {
+    return FeedsPage.imageKeys(this.postByContent(content).locator("img"));
+  }
+
+  async previewImageKey(): Promise<string> {
+    await expect(this.postDetailDialog.locator("img").first()).toBeVisible({ timeout: 10000 });
+    return (await FeedsPage.imageKeys(this.postDetailDialog.locator("img")))[0];
+  }
+
+  /** Tap the post's `index`-th media tile (0-based) and wait for the preview dialog. */
+  async openPostMediaAt(content: string, index: number) {
+    await safeClick(this.postByContent(content).getByRole("button", { name: feedsLabels.openPostMedia }).nth(index));
+    await expect(this.postDetailDialog).toBeVisible({ timeout: 15000 });
+  }
+
+  /** The preview image is letterboxed (object-fit: contain), so it scales without distortion. */
+  async expectPreviewImageProportional() {
+    const image = this.postDetailDialog.locator("img").first();
+    await expect(image).toBeVisible({ timeout: 10000 });
+    await expect(image).toHaveCSS("object-fit", "contain");
+    await expect.poll(() => image.evaluate((el) => (el as any).naturalWidth as number), { message: "preview image should load", timeout: 15000 }).toBeGreaterThan(0);
+  }
+
+  async nextImage() {
+    await this.nextImageButton.click();
+  }
+
+  async previousImage() {
+    await this.previousImageButton.click();
+  }
+
+  async expectPreviewImage(key: string) {
+    await expect.poll(() => this.previewImageKey(), { timeout: 10000 }).toBe(key);
+  }
+
+  feedScrollY(): Promise<number> {
+    return this.page.evaluate(() => (globalThis as any).scrollY as number);
+  }
+
+  private get dialogVideo(): Locator {
+    return this.postDetailDialog.locator("video").first();
+  }
+
+  private videoState() {
+    return this.dialogVideo.evaluate((el) => {
+      const v = el as any;
+      return { paused: v.paused, time: v.currentTime, fullscreen: !!(globalThis as any).document.fullscreenElement, controls: v.controls };
+    });
+  }
+
+  /** Tapping a video opens it full screen in the preview dialog and it starts playing. */
+  async expectVideoPlayingFullScreen() {
+    await expect(this.dialogVideo).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => (await this.videoState()).paused, { timeout: 10000 }).toBe(false);
+    await expect.poll(async () => (await this.videoState()).fullscreen, { timeout: 10000 }).toBe(true);
+  }
+
+  /** Pause with a tap, resume with Space, then seek forward and back through the native controls. */
+  async controlVideoPlayback() {
+    expect((await this.videoState()).controls, "full-screen video should expose playback controls").toBe(true);
+    await this.dialogVideo.click();
+    await expect.poll(async () => (await this.videoState()).paused, { timeout: 5000 }).toBe(true);
+    await this.page.keyboard.press("Space");
+    await expect.poll(async () => (await this.videoState()).paused, { timeout: 5000 }).toBe(false);
+    for (const target of [6, 1]) {
+      await this.dialogVideo.evaluate((el, t) => { (el as any).currentTime = t; }, target);
+      await expect.poll(async () => Math.abs((await this.videoState()).time - target), { timeout: 5000 }).toBeLessThan(1.5);
+    }
   }
 
   private get previewVideo(): Locator {
@@ -497,20 +695,32 @@ export class FeedsPage {
     await expect(this.page.getByText(commentText, { exact: false })).toBeVisible({ timeout: 10000 });
   }
 
-  private commentActions(commentText: string) {
-    return this.page
-      .locator("div")
-      .filter({ hasText: commentText })
-      .filter({ has: this.page.getByRole("button") })
-      .getByRole("button")
-      .last();
+  /** `Open comment actions` exists only on the viewer's own comments (one per comment row). */
+  readonly commentActionsButtons = this.page.getByRole("button", { name: feedsLabels.openCommentActions, exact: true });
+  /** The actions popover is a dialog holding `Edit` / `Delete` buttons. */
+  private readonly commentActionsPopover = this.page.getByRole("dialog").filter({
+    has: this.page.getByRole("button", { name: feedsLabels.editComment, exact: true }),
+  });
+  private readonly deleteCommentConfirmDialog = this.page.getByRole("dialog").filter({ hasText: feedsLabels.deleteCommentTitle });
+  readonly saveCommentButton = smartLocator(this.page, {
+    role: "button",
+    name: feedsLabels.saveComment,
+    text: feedsLabels.saveComment,
+  });
+
+  /** Index of the actions button whose comment row contains `commentText`, or -1. */
+  private async commentActionsIndex(commentText: string): Promise<number> {
+    const rows = await this.commentActionsButtons.evaluateAll((buttons) =>
+      buttons.map((button) => button.parentElement?.textContent ?? ""),
+    );
+    return rows.findIndex((row) => row.includes(commentText));
   }
 
-  private commentAction(name: string) {
-    return this.page
-      .getByRole('menuitem', { name, exact: true })
-      .or(this.page.getByRole('button', { name, exact: true }))
-      .last();
+  private async openCommentActions(commentText: string) {
+    const index = await this.commentActionsIndex(commentText);
+    expect(index, `"${commentText}" should be the viewer's own comment with an actions button`).toBeGreaterThanOrEqual(0);
+    await safeClick(this.commentActionsButtons.nth(index));
+    await expect(this.commentActionsPopover).toBeVisible({ timeout: 5000 });
   }
 
   async expectCommentVisible(commentText: string) {
@@ -521,23 +731,42 @@ export class FeedsPage {
     await expect(this.page.getByText(commentText, { exact: true })).toBeHidden({ timeout: 10000 });
   }
 
+  /**
+   * Edit loads the comment into the `Write your comment` box and swaps in `Save`.
+   * Only works within one minute of posting (`commentEditWindowMs`) — call it right after posting.
+   */
   async editComment(commentText: string, updatedText: string) {
-    await safeClick(this.commentActions(commentText));
-    await safeClick(this.commentAction('Edit'));
-    const editField = this.page.getByRole('textbox').last().or(this.page.locator('textarea').last());
-    await safeFill(editField, updatedText);
-    await safeClick(locatorChain(this.page, { role: 'button', name: 'Save', text: 'Save' }).or(this.page.getByRole('button', { name: /Save|Update/i }).last()));
+    await this.openCommentActions(commentText);
+    await safeClick(this.commentActionsPopover.getByRole("button", { name: feedsLabels.editComment, exact: true }));
+    await expect(this.commentInput).toHaveValue(commentText, { timeout: 5000 });
+    await safeFill(this.commentInput, updatedText);
+    await this.saveCommentButton.click();
     await this.expectCommentVisible(updatedText);
   }
 
+  /** Delete asks for confirmation in a `Delete this comment?` dialog. */
   async deleteComment(commentText: string) {
-    await safeClick(this.commentActions(commentText));
-    await safeClick(this.commentAction('Delete'));
-    const confirmation = this.page.getByRole('button', { name: /Delete|Confirm/i }).last();
-    if (await confirmation.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await expect(confirmation).toBeVisible({ timeout: 5000 });
-      await confirmation.click({ timeout: 10000 });
-    }
+    await this.openCommentActions(commentText);
+    await safeClick(this.commentActionsPopover.getByRole("button", { name: feedsLabels.deleteComment, exact: true }));
+    await expect(this.deleteCommentConfirmDialog).toBeVisible({ timeout: 5000 });
+    await safeClick(this.deleteCommentConfirmDialog.getByRole("button", { name: feedsLabels.deleteComment, exact: true }));
+    await this.expectCommentHidden(commentText);
+  }
+
+  /** Another account's comment is shown without any actions control. */
+  async expectNoCommentActions(commentText: string) {
+    await this.expectCommentVisible(commentText);
+    expect(await this.commentActionsIndex(commentText), `"${commentText}" must not offer edit/delete`).toBe(-1);
+  }
+
+  /** The comment is shown under the given author's username (author and text share one block). */
+  async expectCommentAuthor(commentText: string, username: string) {
+    const block = this.page
+      .getByRole("main")
+      .locator("div")
+      .filter({ has: this.page.getByText(commentText, { exact: true }) })
+      .last();
+    await expect(block).toContainText(username, { timeout: 10000 });
   }
 
   async expectCommentCountIncreased(previousCount: number) {
@@ -635,6 +864,11 @@ export class FeedsPage {
     await expect(this.page.getByText(/Unlock|unlock/i).first()).toBeVisible({ timeout: 5000 });
   }
 
+  /** The post body text is readable on the open post detail. */
+  async expectPostBodyVisible(content: string) {
+    await expect(this.page.getByRole("main").getByText(content, { exact: false }).first()).toBeVisible({ timeout: 10000 });
+  }
+
   async expectLockedPostDetail() {
     await this.expectPostDetailOpen();
     await expect(this.unlockPostButtons.first()).toBeVisible({ timeout: 10000 });
@@ -661,13 +895,27 @@ export class FeedsPage {
     }
   }
 
+  readonly unlockPaymentDialog = this.page.getByRole("dialog", { name: feedsLabels.unlockPaymentDialog });
+
+  readonly unlockPayButton = smartLocator(this.page, {
+    role: "button",
+    name: feedsLabels.unlockPay,
+    text: feedsLabels.unlockPay,
+  });
+
+  /** Open the single-post payment dialog and check it charges this post's price. */
+  async openUnlockPayment(price: number) {
+    // The preview and the post detail both render "Unlock Now"; the topmost one (the preview's) opens payment.
+    await safeClick(this.page.getByRole("button", { name: feedsLabels.unlockNow }).last());
+    await expect(this.unlockPaymentDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.unlockPaymentDialog).toContainText(this.priceText(price));
+  }
+
   async submitUnlockPayment(name: string, phone: string): Promise<string> {
-    await safeClick(
-      locatorChain(this.page, { role: "button", name: "Unlock Now", text: "Unlock now" }).or(
-        this.page.getByRole("button", { name: /Unlock Now|Unlock now/ }).last(),
-      ),
-    );
-    const dialog = this.page.getByRole("dialog").filter({ hasText: /Unlock Exclusive Post|Exclusive Post/ }).first();
+    const dialog = this.unlockPaymentDialog;
+    if (!(await dialog.isVisible())) {
+      await safeClick(this.page.getByRole("button", { name: feedsLabels.unlockNow }).last());
+    }
     await expect(dialog).toBeVisible({ timeout: 10000 });
 
     const emailInput = dialog.locator('input[type="email"]').or(dialog.getByRole("textbox", { name: /email/i }));
@@ -679,7 +927,7 @@ export class FeedsPage {
     await nameInput.first().fill(name);
     await phoneInput.first().fill(phone);
 
-    await safeClick(dialog.getByRole("button", { name: /Pay|Unlock|Continue/i }).last());
+    await this.unlockPayButton.click();
     await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
     await this.waitForPageSettled();
     return this.page.url().split("/transaction/")[1];

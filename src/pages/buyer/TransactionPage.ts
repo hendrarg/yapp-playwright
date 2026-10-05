@@ -67,6 +67,23 @@ export class TransactionPage {
     await expect(this.page.getByRole("button", { name: /Back to profile/i })).toBeVisible();
   }
 
+/** A failed or expired payment opens the `Payment Failed` dialog. */
+  async expectPaymentFailed() {
+    const dialog = this.page.getByRole("dialog", { name: "Payment Failed" });
+    await expect(dialog).toBeVisible({ timeout: 15000 });
+    await expect(dialog).toContainText("We couldn't complete your payment.");
+  }
+
+/** Lifetime (Unlock All) success: the dialog names the creator with an Exclusive pill; Close dismisses it. */
+  async expectLifetimePaymentSuccess(creatorName: string) {
+    const dialog = this.page.getByRole("dialog").filter({ hasText: "Payment Successful!" }).first();
+    await expect(dialog).toBeVisible({ timeout: 30000 });
+    await expect(dialog).toContainText(creatorName);
+    await expect(dialog).toContainText("Exclusive");
+    await safeClick(dialog.getByRole("button", { name: "Close", exact: true }).last());
+    await expect(dialog).toBeHidden({ timeout: 10000 });
+  }
+
   async expectUnlockPaymentSuccess() {
     const dialog = this.page.getByRole("dialog").filter({ hasText: /Payment Successful|payment was successful/i }).first();
     await expect(dialog).toBeVisible({ timeout: 20000 });

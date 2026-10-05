@@ -122,7 +122,7 @@ data in `scripts/automation-mapping.config.json`). Edit the config, not the shee
 - **Risk-based priority.** P0 = money and access (checkout, payment, unlock, entitlement, withdraw,
   login/OTP); P2 = copy, display, filter/sort, analytics; P1 = the rest. Smoke rows are P0.
 - **Out of scope (never mapped):** Livestream / Stream Studio, **Onboarding** (one-time per account —
-  every run would need a brand-new account), **referral attribution** (a brand-new referred account, or
+  every run would need a brand-new account; this includes the Feeds tab's `Become a Creator` TCs), **referral attribution** (a brand-new referred account, or
   applying a referral code — once per account; referral info / share / list stay mapped), external integrations (Telegram bot & group connection,
   Discord OAuth / bot role, Google Calendar) and scheduled jobs / email (reminders, digests, H-x jobs,
   withdrawal SLA). Keep these manual. Whole tabs go in `exclude.tabs`, single journeys in

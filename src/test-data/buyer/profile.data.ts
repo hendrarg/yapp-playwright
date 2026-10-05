@@ -82,6 +82,12 @@ export const profileLabels = {
   exclusiveOnly: "Exclusive Only",
   memberOnly: "Member Only",
   unlockPost: "Unlock Post",
+  exclusiveTab: "Exclusive",
+  lifetimeOffer: "Get all the exclusive content lifetime with just one tap!",
+  lifetimeUnlock: "Unlock now",
+  lifetimeDialog: "Lifetime Access",
+  lifetimePhone: "Enter phone number",
+  lifetimePay: "Pay Rp",
   openPostMedia: "Open post media",
   tierPricePattern: "IDR",
   share: "Share",
@@ -138,3 +144,27 @@ export const tipAmountBoundary = {
 } as const;
 
 export type ProfileTab = keyof typeof profileTabs;
+
+/** Buyer `/profile/settings` → Profile and Account (verified 2026-10-05). */
+export const ownProfileLabels = {
+  myMemberships: "My Memberships",
+  following: "following",
+  accountMenu: "Account menu",
+} as const;
+
+export const accountSettingsLabels = {
+  profileTab: "Profile and Account",
+  usernamePlaceholder: "Enter your username",
+  namePlaceholder: "Enter your name",
+  emailPlaceholder: "Your email address",
+  save: "Save",
+  uploadPictureTitle: "Upload Profile Picture",
+  cropTitle: "Crop Selected Picture",
+  apply: "Apply",
+  pictureUpdated: "Profile Picture Updated!",
+  gotIt: "Got It!",
+  usernameChanged: "Your new username successfully updated.",
+  usernameTaken: "username already exists",
+  usernameInvalid: "invalid username",
+  validationFailed: "validation failed",
+} as const;

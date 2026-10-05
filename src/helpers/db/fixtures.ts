@@ -17,7 +17,15 @@ import { query } from './client';
 
 export const WRITABLE = {
   tier_membership_users: ['expired_at', 'deleted_at'],
+  // Creator discovery flags: hidden from Explore (the NSFW treatment) and the Official (verified) badge.
+  users: ['is_hide_from_explore', 'is_verified_creator', 'name', 'username', 'username_changed_at', 'photo_profile_path'],
+  // A pending lifetime order the test created, pushed to the state a failed/expired payment leaves.
+  post_lifetime_purchases: ['status', 'expired_at'],
 } as const satisfies Record<string, readonly string[]>;
+
+/** Tables whose test-created rows may be soft-deleted for good (`deleted_at = now()`), never restored. */
+export const RETIRABLE = ['post_lifetime_purchases'] as const;
+export type RetirableTable = (typeof RETIRABLE)[number];
 
 export type WritableTable = keyof typeof WRITABLE;
 export type WritableColumn<T extends WritableTable> = (typeof WRITABLE)[T][number];
@@ -68,6 +76,44 @@ export class DbFixtures {
   /** Move a tier membership subscription's expiry to `daysFromNow` days ahead (e.g. 7 for an H-7 window). */
   async setMembershipExpiryIn(subscriptionUuid: string, daysFromNow: number): Promise<void> {
     await this.set('tier_membership_users', subscriptionUuid, { expired_at: new Date(Date.now() + daysFromNow * DAY_MS) });
+  }
+
+  /**
+   * Soft-delete one row this test created and nothing should keep, e.g. a purchase with no refund API.
+   * It is not snapshotted: `restoreAll()` leaves it deleted.
+   */
+  async retire(table: RetirableTable, uuid: string): Promise<void> {
+    if (!(RETIRABLE as readonly string[]).includes(table)) throw new Error(`Table ${table} is not retirable by DB fixtures`);
+    const updated = await this.exec(`UPDATE ${table} SET deleted_at = now() WHERE uuid = $1 AND deleted_at IS NULL RETURNING uuid`, [uuid]);
+    if (updated.length !== 1) throw new Error(`${table} ${uuid}: expected to retire one row, retired ${updated.length}`);
+  }
+
+  /** Revoke the buyer's lifetime unlock of this creator's exclusive posts, bought during the test. */
+  async retireLifetimePurchases(buyerUuid: string, creatorUuid: string): Promise<number> {
+    const rows = await this.exec(
+      `SELECT p.uuid FROM post_lifetime_purchases p
+         JOIN users b ON b.id = p.buyer_id JOIN users c ON c.id = p.creator_id
+        WHERE b.uuid = $1 AND c.uuid = $2 AND p.deleted_at IS NULL`,
+      [buyerUuid, creatorUuid],
+    );
+    for (const row of rows) await this.retire('post_lifetime_purchases', String(row.uuid));
+    return rows.length;
+  }
+
+  /** Turn the test's pending lifetime order into a failed one: status `expired`, payment window closed. */
+  async failLifetimePayment(orderUuid: string): Promise<void> {
+    await this.set('post_lifetime_purchases', orderUuid, { status: 'expired', expired_at: new Date(Date.now() - 60_000) });
+  }
+
+  /**
+   * Let a test edit the account's identity through the UI and get it back afterwards: snapshots
+   * name, username, photo and the username cooldown (a photo upload also blanks the name — bug), and clears the cooldown (a change otherwise blocks the
+   * next one for 24 h). `restoreAll()` writes the original username and photo straight back.
+   */
+  async protectProfile(userUuid: string): Promise<void> {
+    const [row] = await this.exec('SELECT name, username, photo_profile_path FROM users WHERE uuid = $1', [userUuid]);
+    if (!row) throw new Error(`users ${userUuid}: not found`);
+    await this.set('users', userUuid, { name: row.name, username: row.username, photo_profile_path: row.photo_profile_path, username_changed_at: null });
   }
 
   /** Put every changed row back, newest change first. Collects failures and throws once at the end. */

@@ -67,6 +67,13 @@ export class ProductPurchasePage {
     await expect(this.voucherInput).toBeVisible();
   }
 
+/** On an open product page: Purchase opens the checkout (voucher entry visible). */
+  async startPurchase(title: string) {
+    await expect(this.page.getByText(title, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await this.purchaseAction.click();
+    await expect(this.chooseVoucherButton).toBeVisible({ timeout: 15000 });
+  }
+
   async applyPromotion(code: string) {
     await safeFill(this.voucherInput, code);
     await safeClick(this.applyVoucherButton);

@@ -68,6 +68,8 @@ jobs:
       PSQL_DB_PASSWORD: "${{ secrets.PSQL_DB_PASSWORD }}"
       PSQL_DB_PORT: "${{ secrets.PSQL_DB_PORT }}"
       PSQL_DB_SSL_MODE: "${{ secrets.PSQL_DB_SSL_MODE }}"
+      # Lets tests revoke purchases they made (see src/helpers/db/fixtures.ts); dev database only.
+      YAPP_DB_FIXTURES: '1'
       PW_HEADLESS: 'true'
     steps:
     - uses: actions/checkout@v4

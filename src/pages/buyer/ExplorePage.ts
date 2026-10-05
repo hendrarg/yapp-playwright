@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { trackAuthToken } from '@helpers/auth/validate-token';
 import { locatorChain } from '@utils/heal-utils';
+import { VERIFIED_BADGE_SELECTOR } from '@pages/shared/locators';
 import { safeClick, safeFill } from '@utils/playwright.utils';
 
 /**
@@ -38,7 +39,7 @@ export class ExplorePage {
     this.recommendedGrid = page.locator(sectionGrid('Recommended For You!!'));
     this.creatorsSeeMore = page.locator(sectionHeader('Creators For You')).getByRole('link', { name: 'See More', exact: true });
     this.popularSeeMore = page.locator(sectionHeader('Popular Products')).getByRole('link', { name: 'See More', exact: true });
-    this.searchInput = page.getByRole('textbox', { name: 'Search', exact: true });
+    this.searchInput = locatorChain(page, { role: 'textbox', name: 'Search creators, products and more', placeholder: 'Search creators, products and more' });
     this.searchCreatorLinks = page.locator(
       'main a[href^="/"]:has(h3):not([href*="/product/"]):not([href^="/campaign/"])',
     );
@@ -123,6 +124,13 @@ export class ExplorePage {
     await expect(card).toHaveCount(1);
     await expect(card.getByRole('heading', { name: creator.name, exact: true })).toBeVisible();
     await expect(card).toContainText(creator.username);
+  }
+
+  /** The creator's search card carries the Official badge, or not. */
+  async expectCreatorResultOfficial(href: string, official: boolean) {
+    const badge = this.page.locator(`main a[href="${href}"]`).locator(VERIFIED_BADGE_SELECTOR);
+    if (official) await expect(badge.first()).toBeVisible({ timeout: 10000 });
+    else await expect(badge).toHaveCount(0);
   }
 
   async expectNoCreatorResults(query: string) {

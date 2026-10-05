@@ -55,6 +55,11 @@
         "pattern": "Referral Attribution|Referral Earnings|Referral List Updates|Applied Referrer|Single Active Referrer|after referral activity|Apply a valid referral code"
       },
       {
+        "reason": "Creator onboarding: needs a brand-new non-creator account (once per account)",
+        "tabs": ["Feeds and Exclusive"],
+        "pattern": "^Become a Creator \\|"
+      },
+      {
         "reason": "Scheduled job / email delivery",
         "tabs": "*",
         "pattern": "reminder|digest|email notification|notification email|e-?mail (is )?(sent|delivered|received)|receives? an? e-?mail|H-\\d|24[- ]hour"

@@ -54,6 +54,24 @@ Popular Products applies its own status gate on top of the curation: nine produc
 `is_featured_product`, and the one in `draft` (`Quick`, position 0) is the one the
 endpoint drops.
 
+## Official badge and the missing NSFW flag
+
+Verified 2026-10-05 by toggling the flags on `sundanese` (then restored):
+
+- **Official = `users.is_verified_creator`.** The badge is an unnamed gradient SVG whose
+  `<mask id>` contains `verified` (`VERIFIED_BADGE_SELECTOR`). It follows the name on the
+  Explore search card, the profile header, every feed/profile post card and the post detail.
+  Only three dev creators carry it (`iyansr2222`, `angeltest`, `miltonayler`); tests flip it
+  on with `dbFixtures.set('users', uuid, { is_verified_creator: true })`.
+- **There is no creator-level NSFW flag.** `content_settings.is_nsfw` is per product. The only
+  creator switch, `users.is_hide_from_explore`, removes the creator from Explore **and** from
+  exact username search (`No creators found for "sundanese"`), so it cannot be what the NSFW
+  TCs describe (B-032 expects search to still find them). Clarifications CL-AUT-016..019.
+- Explore's landing page never listed `sundanese` even unflagged — "Creators For You" is a
+  short curated/random strip, so absence there proves nothing; assert through search.
+- The search box's accessible name is its placeholder `Search creators, products and more`
+  (the old `Search` name is gone); `?keyword=` drives the results page.
+
 ## Explore listing totals are not counts of what you get
 
 `GET /products/explore?limit=200` reports `totalResults: 225` and delivers 179 rows over
@@ -206,6 +224,42 @@ platform to become more closer and interact with your fans") whose only action i
 `💬 New: your Messages` whose only visible button is `Go To Messages`. That tour is closable
 through its `×`. Until both are cleared, every control on the page — tabs included — is
 unclickable, which is the same trap recorded for the Event & Tickets suites.
+
+## The buyer edits their own profile at /profile/settings
+
+Verified 2026-10-05 (buyer `anthony_mosciski`). The buyer's own `/profile` shows avatar, display
+name, `n following`, a `My Memberships` card and only two tabs — `Feeds` and `Support` (no Shops,
+Links or Exclusive tab; Exclusive is the `All Feeds` / `Exclusive Only` filter). The pencil badge on
+the avatar (an unnamed `span` with an svg) opens **`/profile/settings`** → tabs `Profile and Account`
+/ `Transaction History`: `Change Banner`, an avatar change badge, `Username`
+(placeholder `Enter your username`), `Your Name`, a disabled `Email`, and `Save`. So a buyer **can**
+edit their identity on the buyer app — TC-FE-B-064 ("no edit controls") is out of date.
+
+**Username rules live on the server only.** The form has no maxlength/pattern and no inline errors;
+`Save` is enabled for anything non-empty. `POST /api/v1/accounts/username/change {username}` answers:
+empty → 400 `Username is required`; 3 chars → 400 `Username must be at least 4`; spaces/symbols →
+400 `invalid username`; 26 chars → 400 `Username failed validation (max)`; taken → **409
+`username already exists`** (the UI shows that text); upper-case letters are **accepted**.
+
+**Saving a username** redirects to `/profile` with the overlay "Looking good, <username>!" —
+"Your new username successfully updated." — closed by `Got It!`. The modals on this page are plain
+fixed overlays, not `role="dialog"`.
+
+**Profile picture:** avatar badge → `Upload Profile Picture` (hidden `input[type=file][accept=image/*]`,
+"wider than 1080px, max 10MB, 1:1") → `Crop Selected Picture` (zoom slider, Cancel / Apply). **Apply
+saves immediately** (`PUT /api/v1/accounts/profile/photo`) and shows "Profile Picture Updated!" /
+`Got It!` — no Save needed. `Delete Current Photo` → "Remove Current Photo" → `Yes Remove` sends
+`DELETE /api/v1/accounts/profile/photo` (with no photo it answers 500, S3 key empty).
+
+**Bug M-61 (F&E-13, 2026-10-05): uploading a picture blanks the display name** (`users.name` → `""`; the PUT
+response already carries `name: ""`). With the name empty the settings form loads **both** Username
+and Your Name empty and `Save` stays disabled, so the username can no longer be edited either.
+`dbFixtures.protectProfile()` snapshots name, username, photo and cooldown and restores them.
+
+**A successful change starts a 24-hour cooldown** (`users.username_changed_at`): the next change
+returns **500** `you changed your username recently, you can change it again in 23 hours…`. A test
+that changes a username must reset `username_changed_at` (DB fixture) to put the old one back —
+learned the hard way on 2026-10-05, when a probe left the buyer renamed until a DB restore.
 
 ## Customize: what the profile form actually enforces
 

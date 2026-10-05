@@ -2,11 +2,11 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { safeClick, waitForLoaded } from "@utils/playwright.utils";
-import { locatorChain } from "@utils/heal-utils";
-import { POST_CARD_SELECTOR } from "@pages/shared/locators";
-import { profileTabs, profileLabels, resolveCreatorProfile, type CreatorProfileContext, type ProfileTab } from "@test-data/buyer/profile.data";
+import { flakyClick } from "@utils/flaky-utils";
+import { locatorChain, smartLocator } from "@utils/heal-utils";
+import { POST_CARD_SELECTOR, VERIFIED_BADGE_SELECTOR } from "@pages/shared/locators";
+import { ownProfileLabels, profileTabs, profileLabels, resolveCreatorProfile, type CreatorProfileContext, type ProfileTab } from "@test-data/buyer/profile.data";
 
-const ACTIVE_TAB_CLASS = "primary-text-color";
 const BUYER_APP_ROUTES = new Set([
   "feeds",
   "explore",
@@ -63,6 +63,40 @@ export class ProfilePage {
   async expectLoaded() {
     expect(this.page.url()).not.toContain("/auth");
     this.syncCreatorFromUrl();
+  }
+
+// ── The signed-in buyer's own profile (/profile) ──
+  /** Avatar, display name, following count and the My Memberships entry. */
+  async expectOwnProfileIdentity(displayName: string) {
+    await expect(this.page).toHaveURL(/\/profile$/, { timeout: 15000 });
+    await expect(this.main.getByText(displayName, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.main.getByText(ownProfileLabels.following, { exact: true })).toBeVisible();
+    await expect(this.main.getByText(ownProfileLabels.myMemberships, { exact: true })).toBeVisible();
+  }
+
+  /** The own-profile tabs, in order. */
+  async ownProfileTabLabels(): Promise<string[]> {
+    return (await this.main.getByRole("button").filter({ has: this.page.locator("svg") }).allInnerTexts())
+      .map((t) => t.trim())
+      .filter((t) => (Object.values(profileTabs) as string[]).includes(t) || t === profileLabels.exclusiveTab);
+  }
+
+  /** The pencil badge on the own avatar (an unnamed span) leads to /profile/settings. */
+  async openAccountSettings() {
+    await safeClick(this.main.locator("span.absolute").filter({ has: this.page.locator("svg") }).first());
+    await this.page.waitForURL(/\/profile\/settings/, { timeout: 15000 });
+    await waitForLoaded(this.page);
+  }
+
+  /** The uploaded picture replaces the initial on the own profile and in the account menu. */
+  async expectOwnPictureShown() {
+    await expect(this.main.locator("img").first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByRole("button", { name: ownProfileLabels.accountMenu }).locator("img")).toBeVisible({ timeout: 15000 });
+  }
+
+/** Visiting /<own username> shows the public profile with the buyer's display name. */
+  async expectOwnPublicProfile(displayName: string) {
+    await expect(this.main.getByText(displayName, { exact: true }).first()).toBeVisible({ timeout: 15000 });
   }
 
   async expectAuthenticated() {
@@ -159,9 +193,22 @@ export class ProfilePage {
     return this.main.getByRole("button", { name: label, exact: true });
   }
 
+/** Every label is a visible profile tab. */
+  async expectTabs(labels: readonly string[]) {
+    for (const label of labels) await expect(this.tabButton(label)).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectNoTab(label: string) {
+    await expect(this.tabButton(label)).toHaveCount(0);
+  }
+
   async switchToTab(tab: ProfileTab) {
-    const label = profileTabs[tab];
-    await safeClick(this.tabButton(label));
+    const button = this.tabButton(profileTabs[tab]);
+    // A click that lands before hydration is dropped and the profile stays on Shops; repeat until selected.
+    await expect(async () => {
+      await safeClick(button);
+      await expect(button).toHaveAttribute("data-state", "active", { timeout: 2000 });
+    }).toPass({ timeout: 30000 });
     await waitForLoaded(this.page);
   }
 
@@ -169,11 +216,8 @@ export class ProfilePage {
     const label = profileTabs[tab];
     const btn = this.tabButton(label);
     await expect(btn).toBeVisible({ timeout: 10000 });
-    const cls = (await btn.getAttribute("class")) ?? "";
-    expect(
-      cls.includes(ACTIVE_TAB_CLASS),
-      `Tab "${label}" should be active (class missing "${ACTIVE_TAB_CLASS}"): ${cls}`,
-    ).toBe(true);
+    // Radix tabs: the selected trigger carries data-state="active" (the colour classes change with themes).
+    await expect(btn, `Tab "${label}" should be active`).toHaveAttribute("data-state", "active", { timeout: 10000 });
   }
 
   async expectProductHiddenOnShops(productTitle: string) {
@@ -211,6 +255,11 @@ export class ProfilePage {
   private get tierCards() {
     const pattern = this.creator?.tierPricePattern ?? profileLabels.tierPricePattern;
     return this.main.locator(`text=/${pattern} .* \\/ month/`);
+  }
+
+/** The desktop right-hand Membership panel is shown (tier details are creator-specific). */
+  async expectMembershipPanelVisible() {
+    await expect(this.membershipHeading.first()).toBeVisible({ timeout: 10000 });
   }
 
   async expectMembershipSectionVisible() {
@@ -421,9 +470,102 @@ export class ProfilePage {
   }
 
   async toggleExclusiveOnly() {
-    await safeClick(this.exclusiveOnlyToggle);
+    // FLAKY_FIX: the Feeds tab re-renders its filter bar after hydration and detaches the toggle.
+    await flakyClick(this.exclusiveOnlyToggle);
     await waitForLoaded(this.page);
     await this.page.waitForTimeout(1500);
+  }
+
+  /** A post of this creator is listed on the Feeds tab. */
+  async expectCreatorPostVisible(content: string) {
+    await expect(this.creatorPostByContent(content)).toBeVisible({ timeout: 15000 });
+  }
+
+  /** A post of this creator is listed but gated: it offers `Unlock Post`, not its content. */
+  async expectCreatorPostLocked(content: string) {
+    const post = this.creatorPostByContent(content);
+    await expect(post).toBeVisible({ timeout: 15000 });
+    await expect(post.getByRole("button", { name: profileLabels.unlockPost, exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  /** A purchased post is listed without the `Unlock Post` gate. */
+  async expectCreatorPostUnlocked(content: string) {
+    const post = this.creatorPostByContent(content);
+    await expect(post).toBeVisible({ timeout: 15000 });
+    await expect(post.getByRole("button", { name: profileLabels.unlockPost, exact: true })).toBeHidden({ timeout: 10000 });
+  }
+
+  // ── Lifetime (Unlock All) offer on the Feeds tab ──
+  readonly lifetimeOffer = this.main.getByText(profileLabels.lifetimeOffer, { exact: true });
+
+  readonly lifetimeUnlockButton = smartLocator(this.page, {
+    role: "button",
+    name: profileLabels.lifetimeUnlock,
+    exact: true,
+    text: profileLabels.lifetimeUnlock,
+  });
+
+  readonly lifetimeDialog = this.page.getByRole("dialog", { name: profileLabels.lifetimeDialog });
+
+  /** `Pay Rp<total>` — disabled until the fee breakdown has loaded. */
+  readonly lifetimePayButton = this.lifetimeDialog.getByRole("button", { name: profileLabels.lifetimePay });
+
+
+  /**
+   * The lifetime banner on the Feeds tab. A price saved moments ago is served stale for a while,
+   * so reload the profile (back on the Feeds tab) until the banner shows up.
+   */
+  async expectLifetimeOffer() {
+    await expect(async () => {
+      if (!(await this.lifetimeOffer.isVisible())) {
+        await this.page.reload();
+        await waitForLoaded(this.page);
+        await this.switchToTab("feeds");
+      }
+      await expect(this.lifetimeOffer).toBeVisible({ timeout: 5000 });
+    }).toPass({ timeout: 60000, intervals: [2000, 5000] });
+    await expect.poll(() => this.lifetimeUnlockButton.visibleCount(), { timeout: 10000 }).toBeGreaterThan(0);
+  }
+
+  async expectNoLifetimeOffer() {
+    await expect(this.lifetimeOffer).toBeHidden({ timeout: 15000 });
+    await expect.poll(() => this.lifetimeUnlockButton.visibleCount(), { timeout: 10000 }).toBe(0);
+  }
+
+/** Open the lifetime checkout from the Feeds-tab banner and check the price it charges. */
+  async openLifetimeCheckout(price: string) {
+    await this.expectLifetimeOffer();
+    await this.lifetimeUnlockButton.click();
+    await expect(this.lifetimeDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.lifetimeDialog).toContainText(price);
+  }
+
+  /** Pay the open lifetime checkout (phone only when not prefilled); returns the order id from the URL. */
+  async payLifetime(phone: string): Promise<string> {
+    // The buyer's saved phone is prefilled (and the field then refuses input); type one only when it is blank.
+    const phoneInput = this.lifetimeDialog.getByPlaceholder(profileLabels.lifetimePhone);
+    if (!(await phoneInput.inputValue())) await phoneInput.fill(phone);
+    // FLAKY_FIX: the button re-renders once the fee breakdown arrives.
+    await flakyClick(this.lifetimePayButton);
+    await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
+    await waitForLoaded(this.page);
+    return this.page.url().split("/transaction/")[1];
+  }
+
+  async buyLifetime(price: string, phone: string): Promise<string> {
+    await this.openLifetimeCheckout(price);
+    return this.payLifetime(phone);
+  }
+
+  async expectLifetimeCheckoutNamesCreator(creatorName: string) {
+    await expect(this.lifetimeDialog).toContainText(creatorName, { timeout: 10000 });
+  }
+
+
+/** The profile header shows the Official badge beside the creator's name. */
+  async expectOfficialBadgeBesideName(displayName: string) {
+    const nameRow = this.main.locator("div").filter({ has: this.page.getByText(displayName, { exact: true }) }).filter({ has: this.page.locator(VERIFIED_BADGE_SELECTOR) });
+    await expect(nameRow.last()).toBeVisible({ timeout: 10000 });
   }
 
   async expectExclusiveOnlyShowsLocked() {

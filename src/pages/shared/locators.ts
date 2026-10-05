@@ -317,6 +317,12 @@ export const livePreviewCard = (page: Page) => page.locator("div:has(> h3)");
  * constant that used to sit in both FeedsPage and ProfilePage. When the app gains a
  * `data-testid` on post cards, this is the one line to change.
  */
+/**
+ * The Official (verified creator) badge: an unnamed gradient SVG whose mask id contains "verified".
+ * It follows the creator's name on search cards, profile headers and post cards.
+ */
+export const VERIFIED_BADGE_SELECTOR = 'svg:has(mask[id*="verified"])';
+
 export const POST_CARD_SELECTOR =
   "[class*='cursor-pointer'][class*='flex-row'][class*='items-start']";
 

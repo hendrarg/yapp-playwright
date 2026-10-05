@@ -1,4 +1,4 @@
-> **Obsidian:** Live repo copy — vault canonical: [[../../../raw/sources/yapp/README|raw README]] · [[projects/yapp/yapp|Hub]] · [[home|Vault home]]
+> **Obsidian:** Source of truth for this README — the vault mirror is `raw/sources/yapp/README.md`. Vault: [[../../../raw/sources/yapp/README|raw mirror]] · [[projects/yapp/yapp|Hub]] · [[home|Vault home]]
 
 # Yapp — End-to-End Test Automation
 
@@ -91,6 +91,7 @@ LoginPage               → /auth
 
 Buyer Pages (YAPP_BASE_URL)
 ├── ExplorePage         → /explore
+├── LandingPage         → /
 ├── CartPage            → /cart
 ├── ProductPurchasePage → /{product-path}
 ├── FeedsPage           → /feeds, /post/{id}
@@ -106,6 +107,7 @@ Creator Pages (YAPP_CREATORS_BASE_URL)
 ├── AffiliatePage       → /affiliate
 ├── AnalyticsPage       → /analytics
 ├── CampaignsPage       → /campaigns
+├── CustomizePage       → /customize
 ├── FeedsPage           → /feeds
 ├── MembershipPage      → /membership
 ├── MessagesPage        → /messages
@@ -118,7 +120,21 @@ Creator Pages (YAPP_CREATORS_BASE_URL)
 ├── SettingsPage        → /settings
 ├── StreamingPage       → /streaming
 └── WalletPage          → /wallet
+
+Product-type editors (page-object fixtures only — no buyerNav/creatorNav route yet)
+├── ConsultationPage
+├── DigitalProductPage
+├── DiscordMembershipPage
+├── EventsPage
+├── EventGuestsPage
+├── OnlineCoursePage
+├── TelegramMembershipPage
+└── StreamerOverlaysPage
 ```
+
+Every page-object fixture is listed in `src/fixtures/page.fixtures.ts`; the routes above are the
+ones wired into `buyerNav` / `creatorNav` (`src/helpers/buyer/nav.ts`, `src/helpers/creator/nav.ts`).
+Adding a page to a nav is a six-step checklist — see `.agents/rules/testing.md`.
 
 ### Example
 
@@ -140,12 +156,13 @@ test('explore page loads without auth redirect', { tag: ['@explore', '@buyer', '
 
 Token injection sets the cookie on the apex domain so one token works for both buyer and creator subdomains.
 
-**Important:** Primary OTP login uses the testmail QA inbox (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`) and saves to `YAPP_TEST_ACCESS_TOKEN`. When token1 is missing/expired/wrong user, `authTest` / `creatorAuthTest` refresh it via that OTP flow. Sundanese uses `{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app` → `YAPP_TEST_ACCESS_TOKEN_2`. Run `npm run token:inspect` to verify which user each env var holds.
+**Important:** every account has its own token slot, and a refresh writes back to **that** slot — it can no longer swap accounts. Token1 is the creator `hendrarg` (its OTP login uses `YAPP_CREATOR_LOGIN_EMAIL`); the buyer `anthony_mosciski` lives in `YAPP_TEST_ACCESS_TOKEN_BUYER` and logs in through the testmail QA inbox (`{TESTMAIL_NAMESPACE}.qa@inbox.testmail.app`); Sundanese uses `{TESTMAIL_NAMESPACE}.sdet@inbox.testmail.app` → `YAPP_TEST_ACCESS_TOKEN_2`. Owners are checked by the JWT **uuid**, since Yapp tokens carry no username. Run `npm run token:inspect` to verify which user each env var holds, or `npm run token:refresh -- creator|qa|sundanese` to refresh one slot (prefer `PW_WORKERS=1` so workers do not race one OTP inbox).
 
 | Token | Env var | Owner | Use for |
 |-------|---------|-------|---------|
-| token1 | `YAPP_TEST_ACCESS_TOKEN` | QA Tester (`x7nv1.qa`) | `authTest`, `creatorAuthTest`, primary products/promotions seeding |
-| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (`x7nv1.sdet`) | Creator-post seeding |
+| token1 | `YAPP_TEST_ACCESS_TOKEN` | Creator `hendrarg` (user 317) | `creatorAuthTest` + all creator-side seeding (products, promotions, consultations) |
+| token2 | `YAPP_TEST_ACCESS_TOKEN_2` | Sundanese (user 345) | Creator-post seeding and second-account flows |
+| buyer | `YAPP_TEST_ACCESS_TOKEN_BUYER` | QA buyer `anthony_mosciski` (user 459) | `authTest` — the buyer session |
 
 ## Fixtures
 
@@ -195,7 +212,7 @@ npm test                                    # All Chromium tests
 npm run test:smoke                          # @smoke only
 npm run test:regression                     # @regression only
 npx playwright test tests/buyer/explore.spec.ts
-npx playwright test --grep @AUT-FV-082      # Single automation by tag
+npx playwright test --grep @AUT-FE-012      # Single automation by tag (legacy @AUT-FV-* tags still run)
 npx playwright test --ui
 npm run typecheck                           # tsc --noEmit
 npx eslint .                                # Lint; add --fix for mechanical fixes
@@ -217,15 +234,21 @@ mobile and desktop trees. Override with `PW_VIEWPORT=1280x720` or `PW_VIEWPORT=m
 | `YAPP_BASE_URL` | Yes | Buyer app URL |
 | `YAPP_CREATORS_BASE_URL` | Yes | Creator app URL |
 | `YAPP_API_BASE_URL` | Yes | API base URL |
-| `YAPP_TEST_ACCESS_TOKEN` | For auth tests | QA Tester auth token (do not commit) |
-| `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Sundanese token for creator-post seeding |
+| `YAPP_TEST_ACCESS_TOKEN` | For creator auth/API seeding | Creator `hendrarg` token; auto-refreshed via OTP, code read from `otp_codes` (do not commit) |
+| `YAPP_TEST_ACCESS_TOKEN_BUYER` | For buyer auth | QA buyer `anthony_mosciski` token; auto-refreshed via `*.qa@inbox.testmail.app` (do not commit) |
+| `YAPP_CREATOR_LOGIN_EMAIL` | For creator token refresh | Login email of `hendrarg` (do not commit) |
+| `YAPP_TEST_ACCESS_TOKEN_2` | Optional | Sundanese token for creator-post seeding and second-account flows |
 | `TESTMAIL_API_KEY` | For OTP tests | testmail.app API key |
 | `TESTMAIL_NAMESPACE` | For OTP tests | testmail.app namespace |
 | `YAPP_AUTOMATION_SHEET_ID` | For `/automation` | Google Spreadsheet ID |
 | `YAPP_AUTOMATION_MAPPING_GID` | For `/automation` | Automation Mapping sheet GID |
+| `YAPP_AUTOMATION_CLARIFICATIONS_SHEET` | No | Defaults to `Automation Clarifications` |
 | `PW_HEADLESS` | No | Run headless (`true`/`false`, default `false` locally) |
-| `PW_WORKERS` | No | Parallel worker count (default `1`) |
+| `PW_WORKERS` | No | Parallel worker count (default `1`; prefer `1` when a run may refresh a token) |
 | `PW_VIEWPORT` | No | `1440x900` default; `<w>x<h>` or `maximized` |
+| `YAPP_MCP_ACCOUNT` | No | Account injected into the MCP browser: `creator` (default), `buyer`, `sundanese`, or `guest` |
+| `YAPP_PLAYWRIGHT_BROWSERS_PATH` | No | Stable Playwright browser cache; sandboxes otherwise re-download Chromium |
+| `YAPP_DB_FIXTURES` | No | `1` lets the `dbFixtures` fixture change whitelisted dev-DB rows (restored after each test); never set against production |
 | `GEMINI_API_KEY` | No | Enables AI-assisted test data (Google Gemini). Absent → seeded-Faker only |
 | `GEMINI_MODEL` | No | Gemini model for test data (default `gemini-3.5-flash-lite`) |
 | `YAPP_TEST_SEED` | No | Fixed Faker seed to reproduce a run exactly (default per-run timestamp) |

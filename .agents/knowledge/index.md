@@ -5,7 +5,7 @@ index_of: knowledge
 category: project
 tags: [yapp, product, automation]
 project: yapp
-updated: 2026-09-23
+updated: 2026-10-05
 created: 2026-09-04
 sources: 0
 status: active
@@ -47,10 +47,10 @@ the sheet wins.
 | Note | Covers |
 |------|--------|
 | [[products\|Products]] | Pricing defaults and the Rp10.000 floor, thumbnail capacity and rejection, the status lifecycle, Online Course after-sales |
-| [[posts\|Posts]] | Post visibility tiers, pay-per-view pricing, what the composer can and cannot publish, editing published posts, scheduling and buyer video playback |
-| [[messaging\|Messaging]] | Chat and Broadcast, Group Chat rows in that same Chat list, the 3-value access policy, attachment cards, mark badges, buyer inbox limits |
+| [[posts\|Posts]] | Post visibility tiers, pay-per-view pricing, what the composer can and cannot publish, editing published posts, scheduling, buyer video playback, and Lifetime access — where the buyer meets it and how a Rp0 price behaves |
+| [[messaging\|Messaging]] | Chat and Broadcast, Group Chat rows in that same Chat list, the 3-value access policy, WebSocket sends, composer limits, attachment cards, mark badges, buyer inbox limits, long-text wrapping |
 | [[tipping\|Tipping]] | Tip button configuration, the fee split, the buyer tip form and its Livestream add-ons |
-| [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap |
+| [[livestream\|Livestream]] | The `/streamer` app map, overlay URLs, media-share pricing, the shared Save and its Voting trap, Subathon Gacha vs timer rules, and the per-widget sliders |
 | [[onboarding\|Onboarding]] | Creator sign-up, username rules, the three-step wizard — the account exists before the username, host-scoped session cookies, exactly-three tools, and a silent profile-picture path |
 | [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
 | [[membership-tiers\|Membership tiers]] | The creator's own subscription programme at `/membership` — **not a product**: per-duration prices, Perk Hybrid `accessMode`, and the Enable Group Chat toggle (shared room, frozen when turned off) |
@@ -58,7 +58,7 @@ the sheet wins.
 | [[orders-and-reports\|Orders & reports]] | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
 | [[settings\|Settings]] | The two tabs and their URL behaviour, five fee blocks with a display-only split, the auto-saving gateway choice, the bank form with no validation, the five integrations |
 | [[wallet\|Wallet]] | The three disagreeing balance surfaces, history pagination and its filter labels, the withdrawal dialog and its unvalidated address |
-| [[explore-and-profile\|Explore & profile]] | Explore feeds and the curated Popular section, dead account fields, landing CTA structure, profile tab order |
+| [[explore-and-profile\|Explore & profile]] | Explore feeds and the curated Popular section, the Official badge (`is_verified_creator`) and the missing creator-level NSFW flag, dead account fields, landing CTA structure, profile tab order |
 | [[referral\|Referral]] | The 1% / 10% two-sided programme, the `?c=` link and its creator-domain-only cookie, live code validation, the empty-list `Page 1 of 0` |
 | [[campaigns\|Campaigns]] | Where Campaigns diverge from the Products standard: no Draft state (draft = inactive), a different row menu with no Delete, no title length rule, inactive links still take donations |
 | [[currency-format\|Currency format]] | Creator renders `Rp10.000,00` where buyer renders `Rp10.000`, the third `IDR 10,000` preview dialect, and every creator surface that shows the decimals |

@@ -15,15 +15,33 @@ export const feedsLabels = {
   unlikePost: "Unlike post",
   memberOnly: "Member Only",
   openPostMedia: "Open post media",
+  viewProducts: "View Products",
+  nextImage: "Next image",
+  previousImage: "Previous image",
   guestFollowingEmptyHeading: "You're not following anyone yet",
   guestFollowingEmptySubtext: "Follow creators to see their latest posts here",
   signInBeforeFollowing: "Sign in before following",
   signInNow: "Sign in now!",
   unlockPost: "Unlock Post",
+  unlockNow: /Unlock Now/i,
+  unlockPaymentDialog: "Unlock Exclusive Post",
+  unlockPay: "Pay Rp",
+  screenshotWarning: "Screenshot not allowed",
+  screenshotWarningBody: "This content is protected.",
+  screenshotWarningDismiss: "I Understand",
   writeComment: "Write your comment",
   back: "Back",
   postComment: "Post",
+  openCommentActions: "Open comment actions",
+  editComment: "Edit",
+  deleteComment: "Delete",
+  saveComment: "Save",
+  cancelEditing: "Cancel editing",
+  deleteCommentTitle: "Delete this comment?",
 } as const;
+
+/** A comment can only be edited this long after it was posted (toast otherwise). */
+export const commentEditWindowMs = 60_000;
 
 export type FeedsTab = keyof typeof feedsTabs;
 

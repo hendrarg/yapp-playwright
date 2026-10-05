@@ -78,13 +78,38 @@ field. The composer shows no copy about file size, media count, or video duratio
 note previously recorded. The number is enforced, not decorative: `Save` stays disabled
 at 5.000 and 9.999 and enables from 10.000 upward.
 
-**Turning the `Lifetime access` switch off does not disable anything — it writes a price
-of zero.** Saving with the switch off sends `PUT /api/v1/posts/lifetime-prices/me` with
-`{"priceIDR":0}`; the `post_lifetime_prices` row is never deleted and there is no
-active/inactive flag. The creator UI then shows the switch off with an empty price, which
-looks right — but the buyer still sees the lifetime banner and `Unlock now`, and the
-checkout opens at **Price Rp0, Total Rp0, with `Pay Rp0` enabled**. Filed as H-04;
-whether paying Rp0 actually grants access is deliberately untested.
+**Turning the `Lifetime access` switch off writes a price of zero** — `PUT
+/api/v1/posts/lifetime-prices/me` with `{"priceIDR":0}`; the `post_lifetime_prices` row is
+never deleted and there is no active/inactive flag. **H-04 is fixed (re-checked 2026-10-05):**
+at price 0 the buyer profile no longer shows the lifetime banner or `Unlock now`, while
+single-post `Unlock Post` stays. `GET /api/v1/posts/lifetime-prices/{creatorUuid}` (or `/me`)
+reads the current price.
+
+**Where the buyer meets it:** the creator profile's Feeds tab shows the banner `Get all the
+exclusive content lifetime with just one tap!` with `Unlock now`. That opens dialog
+`Lifetime Access` — phone number only (prefilled from the buyer's account, and the field then
+refuses typing), payment methods, voucher, fee breakdown (Rp15.000 → fee Rp150 + PG Rp152 →
+`Pay Rp15.302`). Paying goes to `/transaction/<orderId>` and `depositWebhook` settles it like
+a PPV order; afterwards every current **and future** PPV post of that creator reports
+`isPurchased: true` and appears in the buyer's Exclusive tab.
+
+**The banner is cached ~1 minute.** It is driven by `GET /api/v1/lifetime-prices/{username}/check`
+(`isSet`) plus `GET /api/v1/posts/lifetime-prices/{creatorUuid}/has-bought`; after a price change
+`isSet` lagged 36–62 s (measured 2026-10-05). Poll it (`waitForLifetimeOffer`) before asserting UI.
+
+**The `Lifetime Access` checkout never names the creator** — only phone, payment method, voucher
+and price (TC-FE-B-052 expects creator info; AUT-FE-020 runs under `test.fail()` until L-78 (F&E-12) is fixed).
+The order page is `/lifetime/transaction/<orderId>`. A settled order shows dialog
+`Payment Successful!` naming the creator with an `Exclusive` pill — it must be closed, or it
+covers the next page. An order whose row is `status = 'expired'` shows dialog `Payment Failed`
+("We couldn't complete your payment.", `Try Again` / `Back to Checkout`); only moving
+`expired_at` into the past is not enough. `dbFixtures.failLifetimePayment(orderId)` does both.
+Purchase statuses seen: `pending`, `completed`, `expired`.
+
+**A lifetime purchase is permanent** (`post_lifetime_purchases`, no refund API) and would
+unlock every PPV post that other tests expect locked. Tests that buy one revoke it with
+`dbFixtures.retireLifetimePurchases(buyer, creator)` (sets `deleted_at`; access is gone
+immediately), which needs `YAPP_DB_FIXTURES=1`.
 
 The buyer-facing price itself works correctly when lifetime is on: the `Lifetime Access`
 checkout shows the saved price with its fee breakdown (Rp99.999 → fee Rp1.000 + PG
@@ -102,6 +127,10 @@ viewport width.
 `Feeds`, `Support` — with Membership rendered as a right-hand sidebar panel. At 700 and
 480 the panel becomes a fifth tab and the list reads `Shops`, `Links`, `Feeds`,
 `Membership`, `Support`. The earlier five-tab note was correct only for the narrow case.
+At narrow widths only the **active** tab keeps its label — the inactive ones are bare icons
+with no accessible name, so `getByRole('button', { name: 'Links' })` finds nothing there.
+The selected tab is marked by `data-state="active"` (Radix); the old `primary-text-color`
+class is gone (re-checked 2026-10-05).
 
 **The creator side has no Exclusive view at all.** `/feeds` offers exactly three tabs —
 `Published`, `Draft`, `Scheduled` — and exclusive posts sit among the public and
@@ -116,6 +145,50 @@ dialog carrying the post title, `Purchase to unlock the full content`, an `Unloc
 button and the PPV price (verified at Rp60.000). Member-only posts render
 `Subscribe to Unlock` instead. The price is not printed on the feed card itself.
 
+**Text-only PPV posts never show `Unlock Post`** (verified 2026-10-05): with no media to
+blur, the body stays readable and the post detail offers only `Unlock post to add comments`
+and `Unlock Now`. Seed an image PPV post whenever a test needs the `Unlock Post` gate.
+
+`Unlock Now` (on the preview or the post detail — both render one, so a bare
+`getByRole('button', { name: 'Unlock Now' })` is a strict-mode violation) opens the payment
+dialog `Unlock Exclusive Post` (accessible name via `aria-labelledby`): Contact Information
+with `Name`, `Email` (prefilled) and `Enter phone number`, payment methods QRIS /
+CREDIT CARD / VA BRI / EWALLET SHOPEEPAY, `Redeem Voucher`, Detail Transactions and a
+`Pay Rp<price>` submit button. Paying navigates to `/transaction/<orderId>`; settle it with
+`depositWebhook`.
+
+## Buyer /feeds: the Exclusive tab appears only after a purchase
+
+On the buyer `/feeds` page the `Exclusive` tab (next to `Following`) is **hidden until the
+buyer owns at least one exclusive post** (verified 2026-10-05: the buyer account with zero
+purchases had no tab; the creator account with seven did). It lists
+`GET /api/v1/posts/explore?type=exclusive&isPurchasedOnly=true` — purchased pay-per-view
+posts only. A test that needs the tab must buy a seeded PPV post first.
+
+There is **no plus / Follow quick action on a creator's avatar** in the feed, on `/feeds` or
+`/explore`, desktop or mobile (checked 2026-10-05, clarification CL-AUT-012). Follow and
+Unfollow live on the creator profile page only.
+
+## The buyer "Exclusive badge" is an unnamed pink lock pill
+
+Verified 2026-10-05: a pay-per-view post carries a small pink-to-purple gradient pill with a
+white lock icon right after the timestamp, on the feed card **and** the post detail. It has no
+text and no accessible name — the only hook is the gradient class (`from-[#FF0090]`). There
+is no word "Exclusive" anywhere on the buyer card.
+
+## Screenshot protection is a dialog on the Exclusive tab
+
+On the buyer `/feeds` Exclusive tab, pressing `PrintScreen` (also Ctrl/Meta+Shift+S,
+Meta+Shift+3/4) opens dialog `Screenshot not allowed` — "This content is protected. Please
+respect creator rights." — with `I Understand` and `Close`. The Following tab does not react.
+The copy does **not** mention legal action (clarification CL-AUT-013).
+
+## Updating a post via API replaces its assets
+
+`PUT /api/v1/posts/{uuid}` takes the create payload and **replaces** the asset list: send the
+original upload id as `assets[].url` to keep the media. The signed URLs a GET returns are
+silently dropped, leaving the post with no media (helper `updatePost`).
+
 ## Every control on the feed is an unlabelled icon
 
 Verified 2026-09-09 while trying to script this area: the post row action buttons and all
@@ -124,19 +197,47 @@ only a lucide `svg` class. Locating them needs either real `data-testid` hooks o
 browser-verified role scope from `generate-locators-mcp`; blind DOM heuristics do not
 reach the post action menu at all.
 
-## Comments: Delete is the only action, and only on your own
+## Comments: Edit (for one minute) and Delete, only on your own
 
-Verified 2026-09-09 with two buyer accounts on one public post.
+Verified 2026-09-09 with two buyer accounts on one public post; **Edit added and re-verified
+2026-10-05** (the 09-09 "Delete only, no Edit" is superseded).
 
 - The comment thread lives on the **post detail page, `/post/{uuid}`** — reachable by
   clicking the post card. The comment-count button on the feed row opens nothing, so
   navigate to `/post/{uuid}` directly in a script.
-- The composer is `Add a comment...` with a `Post` button; a comment appears immediately.
-- **Your own comment** carries one control, `aria-label="Open comment actions"`, and its
-  popover offers **`Delete` only — there is no Edit**.
+- The composer is a textbox named `Write your comment` (placeholder `Write your comment
+  here...`) with a `Post` button that stays disabled while the box is empty; a comment
+  appears immediately (`POST /api/v1/posts/{uuid}/comments` `{postUUID, content}`).
+- **Your own comment** carries one control, `aria-label="Open comment actions"`. Its popover
+  is a `dialog` (not a menu) with two **buttons**, `Edit` and `Delete`.
+- **Edit loads the comment into the same `Write your comment` box** and swaps the composer
+  buttons for `Cancel editing` + `Save` (`PUT /api/v1/posts/comments/{id}`). **It only works
+  within one minute of posting** — later, Save shows the toast `Comments can only be edited
+  within 1 minute of posting.` and the text does not change. A test must edit right after
+  posting, or seed the comment and edit it inside the window.
+- **Delete asks first**: a dialog `Delete this comment?` / `Once you delete it, there's no
+  turning back!` with `Cancel` and `Delete` (`DELETE /api/v1/posts/comments/{id}`).
 - **Another buyer's comment carries no control at all**: no kebab, no menu, nothing to
   click. Authorization is enforced by not rendering, so a test should assert the absence
   of the button rather than an error message.
+- Like is `button "Like post"`, which becomes `"Unlike post"` once liked; the count is the
+  `p` right after it. `GET /api/v1/posts/{uuid}` returns `likeCount`, `commentCount` and
+  `likedByMe` — the source of truth for an engagement-count assertion.
+
+## Linked products on a post
+
+Verified 2026-10-05 with API-seeded products (`productUuids` on `POST /api/v1/posts`):
+
+- The feed card shows only `View Products (n)`; the post detail lists each product as a chip
+  — thumbnail (`img alt` = product title), title, price written `Rp15,000` (comma, unlike the
+  product page's `Rp15.000`). Chips have no role and no link; clicking the title navigates to
+  `/<creator>/product/<shortId>`, whose `Purchase` opens checkout.
+- A post with no products shows neither the label nor any chip.
+- A **deleted** product drops out (`View Products` count and chips both exclude it).
+- **An `inactive` product is still shown** — counted in `View Products (n)`, rendered as a
+  chip, and clicking it lands on `That page doesn't exist`. Contradicts TC-FE-B-050; AUT-FE-019
+  runs under `test.fail()` until M-60 (F&E-11) is fixed.
+- No API changes a product's status; seed an inactive one with `status: 'inactive'` on create.
 
 ## The composer cannot publish anything that is not Public
 
@@ -200,12 +301,22 @@ to watch the transition.
 The `Scheduled` tab card labels a future schedule `Posted on …` (past tense) while the
 composer and the edit chip both say `Posting on …` — filed as L-20.
 
+## Buyer image preview and gallery
+
+Tapping a feed image (`Open post media`, one per tile) opens dialog `Post image modal` at
+**the tapped image**. Desktop has `Previous image` / `Next image` buttons (ArrowLeft/Right
+work too); mobile instead shows a `1/3` counter and swipes. The image is `object-fit:
+contain`. **There is no zoom on desktop** — wheel, Ctrl+wheel, click and double-click change
+nothing, and no pinch/zoom wrapper exists (clarifications CL-AUT-014/015). Images are served
+via `/_next/image?url=…`; compare the file name inside `url` to tell gallery images apart.
+`createPost({ imagePaths: [...] })` seeds a gallery.
+
 ## Buyer video playback
 
 A video post autoplays **muted and inline** on the post detail. Tapping it opens a
 full-screen modal (`document.fullscreenElement` becomes `<html>`, not the `<video>`), and
-`Escape` exits back to the originating post. Inside that modal the only buttons are
-`Unmute video`, `Close modal` and `Like post` — **no play/pause, no seek bar, no exit
-button**, `video.controls` stays `false`, `Space` and `ArrowRight` do nothing, and even a
-programmatic `currentTime` write is reverted. Filed as M-21. The creator-side card, by
+`Escape` exits back to the originating post. **Re-checked 2026-10-05: the controls bug (M-12, earlier noted as
+M-21) looks fixed.** The modal's `<video>` now has `controls = true`; a click pauses it,
+`Space` resumes, and programmatic `currentTime` writes (forward and back) stick. The modal
+buttons are `Close modal` and `Like post`. Feed scroll position survives open + `Escape`. The creator-side card, by
 contrast, does render `Play 00:00 00:30 Mute Enter fullscreen`.

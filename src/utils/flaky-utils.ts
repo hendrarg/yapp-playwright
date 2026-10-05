@@ -26,10 +26,10 @@ export async function flakyClick(locator: Locator, options?: { retries?: number;
 
   for (let i = 0; i < retries; i++) {
     try {
-      await locator.scrollIntoViewIfNeeded();
+      await locator.scrollIntoViewIfNeeded({ timeout });
       await expect(locator).toBeVisible({ timeout });
       await expect(locator).toBeEnabled({ timeout });
-      await locator.click();
+      await locator.click({ timeout });
       return;
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
