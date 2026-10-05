@@ -318,7 +318,12 @@ time`** (`aria-label="Tips add time to the clock"`), combined with the Gacha mas
 |---|---|---|
 | ON | OFF | `You're tipping IDR 15.000 will add 10m 0s to the stream` — no chooser |
 | ON | ON | at **≥ Gacha minimum** a chooser `Add subathon time by` **[Timer rules] [Spin gacha]**, default Timer rules; below the minimum no chooser, but the `will add …` line still shows and the rules still apply |
-| OFF | ON | nothing subathon-related at any amount, although qualifying tips spin the wheel |
+| OFF | ON | at ≥ Gacha minimum `You're tipping IDR 25.000 will spin the Subathon Gacha (+5m 0s or +10m 0s)`, no chooser; below the minimum nothing (the tip moves nothing). Was blank until fixed — re-verified 5 Oct 2026 |
+
+**Everything in this table needs the Subathon timer to be running.** Re-verified 5 Oct 2026 on
+`anthony_mosciski`: with `isRunning: false` (`GET /api/v1/account/<uuid>/subathon`) the tip page
+shows no chooser and no `will …` line at any amount, even with Gacha ON and a rule stored. Press
+`START TIMER` first, then `PAUSE`/`RESET` to put the creator back.
 
 - The Gacha minimum is inclusive: Rp19.999 shows no chooser, Rp20.000 does.
 - **Proven with three settled dev tips (30 Sep 2026).** The choice travels as
@@ -330,13 +335,22 @@ time`** (`aria-label="Tips add time to the clock"`), combined with the Gacha mas
 - **Text-search trap:** the buyer info line reads `You're tipping IDR 15.000 will add 10m 0s to the
   stream` and contains none of the words subathon/gacha/timer — match on `will add`, or you will
   "prove" the line is missing.
-- Picking `Spin gacha` removes the info line; the possible prizes (the wheel's `5 min` /
-  `10 min` slots) are never shown to the buyer.
-- With `Tips add time` OFF, the editor's `TRY AN AMOUNT` still reads `A tip of Rp25.000 adds
-  +20 min to the timer.` — the simulator ignores the switch.
+- Picking `Spin gacha` swaps the info line for `You're tipping IDR 20.000 will spin the Subathon
+  Gacha (+5m 0s or +10m 0s)` — the wheel's slots, listed (fixed; re-verified 5 Oct 2026). The
+  selected option is now filled blue (`rgb(37, 99, 235)`, white text) and the other light; until
+  the fix both looked identical and only `aria-checked` differed.
+- With `Tips add time` OFF, the editor's `TRY AN AMOUNT` reads `A tip of Rp25.000 won't move the
+  timer while Tips add time is off. Qualifying tips spin the Subathon Gacha instead.` (fixed; it used
+  to keep saying `adds +20 min`). Re-verified 5 Oct 2026; the toggle is unsaved, so no SAVE needed.
 - The Gacha master switch needs `Minimum tip to spin` > 0 to save: SAVE is refused with the toast
   `Subathon Gacha minimum tip must be greater than 0` and no request. With Gacha OFF that field is
-  **disabled**, so a value typed while it was on stays stored.
+  **disabled**, so a value typed while it was on stays stored. To put it back to `0`, type `0` *while
+  still ON*, switch Gacha OFF and SAVE in one go — that saves (5 Oct 2026, `gachaMinTipAmount: 0`).
+- **The editor shows a rule the server does not have.** With `GET /api/v1/subathons` returning
+  `rules: []`, `Time extension rules` still reads `1 rule` (`Rp10.000 → + 10 minutes`) and `0 unsaved
+  changes`, and the tip page then shows no `will add` line. A SAVE from either Subathon tab may or may
+  not persist that row — one Gacha-tab save created it, a later one wrote `rules: []`. Check the
+  API, never the editor, before assuming a rule exists.
 ## The Subathon preview clock is decorative
 
 Verified 2026-09-09. The clock drawn on the dashboard preview card shows the **Starting
