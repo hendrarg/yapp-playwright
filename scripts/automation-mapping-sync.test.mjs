@@ -85,6 +85,15 @@ test("changed TC content flips an Automated row to Needs Review", () => {
   assert.equal(sync(ctxFor(edited, { mapping }), {}).rows[0].cells[13], "Needs Review");
 });
 
+test("rows listed in config exclude.rows are removed (Planned) or retired (Automated)", () => {
+  const list = [tc("TC-TIP-C-001", "A"), tc("TC-TIP-C-002", "A"), tc("TC-TIP-C-003", "A")];
+  const mapping = rebuiltMapping(list);
+  mapping[1][0] = "AUT-E2E-006"; // listed in scripts/automation-mapping.config.json → exclude.rows
+  assert.equal(sync(ctxFor(list, { mapping }), {}).rows.filter((r) => r.id === "AUT-E2E-006").length, 0);
+  mapping[1][13] = "Automated";
+  assert.equal(sync(ctxFor(list, { mapping }), {}).rows.find((r) => r.id === "AUT-E2E-006").cells[13], "Retired");
+});
+
 test("known bugs follow the Bugs sheet", () => {
   const list = [tc("TC-TIP-C-001", "A"), tc("TC-TIP-C-002", "A"), tc("TC-TIP-C-003", "A")];
   const mapping = rebuiltMapping(list);

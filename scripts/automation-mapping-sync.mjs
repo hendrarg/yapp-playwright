@@ -307,6 +307,14 @@ function sync(ctx, prev = readState()) {
   const changes = [];
   const renames = new Map();
   const rows = old.rows.map((r) => ({ id: r.id, cells: [...r.cells], tcIds: [...r.tcIds] }));
+  // Rows taken out of scope by config.exclude.rows: Planned-like rows go, Automated rows retire.
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const reason = (CONFIG.exclude.rows || {})[rows[i].id];
+    if (!reason) continue;
+    if (rows[i].cells[13] === "Automated" || rows[i].cells[13] === "Retired") {
+      if (rows[i].cells[13] !== "Retired") { rows[i].cells[13] = "Retired"; changes.push(`${rows[i].id}: excluded (${reason}) → Retired`); }
+    } else { changes.push(`${rows[i].id}: excluded (${reason}) → removed`); rows.splice(i, 1); }
+  }
   const covered = new Set(rows.flatMap((r) => r.tcIds));
   const missing = [...covered].filter((id) => !tcById.has(id));
   const uncovered = tcs.filter((t) => !covered.has(t.id) && !excluded.has(t.id));

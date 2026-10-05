@@ -121,9 +121,11 @@ data in `scripts/automation-mapping.config.json`). Edit the config, not the shee
   its test carries `@smoke`. Every other Functional row is `Regression`.
 - **Risk-based priority.** P0 = money and access (checkout, payment, unlock, entitlement, withdraw,
   login/OTP); P2 = copy, display, filter/sort, analytics; P1 = the rest. Smoke rows are P0.
-- **Out of scope (never mapped):** Livestream / Stream Studio, external integrations (Telegram bot &
-  group connection, Discord OAuth / bot role, Google Calendar) and scheduled jobs / email
-  (reminders, digests, H-x jobs, withdrawal SLA). Keep these manual.
+- **Out of scope (never mapped):** Livestream / Stream Studio, **Onboarding** (one-time per account —
+  every run would need a brand-new account), external integrations (Telegram bot & group connection,
+  Discord OAuth / bot role, Google Calendar) and scheduled jobs / email (reminders, digests, H-x jobs,
+  withdrawal SLA). Keep these manual. Whole tabs go in `exclude.tabs`, single journeys in
+  `exclude.rows` of `scripts/automation-mapping.config.json`.
 - **Known bugs.** A covered TC with an open row in the Bugs sheet is listed as `Known bug:` in the row's
   Notes. Write that step to the **correct expected** behaviour and mark the test
   `test.fail()` with `annotation: { type: 'issue', description: '<ticket>' }` so CI stays green; when

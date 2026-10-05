@@ -22,11 +22,16 @@
     "Membership": "MEM",
     "Feeds and Exclusive": "FE",
     "Campaigns": "CMP",
-    "Settings": "SET",
-    "Onboarding": "ONB"
+    "Settings": "SET"
   },
   "exclude": {
-    "tabs": { "Livestream": "Livestream / Stream Studio: OBS overlay widgets, real QRIS tips, time-based alert rendering" },
+    "tabs": {
+      "Livestream": "Livestream / Stream Studio: OBS overlay widgets, real QRIS tips, time-based alert rendering",
+      "Onboarding": "Onboarding: one-time per account — every run would need a brand-new account"
+    },
+    "rows": {
+      "AUT-E2E-006": "Starts with creator onboarding (one-time per account)"
+    },
     "rules": [
       {
         "reason": "External integration: Telegram bot / group connection",
@@ -51,7 +56,8 @@
     ],
     "e2e": {
       "AUT-E2E-004": "Livestream / Stream Studio",
-      "AUT-E2E-013": "External integration: Telegram bot group access"
+      "AUT-E2E-013": "External integration: Telegram bot group access",
+      "AUT-E2E-007": "Creator onboarding (one-time per account) — pre-2026-10-04 ID of today's AUT-E2E-006"
     }
   },
   "grouping": { "min": 3, "max": 8 },
