@@ -60,6 +60,14 @@ jobs:
       YAPP_TEST_ACCESS_TOKEN: "${{ secrets.YAPP_TEST_ACCESS_TOKEN }}"
       YAPP_TEST_ACCESS_TOKEN_2: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_2 }}"
       YAPP_TEST_ACCESS_TOKEN_BUYER: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_BUYER }}"
+      # Token refresh in CI: the creator's OTP is read from otp_codes, so the DB is needed too.
+      YAPP_CREATOR_LOGIN_EMAIL: "${{ secrets.YAPP_CREATOR_LOGIN_EMAIL }}"
+      PSQL_DB_HOST: "${{ secrets.PSQL_DB_HOST }}"
+      PSQL_DB_NAME: "${{ secrets.PSQL_DB_NAME }}"
+      PSQL_DB_USER: "${{ secrets.PSQL_DB_USER }}"
+      PSQL_DB_PASSWORD: "${{ secrets.PSQL_DB_PASSWORD }}"
+      PSQL_DB_PORT: "${{ secrets.PSQL_DB_PORT }}"
+      PSQL_DB_SSL_MODE: "${{ secrets.PSQL_DB_SSL_MODE }}"
       PW_HEADLESS: 'true'
     steps:
     - uses: actions/checkout@v4

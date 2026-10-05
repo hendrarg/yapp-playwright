@@ -29,6 +29,13 @@ The Playwright workflow must provide:
 
 `YAPP_TEST_ACCESS_TOKEN_2` is optional and only needed to seed creator posts for E2E tests.
 
+Tokens live about two days, so CI can refresh them itself: it also receives
+`YAPP_CREATOR_LOGIN_EMAIL` and `PSQL_DB_HOST` / `PSQL_DB_NAME` / `PSQL_DB_USER` /
+`PSQL_DB_PASSWORD` / `PSQL_DB_PORT` / `PSQL_DB_SSL_MODE` (the creator's OTP is read from
+`otp_codes`). All of these are repository secrets, set from a local `.env` with
+`gh secret set <NAME> --repo hendrarg/yapp-playwright` (value on stdin, never echoed). A token
+refreshed inside CI is not written back to the secret — when the stored one expires, set it again.
+
 ## Secrets
 
 - Use GitHub repository secrets for tokens and API keys.
