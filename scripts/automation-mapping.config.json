@@ -30,7 +30,8 @@
       "Onboarding": "Onboarding: one-time per account — every run would need a brand-new account"
     },
     "rows": {
-      "AUT-E2E-006": "Starts with creator onboarding (one-time per account)"
+      "AUT-E2E-006": "Starts with creator onboarding (one-time per account)",
+      "AUT-E2E-011": "Referral attribution journey: needs a brand-new referred account (its remaining TCs live in AUT-REF-002..004)"
     },
     "rules": [
       {
@@ -47,6 +48,11 @@
         "reason": "External integration: Google Calendar",
         "tabs": ["Consultation"],
         "pattern": "google calendar|calendar (connect|integration|sync)|connect(ed)? (to )?(google )?calendar"
+      },
+      {
+        "reason": "Referral attribution: needs a brand-new referred account, or applies a referral code (once per account)",
+        "tabs": ["Referral"],
+        "pattern": "Referral Attribution|Referral Earnings|Referral List Updates|Applied Referrer|Single Active Referrer|after referral activity|Apply a valid referral code"
       },
       {
         "reason": "Scheduled job / email delivery",

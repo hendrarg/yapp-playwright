@@ -122,10 +122,18 @@ data in `scripts/automation-mapping.config.json`). Edit the config, not the shee
 - **Risk-based priority.** P0 = money and access (checkout, payment, unlock, entitlement, withdraw,
   login/OTP); P2 = copy, display, filter/sort, analytics; P1 = the rest. Smoke rows are P0.
 - **Out of scope (never mapped):** Livestream / Stream Studio, **Onboarding** (one-time per account —
-  every run would need a brand-new account), external integrations (Telegram bot & group connection,
+  every run would need a brand-new account), **referral attribution** (a brand-new referred account, or
+  applying a referral code — once per account; referral info / share / list stay mapped), external integrations (Telegram bot & group connection,
   Discord OAuth / bot role, Google Calendar) and scheduled jobs / email (reminders, digests, H-x jobs,
   withdrawal SLA). Keep these manual. Whole tabs go in `exclude.tabs`, single journeys in
   `exclude.rows` of `scripts/automation-mapping.config.json`.
+- **State that is hard to reach stays in scope — build it as a fixture instead of excluding it.**
+  Expiry / renewal / "after N days": move the relevant timestamps in the dev DB before the test and
+  restore them after. Payment completion in Functional tests: mock the payment-status response
+  (`network-mocking` skill); real QRIS settlement only in E2E. Wallet withdraw: seed balance and reset
+  withdrawal state via the DB; read PIN/OTP codes from the DB as the OTP login does. Aggregated data
+  (rankings, analytics): assert structure and behaviour, not values. `npm run db:shell` is read-only —
+  these fixtures need a separate write-capable DB helper.
 - **Known bugs.** A covered TC with an open row in the Bugs sheet is listed as `Known bug:` in the row's
   Notes. Write that step to the **correct expected** behaviour and mark the test
   `test.fail()` with `annotation: { type: 'issue', description: '<ticket>' }` so CI stays green; when
