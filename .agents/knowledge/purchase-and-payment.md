@@ -411,3 +411,10 @@ has `deleted_at = 2026-07-31`.
 ## Cart marks unavailable items (seen 6 Oct 2026)
 
 The buyer cart now flags an event ticket whose type no longer exists: `Ticket unavailable — This ticket type is no longer available. Remove it to continue.` This is at least part of H-01 (cart never re-validated items) — re-test H-01 against it before assuming the old behaviour.
+
+## Cart rendering, re-checked 6 Oct 2026
+
+- **Adding an event ticket to the cart goes through a `Checkout` dialog** (contact details + attendee details, phone empty by default) whose final button is `Add to Cart` — the product page's `Add To Cart` only opens it.
+- A flexible-price consultation opens `Name a Fair Price` first (confirm button named `Input Amount`), then adds the slot.
+- Cart lines: an event shows `All Day` with **no date** even though the product page says `Saturday 31 Oct`; a consultation shows `2026-10-07 • 11:00 - 12:00` with **no timezone**.
+- Clean-up without UI: `GET /api/v1/cart/items` then `DELETE /api/v1/cart/items/{uuid}` (buyer token, Origin yapp-dev) — 200 each.
