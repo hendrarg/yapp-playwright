@@ -76,6 +76,14 @@ function defaultOnlineCoursePages(): OnlineCourseChapter[] {
   ];
 }
 
+/** Buyer share path `/s/<shortUrl>` of a product returned by one of the create helpers. */
+export function productSharePath(created: CreatedProduct): string {
+  const body = created.body as { data?: { shortUrl?: string; product?: { shortUrl?: string } }; shortUrl?: string };
+  const shortUrl = body?.data?.shortUrl ?? body?.data?.product?.shortUrl ?? body?.shortUrl;
+  if (!shortUrl) throw new Error(`Created product ${created.productUuid} has no short URL`);
+  return `/s/${shortUrl}`;
+}
+
 function productUuidFromBody(body: any): string | undefined {
   return body.data?.uuid ?? body.data?.product?.uuid ?? body.uuid ?? body.product?.uuid;
 }

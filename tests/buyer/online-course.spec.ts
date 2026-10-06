@@ -1,19 +1,12 @@
 import { authTest as test, expect } from '../test-base';
 import { getAccount } from '@helpers/api/account';
-import { createOnlineCourseProduct, deleteProduct } from '@helpers/api/product';
+import { createOnlineCourseProduct, deleteProduct, productSharePath } from '@helpers/api/product';
 import { createPromotion, deletePromotion, getPromotionId } from '@helpers/api/promotion';
 import { depositWebhook } from '@helpers/api/webhook';
 import { markInboxStart, testmailConfig, waitForEmail } from '@helpers/otp/testmail';
 import { generateOnlineCourseBuyerDescription, generateOnlineCourseBuyerTitle, generateOnlineCourseInvalidVoucherCode, onlineCourseBuyerDetailData, onlineCourseCheckoutData } from '@test-data/buyer/online-course.detail.data';
+import { promotionData } from '@test-data/buyer/promotion.data';
 import { generatePromotionData } from '@test-data/creator/promotion.data';
-
-/** Short URL of a freshly created product, as the buyer share path `/s/<shortUrl>`. */
-function sharePathOf(body: unknown): string {
-  const b = body as { data?: { shortUrl?: string; product?: { shortUrl?: string } }; shortUrl?: string };
-  const shortUrl = b?.data?.shortUrl ?? b?.data?.product?.shortUrl ?? b?.shortUrl;
-  expect(shortUrl, 'created online course must include a short URL').toBeTruthy();
-  return `/s/${shortUrl as string}`;
-}
 
 test.describe('Buyer Online Course', () => {
   test('Online Course — Product Detail, Thumbnail Navigation, Initiate Checkout, Personal Information, Payment Method, Voucher, Order Review, Purchase Confirm', {
@@ -49,7 +42,7 @@ test.describe('Buyer Online Course', () => {
           price: onlineCourseBuyerDetailData.price,
         }, seedToken);
         paidUuid = paid.productUuid;
-        paidSharePath = sharePathOf(paid.body);
+        paidSharePath = productSharePath(paid);
         const free = await createOnlineCourseProduct(page.request, {
           title: freeTitle,
           description,
@@ -57,7 +50,7 @@ test.describe('Buyer Online Course', () => {
           price: 0,
         }, seedToken);
         freeUuid = free.productUuid;
-        freeSharePath = sharePathOf(free.body);
+        freeSharePath = productSharePath(free);
         promotionId = getPromotionId(await createPromotion(page.request, promotion, seedToken));
       });
 
@@ -108,7 +101,7 @@ test.describe('Buyer Online Course', () => {
         await productPurchasePage.openOnlineCourseVoucherDialog();
         const rejectedBefore = await productPurchasePage.getOrderSummary();
         await productPurchasePage.applyPromotion(invalidCode);
-        await productPurchasePage.expectRejectedPromotion(rejectedBefore);
+        await productPurchasePage.expectRejectedPromotion(rejectedBefore, promotionData.rejection.notFound);
       });
 
       await test.step('The order review shows subtotal, total and a Pay CTA with the total', async () => {

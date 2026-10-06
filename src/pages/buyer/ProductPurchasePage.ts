@@ -96,15 +96,47 @@ export class ProductPurchasePage {
     expect(after.total).toBeLessThan(before.total);
   }
 
-  async expectRejectedPromotion(before: OrderSummary, error?: string) {
-    if (error) {
-      await expect(this.page.getByText(error, { exact: true })).toBeVisible();
-      const after = await this.getOrderSummary();
-      expect(after.subtotal).toBe(before.subtotal);
-      expect(after.discount).toBe(0);
-      return;
-    }
-    await expect.poll(() => this.getOrderSummary()).toEqual(before);
+/**
+   * A rejected code shows its reason under the voucher, applies no discount and keeps the subtotal.
+   * The summary then drops both fee rows (total = subtotal) — the product's invalid-voucher signal, not a pricing bug.
+   */
+  async expectRejectedPromotion(before: OrderSummary, reason: string) {
+    await expect(this.page.getByText(reason, { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => (await this.getOrderSummary()).discount, { timeout: 10000 }).toBe(0);
+    const after = await this.getOrderSummary();
+    expect(after.subtotal).toBe(before.subtotal);
+    await expect(this.page.getByText('Transaction Fee', { exact: true })).toHaveCount(0);
+    await expect(this.page.getByText('Payment Gateway Fee', { exact: true })).toHaveCount(0);
+    expect(after.total).toBe(after.subtotal);
+  }
+
+  /** Use Now stays disabled until a code is typed. Leaves the typed code in the field. */
+  async expectUseNowEnabledOnlyWithCode(code: string) {
+    await safeFill(this.voucherInput, '');
+    await expect(this.applyVoucherButton).toBeDisabled({ timeout: 5000 });
+    await safeFill(this.voucherInput, code);
+    await expect(this.applyVoucherButton).toBeEnabled({ timeout: 5000 });
+  }
+
+  /** The applied code sits in the voucher box with an × that removes it. */
+  private voucherRemoveButton(code: string) {
+    return this.page
+      .locator('div')
+      .filter({ has: this.page.getByRole('button', { name: code.trim().toUpperCase() }) })
+      .getByRole('button')
+      .filter({ has: this.page.locator('svg.lucide-x') })
+      .last();
+  }
+
+  async removePromotion(code: string) {
+    await safeClick(this.voucherRemoveButton(code));
+    await expect(this.voucherRemoveButton(code)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** Back to the untouched summary: no discount, the original subtotal/total, voucher entry offered again. */
+  async expectPromotionCleared(before: OrderSummary) {
+    await expect.poll(() => this.getOrderSummary(), { timeout: 10000 }).toEqual(before);
+    await expect(this.chooseVoucherButton).toBeVisible({ timeout: 10000 });
   }
 
   async gotoSharePath(sharePath: string) {

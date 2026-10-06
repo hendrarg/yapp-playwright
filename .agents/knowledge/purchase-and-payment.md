@@ -90,10 +90,26 @@ it. Never press `Pay IDR ...` — nothing is charged and no order row is created
 
 - **Valid code** gives `200` carrying `promoCodeDiscount`, `subtotal`, `amount`; the
   UI adds a code chip and a Discount line.
-- **Rejected code** gives **`500`**, with the reason in `message` (`Promo code not
-  active`, `Cannot use the promo code, already expired`). The UI shows only a generic
-  `Invalid promo code`. The 500-for-validation is filed as a Low finding — do not
-  read it as a broken server.
+- **Rejected code** — **changed by 2026-10-06:** now a **`400`** with a machine code in
+  `data.code`, and the UI prints the same specific reason under the voucher (no more generic
+  `Invalid promo code`):
+
+  | Cause | `data.code` | Message |
+  |---|---|---|
+  | unknown code — and **another creator's code** (codes are looked up per creator) | `promo_not_found` | `Promo code not found. Please check the code and try again.` |
+  | period ended | `promo_expired` | `This promo code is no longer active.` |
+  | manually deactivated | `promo_inactive` | `This promo code is no longer active.` |
+  | `maxUsed` reached (seed with `maxUsed: 0`) | `promo_usage_limit` | `This promo code has reached its usage limit.` |
+  | `selected_product` promo on another product | `promo_not_applicable` | `This promo code does not apply to this product.` |
+
+- `Use Now` is disabled while the field is empty. An applied **or rejected** code sits in the
+  voucher box with an `×` (`div[role=button]` with a lucide-x icon) that clears it and restores
+  the original summary without a reload. A valid code also prints `✓ Extra 11% OFF …`.
+- Codes are matched **case-insensitively and trimmed** (`abc`, `  ABC  ` both apply).
+- `discountType` is `percentage` (max 100 — `discount: 150` → 500 `percentage discount must be at
+  most 100`) or **`flat`** (rupiah). A flat discount above the price is capped: Discount −price,
+  Subtotal Rp0, Total Rp0, `Pay Rp0` — never negative.
+- Checkout money is now written `Rp99.000` and the CTA reads `Pay Rp104.000` (it was `Pay IDR …`).
 
 **A valid code recomputes every line, including the fees.** Verified 2026-09-02 on two
 product types with one 10% `all_product` promo, as a guest, without paying:
