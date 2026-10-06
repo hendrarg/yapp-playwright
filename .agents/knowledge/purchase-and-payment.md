@@ -407,3 +407,7 @@ the page instead. Tracked as `ATC-6` / `H-10`.
 DB trail for the reproduction: `cart_items` id 59 (user 345, product 382) →
 `cart_item_tickets` id 37 → `ticket_price_id` 336, and `ticket_price_configurations` id 336
 has `deleted_at = 2026-07-31`.
+
+## Cart marks unavailable items (seen 6 Oct 2026)
+
+The buyer cart now flags an event ticket whose type no longer exists: `Ticket unavailable — This ticket type is no longer available. Remove it to continue.` This is at least part of H-01 (cart never re-validated items) — re-test H-01 against it before assuming the old behaviour.

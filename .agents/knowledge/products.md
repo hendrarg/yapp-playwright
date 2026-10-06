@@ -479,3 +479,11 @@ So a test that needs the product detail page should use the creator-handle + sho
 or navigate to it (Explore, the creator's shop, a tier's perk row) — not `/product/{uuid}`. This cost a full run of `TC-MEM-B-046` before it
 was spotted: three different viewer states all landed somewhere else, which reads at first
 like the page is broken rather than like the route having moved.
+
+## Bug-sheet retest, 6 Oct 2026
+
+- **Promotion `Find Product` picker has no status filter**: it calls `/shop/products?page=1&limit=10[&title=…]` and returns Draft and Inactive products (searched `PERSIB`, `Montir`, `Zoom Meeting`) with no status marker (L-58 still open). The first page happens to be all Active, so check by searching a draft title.
+- `/shop/products?type=<unknown>` ignores the value and returns every product (M-43); `digital_product` is now a real type (1 product), distinct from `digital_download`.
+- Products list: the type filter (`?type=online_course`) changes the rows but not the status-tab counts; a 3-space search gives `No results.` and 0/0/0; Draft rows link to `/products/update/<type>/{uuid}`, two Active Digital Downloads still link to `/products/detail/digital-downloads/{uuid}` while everything else goes to `/products/stats/{uuid}`.
+- `/products/update/consultation/{id}` is still 404; the editor lives at `/products/update/appointment/{id}` (create stays `/products/create/consultation`).
+- Flexible-price consultation (`Start from Rp…`): `Save my spot` first opens a `Name a Fair Price` dialog; its confirm button is literally named `Input Amount`. Only after that does it go to `/product/{uuid}/checkout?…&givenPrice=…`, where a logged-in buyer's email is prefilled **and disabled**.

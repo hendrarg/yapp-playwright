@@ -291,3 +291,10 @@ pages un-merged in the other direction. Verified live on creators-dev, account `
 - All three default to `Last 30 days` and can show **0 rows** even when older data
   exists elsewhere in the account (PPV and Lifetime Access both did on this account) —
   always switch to `All time` or a wide custom range before judging a tab "empty".
+
+## Bug-sheet retest, 6 Oct 2026
+
+- **PPV Export as CSV now returns data** (M-01 fixed): `GET /api/v1/posts/my/purchases/export?start_date=…&end_date=…` → S3 CSV with columns `uuid,buyer_uuid,buyer_name,buyer_email,post_uuid,post_title,purchase_date,total_price`. **But `end_date` is exclusive**: a 90-day export ending today (end_date = today) returned 9 rows while the DB held 10 — the missing one was paid today at 13:09 WIB. Today's purchases never make it into an export that "ends today".
+- The PPV tab's own range filter is a combobox (`Last 7/14/30/60 days`, `All time`); its Export dialog has a separate `30/60/90 days`/`Custom Days` picker. An empty PPV range shows `Page 1 of 0` (L-50 also lives here).
+- Orders CSV (`/api/v1/orders/reports` → asset-dev signed URL): still no UTF-8 BOM, no `Content-Disposition`, no Product Type column; a creator's custom checkout question becomes an extra trailing column (e.g. `Siapakah tuhan mu ?`). The UI download still works because the browser is driven to the file URL.
+- `/shop/orders/summary` `totalEarnings` stays ~Rp136 below the sum of `receivedBySeller` (217 orders): the per-order values carry fractions, the summary does not — a rounding policy, not lost money.
