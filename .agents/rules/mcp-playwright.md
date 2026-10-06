@@ -735,3 +735,12 @@ The creator tab keeps its session and the guest one has no cookie at all.
 - Stream Studio panels (`Time extension rules`, Gacha `Title & minimum tip`) are collapsible; a
   control inside a collapsed panel is "visible" but its click is intercepted by the panel header.
   Expand the header button first (`aria-expanded`).
+
+## Detecting a YouTube clip on the media overlay (verified 2026-10-06)
+
+`document.querySelectorAll('iframe')` on `widget-dev/alert/<key>?variant=media` returned **nothing
+while the clip was visibly playing** — sampling for an iframe "proved" a paid Media Share never
+rendered, and a screenshot of the same moment showed the video. Use `page.screenshot()` a few
+seconds after the alert text (`<name> kirim Rp… buat kamu`) appears, and read the image. The
+`Test` button on the Media Share tab is a free check that the overlay can play at all — but its
+sample is **Rp30.000**, so it is dropped (`silent delete`) whenever the Alert threshold is higher.

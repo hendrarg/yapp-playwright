@@ -236,7 +236,23 @@ Read this before the older sections below — several described defects are gone
 - **Media Share `Test`** sends a sample to the media overlay (`Media share test sent to your
   overlay.`); `Video / TikTok / GIF / Voice note` next to it only switch the on-page preview.
 - **Copy overlay link** toasts `Overlay URL copied!`.
-- **Still broken:** poll offered and charged before its window with the vote dropped (H-02 —
+- **All seven fixed — re-verified 6 Oct 2026** (LIV-36..42, four settled dev tips on `hendrarg`):
+  - Poll before its window: the Vote block is **hidden** on the tip page, and a direct
+    `POST /api/v1/tipping/fiat` with `votingSelectedOption` returns **400 `voting is not open`**.
+  - Milestone START picker: every date enabled (0/35 disabled); today can be picked.
+  - Media Share message now quotes the **effective** floor: creator video min Rp5.000 → `You need
+    to tip at least Rp10.000 to share this media.`; with `MINIMUM AMOUNT TO SHOW ALERT` Rp50.000 it
+    says Rp50.000 and hides the link input — effective floor = max(Media Share min, Rp10.000,
+    Alert threshold).
+  - Non-existent YouTube ID: inline `This video is unavailable. Please use another YouTube link.`;
+    Send Tip stays clickable but the API answers **400 `youtube video not found`** (no bill).
+  - Receipt now lists add-ons: `Your vote for Item A has been counted. You have joined hendrarg's
+    VIP Queue.` (the vote and the `vip_queue_entries` row are both real).
+  - Media still obeys the Alert threshold on the overlay (`silent delete`, `reasons.amountInIDR
+    < alertNominal`); a Rp50.000 tip at a Rp50.000 threshold played. **Residual (API only):** a
+    direct POST below the Alert threshold with media is still accepted (200) and then silently
+    dropped — unreachable from the UI.
+- *History (1 Oct 2026, before the fixes):* poll offered and charged before its window with the vote dropped (H-02 —
   enabled + future window: radios live, bill created, `votedCount` unchanged after settle; a
   *disabled* poll is correctly hidden), Milestone START picker fully disabled (H-04), Media Share
   message quoting the creator floor (M-14), non-existent YouTube IDs accepted (M-16), and the
