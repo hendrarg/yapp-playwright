@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { locatorChain } from "@utils/heal-utils";
+import { safeClick, waitForLoaded } from "@utils/playwright.utils";
+import { buyerEventsDetailData } from "@test-data/buyer/events.detail.data";
 
 export class CartPage {
   private auth = trackAuthToken(this.page);
@@ -68,5 +70,27 @@ export class CartPage {
     expect(cartText).toContain(options.totalAmount);
     await expect(eventHeading).toBeVisible({ timeout: 10000 });
   }
-}
 
+  /** Tick only this product's line and press "Check out"; lands on /cart/checkout. */
+  async checkoutItem(title: string) {
+    const line = this.page.getByRole("main").locator("div").filter({ hasText: title }).filter({ has: this.page.getByRole("checkbox") }).last();
+    await line.getByRole("checkbox").first().check();
+    await safeClick(this.page.getByRole("button", { name: buyerEventsDetailData.cartCheckout.checkOut }).last());
+    await this.page.waitForURL(/\/cart\/checkout/, { timeout: 20000 });
+    await waitForLoaded(this.page);
+  }
+
+  /** On /cart/checkout: fill a blank phone, press Pay and return the order id from /cart/transaction/<id>. */
+  async payCheckout(phone: string): Promise<string> {
+    const phoneInput = this.page.getByPlaceholder(buyerEventsDetailData.checkout.phonePlaceholder);
+    if ((await phoneInput.count()) && !(await phoneInput.first().inputValue())) await phoneInput.first().fill(phone);
+    await safeClick(this.page.getByRole("button", { name: buyerEventsDetailData.cartCheckout.pay }).first());
+    await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
+    return this.page.url().split("/transaction/")[1];
+  }
+
+  async expectPaymentSuccess() {
+    const dialog = this.page.getByRole("dialog").filter({ hasText: buyerEventsDetailData.cartCheckout.paymentSuccess }).first();
+    await expect(dialog).toBeVisible({ timeout: 30000 });
+  }
+}

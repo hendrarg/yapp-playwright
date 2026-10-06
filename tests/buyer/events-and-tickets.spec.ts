@@ -1,10 +1,16 @@
 import { authTest as test, expect } from '../test-base';
+import { baseURL } from '@config/env';
+import { getAccount } from '@helpers/api/account';
 import { createEventProduct, deleteProduct } from '@helpers/api/product';
+import { depositWebhook } from '@helpers/api/webhook';
+import { loginWithToken } from '@helpers/auth/token-login';
+import { ProductPurchasePage } from '@pages/buyer/ProductPurchasePage';
 import { buyerEventsDetailData, generateBuyerEventDiscoverySeedData, generateBuyerEventSeedData } from '@test-data/buyer/events.detail.data';
+import { testAccounts } from '@test-data/users';
 
 test.describe('Buyer Events and Tickets', () => {
-  test('Validate Event Discovery, Product Detail, and Ticket Tier Display', {
-    tag: ['@AUT-FV-319', '@products', '@buyer', '@regression'],
+  test('Event & Tickets — Event Explore Category, Event Product Card, Event Detail Page - Overview, Image Carousel, Event Date Display, Venue Display - On-site, Event Status Display, Ticket Tier Display', {
+    tag: ['@AUT-EVT-011', '@events', '@buyer', '@regression'],
   }, async ({ explorePage, productPurchasePage, page }) => {
     test.setTimeout(240000);
 
@@ -137,8 +143,8 @@ test.describe('Buyer Events and Tickets', () => {
         await productPurchasePage.expectEventTicketTiers({
           soldOutTier: seedData.carouselEvent.soldOutTier.title,
           availableTier: seedData.carouselEvent.availableTier.title,
-          soldOutPricePattern: /IDR100,000\s*\/per pax/,
-          availablePricePattern: /IDR50,000\s*\/per pax/,
+          soldOutPricePattern: buyerEventsDetailData.carouselEvent.soldOutPricePattern,
+          availablePricePattern: buyerEventsDetailData.carouselEvent.availablePricePattern,
           quantityPattern: /Max 100 tix\/user/,
         });
       });
@@ -147,9 +153,104 @@ test.describe('Buyer Events and Tickets', () => {
         await productPurchasePage.expectBuyerStartFromAbsent();
       });
 
-      await test.step('Switch to About Creator and review creator information', async () => {
-        await productPurchasePage.gotoSharePath(hybridEventPath);
-        await productPurchasePage.expectEventAboutCreator();
+    } finally {
+      await Promise.all(
+        createdProducts.map((product) => deleteProduct(page.request, product.productUuid, product.token).catch(() => undefined)),
+      );
+    }
+  });
+
+
+  test('Event & Tickets — Sold Out Tier, Select Ticket Tier, Bottom Sticky Bar, Tier Quantity Mislabelled as Per-User Cap, Hybrid Event Access Info per Tier, Discounted Tier Price Display, Carousel Boundary Behaviour, Owner Viewing Own Event', {
+    tag: ['@AUT-EVT-012', '@events', '@buyer', '@regression'],
+  }, async ({ productPurchasePage, page, browser }) => {
+    test.setTimeout(240000);
+
+    const creatorSeedToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+    const ownerToken = process.env[testAccounts.creator.envVar]?.replace(/"/g, '');
+    test.skip(!creatorSeedToken || !ownerToken, 'Second creator (token2) and creator tokens are required');
+    if (!creatorSeedToken || !ownerToken) return;
+
+    const seedData = generateBuyerEventDiscoverySeedData();
+    const createdProducts: Array<{ productUuid: string; token: string }> = [];
+    let timedEventPath = '';
+    let carouselEventPath = '';
+    let hybridEventPath = '';
+
+    try {
+      await test.step('Seed discovery events with discount, carousel, and hybrid ticket configurations via API', async () => {
+        const timedProduct = await createEventProduct(page.request, {
+          title: seedData.timedEvent.title,
+          description: seedData.timedEvent.description,
+          thumbnailImagePath: seedData.thumbnailImagePath,
+          eventDate: seedData.timedEvent.eventDate,
+          isAllDay: false,
+          eventTimeStart: seedData.timedEvent.timeStart,
+          eventTimeEnd: seedData.timedEvent.timeEnd,
+          venueType: 'on_site',
+          venueName: seedData.timedEvent.venueName,
+          venueAddress: seedData.timedEvent.venueAddress,
+          platform: 'custom',
+          meetingLink: 'https://meet.google.com/timed-event',
+          tickets: [seedData.timedEvent.ticket],
+        }, creatorSeedToken);
+        createdProducts.push({ productUuid: timedProduct.productUuid, token: creatorSeedToken });
+        timedEventPath = `/${timedProduct.creatorUsername}/product/${timedProduct.shortUrl}`;
+
+        const carouselProduct = await createEventProduct(page.request, {
+          title: seedData.carouselEvent.title,
+          description: seedData.carouselEvent.description,
+          thumbnailImagePath: seedData.carouselEvent.thumbnailImagePath,
+          productImagePaths: seedData.carouselEvent.imagePaths,
+          eventDate: seedData.carouselEvent.eventDate,
+          venueType: 'on_site',
+          venueName: seedData.carouselEvent.venueName,
+          venueAddress: seedData.carouselEvent.venueAddress,
+          platform: 'custom',
+          meetingLink: 'https://meet.google.com/carousel-event',
+          tickets: [seedData.carouselEvent.soldOutTier, seedData.carouselEvent.availableTier],
+        }, creatorSeedToken);
+        createdProducts.push({ productUuid: carouselProduct.productUuid, token: creatorSeedToken });
+        carouselEventPath = `/${carouselProduct.creatorUsername}/product/${carouselProduct.shortUrl}`;
+
+        const hybridProduct = await createEventProduct(page.request, {
+          title: seedData.hybridEvent.title,
+          description: seedData.hybridEvent.description,
+          thumbnailImagePath: seedData.thumbnailImagePath,
+          eventDate: seedData.hybridEvent.eventDate,
+          venueType: 'hybrid',
+          venueName: seedData.hybridEvent.venueName,
+          venueAddress: seedData.hybridEvent.venueAddress,
+          platform: 'custom',
+          meetingLink: 'https://meet.google.com/hybrid-event',
+          tickets: [seedData.hybridEvent.onlineTier, seedData.hybridEvent.offlineTier],
+        }, creatorSeedToken);
+        createdProducts.push({ productUuid: hybridProduct.productUuid, token: creatorSeedToken });
+        hybridEventPath = `/${hybridProduct.creatorUsername}/product/${hybridProduct.shortUrl}`;
+
+      });
+
+      await test.step('A sold-out tier is marked Sold Out with Select disabled, and the available tier is selectable', async () => {
+        await productPurchasePage.gotoSharePath(carouselEventPath);
+        await productPurchasePage.expectEventTicketTiers({
+          soldOutTier: seedData.carouselEvent.soldOutTier.title,
+          availableTier: seedData.carouselEvent.availableTier.title,
+          soldOutPricePattern: buyerEventsDetailData.carouselEvent.soldOutPricePattern,
+          availablePricePattern: buyerEventsDetailData.carouselEvent.availablePricePattern,
+          quantityPattern: buyerEventsDetailData.carouselEvent.quantityPattern,
+        });
+      });
+
+      await test.step('The sticky bar keeps Add To Cart disabled until a tier is selected', async () => {
+        await productPurchasePage.gotoSharePath(carouselEventPath);
+        await productPurchasePage.expectEventStickyBarBeforeSelection();
+        await productPurchasePage.selectEventTicket(seedData.carouselEvent.availableTier.title);
+        await productPurchasePage.expectEventStickyBarEnabledAfterScroll();
+      });
+
+      await test.step('The image carousel stops at its ends', async () => {
+        await productPurchasePage.gotoSharePath(carouselEventPath);
+        await productPurchasePage.expectEventCarouselBoundary(seedData.carouselEvent.slideCount);
       });
 
       await test.step('Record the buyer-facing tier quantity label', async () => {
@@ -174,9 +275,35 @@ test.describe('Buyer Events and Tickets', () => {
         expect(price - (price * (discount ?? 0)) / 100).toBe(130500);
 
         await productPurchasePage.gotoSharePath(timedEventPath);
-        await productPurchasePage.expectEventDiscountedTier(/IDR130,500\s*\/per pax/);
+        await productPurchasePage.expectEventDiscountedTier(buyerEventsDetailData.discountedEvent.tierPricePattern);
       });
 
+
+      await test.step('The creator viewing their own event gets Edit Product instead of Add To Cart', async () => {
+        const ownerProduct = await createEventProduct(page.request, {
+          title: seedData.ownerEvent.title,
+          description: seedData.ownerEvent.description,
+          thumbnailImagePath: seedData.thumbnailImagePath,
+          eventDate: seedData.ownerEvent.eventDate,
+          venueType: 'online',
+          platform: 'custom',
+          meetingLink: 'https://meet.google.com/owner-event',
+          tickets: [seedData.ownerEvent.ticket],
+        }, ownerToken);
+        createdProducts.push({ productUuid: ownerProduct.productUuid, token: ownerToken });
+        const ownerContext = await browser.newContext({ viewport: page.viewportSize() });
+        try {
+          await loginWithToken(ownerContext, ownerToken, baseURL);
+          const ownerView = new ProductPurchasePage(await ownerContext.newPage(), baseURL);
+          await ownerView.gotoSharePath(`/${ownerProduct.creatorUsername}/product/${ownerProduct.shortUrl}`);
+          await ownerView.expectOwnerEventView();
+        } finally {
+          await ownerContext.close();
+        }
+        // The buyer on another creator's event keeps the purchase path.
+        await productPurchasePage.gotoSharePath(carouselEventPath);
+        await productPurchasePage.expectEventStickyBarBeforeSelection();
+      });
     } finally {
       await Promise.all(
         createdProducts.map((product) => deleteProduct(page.request, product.productUuid, product.token).catch(() => undefined)),
@@ -184,8 +311,9 @@ test.describe('Buyer Events and Tickets', () => {
     }
   });
 
-  test('Validate Event Ticket Selection, Buyer Form, and Add to Cart', {
-    tag: ['@AUT-FV-320', '@cart', '@buyer', '@smoke'],
+
+  test('Event & Tickets — Proceed to Checkout, Buyer Form Checkout Modal, Cart Contents for Event Ticket, Product Added Confirmation', {
+    tag: ['@AUT-EVT-014', '@events', '@cart', '@buyer', '@smoke'],
   }, async ({ productPurchasePage, cartPage, page }) => {
     test.setTimeout(180000);
 
@@ -198,6 +326,9 @@ test.describe('Buyer Events and Tickets', () => {
     let productUuid = '';
     let sharePath = '';
     let creatorName = '';
+    const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
+    const buyer = await getAccount(page.request, buyerToken);
+    const buyerEmail = `${process.env.TESTMAIL_NAMESPACE}.${testAccounts.qa.testmailTag}@inbox.testmail.app`;
 
     try {
       await test.step('Seed a published hybrid event with ticket tiers via API', async () => {
@@ -260,10 +391,10 @@ test.describe('Buyer Events and Tickets', () => {
           address: event.venueAddress,
           platform: 'Online',
           tierName: event.onlineTier.title,
-          tierPrice: 'IDR10.000',
+          tierPrice: checkout.tierPriceInCart,
           quantityLabel: 'Ticket 1',
-          attendeeName: checkout.attendeeName,
-          attendeeEmail: checkout.attendeeEmail,
+          attendeeName: buyer.name,
+          attendeeEmail: buyerEmail,
           attendeePhone: checkout.cartAttendeePhone,
           totalAmount: checkout.cartTotal,
         });
@@ -275,43 +406,77 @@ test.describe('Buyer Events and Tickets', () => {
     }
   });
 
-  test('Verify Owner Event View on the Public Product Page', {
-    tag: ['@AUT-FV-325', '@products', '@buyer', '@regression'],
-  }, async ({ productPurchasePage, page }) => {
-    test.setTimeout(120000);
+  test('Event & Tickets — About Creator Tab, Library Route and Event Filter, After-Sales Message Access, Ticket About Creator Name', {
+    tag: ['@AUT-EVT-015', '@events', '@library', '@buyer', '@regression'],
+  }, async ({ productPurchasePage, cartPage, libraryPage, page }) => {
+    test.setTimeout(300000);
+    const seedToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+    test.skip(!seedToken, 'YAPP_TEST_ACCESS_TOKEN_2 is required to seed the event');
+    if (!seedToken) return;
 
-    const ownerSeedToken = process.env.YAPP_TEST_ACCESS_TOKEN?.replace(/"/g, '');
-    test.skip(!ownerSeedToken, 'YAPP_TEST_ACCESS_TOKEN is required to seed the owner event');
-    if (!ownerSeedToken) return;
-
-    const seedData = generateBuyerEventDiscoverySeedData();
+    const event = generateBuyerEventSeedData();
+    const { library } = buyerEventsDetailData;
     let productUuid = '';
-    let ownerEventPath = '';
+    let sharePath = '';
+    let creatorName = '';
 
     try {
-      await test.step('Seed an event owned by the signed-in account via API', async () => {
-        const ownerProduct = await createEventProduct(page.request, {
-          title: seedData.ownerEvent.title,
-          description: seedData.ownerEvent.description,
-          thumbnailImagePath: seedData.thumbnailImagePath,
-          eventDate: seedData.ownerEvent.eventDate,
-          venueType: 'online',
-          platform: 'custom',
-          meetingLink: 'https://meet.google.com/owner-event',
-          tickets: [seedData.ownerEvent.ticket],
-        }, ownerSeedToken);
-        productUuid = ownerProduct.productUuid;
-        ownerEventPath = `/${ownerProduct.creatorUsername}/product/${ownerProduct.shortUrl}`;
+      await test.step('Seed an event with an online and an offline tier', async () => {
+        const product = await createEventProduct(page.request, {
+          title: event.title,
+          description: event.description,
+          thumbnailImagePath: event.thumbnailImagePath,
+          eventDate: event.eventDate,
+          timezone: event.timezone,
+          venueType: event.venueType,
+          venueName: event.venueName,
+          venueAddress: event.venueAddress,
+          platform: event.platform,
+          meetingLink: event.meetingLink,
+          tickets: [event.onlineTier, event.offlineTier],
+        }, seedToken);
+        productUuid = product.productUuid;
+        sharePath = product.sharePath;
+        creatorName = product.creatorName;
       });
 
-      await test.step('Open the owned event and verify Edit Product replaces the purchase actions', async () => {
-        await productPurchasePage.gotoSharePath(ownerEventPath);
-        await productPurchasePage.expectOwnerEventView();
+      await test.step('The About Creator tab on the event page shows the creator', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectEventAboutCreator();
+      });
+
+
+      await test.step('The buyer buys a ticket through the cart', async () => {
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.selectEventTicket(event.onlineTier.title);
+        await productPurchasePage.openEventCheckout();
+        await productPurchasePage.expectEventPhoneValidation();
+        await productPurchasePage.submitEventCheckout();
+        await productPurchasePage.clickEventSeeCart();
+        await cartPage.checkoutItem(event.title);
+        const orderId = await cartPage.payCheckout(buyerEventsDetailData.checkout.validPhone);
+        await depositWebhook(page.request, orderId);
+        await cartPage.expectPaymentSuccess();
+      });
+
+      await test.step('/library is gone; the library lives at /dashboard/library and filters to events', async () => {
+        await libraryPage.expectLegacyRouteMissing();
+        await libraryPage.goto();
+        await libraryPage.expectLoaded();
+        expect(await libraryPage.chipCount(library.eventsChip)).toBeGreaterThan(0);
+        await libraryPage.filterCategory(library.eventsChip, library.eventsQuery, event.title);
+      });
+
+      await test.step('The purchased ticket shows the creator after-sales message', async () => {
+        await libraryPage.openPurchase(event.title);
+        await libraryPage.expectAfterSalesMessage(creatorName);
+      });
+
+      await test.step('The ticket About Creator tab names the real creator', async () => {
+        await libraryPage.expectTicketAboutCreatorName(creatorName);
       });
     } finally {
-      if (productUuid) {
-        await deleteProduct(page.request, productUuid, ownerSeedToken).catch(() => undefined);
-      }
+      if (productUuid) await deleteProduct(page.request, productUuid, seedToken).catch(() => undefined);
     }
   });
 

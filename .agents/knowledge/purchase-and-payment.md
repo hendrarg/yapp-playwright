@@ -227,6 +227,27 @@ one — the API cannot currently distinguish them.
 The order side is already prepared to receive one — `affiliatorCommissionAmount`,
 `productAffiliator`, and `productAffiliatorCommission` are present on the order detail.
 
+## Buying an event ticket end to end (verified 2026-10-06)
+
+Event product page → `Select` a tier → `Add To Cart` → `Checkout` modal (contact details; the phone
+must be 10–15 digits) → `Product Added` → `See Cart`. In `/cart`, tick the line's checkbox and
+press **`Check out`** (two words) → `/cart/checkout` (Complete personal information, voucher,
+payment method, fee breakdown, `Pay Rp10.405` for a Rp10.000 tier) → `/cart/transaction/<orderId>`;
+`depositWebhook` settles it and a `Payment Successful` dialog reads "Your products have been
+purchased successfully." (`CartPage.checkoutItem` / `payCheckout`).
+
+- **`/library` is a 404** ("That page doesn't exist"); the library is **`/dashboard/library`**, with
+  count chips (`All 12`, `Events & Tickets 2`, …). The Events chip sets `?product_type=ticket_event`;
+  a fresh purchase carries a `NEW PURCHASE` badge.
+- Opening the purchase lands on `/product/<uuid>` (tabs Overview / Ticket / About Creator) with
+  `See message from <creator>` + `View Message`, which opens dialog `Message from <creator>` holding
+  the default after-sales text ("Thank you for purchasing …") when the creator set none.
+- The ticket's About Creator now reads **`Meet <creator> — <role>`** (a paragraph, not a heading):
+  bug M-10 ("Meet Creator — …") looks fixed — retest it before closing.
+- Event prices are written `Rp100.000 /per pax` on tiers (was `IDR100,000`), cart tier price `Rp10.000`.
+- A buyer who owns a seeded event needs the creator token on the buyer app; with the split
+  accounts the buyer fixture (`anthony`) never owns hendrarg's or sundanese's events.
+
 ## The Library card date is the purchase date
 
 On the buyer Library, the date printed on a card is when the item was **bought**, not
