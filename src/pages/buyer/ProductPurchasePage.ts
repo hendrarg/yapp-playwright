@@ -1101,9 +1101,9 @@ export class ProductPurchasePage {
     title: string;
     description: string;
     pricePattern?: RegExp;
-    creatorName?: string;
+    creatorName: string;
   }) {
-    const creatorName = options.creatorName ?? onlineCourseBuyerDetailData.creatorName;
+    const { creatorName } = options;
     await this.expectOnlineCourseProductLoaded(options.title);
 
     await expect(
@@ -1153,13 +1153,8 @@ export class ProductPurchasePage {
         text: 'Purchase',
       }).filter({ visible: true }),
     ).toBeVisible({ timeout: 10000 });
-    await expect(
-      locatorChain(this.page, {
-        role: 'button',
-        name: 'Add To Cart',
-        text: 'Add To Cart',
-      }).filter({ visible: true }),
-    ).toBeVisible({ timeout: 10000 });
+    // Online courses are bought one at a time: the page offers Purchase only, never Add To Cart.
+    await expect(this.page.getByRole('button', { name: 'Add To Cart' })).toHaveCount(0);
 
     await expect(this.onlineCourseCarouselItem()).toBeVisible({ timeout: 15000 });
     await expect(this.page.getByRole('button', { name: /^Go to slide \d+$/ })).toHaveCount(
@@ -1177,7 +1172,7 @@ export class ProductPurchasePage {
     await expect(this.onlineCoursePreviousSlideButton()).toBeVisible({ timeout: 10000 });
   }
 
-  async expectOnlineCourseOverviewAndAboutCreatorTabs() {
+  async expectOnlineCourseOverviewAndAboutCreatorTabs(creatorName: string) {
     const overview = locatorChain(this.page, {
       role: 'tab',
       name: onlineCourseBuyerDetailData.overviewTab,
@@ -1192,7 +1187,7 @@ export class ProductPurchasePage {
     await expect(about).toHaveAttribute('aria-selected', 'true', { timeout: 10000 });
     await expect(
       this.page
-        .getByText(onlineCourseBuyerDetailData.creatorName, { exact: true })
+        .getByText(creatorName, { exact: true })
         .filter({ visible: true })
         .first(),
     ).toBeVisible({ timeout: 10000 });
@@ -1291,13 +1286,14 @@ export class ProductPurchasePage {
 
   /** Opens the Redeem Voucher dialog from the online course checkout page. */
   async openOnlineCourseVoucherDialog() {
-    await safeClick(this.chooseVoucherButton);
+    // FLAKY_FIX: checkout hydration can replace the voucher entry button after navigation.
+    await flakyClick(this.chooseVoucherButton);
     await expect(this.voucherInput).toBeVisible({ timeout: 10000 });
   }
 
   /** TC-OC-B-003: checkout shows product, creator, and quantity 1. */
-  async expectOnlineCourseCheckoutInitiated(options: { title: string; creatorName?: string }) {
-    const creatorName = options.creatorName ?? onlineCourseBuyerDetailData.creatorName;
+  async expectOnlineCourseCheckoutInitiated(options: { title: string; creatorName: string }) {
+    const { creatorName } = options;
     await expect(
       this.page.getByText(options.title, { exact: false }).filter({ visible: true }).first(),
     ).toBeVisible({ timeout: 15000 });
@@ -1382,7 +1378,18 @@ export class ProductPurchasePage {
     expect(summary.subtotal).toBe(options.subtotal);
     expect(summary.discount).toBeGreaterThanOrEqual(0);
     const payCta = this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern });
-    await expect(payCta).toContainText(summary.total.toLocaleString('en-US'), { timeout: 10000 });
+    await expect(payCta).toContainText(`Rp${summary.total.toLocaleString('id-ID')}`, { timeout: 10000 });
+  }
+
+/** Fill whatever buyer fields are blank, press Pay and return the order id from `/product/transaction/<id>`. */
+  async payOnlineCourseCheckout(buyer: { name: string; phone: string }): Promise<string> {
+    const name = this.page.getByPlaceholder('Enter your name');
+    if (!(await name.inputValue())) await name.fill(buyer.name);
+    const phone = this.page.getByPlaceholder('Enter phone number');
+    if (!(await phone.inputValue())) await phone.fill(buyer.phone);
+    await flakyClick(this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern }));
+    await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
+    return this.page.url().split('/transaction/')[1];
   }
 
   /** Free product buyer page shows Free / IDR 0 (AUT-FV-193 / TC-PD-C-018). Works as product owner. */

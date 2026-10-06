@@ -84,6 +84,16 @@ export class TransactionPage {
     await expect(dialog).toBeHidden({ timeout: 10000 });
   }
 
+/** A settled product order shows "Purchase Successful" with the product, its creator and View Product. */
+  async expectProductPurchaseSuccess(options: { title: string; creatorName: string }) {
+    const dialog = this.page.getByRole("dialog").filter({ hasText: "Purchase Successful" }).first();
+    await expect(dialog).toBeVisible({ timeout: 30000 });
+    await expect(dialog).toContainText("Your product has been purchased successfully.");
+    await expect(dialog).toContainText(options.title);
+    await expect(dialog).toContainText(options.creatorName);
+    await expect(dialog.getByRole("button", { name: "View Product", exact: true })).toBeVisible();
+  }
+
   async expectUnlockPaymentSuccess() {
     const dialog = this.page.getByRole("dialog").filter({ hasText: /Payment Successful|payment was successful/i }).first();
     await expect(dialog).toBeVisible({ timeout: 20000 });

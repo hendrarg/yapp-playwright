@@ -4,7 +4,6 @@ import { testImages } from "@test-data/creator/post.data";
 
 /** Buyer Online Course product-detail data (AUT-FV-169 / TC-OC-B-001). */
 export const onlineCourseBuyerDetailData = {
-  creatorName: "Tester",
   price: 100000,
   priceDisplayPattern: /Rp100\.000/,
   productBadge: "Online Course",
@@ -34,7 +33,9 @@ export const onlineCourseCheckoutData = {
   freeCheckoutBadge: "FREE",
   /** Badge shown on the buyer product page for a free product. */
   freeBuyerBadge: "Free",
-  payCtaPattern: /^Pay IDR/,
+  /** Checkout CTA, e.g. "Pay Rp105.051" (it read "Pay IDR …" before the Rp formatting change). */
+  payCtaPattern: /^Pay Rp/,
+  enrollmentEmailSubject: "Course Enrollment Confirmed",
   /** 11% promo from `generatePromotionData('active')` used in the voucher step. */
   activePromotionDiscountPercent: 11,
 } as const;

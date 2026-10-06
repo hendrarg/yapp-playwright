@@ -77,3 +77,30 @@ export async function fetchOtpCode(
     clearTimeout(timer);
   }
 }
+
+/** Polls the inbox until an email received after `sentAfterMs` contains `needle`; returns its subject and text. */
+export async function waitForEmail(
+  inbox: TestmailInbox,
+  sentAfterMs: number,
+  needle: string,
+  timeoutMs = 90000,
+): Promise<{ subject: string; text: string }> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const url = new URL('https://api.testmail.app/api/json');
+    url.searchParams.set('apikey', inbox.apiKey);
+    url.searchParams.set('namespace', inbox.namespace);
+    url.searchParams.set('tag', inbox.tag);
+    url.searchParams.set('timestamp_from', String(sentAfterMs));
+    url.searchParams.set('limit', '10');
+    const resp = await fetch(url.toString());
+    if (!resp.ok) throw new Error(`testmail.app API ${resp.status}: ${await resp.text()}`);
+    const data = (await resp.json()) as TestmailResponse;
+    for (const email of data.emails ?? []) {
+      const text = email.text ?? (email.html ? String(email.html).replace(/<[^>]*>/g, ' ') : '');
+      if (`${email.subject ?? ''} ${text}`.includes(needle)) return { subject: email.subject ?? '', text };
+    }
+    if (Date.now() > deadline) throw new Error(`No email containing "${needle}" within ${timeoutMs} ms`);
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+}
