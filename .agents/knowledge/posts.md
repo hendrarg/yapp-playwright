@@ -62,10 +62,11 @@ The pill then reads `Exclusive Rp10.000`. Publishing is `POST /api/v1/posts` wit
 and `PUT` happily lowers an existing PPV post to `price: 0`. That is where Rp0 PPV
 fixtures come from — and why the rule cannot be called server-side.
 
-**With price still Rp0 the `Post` button is enabled but inert:** zero requests, no
-toast, no inline error, no `aria-invalid`, and the dialog stays open. Publishing
-really is blocked; the creator simply is not told why. Do not read "button enabled"
-as "action succeeded" — press it and read the resulting request.
+**With price still Rp0 the `Post` button is enabled, and pressing it now explains why it does
+nothing** (re-checked 2026-10-06): a toast `Price must be greater than 0 for exclusive posts`
+appears at the top of the page — outside the dialog, so a check that only reads the dialog
+text misses it — no request is sent, and the composer stays open. (Until September it was
+silent: zero requests, no toast, no inline error.) Publishing really is blocked.
 
 ## The feed composer is looser than the product forms
 
