@@ -43,3 +43,17 @@ export function generatePostData(overrides?: Partial<PostData>): PostData {
     ...overrides,
   };
 }
+
+/** Creator /feeds composer copy (verified 2026-10-06). */
+export const creatorFeedsLabels = {
+  composerPlaceholder: 'Post something here...',
+  composerTitle: 'Create Post',
+  visibilityPublic: 'Public',
+  payPerView: 'Pay per view',
+  priceDialogHeading: 'Pay per view price',
+  confirmPrice: /^Confirm/,
+  publish: 'Post',
+  configureLifetime: 'Configure Lifetime',
+  /** The PPV and lifetime price floors the forms state ("Min. price: Rp10.000"). */
+  minPrice: 10000,
+} as const;

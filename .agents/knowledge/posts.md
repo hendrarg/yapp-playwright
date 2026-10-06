@@ -47,6 +47,16 @@ Re-read 2026-09-10: the price modal says `Min. price: Rp10.000` (it said Rp20.00
 this note was first written). Its `Confirm` button is disabled below the floor and
 enabled above it — identical on create and edit, so there is no UI bypass.
 
+**Re-checked 2026-10-06 (composer flow changed):** choosing `Pay per view` in the visibility menu
+now opens the `Price` dialog **straight away** ("Pay per view price", `Min. price: Rp10.000`); `Edit
+Price` remains as a menu item for later edits. The input is `type=text inputmode=numeric`: letters
+are stripped (`12a34` → `1,234`), a minus sign is kept (`-5,000`), and `Confirm Rp <n>` is enabled
+only from 10.000 up (empty, 0, negative, 9.999 all disabled). **After Confirm the visibility menu
+stays open**, which keeps the `Create Post` dialog `aria-hidden` — role queries for the composer
+fail until the menu is closed (Escape, sent only once the Price dialog has finished closing).
+The pill then reads `Exclusive Rp10.000`. Publishing is `POST /api/v1/posts` with
+`visibility: pay_per_view` and the price. Creator page object: `FeedsPage.publishPost()`.
+
 **The server enforces nothing.** `POST /api/v1/posts` with
 `{visibility:"pay_per_view", price:0}` or `price:5000` returns `200 Post created`,
 and `PUT` happily lowers an existing PPV post to `price: 0`. That is where Rp0 PPV
