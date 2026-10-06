@@ -224,6 +224,12 @@ a `Post something here...` composer, `Open attachment menu`, `Cancel`, `Send Bro
   and the composer behind stays reachable, so a send fired too early goes out empty —
   check that the dialog closed and the broadcast appears in the list before believing it.
 
+- **Broadcast detail has no actions menu** (6 Oct 2026, M&B-6 / M&B-16). There is no
+  update/delete endpoint for a sent broadcast, so the inert `(…)` button that used to sit top
+  right was **removed** rather than wired up. The detail header now holds only `Send to <avatars>
+  N People` and `N Views`. A TC expecting delete/recall/details there (TC-MB-C-101) is out of
+  date — the expected state is that no such control exists.
+
 ### What the recipient sees
 
 - A **member-only post card** renders the post title under a `Member Only` badge. There is

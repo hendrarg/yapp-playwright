@@ -240,6 +240,12 @@ Read this before the older sections below — several described defects are gone
   - Poll before its window: the Vote block is **hidden** on the tip page, and a direct
     `POST /api/v1/tipping/fiat` with `votingSelectedOption` returns **400 `voting is not open`**.
   - Milestone START picker: every date enabled (0/35 disabled); today can be picked.
+    Save persists (6–7 Oct survived a reload). **Progress counts every tip inside the window,
+    including tips paid before the window was saved**: setting START to today 00:00 at ~14:30
+    showed `145.000 / 150.000` at once — the four tips sent earlier that day. One more Rp10.000
+    tip moved it to `155.000 / 150.000`, `100%`, with a confetti burst on the overlay (the
+    completion cue). So a milestone test needs no new tips if the day already has some — and a
+    window that starts in the past can complete instantly.
   - Media Share message now quotes the **effective** floor: creator video min Rp5.000 → `You need
     to tip at least Rp10.000 to share this media.`; with `MINIMUM AMOUNT TO SHOW ALERT` Rp50.000 it
     says Rp50.000 and hides the link input — effective floor = max(Media Share min, Rp10.000,
