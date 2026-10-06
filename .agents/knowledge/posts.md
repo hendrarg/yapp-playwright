@@ -250,6 +250,24 @@ Verified 2026-10-05 with API-seeded products (`productUuids` on `POST /api/v1/po
   runs under `test.fail()` until M-60 (F&E-11) is fixed.
 - No API changes a product's status; seed an inactive one with `status: 'inactive'` on create.
 
+## Creator composer: products, editing, lifetime dialog (verified 2026-10-06)
+
+- **Linked products:** the composer toolbar's product button opens dialog `Select Product` — one
+  `<label>` per product (thumbnail `img alt` = title) with a checkbox, plus `Select All` and
+  `Add (n) Product(s)`. The chosen products appear in the composer and are sent as `productUuids`.
+  Attach them **before** the image: an attached image adds its own `×` button and shifts the
+  icon-only toolbar buttons.
+- **Editing:** each post card's `…` menu offers `Insights`, `Edit`, `Delete`. `Edit` opens dialog
+  `Edit Post` (textarea, `Pick from gallery`, `Add product`, the visibility pill, `Save`); the pill's
+  menu has `Edit Price`, which reopens the Price dialog with the current value. Save sends `PUT
+  /api/v1/posts/{uuid}` (keeps the assets) and toasts `Post published successfully`.
+- **`Configure Lifetime`** opens dialog `Lifetime Configuration`: switch `Lifetime access` (off by
+  default when the price is 0), `Set lifetime price` with an `Rp` field and `Min. price: Rp10.000`,
+  `Save`, `Close`. The field behaves like the PPV one (letters stripped, Save enabled from 10.000).
+  Save sends `PUT /api/v1/posts/lifetime-prices/me {priceIDR}`; switching off saves `0`.
+- A guest viewing a locked post detail sees `Unlock Post` / `Unlock Now` but **not** `Unlock post to
+  add comments` — that line is only for signed-in viewers.
+
 ## The composer cannot publish anything that is not Public
 
 Established 2026-09-10 across six separate attempts; filed as H-05.

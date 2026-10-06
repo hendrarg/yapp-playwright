@@ -54,6 +54,14 @@ Popular Products applies its own status gate on top of the curation: nine produc
 `is_featured_product`, and the one in `draft` (`Quick`, position 0) is the one the
 endpoint drops.
 
+## A creator with no visible products has no Shops tab
+
+Verified 2026-10-06 by hiding both of `sundanese`'s products from the profile (then restoring):
+the **Shops tab disappears** — the profile shows `Links`, `Feeds`, `Support` and opens on Links —
+rather than showing an empty-state message. TC-FE-C-067 expects "No products added yet"
+(clarification CL-AUT-028). `PUT /api/v1/shop/products/{uuid}/hide-from-profile
+{isHideFromProfile}` (helper `setProductHideFromProfile`) toggles it.
+
 ## Official badge and the missing NSFW flag
 
 Verified 2026-10-05 by toggling the flags on `sundanese` (then restored):

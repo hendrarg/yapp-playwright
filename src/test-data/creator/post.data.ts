@@ -54,6 +54,18 @@ export const creatorFeedsLabels = {
   confirmPrice: /^Confirm/,
   publish: 'Post',
   configureLifetime: 'Configure Lifetime',
+  lifetimeDialog: 'Lifetime Configuration',
+  lifetimeSwitch: 'Lifetime access',
+  lifetimePriceLabel: 'Set lifetime price',
+  minPriceHint: 'Min. price: Rp10.000',
+  save: 'Save',
+  selectProductDialog: 'Select Product',
+  addProducts: /^Add \(\d+\) Products?$/,
+  postMenuEdit: 'Edit',
+  editDialog: 'Edit Post',
+  editPrice: 'Edit Price',
+  zeroPriceToast: 'Price must be greater than 0 for exclusive posts',
+  publishedToast: 'Post published successfully',
   /** The PPV and lifetime price floors the forms state ("Min. price: Rp10.000"). */
   minPrice: 10000,
 } as const;

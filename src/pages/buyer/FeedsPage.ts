@@ -869,7 +869,8 @@ export class FeedsPage {
     await expect(this.page.getByRole("main").getByText(content, { exact: false }).first()).toBeVisible({ timeout: 10000 });
   }
 
-  async expectLockedPostDetail() {
+/** Locked post detail: Unlock Post and Unlock Now. A signed-in viewer also gets "Unlock post to add comments"; a guest does not. */
+  async expectLockedPostDetail(options: { signedIn?: boolean } = {}) {
     await this.expectPostDetailOpen();
     await expect(this.unlockPostButtons.first()).toBeVisible({ timeout: 10000 });
     await expect(
@@ -877,7 +878,9 @@ export class FeedsPage {
         this.page.getByRole("button", { name: /Unlock Now|Unlock now/ }),
       ),
     ).toBeVisible({ timeout: 10000 });
-    await expect(this.page.getByText(/Unlock post to add comments/i).first()).toBeVisible({ timeout: 10000 });
+    if (options.signedIn !== false) {
+      await expect(this.page.getByText(/Unlock post to add comments/i).first()).toBeVisible({ timeout: 10000 });
+    }
   }
 
   async openUnlockPreview(price = 20000) {
