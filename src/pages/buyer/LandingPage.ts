@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { landingCopy } from '@test-data/buyer/landing.data';
 import { locatorChain, smartLocator } from '@utils/heal-utils';
@@ -193,6 +193,15 @@ export class LandingPage {
     await expect(this.exploreCreatorsLink).toBeVisible();
     await expect(this.exploreProductsLink).toBeVisible();
     await expect(this.exploreCampaignsLink).toBeVisible();
+  }
+
+  /** Open the header Explore menu, pick an item and land on its explore page (first load can be slow). */
+  async openExploreMenuItem(item: { label: string; path: string; heading: string }) {
+    await this.openExploreMenu();
+    const links = { '/explore/creators': this.exploreCreatorsLink, '/explore/products': this.exploreProductsLink, '/explore/campaigns': this.exploreCampaignsLink } as Record<string, Locator>;
+    await safeClick(links[item.path]);
+    await this.page.waitForURL((url) => url.pathname === item.path, { timeout: 30000 });
+    await expect(this.page.getByRole('heading', { name: item.heading, exact: true })).toBeVisible({ timeout: 15000 });
   }
 
   async closeExploreMenu() {

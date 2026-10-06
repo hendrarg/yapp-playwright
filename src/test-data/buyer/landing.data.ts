@@ -26,6 +26,12 @@ export const landingCopy = {
   productsHeading: 'Products',
   campaignsHeading: 'Campaigns',
   viewMore: 'View More',
+  /** Header Explore dropdown: item label → destination path and page heading. */
+  exploreMenuItems: [
+    { label: 'Creators', path: '/explore/creators', heading: 'Explore Creators' },
+    { label: 'Products', path: '/explore/products', heading: 'Explore Products' },
+    { label: 'Campaigns', path: '/explore/campaigns', heading: 'Explore Campaigns' },
+  ] as const,
   faqQuestion: 'What is Yapp?',
   footerLinks: [
     { name: 'About Us', urlPattern: /\/about/ },

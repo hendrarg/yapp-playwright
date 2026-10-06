@@ -2,109 +2,95 @@ import { test as guestTest, expect } from '../test-base';
 import { landingCopy, generateGetYappUsername } from '@test-data/buyer/landing.data';
 
 guestTest.describe('Buyer Landing Page', () => {
-  guestTest('Verify Landing Page Hero, Header, and Copy Regression', {
-    tag: ['@AUT-FV-306', '@landing', '@buyer', '@regression'],
-  }, async ({ buyerNav, landingPage }) => {
-    await guestTest.step('Open landing page and verify shell renders', async () => {
+  guestTest('Landing Page — Page Load, Header Navigation, Hero Copy, Primary CTA, Header Menu, Feature Tabs', {
+    tag: ['@AUT-LP-001', '@landing', '@buyer', '@smoke'],
+  }, async ({ buyerNav, landingPage, explorePage }) => {
+    await guestTest.step('The landing page loads with hero, content sections and footer', async () => {
       await buyerNav.open('landing');
       await landingPage.expectLandingShellVisible();
     });
 
-    await guestTest.step('Verify header navigation labels', async () => {
+    await guestTest.step('The header shows Explore, Features, Pricing, FAQ and Log In', async () => {
       await landingPage.expectHeaderLabels();
     });
 
-    await guestTest.step('Verify hero headline and supporting copy', async () => {
+    await guestTest.step('The hero headline and supporting copy use the approved wording', async () => {
       await landingPage.expectHeroCopy();
     });
 
-    await guestTest.step('Verify Explore menu expands and collapses', async () => {
+    await guestTest.step('The Explore menu expands and collapses', async () => {
       await landingPage.openExploreMenu();
       await landingPage.closeExploreMenu();
     });
 
-    await guestTest.step('Verify approved marketing copy with no placeholders', async () => {
-      await landingPage.expectApprovedCopy();
-    });
-  });
-
-  guestTest('Verify Landing Page Primary Conversion CTAs and Join Form', {
-    tag: ['@AUT-FV-307', '@landing', '@buyer', '@smoke', '@regression'],
-  }, async ({ buyerNav, landingPage, explorePage }) => {
-    await guestTest.step('Open landing page', async () => {
-      await buyerNav.open('landing');
+    await guestTest.step('All core feature tabs are shown', async () => {
+      await landingPage.expectFeatureTabs();
     });
 
-    await guestTest.step('Verify Start Exploring navigates to Explore', async () => {
+    await guestTest.step('Start Exploring opens Explore with the recommended section', async () => {
       await landingPage.clickStartExploring();
       await explorePage.expectLoaded();
       await explorePage.expectRecommendedSectionVisible();
     });
 
-    await guestTest.step('Verify Become a Creator opens creator join flow', async () => {
+    await guestTest.step('Become a Creator opens the creator sign-up flow', async () => {
       await buyerNav.open('landing');
       const creatorAuthPage = await landingPage.clickBecomeACreator();
       await landingPage.expectCreatorJoinFormVisible(creatorAuthPage);
-      await creatorAuthPage.close();
+      if (creatorAuthPage !== landingPage.page) await creatorAuthPage.close();
     });
 
-    await guestTest.step('Verify Get Yapp form accepts input and submits', async () => {
-      await buyerNav.open('landing');
-      const username = generateGetYappUsername();
-      await landingPage.submitGetYapp(username);
-      await landingPage.expectCreatorJoinFormVisible(landingPage.page, username);
+    await guestTest.step('Each Explore menu item opens its explore page', async () => {
+      for (const item of landingCopy.exploreMenuItems) {
+        await buyerNav.open('landing');
+        await landingPage.openExploreMenuItem(item);
+      }
     });
   });
 
-  guestTest('Verify Landing Page Feature, Creator, Product, and Campaign Discovery Sections', {
-    tag: ['@AUT-FV-308', '@landing', '@buyer', '@regression'],
-  }, async ({ buyerNav, landingPage }) => {
-    await guestTest.step('Open landing page', async () => {
+  guestTest('Landing Page — Feature Cards, Creators Section, Products Section, Campaigns Section, FAQ Accordion, Footer Navigation, Get Yapp Form, Copy Regression', {
+    tag: ['@AUT-LP-002', '@landing', '@buyer', '@regression'],
+  }, async ({ buyerNav, landingPage, page }) => {
+    await guestTest.step('Feature cards show title, description and the Sign Up CTA', async () => {
       await buyerNav.open('landing');
-    });
-
-    await guestTest.step('Verify core feature tabs are visible', async () => {
-      await landingPage.expectFeatureTabs();
-    });
-
-    await guestTest.step('Verify feature cards show copy and Sign Up CTA', async () => {
       await landingPage.expectFeatureCards();
     });
 
-    await guestTest.step('Verify Creators section cards and View More', async () => {
+    await guestTest.step('The Creators section renders creator cards and View More', async () => {
       await landingPage.expectCreatorsSection();
     });
 
-    await guestTest.step('Verify Products section metadata', async () => {
+    await guestTest.step('The Products section renders title, price and discount details', async () => {
       await landingPage.expectProductsSection();
     });
 
-    await guestTest.step('Verify Campaigns section progress metadata', async () => {
+    await guestTest.step('The Campaigns section renders goal and progress', async () => {
       await landingPage.expectCampaignsSection();
     });
-  });
 
-  guestTest('Verify Landing Page FAQ Accordion and Footer Navigation', {
-    tag: ['@AUT-FV-309', '@landing', '@buyer', '@regression'],
-  }, async ({ buyerNav, landingPage, page }) => {
-    await guestTest.step('Open landing page', async () => {
-      await buyerNav.open('landing');
-    });
-
-    await guestTest.step('Verify FAQ expands and collapses', async () => {
+    await guestTest.step('An FAQ item expands and collapses', async () => {
       await landingPage.expandFaq();
       await landingPage.collapseFaq();
     });
 
-    await guestTest.step('Verify footer links navigate to correct destinations', async () => {
+    await guestTest.step('The page uses the approved marketing copy with no placeholders', async () => {
+      await landingPage.expectApprovedCopy();
+    });
+
+    await guestTest.step('Footer links open their destinations', async () => {
       for (const link of landingCopy.footerLinks) {
         await buyerNav.open('landing');
         const destination = await landingPage.openFooterLink(link.name);
         await expect(destination).toHaveURL(link.urlPattern);
-        if (destination !== page) {
-          await destination.close();
-        }
+        if (destination !== page) await destination.close();
       }
+    });
+
+    await guestTest.step('The Get Yapp field accepts a username and opens the join form with it', async () => {
+      await buyerNav.open('landing');
+      const username = generateGetYappUsername();
+      await landingPage.submitGetYapp(username);
+      await landingPage.expectCreatorJoinFormVisible(landingPage.page, username);
     });
   });
 });
