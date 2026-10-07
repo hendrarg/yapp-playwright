@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { getAiText } from '@test-data/ai';
 
-export type PostVisibility = 'public' | 'pay_per_view' | 'exclusive' | 'member_only';
+export type PostVisibility = 'public' | 'pay_per_view' | 'exclusive' | 'membership_only';
 
 export interface PostData {
   content: string;

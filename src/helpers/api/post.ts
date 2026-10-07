@@ -9,6 +9,8 @@ export interface CreatePostOptions {
   price?: number;
   isFlexiblePrice?: boolean;
   productUuids?: string[];
+  /** Required for `membership_only`: the tiers that unlock the post. */
+  tierMembershipUuids?: string[];
   imagePath?: string;
   mediaPath?: string;
   /** Several images in order — a gallery post. Takes precedence over `imagePath`/`mediaPath`. */
@@ -30,6 +32,7 @@ export async function createPost(
     price = 0,
     isFlexiblePrice = false,
     productUuids = [],
+    tierMembershipUuids,
     imagePath,
     mediaPath = imagePath,
     imagePaths,
@@ -39,7 +42,7 @@ export async function createPost(
   if (!mediaPaths.length) {
     const response = await request.post(apiUrl('/api/v1/posts'), {
       headers: h(),
-      data: { content, status: 'active', visibility, assets: [], productUuids, price, isFlexiblePrice },
+      data: { content, status: 'active', visibility, assets: [], productUuids, price, isFlexiblePrice, tierMembershipUuids },
     });
     if (!response.ok()) {
       throw new Error(`Create post failed: ${response.status()} ${await response.text()}`);
@@ -61,6 +64,7 @@ export async function createPost(
       productUuids,
       price,
       isFlexiblePrice,
+      tierMembershipUuids,
     },
   });
   if (!postRes.ok()) {

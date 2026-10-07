@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, messaging]
 project: yapp
 created: 2026-09-04
-updated: 2026-10-02
+updated: 2026-10-07
 sources: 0
 status: active
 ---
@@ -76,24 +76,81 @@ test cases were written against, so check this before scoping a messaging TC.
 
 ## Buyer app
 
-- The composer has only **Attach image** plus Send — no rich-card menu
-  (`accept="image/jpeg,png,gif,webp"`).
+- The composer has only **Attach media** plus Send — no rich-card menu. Since Oct 2026
+  the input also takes video (`accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,
+  video/webm,video/quicktime"`, `multiple`); a buyer-sent MP4 renders as a loaded `<video>`.
+  (Was `Attach image`, images only — re-verified 2026-10-07.)
 - Inbox previews are type-aware ("You sent a photo", "Sent a product", "You requested
   a tip") where the creator app renders a blank preview.
 - The ⋮ menu is Report User / Block User / Delete — no Add Mark Badge.
-- **The only new-chat entry point is the "Your Subscribed Creators" list**
-  (`GET /api/v1/dm/directories/buyer/creators`) shown in the empty-inbox state; a
-  per-creator Message button creates the conversation on click. That section
-  disappears once the buyer has any conversation, and the creator's public profile has
-  no Message button at all. So a buyer with an existing inbox has no way to start a
-  new conversation.
+- **Two new-chat entry points** (2026-10-07). The creator's public profile now has a
+  **`Direct Message`** button next to `Member` — it opens `/direct?chatId=<uuid>` when the
+  buyer may message, and `/<creator>/membership` when the policy is subscribers-only and the
+  buyer holds no tier. The **"Your Subscribed Creators"** list
+  (`GET /api/v1/dm/directories/buyer/creators`, Message → `POST /api/v1/dm/conversations`
+  `{counterPartyUUID, counterPartyRole: "creator"}`) renders **only when the buyer has zero DM
+  conversations *and* zero group chats** (that is the code's condition) — a buyer in any
+  tier group never sees it. Fixture for the empty state: soft-delete every
+  `tier_membership_users` row of the buyer with `DbFixtures.set(..., { deleted_at })` (that
+  also drops their groups) and delete each conversation for the buyer.
+- **Delete (scope `me`) wipes the buyer's copy of the history.** `DELETE
+  /api/v1/dm/conversations/{uuid}` `{scope: "me"}` hides the thread; the next message from
+  either side brings it back with **only the new messages**. Starting the chat again returns
+  the same conversation UUID.
 - Buyer inbox search is inert — it filters nothing.
 
-## DM sends ride a WebSocket, not REST
+## DM sends ride a WebSocket — with a REST fallback that seeds anything
 
-There is no `POST .../messages` to wait on. The stable assertions are the state from
-`GET /api/v1/dm/conversations` (`lastMessage`, `unreadCount`) or the thread DOM —
-never a response wait on the send itself.
+The UI sends over `wss://…/api/v1/dm/ws?token=` (on dev the socket host is
+`staging.yapp.ink`), so there is no request to wait on from the browser. The stable
+assertions are the state from `GET /api/v1/dm/conversations` (`lastMessage`,
+`unreadCount`) or the thread DOM.
+
+**For seeding, the app's own fallback works:** `POST /api/v1/dm/conversations/{uuid}/messages`
+with `{contentType, content?, referenceUuids?, tipAmount?, mediaUrls?, mediaType?}` accepts
+every type — `text`, `media`, `product`, `campaign`, `post`, `tier_membership` **and `tip`**
+(which broadcasts reject, M-27). Wrapped as `sendDm` in `src/helpers/api/dm.ts`, with
+eligibility, policy (`PUT /api/v1/dm/settings`), directory and delete helpers beside it.
+Broadcasts take `{contentType, content, referenceUuids, audience: {type: "buyer_uuids",
+buyerUUIDs}}` (or `{type: "custom_list", customListUUID}`). Member-only posts need
+`tierMembershipUuids` on create (`visibility: "membership_only"`), else 500.
+
+## Buyer thread: cards, timestamps and read-only panels (verified 2026-10-07)
+
+- Own bubbles sit right with a clock time and an unlabeled lucide check (delivered); the
+  creator's sit left. **Consecutive messages share one time**, printed under the last of the
+  run — earlier bubbles in a run have none. A buyer text reaches the creator's
+  `/dm/conversations` within ~1 s and bumps `unreadCount`.
+- Product card: thumbnail, type badge, title, creator, `Rp15.000`, **`Buy Now`** (new tab →
+  `/<creator>/product/<short>`). Campaign card: banner, `Active`, title, owner, `N%`, a
+  progressbar, **`Donate Now`** (new tab → `/campaign/uuid/<uuid>/donate`). Tip request:
+  creator avatar/name and **`Send Tip Rp25.000`** (same tab → `/<creator>/tip?amount=25000&
+  currency=IDR`, amount prefilled). Tier card: `Membership`, tier, creator, `Subscribed`
+  (same tab → `/profile/membership`) or `Subscribe Now` (new tab → `/<creator>/membership/
+  <tier>`).
+- Post cards are a single button (author, age, text, image) with **no `Public` label and no
+  `View Post`**; clicking opens `/post/<uuid>`. PPV adds `Unlock Post`, which opens the
+  **`Unlock Exclusive Post` payment dialog in place** (same form as the feed). After the
+  purchase the card loses `Unlock Post`. A member-only card shows `Member Only`; for a buyer
+  without the tier the post page's `Unlock Now` opens **`Select Membership to Unlock`** with
+  that tier and `Subscribe Rp<price>`.
+- Read-only threads replace the composer with **"You can't send a message right now"** plus
+  a reason: policy `none` → "This person is not accepting messages right now. Your chat
+  history is saved." (`reason: dm_disabled`); subscribers-only + lapsed member → banner "Your
+  subscription to <creator> ended, resubscribe to keep chatting" and "Messages only accept
+  from subscribers…" with `Subscribe` → `/<creator>/membership`; Everyone + lapsed member →
+  "Your subscription has ended. Resubscribe to keep chatting…" with `Subscribe` →
+  `/profile/membership`. History stays readable in every case.
+- **Candidate bug (2026-10-07, not filed):** once the buyer holds no active tier of the
+  creator, the existing conversation reports `canSend: false`, `readOnlyReason:
+  dm_access_revoked` even when the policy is Everyone and
+  `GET /api/v1/dm/creators/{uuid}/eligibility` says `canMessage: true`. So a "potential
+  customer" (no membership) can open a chat from the directory but cannot type. A pending
+  order does not grant DM either (`dm_subscriber_only_required` under subscribers-only).
+  `AUT-MB-019` runs under `test.fail()` for this.
+- Fixtures: the QA buyer also holds two DM-disabled tiers of **sundanese** (`MB Permanent
+  Contrast`, `MB Dropdown Check …`) — with sundanese on subscribers-only, eligibility is
+  `canMessage: false` and sundanese drops out of the directory (the "tier without DM" case).
 
 ## Composer limits (verified 2026-09-01)
 
