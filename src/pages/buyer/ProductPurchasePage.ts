@@ -1312,8 +1312,11 @@ export class ProductPurchasePage {
   async openOnlineCourseCheckout(title: string, sharePath: string) {
     await this.gotoSharePath(sharePath);
     await this.expectOnlineCourseProductLoaded(title);
-    await flakyClick(this.page.getByRole('button', { name: /^(Get Product|Purchase)$/ }));
-    await expect(this.page).toHaveURL(/\/checkout\?quantity=1/, { timeout: 15000 });
+    // A click that lands before hydration is dropped; repeat until checkout opens.
+    await expect(async () => {
+      if (!/\/checkout/.test(this.page.url())) await flakyClick(this.page.getByRole('button', { name: /^(Get Product|Purchase)$/ }));
+      await expect(this.page).toHaveURL(/\/checkout\?quantity=1/, { timeout: 5000 });
+    }).toPass({ timeout: 30000 });
   }
 
   /** Opens the Redeem Voucher dialog from the online course checkout page. */
@@ -1413,7 +1416,23 @@ export class ProductPurchasePage {
     await expect(payCta).toContainText(`Rp${summary.total.toLocaleString('id-ID')}`, { timeout: 10000 });
   }
 
-/** Fill whatever buyer fields are blank, press Pay and return the order id from `/product/transaction/<id>`. */
+/**
+   * Guest checkout (2026-10-07): name, email, a "Confirm email" field and phone, with the note
+   * "Receipt & download link will be sent to <email>"; there is no verification-code step any more.
+   */
+  async payGuestCheckout(buyer: { name: string; email: string; phone: string }): Promise<string> {
+    const field = (placeholder: string) => this.page.getByPlaceholder(placeholder).filter({ visible: true }).first();
+    await field('Enter your name').fill(buyer.name);
+    await field('Enter your email').fill(buyer.email);
+    await field('Re-enter your email').fill(buyer.email);
+    await field('Enter phone number').fill(buyer.phone);
+    await expect(this.page.getByText(`Receipt & download link will be sent to ${buyer.email}`)).toBeVisible({ timeout: 10000 });
+    await flakyClick(this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern }));
+    await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
+    return this.page.url().split('/transaction/')[1];
+  }
+
+  /** Fill whatever buyer fields are blank, press Pay and return the order id from `/product/transaction/<id>`. */
   async payOnlineCourseCheckout(buyer: { name: string; phone: string }): Promise<string> {
     const name = this.page.getByPlaceholder('Enter your name');
     if (!(await name.inputValue())) await name.fill(buyer.name);

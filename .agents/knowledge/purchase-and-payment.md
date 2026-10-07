@@ -16,6 +16,33 @@ status: active
 
 Checkout, guest verification, promo redemption, and how payments settle on dev.
 
+## Digital product purchase and access (verified 2026-10-07)
+
+**Guest checkout changed again: no verification code at checkout.** The guest form now has
+`Your Name`, `Email`, **`Confirm email`** (placeholder `Re-enter your email`) and `Phone Number`,
+plus the note `Receipt & download link will be sent to <email>`, and `Pay` goes straight to
+`/product/transaction/<orderId>`. (Some inputs exist twice in the DOM — filter on visible.) The
+email check moved to **access time**: opening `/product/<order-uuid>` without a session redirects
+to `/auth?redirect_url=…`; signing in there with the purchase email and the **login** OTP
+(`verify-login-otp`) lands on the order page. The first sign-in creates an account, so tests use one
+fixed guest address. For guest orders `depositWebhook` completes the order but its response can
+hang 30 s+ — pass `{ tolerateTimeout: true }` and verify in the UI.
+
+- Success modal `Purchase Successful` → `View Product` → `/product/<order-uuid>/thank-you` ("Thank you
+  for your purchase!", the after-sales note, `View Download`). `View Download` → `/product/<order-uuid>`.
+  **`Explore other products` opens `/dashboard/library`, not Explore** (candidate bug, not filed yet).
+  **Back on the thank-you page opens the order page**, not the product detail (M-45; the bug text says
+  library — it now goes to `/product/<order-uuid>`).
+- The order page shows title, `Digital Product` badge, description, `See message from <creator>` /
+  `View Message`, then a `Links` section (label, URL, `Open Link` with `target=_blank`) and a
+  `Media` section for uploaded files (name, `View`, `Download` → S3 URL with
+  `response-content-disposition=attachment`). Empty sections are not rendered.
+- Buying an already-owned product again: `Pay` does nothing — no navigation, no message.
+- Email subject: `Yapp — Your Download Is Ready 📥`. Library chips add up to `All`; the Digital
+  Download chip sets `?product_type=digital_download`.
+- **Seeding:** `createDigitalProduct` posts `files: [{ title, url: uploadId, feedAssetType: 'file' }]`
+  and `embedLinks: [{ label, url }]` — `productFiles` is only the read-side name and is ignored on create.
+
 ## Guests must verify email before buying
 
 Confirmed 2026-08-27.

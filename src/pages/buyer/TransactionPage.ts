@@ -94,6 +94,21 @@ export class TransactionPage {
     await expect(dialog.getByRole("button", { name: "View Product", exact: true })).toBeVisible();
   }
 
+/** Success modal → View Product: the order's thank-you page. */
+  async viewPurchasedProduct() {
+    const dialog = this.page.getByRole("dialog").filter({ hasText: "Purchase Successful" }).first();
+    await safeClick(dialog.getByRole("button", { name: "View Product", exact: true }));
+    await expect(this.page).toHaveURL(/\/product\/[0-9a-f-]{36}\/thank-you/, { timeout: 20000 });
+    await waitForLoaded(this.page);
+  }
+
+  /** Success modal → Explore other products: back to Explore. */
+  async exploreOtherProducts() {
+    const dialog = this.page.getByRole("dialog").filter({ hasText: "Purchase Successful" }).first();
+    await safeClick(dialog.getByRole("button", { name: "Explore other products", exact: true }));
+    await expect(this.page).toHaveURL(/\/explore/, { timeout: 20000 });
+  }
+
   async expectUnlockPaymentSuccess() {
     const dialog = this.page.getByRole("dialog").filter({ hasText: /Payment Successful|payment was successful/i }).first();
     await expect(dialog).toBeVisible({ timeout: 20000 });

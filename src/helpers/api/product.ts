@@ -492,6 +492,84 @@ export async function createOnlineCourseProduct(
   };
 }
 
+export interface CreateDigitalProductOptions {
+  title: string;
+  description: string;
+  thumbnailImagePath: string;
+  price?: number;
+  /** Local paths uploaded as downloadable "Digital Files". */
+  filePaths?: string[];
+  /** External links shown on the buyer's access page. */
+  links?: Array<{ label: string; url: string }>;
+  thankYouNote?: string;
+}
+
+/**
+ * Create an active Digital Download (`productType: digital_download`). Files go in `files`
+ * (`{ title, url: uploadId, feedAssetType: 'file' }`) and links in `embedLinks` (`{ label, url }`);
+ * `productFiles` is the read-side name and is ignored on create (verified 2026-10-07).
+ */
+export async function createDigitalProduct(
+  request: APIRequestContext,
+  options: CreateDigitalProductOptions,
+  token?: string,
+): Promise<CreatedProduct> {
+  const headers = getCreatorHeaders(token);
+  const thumbnail = await uploadFile(request, { filePath: options.thumbnailImagePath, token, headers });
+  const files = [];
+  for (const filePath of options.filePaths ?? []) {
+    const uploaded = await uploadFile(request, { filePath, token, headers });
+    files.push({ title: filePath.split(/[\\/]/).pop(), description: '', feedAssetType: 'file', url: uploaded.uploadId });
+  }
+  const response = await request.post(apiUrl('/api/v1/shop/products'), {
+    headers,
+    data: {
+      title: options.title,
+      description: options.description,
+      thumbnailImage: thumbnail.uploadId,
+      productImages: [],
+      isSetPrice: (options.price ?? 0) > 0,
+      price: options.price ?? 0,
+      isSetDiscount: false,
+      discount: 0,
+      discountType: 'percentage',
+      isFlexiblePrice: false,
+      maximumFlexiblePrice: null,
+      isSchedulePublish: false,
+      isHideFromExplore: false,
+      isAvailability: false,
+      status: 'active',
+      files,
+      embedLinks: options.links ?? [],
+      contentSetting: { isDownloadable: true, isRequireLoginToPurchase: false, isNSFW: false, isBlurContent: false, isOneTimeView: false },
+      additionalQuestions: [],
+      isAllowCustomerChooseQuantity: false,
+      isLimitProductSales: false,
+      limitProductSales: 0,
+      isEnableCrypto: false,
+      isCryptoFlexiblePrice: false,
+      categoryIDs: [],
+      isAcceptPublicAffiliator: false,
+      affiliateCommissionType: 'percentage',
+      affiliateCommission: 0,
+      affiliateCommissionCrypto: 0,
+      isFreeForMembers: false,
+      purchaseButtonText: 'Purchase',
+      privateDescription: '',
+      thankYouNote: options.thankYouNote ?? '',
+      salesLinks: [],
+      productType: 'digital_download',
+    },
+  });
+  if (!response.ok()) {
+    throw new Error(`Create digital product failed: ${response.status()} ${await response.text()}`);
+  }
+  const body = await response.json();
+  const productUuid = productUuidFromBody(body);
+  if (!productUuid) throw new Error(`Create digital product response did not include product uuid: ${JSON.stringify(body)}`);
+  return { productUuid, uploadId: thumbnail.uploadId, key: thumbnail.key, body };
+}
+
 export async function deleteProduct(
   request: APIRequestContext,
   productUuid: string,

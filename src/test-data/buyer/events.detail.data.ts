@@ -79,6 +79,8 @@ export const buyerEventsDetailData = {
     missingPage: "That page doesn't exist",
     eventsChip: "Events & Tickets",
     eventsQuery: "product_type=ticket_event",
+    digitalChip: "Digital Download",
+    digitalQuery: "product_type=digital_download",
     newPurchaseBadge: "NEW PURCHASE",
   },
   ticketPage: {
