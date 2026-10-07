@@ -52,11 +52,21 @@ export const testAccounts = {
 export type TestAccountKey = keyof typeof testAccounts;
 export type TestAccount = (typeof testAccounts)[TestAccountKey];
 export type TestTokenEnvVar = TestAccount["envVar"];
+/**
+ * Inbox-only accounts: no token slot in `.env`, signed in through OTP when a test needs them.
+ * `emptyCreator` is the guest-buyer inbox — onboarded as a creator with no products and no
+ * orders, so it is the only account that shows the Orders empty states.
+ */
+export const inboxAccounts = {
+  emptyCreator: { displayName: "Empty creator (guest buyer inbox)", testmailTag: "guestbuyer" },
+} as const;
+export type InboxAccount = (typeof inboxAccounts)[keyof typeof inboxAccounts];
+
 /** Accounts whose OTP arrives in a testmail.app inbox. */
-export type TestmailAccount = Extract<TestAccount, { testmailTag: string }>;
+export type TestmailAccount = Extract<TestAccount, { testmailTag: string }> | InboxAccount;
 
 /** Email the account signs in with: the testmail inbox, or the env-provided address for `creator`. */
-export function accountLoginEmail(account: TestAccount): string {
+export function accountLoginEmail(account: TestAccount | InboxAccount): string {
   if ("loginEmailEnv" in account) {
     const email = process.env[account.loginEmailEnv]?.trim();
     if (!email) throw new Error(`${account.loginEmailEnv} must be set in .env to sign ${account.displayName} in via OTP.`);

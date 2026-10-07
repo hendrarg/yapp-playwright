@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, orders-and-reports]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-09
+updated: 2026-10-07
 sources: 0
 status: active
 ---
@@ -16,6 +16,52 @@ status: active
 
 The creator Orders list, order details, and the CSV export. Established across the
 Aug 2026 test sessions.
+
+## Orders has its own route since Oct 2026 (verified 2026-10-07)
+
+**`/products?tab=orders` no longer opens Orders** — it renders the Products list. Orders is
+the sidebar item and top-nav link **`/orders`**: overview cards `Lifetime Earnings` and a
+period card (`All time earnings`, or `30 days earnings` etc. when a preset is picked), then
+**Performance Details** with tabs Products / Tipping / Campaigns Activations / PPV /
+Membership / Lifetime Access. The Products tab holds Search, the time and product filters,
+`Export as CSV`, the table and the pager. The hidden tabs render their own pager and empty
+texts in the DOM, so scope locators to `tabpanel "Products"` and filter text to visible.
+
+- **A row opens Order Details at `/orders/<orderUuid>`**: `Order #<uuid>`, Customer Details
+  (Name, Username `-`, Email, Phone Number, Payment Method), Additional Questions (custom
+  questions), Order Details (`Order items: N`, Purchase Date, product image/type/name,
+  price, `Nx`), and Revenue (Product Price, Subtotal, Platform Fee and Payment Gateway Fee
+  "(Buyer pays)", Received By Seller). Nothing is editable; `Back` returns to `/orders`.
+- APIs: list `GET /api/v1/shop/orders?page&limit&status=completed&start_date&end_date
+  &direction=desc[&product_type=a,b][&q=]`, overview `GET /api/v1/shop/orders/summary
+  ?start_date&end_date` (`totalEarnings`, `totalEarningOnRangeTime`,
+  `totalSalesOnRangeTime`), detail `GET /api/v1/shop/orders/{uuid}` (adds `paymentMethod`,
+  fees, `pricePaidByBuyer`). All Time sends `start_date=2020-01-01`; presets send today − N
+  (local date). Helpers in `src/helpers/api/orders.ts`.
+- Row rendering: Order ID `850b42f3...3069` (first 8 + last 4), email `alt...j7m@yopmail.com`
+  (3 characters either side of the local part), phone verbatim, date `07 October 2026 13:18`
+  in WIB, **Total Price = `priceAfterDiscount`** (not `receivedBySeller`).
+- Product type labels: `appointment` → `Consultation` (filter option `Consultations`),
+  `ticket_event` filter option `Events and Tickets`. A new type **`digital_product`** exists
+  alongside `digital_download`, with its own filter option `Digital Product`.
+- **Product filter coupling (candidate bug, 2026-10-07, not filed):** from the default,
+  ticking `Digital Product` also ticks Digital Download and Online Course (`3 Products`);
+  ticking `Digital Download` also ticks Digital Product but requests only `digital_download`;
+  ticking `Online Course` ticks Digital Product too. Telegram, Discord, Consultations and
+  Events behave independently — use those for multi-select tests.
+- **Repeated filter combinations are served from the query cache** — no request fires, so
+  wait on a list request only for a combination not yet loaded in that page session.
+- **Empty-state fixture exists now:** the guest-buyer testmail inbox (`inboxAccounts
+  .emptyCreator`), onboarded as a creator with no products. Its `/orders` shows both cards at
+  `Rp0` and, in the list, "Start earning by selling your product / Get started today!" with a
+  `Create Product` link → `/products`. The pager still reads `Page 1 of 0` (L-50). A fresh
+  token: OTP sign-in on the buyer app, then inject it for creators; if it lands on `/onboard`,
+  "I'll do it later" lets it through.
+- **L-41 is fractional rupiah.** `receivedBySeller` can carry fractions (e.g. 69300.0001…);
+  the summary is rounded, so Lifetime is off by under Rp1 per affected order (12.090.870 vs
+  12.091.006,6 over 219 orders). The 30-day window agrees on the order set (17 = 17).
+- One console error on load: `404 GET https://staging.yapp.ink/api/v1/accounts/domain` (no
+  custom domain) — no hydration or uncaught errors (TC-ORD-C-059, CL-AUT-039).
 
 ## The CSV export has its own range state
 
@@ -105,7 +151,7 @@ exactly 188 orders with no duplicates or dropped rows. **There is no column sort
 control at all**, and no loading indicator: the table can sit empty for a few seconds
 after a filter change, so poll rather than assert immediately.
 
-Filters live only in component state — the URL stays `/products?tab=orders` no matter
+Filters live only in component state — the URL stays `/orders` (formerly `/products?tab=orders`) no matter
 what is applied, so a filtered view cannot be shared or bookmarked.
 
 **Changing a filter resets the page to 1.** From `Page 20 of 20`, selecting
@@ -129,9 +175,9 @@ Both pages exist, and they are different products:
 | `/analytics?tab=transactions` | **Performance Details** — tabs Products / Tipping / Campaigns Activations / PPV / Membership / Lifetime Access, the transaction table, and **Export as CSV** |
 | `/statistics` | A separate, newer page: Audience (profile & product views, wishlist adds, money left in carts), Activity over time, Buyer journey funnel, a Products table with sortable columns, and Reach (best time to post, link performance). No tabs, **no export** |
 
-The creator **Orders** list also lives under `/analytics` — the sidebar links Orders to
-`/analytics?tab=transactions`, and `/orders` resolves to the same "Payments" screen.
-`/products?tab=orders` does **not** open it.
+*(Superseded 2026-10-07: Orders is now its own `/orders` page — see the top of this note.)*
+The creator **Orders** list used to live under `/analytics` — the sidebar linked Orders to
+`/analytics?tab=transactions`, and `/orders` resolved to the same "Payments" screen.
 
 So the `Analytics` sheet is **not** stale, and creator CSV export exists in two places:
 the Orders export documented above and the Performance Details export on

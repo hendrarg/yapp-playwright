@@ -1,23 +1,23 @@
 import type { Page } from '@playwright/test';
-import { accountLoginEmail, testAccounts, type TestAccount } from '@test-data/users';
+import { accountLoginEmail, testAccounts, type InboxAccount, type TestAccount } from '@test-data/users';
 import { humanClick } from '@utils/playwright.utils';
 import { testmailConfig, markInboxStart } from '../otp/testmail';
 import { resolveOtpCode } from '../otp/otp-code';
 import { fetchOtpCodeFromDb } from '../otp/db-otp';
 import { extractAccessToken } from './save-token';
 
-export type OtpLoginResult = {
+export type OtpLoginResult<A extends TestAccount | InboxAccount = TestAccount> = {
   email: string;
   token: string;
-  account: TestAccount;
+  account: A;
 };
 
 /** Signs in through the real OTP UI flow and lands on /explore. */
-export async function signInWithEmailOtp(
+export async function signInWithEmailOtp<A extends TestAccount | InboxAccount = typeof testAccounts.qa>(
   page: Page,
   baseURL: string,
-  account: TestAccount = testAccounts.qa,
-): Promise<OtpLoginResult> {
+  account: A = testAccounts.qa as A,
+): Promise<OtpLoginResult<A>> {
   const email = accountLoginEmail(account);
   const sentAtMs = markInboxStart();
 
