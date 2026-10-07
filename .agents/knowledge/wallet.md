@@ -173,3 +173,6 @@ Settled filters and the 10-rows selector still present. Worth contrasting with t
 long-lived QA account, whose three balance surfaces disagree — that disagreement needs
 transaction history to appear, so it cannot be reproduced on a clean account.
 
+## Wrong PIN, re-checked 7 Oct 2026 (sundanese)
+
+`Withdraw` → asset IDR → `Add Destination` → BANK CENTRAL ASIA / `1234567890` → `Add Bank Account` opens `Enter Your PIN`, which **submits by itself on the 6th digit** (no Continue click needed). A wrong PIN toasts `Invalid PIN. 9 attempt(s) remaining before your account is locked`; a second try a few seconds later got `429 Too Many Requests` with the toast `Failed to add bank account`. The wrong-PIN status code itself was not captured this time (last seen as 500 on 23 Sep). Sundanese showed 9 attempts remaining after the first try; whether the 429-rejected second try counted is unknown.

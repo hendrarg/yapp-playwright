@@ -439,3 +439,7 @@ The buyer cart now flags an event ticket whose type no longer exists: `Ticket un
 - A flexible-price consultation opens `Name a Fair Price` first (confirm button named `Input Amount`), then adds the slot.
 - Cart lines: an event shows `All Day` with **no date** even though the product page says `Saturday 31 Oct`; a consultation shows `2026-10-07 • 11:00 - 12:00` with **no timezone**.
 - Clean-up without UI: `GET /api/v1/cart/items` then `DELETE /api/v1/cart/items/{uuid}` (buyer token, Origin yapp-dev) — 200 each.
+
+## Voucher picker in membership subscribe makes no request (7 Oct 2026)
+
+With an active All Product promo, the membership `Subscribe` sheet's `Choose Voucher` opens `Redeem Voucher` with only `Use Voucher Instead` — and no promo or voucher API call is made at all, so the list can never fill. Cart items load from `GET /api/v1/cart/items?page=1&limit=20`; to test the empty-cart state without touching data, route that response to `data.data: []`.

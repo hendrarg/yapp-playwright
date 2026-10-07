@@ -494,3 +494,16 @@ like the page is broken rather than like the route having moved.
 - File inputs on step 1: Media takes `image/*,.jpg…,video…` with `multiple`; Digital Files takes pdf/doc/xls/csv/zip with `multiple`. A video lists as `<name> <size>`; an image only as a blob tile (no name, no size, empty alt). Unticking a card drops its uploads at once, no confirmation, and re-ticking shows an empty section.
 - Still true: the Description counter counts **words** (60 chars / 10 words → `10 / 500`); Title accepts 556+ chars with no `maxlength`; leaving a dirty form through the sidebar navigates away with no prompt; the consultation reschedule helper reads `up to 1 days in the future` next to the field label `day(s) before session`; the empty membership tier submit (button `Add Membership`) lists `Thumbnail URL is required` under the field labelled Hero Image.
 - Consultation (and other) editors render the Availability section **twice** (mobile + desktop copies) — scope locators with `.filter({ visible: true })` or strict mode trips.
+
+## Bug-sheet batch 3, 7 Oct 2026
+
+- **Promotion create/edit show no success toast; delete does** (`Promo deleted successfully`). The delete dialog still names no object (`Are you sure you want to delete this promotion?`). Row actions are `Set Inactive / Edit / Delete` behind an unnamed `dropdown-menu-trigger`.
+- **Self-affiliate still saves**: `Find Creator` offers the promo owner (`@hendrarg`) and `POST` carries `affiliatorUUID` = the owner's uuid → 200.
+- Generated promo codes vary 8–12 characters; the regenerate button next to `Discount code` has no accessible name; the code field stays editable.
+- **After-sales Customize Message over 1000 chars now blocks Save — silently**: the editor accepts 1005 chars (`1005/1000 characters`), then `Save as Draft` sends no request and shows nothing; at 900 chars it saves (PUT 200, then redirects to /profile). Switch ON with an empty message still saves (PUT 200, no message) and reloads as OFF.
+- **Discord Membership edit**: `Next: Publish` stays disabled until something changes; saving a real change still shows `Your product has been successfully created.`
+- **Membership tier Hero Image**: a 686×447 image is accepted with a preview and no error (min 500×500 is only text). The first file input on `/membership/create` belongs to the description editor (`image/*`); the Hero Image input is the one accepting `image/jpeg,…`.
+- **Campaign create** (`/profile/campaigns/create`): a 1×1 banner is accepted with a preview, no error.
+- **Online Course attachment**: `Insert > Attachment` opens an `Upload attachment` panel (`.pdf, .docx, .xlsx, .csv, .mp3, .wav or .zip`); a .wav fails at `POST /api/v1/file/upload/create` → 500, `Upload failed`. The editor autosaves pages (`PUT …/pages/{id}`), but the failed block did not persist after reload.
+- PPV post price has no server floor: `POST /api/v1/posts` with `pay_per_view` and price 0 or 19 999 → 200. `DELETE /api/v1/posts/{uuid}` cleans up (200, then GET 404).
+- `POST /api/v1/tier-memberships` requires only name, description, isActive, prices, tierMembershipProductAndBenefits (an empty array passes); it accepted priceIDR 10 000 and no thumbnail, and **ignored `isActive: false`** (stored true). `DELETE /tier-memberships/{uuid}` soft-deletes (GET afterwards answers 500, not 404).
