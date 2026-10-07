@@ -258,6 +258,21 @@ Read this before the older sections below — several described defects are gone
     < alertNominal`); a Rp50.000 tip at a Rp50.000 threshold played. **Residual (API only):** a
     direct POST below the Alert threshold with media is still accepted (200) and then silently
     dropped — unreachable from the UI.
+- **Media Share minimum vs Alert threshold (retest LIV-45, 7 Oct 2026):**
+  - Stream Studio now refuses `Video & GIF pricing > MINIMUM TIP` below `Minimum amount to show
+    alert` (`Must not be lower than the minimum amount to show alert`); `Minimum amount to play
+    sound` has the same rule against the Alert value. **`Voice note pricing > MINIMUM TIP` is not
+    checked** — Rp49.999 saved under a Rp50.000 Alert (buyer page still gates at Rp50.000).
+  - **A blocked Save is silent**: no PUT, no toast, counter stays at `N unsaved changes`. The
+    violating field may sit on the *other* tab (raising Alert while Video min is lower) or show no
+    inline error after a reload. One Save sends every widget (`PUT /accounts/stream/configuration`
+    plus running-text, spin-wheel, votings, song-share, vip-queue… POSTs). Read the real values
+    with `GET /api/v1/accounts/stream/configuration` (`alertNominal`, `alertSoundNominal`,
+    `mediaShareVideoMinAmount`, `minimumVoiceTipAmount` = the UI voice-note minimum).
+  - A legacy config below the new rule (hendrarg had Video min Rp5.000 under Alert Rp10.000)
+    can't be re-saved; hendrarg now carries Video min **Rp10.000**.
+  - **BE still unchanged:** direct `POST /tipping/fiat` with `mediaType youtube` at Rp15.000 and
+    Rp49.999 returns 200 even with Alert *and* Video min at Rp50.000 — no server-side media floor.
 - *History (1 Oct 2026, before the fixes):* poll offered and charged before its window with the vote dropped (H-02 —
   enabled + future window: radios live, bill created, `votedCount` unchanged after settle; a
   *disabled* poll is correctly hidden), Milestone START picker fully disabled (H-04), Media Share

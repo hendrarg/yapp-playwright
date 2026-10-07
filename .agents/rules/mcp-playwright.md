@@ -734,7 +734,12 @@ The creator tab keeps its session and the guest one has no cookie at all.
   in `.playwright-mcp/` (git-ignored), and delete one that embeds a token.
 - Stream Studio panels (`Time extension rules`, Gacha `Title & minimum tip`) are collapsible; a
   control inside a collapsed panel is "visible" but its click is intercepted by the panel header.
-  Expand the header button first (`aria-expanded`).
+  Expand the header button first (`aria-expanded`). Same for Media Share `Video & GIF pricing` /
+  `Voice note pricing` and Alert `Thresholds` (7 Oct 2026) — `locator.fill()` into a collapsed
+  panel's input "succeeds" but the value never sticks. Type into it after expanding
+  (`click` → `Control+A` → `keyboard.type`). If the save-bar `SAVE` click is intercepted, click its
+  `boundingBox()` centre with `page.mouse.click`; then confirm a `PUT /accounts/stream/configuration`
+  fired — a validation-blocked Save is silent.
 
 ## Detecting a YouTube clip on the media overlay (verified 2026-10-06)
 
