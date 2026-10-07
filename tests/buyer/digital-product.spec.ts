@@ -23,10 +23,11 @@ const guestEmail = () => `${process.env.TESTMAIL_NAMESPACE}.guestbuyer@inbox.tes
 test.describe('Buyer Digital Product', () => {
   test('Product Digital — Voucher, Success Modal, Authenticated Access, Guest OTP, Files and Links, Conditional Sections, Order-Scoped URL', {
     tag: ['@AUT-PD-010', '@products', '@library', '@buyer', '@regression'],
+    annotation: { type: 'issue', description: 'L-80' },
   }, async ({ productPurchasePage, transactionPage, libraryPage, page, browser }) => {
     test.setTimeout(420000);
-    // Candidate bug (not yet filed): Explore other products opens /dashboard/library, not Explore. Last step.
-    test.fail(true, 'Explore other products on the success modal opens the library instead of Explore');
+    // Known bug L-80: Explore other products opens /dashboard/library, not Explore. Last step.
+    test.fail(true, 'L-80: Explore other products on the success modal opens the library instead of Explore');
     const token = sellerToken();
     test.skip(!token, 'YAPP_TEST_ACCESS_TOKEN_2 is required to seed the digital products');
     if (!token) return;

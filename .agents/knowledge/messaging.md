@@ -141,7 +141,7 @@ buyerUUIDs}}` (or `{type: "custom_list", customListUUID}`). Member-only posts ne
   from subscribers…" with `Subscribe` → `/<creator>/membership`; Everyone + lapsed member →
   "Your subscription has ended. Resubscribe to keep chatting…" with `Subscribe` →
   `/profile/membership`. History stays readable in every case.
-- **Candidate bug (2026-10-07, not filed):** once the buyer holds no active tier of the
+- **Bug M-63 / M&B-23 (filed 2026-10-07):** once the buyer holds no active tier of the
   creator, the existing conversation reports `canSend: false`, `readOnlyReason:
   dm_access_revoked` even when the policy is Everyone and
   `GET /api/v1/dm/creators/{uuid}/eligibility` says `canMessage: true`. So a "potential

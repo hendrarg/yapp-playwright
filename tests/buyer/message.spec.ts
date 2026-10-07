@@ -67,11 +67,12 @@ test.describe('Buyer Messages', () => {
 
   test('Messages & Broadcast — DM Access, Access Rules – System-Allowed DM, Messaging', {
     tag: ['@AUT-MB-019', '@messages', '@buyer', '@smoke'],
+    annotation: { type: 'issue', description: 'M-63' },
   }, async ({ messagePage, productPurchasePage, dbFixtures, page }) => {
     test.setTimeout(360000);
-    // Candidate bug (not yet filed): with no active membership the conversation turns read-only
-    // (dm_access_revoked) although eligibility says canMessage — B-004 and B-005 cannot send.
-    test.fail(true, 'A buyer without an active membership cannot send even when the creator allows Everyone');
+    // Known bug M-63: with no active membership the conversation turns read-only (dm_access_revoked)
+    // although eligibility says canMessage — B-004 and B-005 cannot send.
+    test.fail(true, 'M-63: a buyer without an active membership cannot send even when the creator allows Everyone');
     const request = page.request;
     const stamp = Date.now();
     await activeDmSubscription(request, dbFixtures);

@@ -30,7 +30,7 @@ hang 30 s+ — pass `{ tolerateTimeout: true }` and verify in the UI.
 
 - Success modal `Purchase Successful` → `View Product` → `/product/<order-uuid>/thank-you` ("Thank you
   for your purchase!", the after-sales note, `View Download`). `View Download` → `/product/<order-uuid>`.
-  **`Explore other products` opens `/dashboard/library`, not Explore** (candidate bug, not filed yet).
+  **`Explore other products` opens `/dashboard/library`, not Explore** (bug L-80 / DP-16, filed 2026-10-07).
   **Back on the thank-you page opens the order page**, not the product detail (M-45; the bug text says
   library — it now goes to `/product/<order-uuid>`).
 - The order page shows title, `Digital Product` badge, description, `See message from <creator>` /
