@@ -33,10 +33,10 @@ export class ExplorePage {
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.creatorsHeading = page.getByRole('heading', { name: 'Creators For You', exact: true });
     this.popularHeading = page.getByRole('heading', { name: 'Popular Products', exact: true });
-    this.recommendedHeading = page.getByRole('heading', { name: 'Recommended For You!!', exact: true });
+    this.recommendedHeading = page.getByRole('heading', { name: 'Recommended', exact: true });
     this.creatorsGrid = page.locator(sectionGrid('Creators For You'));
     this.popularGrid = page.locator(sectionGrid('Popular Products'));
-    this.recommendedGrid = page.locator(sectionGrid('Recommended For You!!'));
+    this.recommendedGrid = page.locator(`${sectionHeader('Recommended')} + div + div`);
     this.creatorsSeeMore = page.locator(sectionHeader('Creators For You')).getByRole('link', { name: 'See More', exact: true });
     this.popularSeeMore = page.locator(sectionHeader('Popular Products')).getByRole('link', { name: 'See More', exact: true });
     this.searchInput = locatorChain(page, { role: 'textbox', name: 'Search creators, products and more', placeholder: 'Search creators, products and more' });
@@ -95,9 +95,114 @@ export class ExplorePage {
   }
 
   async expectRecommendedSectionVisible() {
-    await expect(
-      this.recommendedHeading.or(this.page.getByRole('heading', { name: 'Recommended', exact: true })),
-    ).toBeVisible();
+    await expect(this.recommendedHeading).toBeVisible();
+  }
+
+  /** The default (no keyword) Explore: Recommended, Popular Products and Creators For You. */
+  async expectDefaultSections() {
+    await expect(this.page).not.toHaveURL(/keyword=/);
+    await expect(this.recommendedHeading).toBeVisible({ timeout: 15000 });
+    await expect(this.popularHeading).toBeVisible();
+    await expect(this.creatorsHeading).toBeVisible();
+  }
+
+  /** A keyword search groups results under Creators, Products and Campaigns. */
+  async expectSearchGroups(query: string) {
+    await this.expectKeyword(query);
+    for (const group of ['Creators', 'Products', 'Campaigns']) {
+      await expect(this.page.getByRole('main').getByText(group, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    }
+  }
+
+  /** No match: each group shows its own "No … found" state. */
+  async expectAllGroupsEmpty(query: string) {
+    for (const group of ['creators', 'products', 'campaigns']) {
+      await expect(this.page.getByText(`No ${group} found for "${query}"`, { exact: true })).toBeVisible({ timeout: 15000 });
+    }
+  }
+
+  /**
+   * Typing a keyword fires three explore requests whose search parameter differs:
+   * campaigns use `q`, creators `keyword`, products `q`. Returns the parameter seen per endpoint.
+   */
+  async searchAndCaptureEndpoints(query: string): Promise<Record<string, string | null>> {
+    const seen: Record<string, string | null> = {};
+    const listener = (r: { url(): string }) => {
+      const url = new URL(r.url());
+      for (const [name, path] of [['campaigns', '/campaign/explore'], ['creators', '/creators/explore'], ['products', '/products/explore']] as const) {
+        if (url.pathname.endsWith(path)) {
+          const param = ['q', 'keyword'].find((k) => url.searchParams.get(k) === query) ?? null;
+          if (param) seen[name] = param;
+        }
+      }
+    };
+    this.page.on('request', listener);
+    await this.searchCreators(query);
+    await expect.poll(() => Object.keys(seen).length, { timeout: 15000 }).toBe(3);
+    this.page.off('request', listener);
+    return seen;
+  }
+
+  async expectSearchInputUnbounded() {
+    await expect(this.searchInput).not.toHaveAttribute('maxlength', /.*/);
+  }
+
+  async openAllProductsFromRecommended() {
+    await safeClick(this.page.locator(sectionHeader('Recommended')).getByRole('link', { name: 'See More', exact: true }));
+    await expect(this.page).toHaveURL(new URL('explore/products', this.baseURL).toString());
+    await expect(this.page.getByRole('heading', { name: 'Explore Products', exact: true })).toBeVisible();
+  }
+
+  /** Back to "All": the productType query goes and the unfiltered list returns. */
+  async clearProductCategory() {
+    await safeClick(locatorChain(this.page, { role: 'button', name: 'All', text: 'All', exact: true }).filter({ visible: true }).first());
+    await expect(this.page).not.toHaveURL(/productType=/);
+    await expect.poll(() => this.recommendedGrid.locator('a[href*="/product/"]').count()).toBeGreaterThan(0);
+  }
+
+  /** Every Recommended card is of this type (its badge). */
+  async expectRecommendedOnlyType(typeLabel: string) {
+    // The grid refreshes after the chip is picked; wait until it holds only this type.
+    await expect.poll(async () => {
+      const texts = await this.recommendedGrid.locator('a[href*="/product/"]').allInnerTexts();
+      return texts.length > 0 && texts.every((text) => text.includes(typeLabel));
+    }, { message: `Recommended should only list ${typeLabel}`, timeout: 15000 }).toBe(true);
+  }
+
+  /**
+   * Product cards must carry the same field set in every Explore section — in particular the
+   * product-type badge (the only marker of what kind of product it is). Checks Recommended and Popular.
+   */
+  async expectConsistentCardsAcrossSections(typeLabels: readonly string[]) {
+    for (const [section, grid] of [['Recommended', this.recommendedGrid], ['Popular Products', this.popularGrid]] as const) {
+      await expect.poll(() => grid.locator('a[href*="/product/"]').count(), { message: `${section} must show cards`, timeout: 15000 }).toBeGreaterThan(0);
+      const texts = await grid.locator('a[href*="/product/"]').allInnerTexts();
+      for (const text of texts) {
+        expect(typeLabels.some((label) => text.includes(label)), `${section} card without a type badge: ${text.replace(/\n/g, ' | ')}`).toBe(true);
+      }
+    }
+  }
+
+  /** A product title is (or is not) found by the global Explore search. */
+  async expectGlobalSearchFindsProduct(title: string, found: boolean) {
+    await this.searchCreators(title);
+    const card = this.page.getByRole('main').getByText(title, { exact: true });
+    if (found) await expect(card.first()).toBeVisible({ timeout: 15000 });
+    else await expect(this.page.getByText(`No products found for "${title}"`, { exact: true })).toBeVisible({ timeout: 15000 });
+  }
+
+  /** Recommended filtered to a category contains (or not) this product. */
+  async recommendedContains(title: string): Promise<boolean> {
+    await expect.poll(() => this.recommendedGrid.locator('a[href*="/product/"]').count(), { timeout: 15000 }).toBeGreaterThan(0);
+    return (await this.recommendedGrid.innerText()).includes(title);
+  }
+
+  /** The /explore/products catalogue search finds (or not) this product. */
+  async catalogueSearchFinds(title: string): Promise<boolean> {
+    await this.page.goto(new URL('explore/products', this.baseURL).toString());
+    await safeFill(this.page.getByRole('textbox', { name: 'Find products', exact: true }), title);
+    await this.page.waitForTimeout(2500);
+    return this.page.getByRole('heading', { name: title, exact: true }).isVisible();
   }
 
   async expectSearchVisible() {
@@ -106,17 +211,25 @@ export class ExplorePage {
 
   async searchCreators(query: string) {
     await safeFill(this.searchInput, query);
-    await expect(this.page).toHaveURL(new RegExp(`keyword=${encodeURIComponent(query)}`));
+    await this.expectKeyword(query);
+  }
+
+  /** The URL carries the query as ?keyword= (spaces are encoded as +). */
+  async expectKeyword(query: string) {
+    await expect.poll(() => new URL(this.page.url()).searchParams.get('keyword'), { timeout: 10000 }).toBe(query);
   }
 
   async expectCreatorResults(query: string, minimum: number): Promise<string[]> {
-    await expect.poll(() => this.searchCreatorLinks.count()).toBeGreaterThanOrEqual(minimum);
-    const results = await this.searchCreatorLinks.evaluateAll((links) => links.map((link) => ({
+    const read = () => this.searchCreatorLinks.evaluateAll((links) => links.map((link) => ({
       href: link.getAttribute('href') ?? '',
       name: link.querySelector('h3')?.textContent?.trim() ?? '',
     })));
-    expect(results.every(({ name }) => name.toLowerCase().includes(query.toLowerCase()))).toBeTruthy();
-    return results.map(({ href }) => href);
+    // Results refresh asynchronously; wait until the list reflects this query.
+    await expect.poll(async () => {
+      const results = await read();
+      return results.length >= minimum && results.every(({ name }) => name.toLowerCase().includes(query.toLowerCase()));
+    }, { timeout: 15000 }).toBe(true);
+    return (await read()).map(({ href }) => href);
   }
 
   async expectExactCreatorResult(creator: { name: string; username: string; href: string }) {
@@ -210,6 +323,7 @@ export class ExplorePage {
 
   async expectProductCardMetadata(sections = [this.popularGrid, this.recommendedGrid]) {
     for (const section of sections) {
+      await expect.poll(() => section.locator('a[href*="/product/"]').count(), { timeout: 15000 }).toBeGreaterThan(0);
       const cards = await section.locator('a[href*="/product/"]').evaluateAll((links) => links.map((link) => {
         const text = (link as unknown as { innerText: string }).innerText;
         const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
@@ -217,7 +331,6 @@ export class ExplorePage {
         return {
           title: link.querySelector('h3')?.textContent?.trim() || lines[0],
           imageCount,
-          hasCreatorVisual: imageCount >= 2 || lines.length >= 5,
           creator: lines[lines.length - 1],
           lines: lines.length,
           text,
@@ -228,7 +341,6 @@ export class ExplorePage {
       for (const card of cards) {
         expect(card.title, 'Product name is required').toBeTruthy();
         expect(card.imageCount, `${card.title} must show a product image`).toBeGreaterThan(0);
-        expect(card.hasCreatorVisual, `${card.title} must show a creator image or fallback`).toBeTruthy();
         expect(card.creator, `${card.title} must show a creator name`).not.toMatch(/^(?:Free|(?:Rp|\$)\s?[\d.,]+)$/);
         expect(card.lines, `${card.title} must show product and creator metadata`).toBeGreaterThanOrEqual(3);
         expect(card.text, `${card.title} must show a price or Free`).toMatch(/(?:Rp|\$)\s?[\d.,]+|Free/);
@@ -251,8 +363,11 @@ export class ExplorePage {
     return this.productCards(this.recommendedGrid);
   }
 
-  async expectPopularOrder(popularProducts: readonly string[]) {
-    expect((await this.productCards(this.popularGrid)).map(({ title }) => title)).toEqual([...popularProducts]);
+  /** Popular Products follow the curated order (featuredProductPosition), not a popularity ranking. */
+  async expectPopularOrder(curatedTitles: readonly string[]) {
+    const shown = (await this.productCards(this.popularGrid)).map(({ title }) => title);
+    expect(shown.length, 'Popular Products must show cards').toBeGreaterThan(0);
+    expect(shown).toEqual(curatedTitles.slice(0, shown.length));
   }
 
   async expectProductsInPublicList(products: VisibleProducts) {
@@ -272,6 +387,7 @@ export class ExplorePage {
     await this.returnToExplore();
   }
 
+  /** Every Popular / Recommended card can also be found in the public /explore/products catalogue. */
   async expectRecommendationsLeadPublicList(recommendations: readonly ProductCard[]) {
     expect(recommendations.length, 'Recommended For You must contain products').toBeGreaterThan(0);
     await this.openAllProducts();

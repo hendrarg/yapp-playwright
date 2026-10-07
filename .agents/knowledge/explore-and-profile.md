@@ -16,6 +16,27 @@ status: active
 
 Buyer discovery surfaces and the creator's public profile.
 
+## Explore layout as of 2026-10-07
+
+Sections, top to bottom: **Recommended** (header with See More → `/explore/products`, then a row of
+category chips `All` / `Digital Product` / `Online Course` / `Discord Membership` / `Telegram
+Membership` / `Events and Tickets` / `Consultation`, then a 12-card grid — the chip sets
+`?productType=<type>` and the grid refreshes a moment later), **Part of your Membership** (new:
+cards with `Claim Now` / `Open Course` for products the buyer's memberships include), **Popular
+Products** (8 cards, See More → `/explore/products`), **Creators For You** (carousel, See More →
+`/explore/creators`). **"Recommended For You!!" is gone** — AUT-EXP-005 waits on the TCs being
+rewritten (CL-AUT-029).
+
+- Popular follows `GET /products/featured` ordered by `featuredProductPosition`; Creators For You is
+  `GET /creators/featured` (helpers `getFeaturedProductTitles`, `getFeaturedCreators`).
+- **Popular cards carry no product-type badge** while Recommended cards do (bug L-12, still open).
+  Creators without a photo get a gradient circle, not an `<img>` — count the creator name, not images.
+- The search keyword lands in the URL as `?keyword=Asep+pisan` (spaces as `+`) — compare via
+  `searchParams`, not a `%20` regex. Results refresh asynchronously, so poll until they match.
+- **Past events are filtered inconsistently** (2026-10-07): an event dated three days ago is absent
+  from global search and from Recommended → Events and Tickets, but the `/explore/products`
+  catalogue search ("Find products") still finds it, and its page opens ("Event has started").
+
 ## Explore is fed by two different endpoints
 
 - **Recommended** comes from `GET /products/explore`.
