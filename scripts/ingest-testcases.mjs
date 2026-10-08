@@ -31,7 +31,10 @@ const GITBOOK_URL = "https://yapp.gitbook.io/yapp-docs";
 const MARK = "tc-ingest";
 const TODAY = new Date().toISOString().slice(0, 10);
 
-/** Tab → GitBook pages (paths under raw/sources/yapp-docs-gitbook, no .md) and knowledge note. */
+/**
+ * Tab → GitBook pages (paths under raw/sources/yapp-docs-gitbook, no .md), knowledge note, and the
+ * distilled PRD notes (`projects/yapp/<name> - prd.md`, raw PDF in raw/sources/yapp-prd/) for the tab.
+ */
 const FEATURES = {
   "Products": { gitbook: ["features/product-detail-page"], knowledge: "products" },
   "Product Digital": { gitbook: ["digital-product", "product-guides/list-digital-product-on-yapp"], knowledge: "products" },
@@ -53,7 +56,7 @@ const FEATURES = {
   "Analytics": { gitbook: ["creator/statistics", "creator/payments"], knowledge: "orders-and-reports" },
   "Referral": { gitbook: ["creator/referral"], knowledge: "referral" },
   "Membership": { gitbook: ["features/membership"], knowledge: "membership-tiers" },
-  "Feeds and Exclusive": { gitbook: ["features/feeds", "features/exclusive-post"], knowledge: "posts" },
+  "Feeds and Exclusive": { gitbook: ["features/feeds", "features/exclusive-post"], knowledge: "posts", prd: ["pinned-feeds - prd"] },
   "Campaigns": { gitbook: ["features/campaigns"], knowledge: "campaigns" },
   "Settings": { gitbook: ["creator/settings"], knowledge: "settings" },
   "Onboarding": { gitbook: ["creator/creator-onboarding", "features/sign-in-and-authentication"], knowledge: "onboarding" },
@@ -141,6 +144,13 @@ ${steps(t.steps)}
 **Expected.** ${para(t.expected)}`).join("\n\n");
   }).join("\n\n");
 
+  const prdLinks = f.prd?.length
+    ? f.prd.map((p) => `[[${PROJECT_REL}/${p}|${p.replace(/ - prd$/, "")}]]`).join(" · ")
+    : "belum ada";
+  const prdCallout = f.prd?.length
+    ? `> [!info] PRD\n> PRD yang menyentuh tab ini: ${prdLinks}. PRD fitur baru belum tentu punya TC di tab ini —\n> scoping TC-nya dimulai dari note PRD tersebut.\n`
+    : `> [!todo] PRD\n> PRD fitur ini belum ada di vault. Setelah di-ingest ke \`raw/sources/yapp-prd/\`, tambahkan namanya di\n> \`FEATURES\` (\`prd\`) skrip ini; note PRD-nya menautkan balik ke note ini.\n`;
+
   return (created, updated) => `---
 title: ${yaml(`${tab} - Tc`)}
 type: note
@@ -148,7 +158,7 @@ kind: tc
 feature: ${slug}
 module: ${yaml(tab)}
 tags: [yapp, testcase, tc, ${slug}]
-prd: ""
+prd: [${(f.prd ?? []).map((p) => yaml(`${PROJECT_REL}/${p}`)).join(", ")}]
 gitbook: [${gb.map((g) => yaml(`${GITBOOK_URL}/${g.rel}`)).join(", ")}]
 gitbook_raw: [${gb.map((g) => yaml(`${GITBOOK_RAW}/${g.rel}.md`)).join(", ")}]
 knowledge: ${yaml(f.knowledge ? `projects/yapp/knowledge/${f.knowledge}` : "")}
@@ -162,7 +172,7 @@ status: active
 
 # ${tab} - Tc
 
-> [[${PROJECT_REL}/testcase-index|TestCase index]] · [[${PROJECT_REL}/knowledge/index|Knowledge index]] · GitBook: ${gitbookLinks} · PRD: belum ada · Knowledge: ${knowledge}
+> [[${PROJECT_REL}/testcase-index|TestCase index]] · [[${PROJECT_REL}/knowledge/index|Knowledge index]] · GitBook: ${gitbookLinks} · PRD: ${prdLinks} · Knowledge: ${knowledge}
 
 Seluruh **${tcs.length} TC** tab \`${tab}\` dari sheet *Yapp - Test Case*, dikelompokkan per Epic.
 **Kolom yang dibawa:** TC ID · Epic · Feature · Title · Preconditions · Steps · Expected.
@@ -170,9 +180,7 @@ Seluruh **${tcs.length} TC** tab \`${tab}\` dari sheet *Yapp - Test Case*, dikel
 statusnya per TC dibaca langsung dari sheet. Note ini di-generate (\`npm run tc:ingest\` di repo yapp) —
 jangan diedit tangan; ubah sheet-nya lalu regenerate.
 
-> [!todo] PRD
-> PRD fitur ini belum ada di vault. Setelah di-ingest ke \`raw/sources/yapp-prd/\`, isi field \`prd\`
-> di frontmatter; note PRD-nya menautkan balik ke note ini.
+${prdCallout}
 
 ## Ringkasan
 
