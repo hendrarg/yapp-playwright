@@ -103,6 +103,8 @@ export const onlineCoursePricingData = {
   zeroPrice: "0",
   belowMinimumPrice: "9999",
   invalidPriceErrorPattern: /Price must be either 0 or at least Rp10\.000/i,
+  /** The live preview shows a free course as `Rp0` (it used to read `IDR 0`). */
+  idrZeroPattern: /(?:Rp|IDR)\s*0(?!\d)/,
 } as const;
 
 /** Digital Product pricing boundary data (AUT-FV-193 / TC-PD-C-018..019). */

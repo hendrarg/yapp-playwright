@@ -623,3 +623,19 @@ export async function expectProductStatus(
   const body = await response.json();
   expect(body.data.status).toBe(status);
 }
+
+/** `GET /api/v1/shop/products/{uuid}` as the owner sees it (status, shortUrl, title…). */
+export async function getProduct(
+  request: APIRequestContext,
+  productUuid: string,
+  token?: string,
+): Promise<{ uuid: string; title: string; status: ProductStatus; shortUrl: string }> {
+  const response = await request.get(apiUrl(`/api/v1/shop/products/${productUuid}`), { headers: getHeaders(token, creatorOrigin()) });
+  if (!response.ok()) throw new Error(`Get product failed: ${response.status()} ${await response.text()}`);
+  return (await response.json()).data;
+}
+
+/** Buyer share path `/s/<shortUrl>` of any existing product. */
+export async function productShortPath(request: APIRequestContext, productUuid: string, token?: string): Promise<string> {
+  return `/s/${(await getProduct(request, productUuid, token)).shortUrl}`;
+}

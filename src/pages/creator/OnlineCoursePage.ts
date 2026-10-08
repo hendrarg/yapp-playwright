@@ -101,24 +101,10 @@ export class OnlineCoursePage {
     selector: 'text="No Image"',
   });
 
-  private addVideoBlockButton() {
-    return smartLocator(this.page, {
-      role: "button",
-      name: "Video",
-      exact: true,
-      text: "Video",
-      selector: 'div.blocknote-container button[data-slot="button"]:has-text("Video")',
-    });
-  }
-
-  private addAttachmentBlockButton() {
-    return smartLocator(this.page, {
-      role: "button",
-      name: "Attachment",
-      exact: true,
-      text: "Attachment",
-      selector: 'div.blocknote-container button[data-slot="button"]:has-text("Attachment")',
-    });
+  /** Blocks are added from the editor's `Insert` menu (Video, Attachment, Image, Carousel, Product). */
+  private async insertBlock(name: "Video" | "Attachment") {
+    await this.page.getByRole("button", { name: "Insert", exact: true }).locator("visible=true").first().click({ timeout: 10000 });
+    await this.page.getByRole("menuitem", { name, exact: true }).click({ timeout: 10000 });
   }
 
   private chapterCards(): Locator {
@@ -231,7 +217,8 @@ export class OnlineCoursePage {
     expect(after, "expected Next: Set Details CTA after scroll").toBeTruthy();
     expect(after!.y).toBeGreaterThanOrEqual(0);
     expect(after!.y).toBeLessThan(844);
-    expect(Math.abs(after!.y - before!.y)).toBeLessThan(60);
+    // The mobile header compacts on scroll, so the CTA shifts up to ~80px — sticky means it stays on screen near the top.
+    expect(Math.abs(after!.y - before!.y)).toBeLessThan(120);
   }
 
   async scrollToTop() {
@@ -357,11 +344,7 @@ export class OnlineCoursePage {
     if (type === "Text") return;
     if ((await this.getSelectedContentType()) === type) return;
 
-    if (type === "Video") {
-      await this.addVideoBlockButton().click({ timeout: 10000 });
-    } else {
-      await this.addAttachmentBlockButton().click({ timeout: 10000 });
-    }
+    await this.insertBlock(type);
     await expect.poll(() => this.getSelectedContentType(), { timeout: 10000 }).toBe(type);
   }
 
@@ -417,7 +400,7 @@ export class OnlineCoursePage {
         'div.blocknote-container .bn-block:has-text("Upload attachment") input[type="file"]',
       );
       if ((await emptyBlockInput.count()) === 0) {
-        await this.addAttachmentBlockButton().click({ timeout: 10000 });
+        await this.insertBlock("Attachment");
       }
       await emptyBlockInput.last().setInputFiles(filePath, { timeout: 15000 });
       await this.page.waitForTimeout(400);
@@ -505,7 +488,7 @@ export class OnlineCoursePage {
 
   async expectOnlineCourseFreePreview() {
     await expect.poll(() => this.readBodyText(), { timeout: 10000 })
-      .toMatch(/\bIDR\s*0\b/i);
+      .toMatch(onlineCoursePricingData.idrZeroPattern);
   }
 
   async expectOnlineCoursePrice(price: string) {
@@ -726,16 +709,16 @@ export class OnlineCoursePage {
   async applyEpisodeRichTextFormatting(text: string) {
     await this.setFreeTextContent(text);
     await this.page.keyboard.press("Control+A");
-    const { bold, italic, underline } = this.formatButtons(this.page.locator("div.blocknote-container"));
-    await bold.click({ timeout: 10000 });
-    await italic.click({ timeout: 10000 });
-    await underline.click({ timeout: 10000 });
-    await expect.poll(() => this.freeTextEditor().innerHTML()).toMatch(/strong|em|u/i);
+    // The page editor toolbar offers Bold, Italic and Strikethrough (no Underline, unlike the description editor).
+    for (const name of ["Bold", "Italic", "Strikethrough"]) {
+      await this.page.getByRole("button", { name, exact: true }).locator("visible=true").first().click({ timeout: 10000 });
+    }
+    await expect.poll(() => this.freeTextEditor().innerHTML()).toMatch(/<strong|<em|<s>|<del/i);
   }
 
   async expectEpisodeRichTextContent(text: string) {
     await this.expectFreeTextContent(text);
-    await expect.poll(() => this.freeTextEditor().innerHTML()).toMatch(/strong|em|u/i);
+    await expect.poll(() => this.freeTextEditor().innerHTML()).toMatch(/<strong|<em|<s>|<del/i);
   }
 
   async expectOnlineCourseMembershipBenefitsState() {
@@ -812,6 +795,135 @@ export class OnlineCoursePage {
   async expectRequiredFieldsError() {
     await expect.poll(() => this.readBodyText(), { timeout: 10000 })
       .toContain(onlineCourseValidationData.requiredErrors.summary);
+  }
+
+  /**
+   * Header `Save`. On the create flow it creates the course as a **draft** and lands on its
+   * edit route; on an existing course it saves in place without changing the status.
+   */
+  async saveCourse(): Promise<string> {
+    const response = this.page.waitForResponse(
+      (r) => /\/api\/v1\/shop\/products(\/[0-9a-f-]{36})?$/.test(new URL(r.url()).pathname) && ["POST", "PUT"].includes(r.request().method()),
+      { timeout: 20000 },
+    );
+    await this.page.getByRole("button", { name: "Save", exact: true }).locator("visible=true").first().click({ timeout: 10000 });
+    const saved = await response;
+    expect(saved.ok(), await saved.text()).toBe(true);
+    await expect(this.page).toHaveURL(/\/products\/update\/online-course\/[0-9a-f-]{36}/, { timeout: 20000 });
+    return this.page.url().split("/online-course/")[1].split(/[?#/]/)[0];
+  }
+
+  async openEdit(productUuid: string) {
+    await this.page.goto(new URL(`products/update/online-course/${productUuid}`, this.baseURL).toString(), { waitUntil: "domcontentloaded" });
+    await this.expectLoaded();
+  }
+
+  /** Edit header: `Edit <title>`, `Next: Edit Details`, Save, Preview, and the active-status stamp. */
+  async expectEditHeader(title: string) {
+    await expect(this.page.getByRole("heading", { name: `Edit ${title}`, level: 1 })).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByRole("button", { name: "Next: Edit Details" })).toBeVisible();
+    await expect(this.page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+    await expect(this.page.getByRole("button", { name: "Preview" })).toBeVisible();
+    await expect(this.page.getByText(/^This product is active and was last updated \d{1,2} \w{3} \d{4}, \d{2}:\d{2}\.$/)).toBeVisible();
+  }
+
+  /** The icon-only `Version history` button opens the retention rule and timestamped entries. */
+  async expectVersionHistory() {
+    await this.page.getByRole("button", { name: "Version history" }).click({ timeout: 10000 });
+    const dialog = this.page.getByRole("dialog", { name: "Version history" });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog).toContainText("A version is saved on every edit. The last 10 are kept.");
+    const entries = dialog.getByRole("listitem");
+    await expect(entries.first()).toBeVisible();
+    await expect(entries.first()).toContainText(/\d{2} \w{3} \d{4} · \d{2}:\d{2}/);
+    await expect(entries.first()).toContainText("Nothing to restore from this version");
+    await this.page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+  }
+
+  private membershipSwitch(): Locator {
+    return this.page.getByRole("switch", { name: "Set benefits for membership" });
+  }
+
+  /** A creator with no tiers gets a disabled switch that says why. */
+  async expectMembershipBenefitsUnavailable() {
+    await expect(this.membershipSwitch()).toBeDisabled({ timeout: 15000 });
+    await expect(this.page.getByText("You do not have any membership tiers yet, so this option is disabled.")).toBeVisible();
+  }
+
+  /** With tiers, switching benefits on lists every tier with its own Add Benefit. */
+  async expectMembershipTiersSelectable(tierNames: readonly string[]) {
+    await expect(this.membershipSwitch()).toBeEnabled({ timeout: 15000 });
+    if ((await this.membershipSwitch().getAttribute("aria-checked")) !== "true") await this.membershipSwitch().click();
+    await expect(this.membershipSwitch()).toHaveAttribute("aria-checked", "true");
+    const main = this.page.getByRole("main");
+    for (const name of tierNames) {
+      await expect(main.locator("div").filter({ hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}Add Benefit$`) }).first()).toBeVisible({ timeout: 10000 });
+    }
+    await this.membershipSwitch().click();
+  }
+
+  /** The uploaded video renders as a playable <video> whose first frame is its preview. */
+  async expectVideoPreviewLoaded() {
+    const video = this.page.locator("div.blocknote-container video").first();
+    await expect(video).toBeVisible({ timeout: 30000 });
+    await expect.poll(() => video.evaluate((v) => (v as unknown as { readyState: number }).readyState), { timeout: 30000 }).toBeGreaterThan(0);
+    await expect(this.page.getByRole("button", { name: "Play" }).first()).toBeVisible();
+  }
+
+  /** Every file shows in its own block and none reports `Upload failed`. */
+  async expectLessonFilesUploaded(fileNames: readonly string[]) {
+    const editor = this.page.locator("div.blocknote-container").first();
+    for (const name of fileNames) await expect(editor.getByText(name, { exact: false }).first()).toBeVisible({ timeout: 30000 });
+    // A block reads "Uploading..." until the transfer settles; judge only the settled state.
+    await expect.poll(async () => {
+      const text = (await editor.innerText()).replace(/\s+/g, " ");
+      return /Uploading\.\.\.|Upload failed/i.test(text) ? text : "settled";
+    }, { timeout: 90000, message: "every lesson file should finish uploading without errors" }).toBe("settled");
+  }
+
+  /**
+   * Page content is not part of `Save`: each page autosaves on edit (`PUT …/pages/{id}`).
+   * Start waiting before the edit, await after it, so a save/reload does not outrun it.
+   */
+  waitForPageAutosave(): Promise<unknown> {
+    return this.page.waitForResponse(
+      (r) => /\/api\/v1\/shop\/products\/[0-9a-f-]{36}\/pages\/[0-9a-f-]{36}$/.test(new URL(r.url()).pathname) && r.request().method() === "PUT" && r.ok(),
+      { timeout: 30000 },
+    );
+  }
+
+  /** Delete a filled attachment block through its block menu. */
+  async removeLessonFile(fileName: string) {
+    const block = this.page.locator("div.blocknote-container .bn-block").filter({ hasText: fileName }).last();
+    await block.hover();
+    await this.page.getByRole("button", { name: "Open block menu" }).locator("visible=true").first().click({ timeout: 10000 });
+    await this.page.getByRole("menuitem", { name: "Delete" }).locator("visible=true").first().click({ timeout: 10000 });
+    await expect(this.page.locator("div.blocknote-container").first().getByText(fileName)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectLessonFileAbsent(fileName: string) {
+    await expect(this.page.locator("div.blocknote-container").first()).toBeVisible({ timeout: 20000 });
+    await expect(this.page.locator("div.blocknote-container").first().getByText(fileName)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** A save or publish of an existing course should confirm itself with a toast. */
+  async expectSaveConfirmation() {
+    await expect(this.page.locator("[data-sonner-toast]").first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Title / description validation on step 2. */
+  async expectTitleRequiredError() {
+    await expect(this.page.getByText(/Title is required/i).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  async readTitleValue(): Promise<string> {
+    return this.detailsTitleInput().inputValue();
+  }
+
+  /** A documented title limit shows up as the input's maxlength. */
+  async expectTitleLimited() {
+    await expect(this.detailsTitleInput()).toHaveAttribute("maxlength", /^\d+$/, { timeout: 5000 });
   }
 
   async deleteAllChapters() {

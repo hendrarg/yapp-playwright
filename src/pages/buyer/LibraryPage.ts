@@ -86,6 +86,15 @@ export class LibraryPage {
     await expect(dialog).toBeHidden({ timeout: 10000 });
   }
 
+  /** View Message on the order page shows the creator's after-sales message text. */
+  async expectAfterSalesMessageText(creatorName: string, message: string) {
+    await expect(this.page.getByText(`${ticketPage.seeMessagePrefix} ${creatorName}`)).toBeVisible({ timeout: 20000 });
+    await safeClick(this.page.getByRole("button", { name: ticketPage.viewMessage }));
+    const dialog = this.page.getByRole("dialog").filter({ hasText: `${ticketPage.messageDialogPrefix} ${creatorName}` });
+    await expect(dialog).toContainText(message, { timeout: 10000 });
+    await this.page.keyboard.press("Escape");
+  }
+
   /** The ticket's About Creator tab should introduce the real creator ("Meet <name> — …"). */
   async expectTicketAboutCreatorName(creatorName: string) {
     await safeClick(this.page.getByRole("tab", { name: ticketPage.aboutCreatorTab }));

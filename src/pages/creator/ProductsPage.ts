@@ -477,10 +477,13 @@ export class ProductsPage {
   }
 
   async openEditProduct(productName: string) {
-    await this.openProductActionsMenu(productName);
-    const editAction = this.productActionMenu().getByRole("menuitem", { name: "Edit", exact: true });
-    await expect(editAction).toBeVisible({ timeout: 10000 });
-    await editAction.click({ timeout: 10000 });
+    // The menu can re-render while the list refreshes, detaching the item mid-click; reopen and retry.
+    await expect(async () => {
+      if (!(await this.productActionMenu().isVisible())) await this.openProductActionsMenu(productName);
+      const editAction = this.productActionMenu().getByRole("menuitem", { name: "Edit", exact: true });
+      await expect(editAction).toBeVisible({ timeout: 5000 });
+      await editAction.click({ timeout: 5000 });
+    }).toPass({ timeout: 30000 });
     await expect(this.page).toHaveURL(
       /\/products\/update\/(?:appointment|discord-membership|online-course|digital-downloads|events-ticket)\//,
       { timeout: 30000 },

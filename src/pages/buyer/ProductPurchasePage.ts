@@ -1308,6 +1308,14 @@ export class ProductPurchasePage {
 
   /** Online Course checkout (AUT-FV-171 / TC-OC-B-003..007). */
 
+  /** A creator's additional question shows on the checkout; answer it so Pay is not blocked. */
+  async expectCheckoutQuestion(label: string, answer = 'Answer from automation') {
+    const main = this.page.getByRole('main');
+    await expect(main.getByText(label, { exact: false }).first()).toBeVisible({ timeout: 15000 });
+    const field = main.getByRole('textbox', { name: new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+    if (await field.count()) await field.first().fill(answer);
+  }
+
   /** Open a paid course checkout page from its share path as a logged-in buyer. */
   async openOnlineCourseCheckout(title: string, sharePath: string) {
     await this.gotoSharePath(sharePath);
@@ -1439,7 +1447,8 @@ export class ProductPurchasePage {
     const phone = this.page.getByPlaceholder('Enter phone number');
     if (!(await phone.inputValue())) await phone.fill(buyer.phone);
     await flakyClick(this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern }));
-    await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
+    // The transaction page's load event can hang on the payment widget; the URL is what matters.
+    await expect(this.page).toHaveURL(/\/transaction\//, { timeout: 30000 });
     return this.page.url().split('/transaction/')[1];
   }
 

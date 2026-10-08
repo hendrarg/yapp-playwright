@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, products]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-10-08
 sources: 0
 status: active
 ---
@@ -438,6 +438,41 @@ gap, not an editor bug — and `page_files` rows are **rewritten on every page s
 (old row soft-deleted, an identical row inserted with a new id), so never treat a
 `page_files` id as stable.
 
+### Course editor re-checked 2026-10-08
+
+- **`Insert` is now a menu** (`menu "Insert"` → `menuitem` Video / Attachment / Image / Carousel /
+  Product); the inline Video/Attachment buttons on an empty page are gone.
+- **Attachments only upload into a course that exists.** On the create flow (before the first
+  `Save`) every attachment sits at `Uploading...` forever and no upload request fires; on a
+  saved course (edit route) pdf/docx/xlsx/csv/mp3/zip settle in seconds. Test file uploads on a
+  seeded course. **`.wav` now hangs at `Uploading...`** instead of `Upload failed` (L-37).
+- A filled attachment shows `<name> <size> Replace` and the pdf adds `View only (no download)`;
+  the empty-placeholder text `Upload attachment` disappears, so "which content type" checks keyed
+  on that text read a filled block as plain text.
+- Page content autosaves per page (`PUT …/products/{uuid}/pages/{pageUuid}`); wait for that
+  response before `Save` + reload, or the reload can outrun it.
+- The page toolbar is Bold / Italic / Strikethrough / Text style / Quote / lists / Add link /
+  Insert — **no Underline** (the product description editor has one).
+- The Video block has Play / Seek / Mute / Volume / Fullscreen / `Delete Video` and **no thumbnail
+  picker** (CL-AUT-043).
+- Create step 2 `Save` → `POST /shop/products` with `status: draft`, then redirects to
+  `/products/update/online-course/{uuid}`. **Edit step 2 now has `Publish`** (disabled until
+  something changes) next to `Save`, `Preview` and the icon-only `Version history`; `Save` on an
+  active course keeps it active. Neither shows a toast (L-52).
+- `Version history` dialog: "A version is saved on every edit. The last 10 are kept." and entries
+  like `a few seconds ago Current 08 Oct 2026 · 10:39 · Nothing to restore from this version`.
+- The live preview shows a free course as **`Rp0`** (was `IDR 0`).
+- Membership Benefits on a creator with no tiers: the switch is disabled with "You do not have any
+  membership tiers yet, so this option is disabled." With tiers, switching it on lists every tier
+  with its own `Add Benefit`. (Fixture: `inboxAccounts.emptyCreator`.)
+- **Candidate bug (2026-10-08, not filed): a buyer question added while editing an existing course
+  is not saved** — the `PUT /shop/products/{uuid}` body carries it in `additionalQuestions`, the
+  response and a later GET return `additionalQuestions: []`, and the next checkout has no question.
+  A price change in the same save does apply (orders at 15.000 then 20.000).
+- **After Sales message is live, not per order**: an earlier buyer's `View Message` shows the
+  creator's *current* message after it is edited (CL-AUT-046). The create form starts Customize
+  Message ON while the edit page of an unconfigured course reads OFF (TC-OC-C-040, not filed).
+
 ## Publishing a course: what is and is not validated
 
 Verified 2026-09-10.
@@ -445,7 +480,7 @@ Verified 2026-09-10.
 - On the **create** flow step 2 the buttons are `Next: Publish` and `Save`. **`Save` is the
   draft save** — it creates the product with `status: "draft"`, which is invisible on the
   creator's public profile, absent from `/explore/products`, and 404 on its direct link.
-- On an **already active** product there is **no Publish or Republish button at all** —
+- *(2026-10-08: edit step 2 now has `Publish` — see above.)* On an **already active** product there was **no Publish or Republish button at all** —
   only `Save`, and pressing it produces **no toast and no dialog**; the only feedback is the
   header stamp `This product is active and was last updated <date>` (`L-66`). Edits go live
   immediately and `shortUrl` never changes.
