@@ -296,6 +296,17 @@ server-side and the messages are precise:
 - `accessMode must be permanent or membership_bound`
 - `accessType must be free or discount when accessMode=permanent`
 
+**Expiry is enforced on the course material (verified 8 Oct 2026, H-05 fixed).** Buyer user
+487 holding only a `membership_bound` perk for `New layout` (product 688, Rp100.000; tier 75,
+subscription 106, no order): while active `GET /tier-membership-users/products/{uuid}/course`
+→ 200 with content; with `expired_at` pushed one day back → **403**
+`{hasAccess:false, accessSource:"none", hasPurchased:false, hasMembershipAccess:false}` and
+`/product/{uuid}/course` shows `Access locked — Your membership is not active or you do not
+own this course.` **Pick the fixture carefully:** `anthony_mosciski`, `sundanese` and `coba2`
+all own free `completed` orders for 688 from August, so their access is legitimate and would
+mask the gate — check `orders` for the buyer and product before calling access a leak. The
+original H-05 fixture (sundanese) had exactly that order.
+
 **All of these come back as HTTP 500, not 400** — same 500-for-validation habit as the
 promo estimation endpoint. Only the top-level required-field check
 (`Name`/`Description`/`IsActive`/`Prices`/`TierMembershipProductAndBenefits`) answers

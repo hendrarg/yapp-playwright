@@ -322,6 +322,14 @@ buttons plus Close: the default renders the iframe at **1222px**, the second at
 file, and the copy states *wider than 1080px*, *maximum file size 20MB*, *recommended
 aspect ratio 1:1*.
 
+Re-verified 7 Oct 2026 (L-53 → CP-12, still failing): `/customize` → Profile → Header has
+`Change profile banner` (Gallery / Upload tabs) and `Change profile picture`; **both show the same
+guidance** (1080px / 20MB / 1:1). Output is a `data:image/jpeg` preview: banner `Crop Header` →
+**900×506** from a 1920×480 input; profile `Crop Profile Picture` → **600×600** from 1600×1600.
+**On `/customize`, Apply only stages the image** ("You Have Unsaved Changes", needs `Save`) — unlike
+the `/profile` avatar flow, where Apply saves at once. Leaving with unsaved changes raises a
+`beforeunload` dialog. hendrarg's `Your Name` is currently empty (M-61 residue).
+
 ## Explore search fans out to three endpoints
 
 Verified 2026-09-01. One keystroke burst fires **three parallel requests**, and the

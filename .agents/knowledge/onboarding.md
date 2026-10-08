@@ -48,6 +48,26 @@ Abandoning at the username screen still leaves a usable account: `POST
 /api/v1/accounts/username` with `{username}` sets it afterwards → `200 Update Username
 Successfully`.
 
+## Update 8 Oct 2026: sign-up works, but verify answers after ~30 s
+
+Re-checked by registering `qab4onb936674` (`qa.b4onb936674@yopmail.com`) end to end on
+`creators-dev/auth`. The section below is **superseded**: typing the five digits
+(`pressSequentially`, 120 ms delay) fires `POST /api/v1/auth/login/otp/verify` at once, but
+the response takes **≈30 s** (30 218 ms measured; the buyer app behaves the same for a new
+email). During that wait `Verify` is greyed out with no spinner or text, then the app moves
+to `?step=select-username`. **A script that gives up after a few seconds reads this as
+"verify never fires"** — that is very likely what the 9 Sep finding was. Wait on the URL
+leaving `input-otp` for 60 s, not on a fixed timeout. Logging in an *existing* account is
+fast. Other things seen on 8 Oct:
+
+- the OTP send is rate-limited per email: a second send soon after answers `429`;
+- the wizard now has **four** steps — `Set Profile`, **`Describe Yourself`** (pick a role:
+  Educator, Software Developer, Streamer, …; `Next` stays disabled until one is chosen),
+  `Choose Tools`, `Follow Creators` — and ends on `You're All Set Up!` with `Go to Dashboard`;
+- step 1 now carries the Username field (`n/25`, `yapp.ink/` prefix) instead of Display Name;
+- each step saves immediately (`PUT /accounts`, `PUT /accounts/social-link`,
+  `PUT /accounts/creator-favorites`, `PUT /accounts/sidebar-menus`).
+
 ## The creator app cannot finish an OTP sign-up (9 Sep 2026)
 
 The step above still describes the intended flow, but on `creators-dev` the **`Verify`
@@ -191,6 +211,13 @@ validation. Failure feedback is absent across the board:
 
 Always run a valid-PNG control before calling this path broken — a 600×600 PNG crops and
 applies correctly.
+
+**Re-checked 8 Oct 2026:** oversize is now handled — a 13.85 MB PNG shows the toast
+`File size must be less than 5MB` and opens no dialog (M-34 fixed). The `.txt` case is
+unchanged: `Crop Image` opens, `Apply` does nothing, the dialog stays open, no message (the
+`drawImage` exception no longer reaches the console, but the effect is the same). The social
+username still accepts `@handle`, a full URL, spaces, 1 and 200 chars (`maxLength -1`), and
+`https://instagram.com/someone` is stored verbatim in `user_links.link` with `is_active=true`.
 
 ## First entry to the creator side runs a mandatory guided tour
 

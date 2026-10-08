@@ -395,6 +395,18 @@ no marker, `Check out` stays enabled, `/cart/checkout` renders in full, and
 order is correctly never created, but the `Pay` button produces no toast, dialog or
 message — a silent dead end. Recorded on H-01.
 
+**Re-checked 8 Oct 2026 (H-01).** A past event's cart line is now handled: the row shows
+`Ticket unavailable — This ticket type is no longer available. Remove it to continue.`, its
+checkbox is disabled, and `GET /cart/items` returns `status: inactive` with
+`tickets[].isAvailable: false`. The consultation half is unchanged in the cart: a slot moved
+outside the weekly rules (reproduced by inserting a `cart_items` row at 03:00 for
+`Katalon Studio`, availability 09:00–16:00, then soft-deleting it) returns `status: active`
+with `slot.isValid: false`, yet the row has no marker, is selectable, counts into the total
+(`Rp100.000`), `Check out` is enabled and `/cart/checkout` renders. Only `Pay` fails — now
+with a generic `Failed to process checkout` toast (was silent); estimate and checkout still
+answer 500 and no order is created. The FE ignores `slot.isValid`; the item-level `status`
+does not reflect it.
+
 **Cart checkboxes are Radix buttons — `element.click()` does nothing, use a mouse click.**
 And there are three per creator group: one page-level `Select All`, one per-creator group
 box (its row text spans every product that creator sells), and one per product row. Pick
@@ -470,3 +482,11 @@ The buyer cart now flags an event ticket whose type no longer exists: `Ticket un
 ## Voucher picker in membership subscribe makes no request (7 Oct 2026)
 
 With an active All Product promo, the membership `Subscribe` sheet's `Choose Voucher` opens `Redeem Voucher` with only `Use Voucher Instead` — and no promo or voucher API call is made at all, so the list can never fill. Cart items load from `GET /api/v1/cart/items?page=1&limit=20`; to test the empty-cart state without touching data, route that response to `data.data: []`.
+
+## Purchase emails stopped on dev (observed 2026-10-08)
+
+The QA testmail inbox has received **no purchase email since 2026-10-07 ~09:43 UTC** — none for
+the digital-product and course orders completed after it (orders do complete; the creator's
+`/shop/orders` lists them). Tests that wait for "Your Download Is Ready" / "Course Enrollment
+Confirmed" will time out until delivery recovers, so check the inbox before reading such a failure
+as a product regression.
