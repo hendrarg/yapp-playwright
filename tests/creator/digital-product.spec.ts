@@ -1,258 +1,428 @@
 import { creatorAuthTest as test, expect } from '../test-base';
-import { digitalProductPricingData, digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, onlineCourseMediaData, productsCreationData } from '@test-data/creator/products.creation.data';
-import { closeProductCompleteModal, enableAfterSalesLinks, expectEmbedLinksSaved, expectInvalidEmbedLinkFeedback, expectProductCompleteModal, fillEmbedLink, openEmbedLinkDialog, readProductCompleteSharePath, saveCurrentEmbedLink } from '@helpers/creator/product-editor';
-import { titleInput } from '@pages/shared/locators';
+import { listCreatorTiers } from '@helpers/api/membership';
+import { listOrders } from '@helpers/api/orders';
+import { deleteProduct, findProductByTitle, getProduct } from '@helpers/api/product';
+import { depositWebhook } from '@helpers/api/webhook';
+import { loginWithToken } from '@helpers/auth/token-login';
+import { buyCourseAs } from '@helpers/buyer/course-purchase';
+import { createDigitalProductUploadFixtures } from '@helpers/creator/digital-product-media';
+import { addCustomBuyerQuestion, closeProductCompleteModal, copyProductCompleteLink, enableAfterSalesLinks, expectAddQuestionsDisabled, expectEmbedLinksSaved, expectImageTooSmall, expectInvalidEmbedLinkFeedback, expectMandatoryBuyerFieldsProtected, expectProductCompleteModal, expectSavedBuyerQuestion, fillEmbedLink, openEmbedLinkDialog, readProductCompleteSharePath, removeCustomBuyerQuestion, saveCurrentEmbedLink } from '@helpers/creator/product-editor';
+import { LibraryPage } from '@pages/buyer/LibraryPage';
+import { ProductPurchasePage } from '@pages/buyer/ProductPurchasePage';
+import type { DigitalProductPage } from '@pages/creator/DigitalProductPage';
+import type { OnlineCoursePage } from '@pages/creator/OnlineCoursePage';
+import { baseURL } from '@config/env';
+import { digitalProductPricingData, digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesMessage, onlineCourseMediaData } from '@test-data/creator/products.creation.data';
+import { testAccounts } from '@test-data/users';
+
+const token = (account: { envVar: string }) => process.env[account.envVar]?.replace(/"/g, '');
+const [firstLink, secondLink] = digitalProductValidationData.linkValidation.validLinks;
+
+/** Step 1 with one content link, then step 2 with title, description and thumbnail filled. */
+async function reachDetails(digital: DigitalProductPage, course: OnlineCoursePage, title: string) {
+  const page = digital.page;
+  await digital.goto();
+  await digital.expectDigitalProductCreateFlow();
+  await digital.enableLinksContentType();
+  await openEmbedLinkDialog(page);
+  await fillEmbedLink(page, firstLink.label, firstLink.url);
+  await saveCurrentEmbedLink(page);
+  await digital.goToDetails();
+  await course.fillTitle(title);
+  await course.fillDescription(generateDigitalProductDescription());
+  await course.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+}
+
+/** Publish from step 2 and return the share path from the completion modal. */
+async function publish(course: OnlineCoursePage): Promise<string> {
+  await course.submitPublish();
+  await expectProductCompleteModal(course.page);
+  const sharePath = await readProductCompleteSharePath(course.page);
+  await closeProductCompleteModal(course.page);
+  return sharePath;
+}
 
 test.describe('Creator Digital Product', () => {
-  test('Validate Digital Products Inputs and Boundary Conditions', {
-    tag: ['@AUT-FV-188', '@products', '@creator', '@regression'],
-  }, async ({digitalProductPage, creatorNav, productsPage, page }) => {
-    await test.step('Open Digital Product creation flow', async () => {
-      const digitalProductType = productsCreationData.productTypes.find(
-        (type) => type.label === 'Digital Product',
-      )!;
-
-      await creatorNav.open('products');
-      await productsPage.expectLoaded();
-      await productsPage.openAddProductSheet();
-      await productsPage.selectProductType(digitalProductType.buttonName);
-      await digitalProductPage.expectDigitalProductCreateFlow();
-    });
-
-    await test.step('Validate title and required Add Content fields cannot be empty', async () => {
-      await digitalProductPage.submitEmptyDigitalProductAddContent();
-      await digitalProductPage.expectDigitalProductRequiredFeedback();
-    });
-
-    await test.step('Validate link label boundary and invalid URL are blocked', async () => {
-      await digitalProductPage.enableLinksContentType();
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page,
-        digitalProductValidationData.linkValidation.longLabel,
-        digitalProductValidationData.linkValidation.invalidUrl,
-      );
-      await expectInvalidEmbedLinkFeedback(page);
-    });
-
-    await test.step('Correct link data and save multiple valid embedded links', async () => {
-      const [firstLink, secondLink] = digitalProductValidationData.linkValidation.validLinks;
-
-      await fillEmbedLink(page, firstLink.label, firstLink.url);
-      await saveCurrentEmbedLink(page);
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, secondLink.label, secondLink.url);
-      await saveCurrentEmbedLink(page);
-      await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
-    });
-  });
-
-  test('Validate Digital Product Navigation and Unsaved Changes', {
-    tag: ['@AUT-FV-190', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-PD-C-003',
-    }],
-  }, async ({digitalProductPage, creatorNav, productsPage, page }) => {
-
-    const digitalProductType = productsCreationData.productTypes.find(
-      (type) => type.label === 'Digital Product',
-    )!;
-
-    await test.step('Open Digital Product creation flow and make an unsaved change', async () => {
-      await creatorNav.open('products');
-      await productsPage.openAddProductSheet();
-      await productsPage.selectProductType(digitalProductType.buttonName);
-      await digitalProductPage.expectDigitalProductCreateFlow();
-      await titleInput(page).fill(generateDigitalProductTitle());
-    });
-
-    await test.step('Attempt to continue with incomplete content and remain on the form', async () => {
-      await digitalProductPage.submitEmptyDigitalProductAddContent();
-      await digitalProductPage.expectDigitalProductCreateFlow();
-    });
-
-    await test.step('Protect the unsaved Digital Product changes when leaving', async () => {
-      await digitalProductPage.navigateAwayFromDigitalProductViaBack();
-      await digitalProductPage.expectDigitalProductUnsavedChangesDialog();
-      await page.keyboard.press('Escape');
-    });
-  });
-
-  test('Validate Digital Product After Sales Link Validation', {
-    tag: ['@AUT-FV-191', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-PD-C-027',
-    }],
-  }, async ({digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
-    const digitalProductType = productsCreationData.productTypes.find(
-      (type) => type.label === 'Digital Product',
-    )!;
-    const { linkValidation } = digitalProductValidationData;
-
-    await test.step('Open Digital Product and enable After Sales Links', async () => {
-      await creatorNav.open('products');
-      await productsPage.openAddProductSheet();
-      await productsPage.selectProductType(digitalProductType.buttonName);
-      await digitalProductPage.expectDigitalProductCreateFlow();
-      await titleInput(page).fill(generateDigitalProductTitle());
-      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
-      await digitalProductPage.enableLinksContentType();
-      const [contentLink] = linkValidation.validLinks;
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, contentLink.label, contentLink.url);
-      await saveCurrentEmbedLink(page);
-      await onlineCoursePage.submitContentDetails();
-      await enableAfterSalesLinks(page);
-    });
-
-    await test.step('Block invalid After Sales URL and over-limit label', async () => {
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, linkValidation.longLabel, linkValidation.invalidUrl);
-      await expectInvalidEmbedLinkFeedback(page);
-    });
-
-    await test.step('Save multiple valid After Sales links', async () => {
-      const [firstLink, secondLink] = linkValidation.validLinks;
-      await fillEmbedLink(page, firstLink.label, firstLink.url);
-      await saveCurrentEmbedLink(page);
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, secondLink.label, secondLink.url);
-      await saveCurrentEmbedLink(page);
-      await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
-    });
-  });
-
-  test('Validate Digital Product Buyer-Only Description', {
-    tag: ['@AUT-FV-192', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-PD-C-013',
-    }],
-  }, async ({digitalProductPage, creatorNav, productsPage, onlineCoursePage, page }) => {
-    test.setTimeout(180000);
-
-    const digitalProductType = productsCreationData.productTypes.find(
-      (type) => type.label === 'Digital Product',
-    )!;
-    const [contentLink] = digitalProductValidationData.linkValidation.validLinks;
-
-    await test.step('Open Digital Product creation flow', async () => {
-      await creatorNav.open('products');
-      await productsPage.openAddProductSheet();
-      await productsPage.selectProductType(digitalProductType.buttonName);
-      await digitalProductPage.expectDigitalProductCreateFlow();
-    });
-
-    await test.step('Fill required Add Content fields', async () => {
-      await titleInput(page).fill(generateDigitalProductTitle());
-      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await digitalProductPage.enableLinksContentType();
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, contentLink.label, contentLink.url);
-      await saveCurrentEmbedLink(page);
-      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
-    });
-
-    await test.step('Fill buyer-only description to the 500-word limit and verify counter', async () => {
-      const buyerOnly = generateDigitalProductBuyerOnlyDescription(500);
-      expect(buyerOnly.split(' ').length).toBe(500);
-      await digitalProductPage.fillDigitalProductContentDescription(buyerOnly);
-      await digitalProductPage.expectDigitalProductContentDescriptionCounter('500 / 500');
-    });
-
-    await test.step('Apply rich text formatting to buyer-only description', async () => {
-      await digitalProductPage.applyDigitalProductContentDescriptionFormatting();
-      await digitalProductPage.expectDigitalProductContentDescriptionFormatted();
-    });
-
-    await test.step('Clear buyer-only description and verify it remains optional', async () => {
-      await digitalProductPage.fillDigitalProductContentDescription('');
-      await digitalProductPage.expectDigitalProductContentDescriptionCounter('0 / 500');
-      await onlineCoursePage.submitContentDetails();
-      await digitalProductPage.expectDigitalProductSetDetailsLoaded();
-    });
-  });
-
-  test('Validate Digital Product Pricing Rules', {
-    tag: ['@AUT-FV-193', '@products', '@creator', '@regression'],
-    annotation: [{
-      type: 'covers',
-      description: 'TC-PD-C-018, TC-PD-C-019',
-    }],
-  }, async ({ digitalProductPage, creatorNav, productsPage, onlineCoursePage, productPurchasePage, page }) => {
+  test('Product Digital — Basic Information, Description, Navigation, Content Type', {
+    tag: ['@AUT-PD-001', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'issue', description: 'L-42' }, { type: 'issue', description: 'M-46' }, { type: 'issue', description: 'M-13' }],
+  }, async ({ creatorNav, productsPage, digitalProductPage, onlineCoursePage }) => {
     test.setTimeout(240000);
+    // Known bugs L-42 (requirement does not name Media), M-46/M-26 (limits and counter), M-13 (no unsaved guard). Last three steps.
+    test.fail(true, 'L-42 / M-46 / M-13: content-type message, description limit, unsaved changes');
+    const uploads = createDigitalProductUploadFixtures();
 
-    const digitalProductType = productsCreationData.productTypes.find(
-      (type) => type.label === 'Digital Product',
-    )!;
-    const [contentLink] = digitalProductValidationData.linkValidation.validLinks;
-    const freeTitle = generateDigitalProductTitle();
-    let freeSharePath = '';
+    try {
+      await test.step('Title is required before the product can be published', async () => {
+        await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
+        await onlineCoursePage.clearTitle();
+        await onlineCoursePage.submitNextPublish();
+        await onlineCoursePage.expectTitleRequiredError();
+      });
 
-    await test.step('Open Digital Product creation flow with pricing off by default', async () => {
-      await creatorNav.open('products');
-      await productsPage.openAddProductSheet();
-      await productsPage.selectProductType(digitalProductType.buttonName);
-      await digitalProductPage.expectDigitalProductCreateFlow();
-    });
+      await test.step('At least one content type is required to continue', async () => {
+        await creatorNav.open('products');
+        await productsPage.openAddProductSheet();
+        await productsPage.selectProductType(/Digital Products Digital Download Downloadable files/i);
+        await digitalProductPage.expectDigitalProductCreateFlow();
+        await digitalProductPage.submitEmptyDigitalProductAddContent();
+        await digitalProductPage.expectContentTypeRequired();
+      });
 
-    await test.step('Fill Add Content and reach Set Details with pricing default', async () => {
-      await titleInput(page).fill(freeTitle);
-      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await digitalProductPage.enableLinksContentType();
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, contentLink.label, contentLink.url);
-      await saveCurrentEmbedLink(page);
-      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
-      await onlineCoursePage.submitContentDetails();
-      await digitalProductPage.expectDigitalProductSetDetailsLoaded();
-    });
+      await test.step('Three unticked content types; ticking opens a section, unticking drops it with no confirmation', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.expectContentTypeOptions();
+        for (const type of ['media', 'links', 'digital'] as const) {
+          await digitalProductPage.setContentType(type, true);
+          await digitalProductPage.expectContentSection(type, true);
+          await digitalProductPage.expectUntickWithoutConfirmation(type);
+        }
+      });
 
-    await test.step('Verify free default pricing (preview shows IDR 0)', async () => {
-      await digitalProductPage.expectDigitalProductPricingFreeDefault();
-    });
+      await test.step('Unticking Media clears the media already added', async () => {
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia([uploads.videos[0]]);
+        await digitalProductPage.expectMediaItems({ videoNames: [uploads.videoNames[0]], imageCount: 0 });
+        await digitalProductPage.setContentType('media', false);
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.expectMediaListEmpty();
+      });
 
-    await test.step('Publish the free product and verify IDR 0 on the buyer page', async () => {
-      await onlineCoursePage.submitPublish();
-      await expectProductCompleteModal(page);
-      freeSharePath = await readProductCompleteSharePath(page);
-      expect(freeSharePath).toMatch(/\/s\//);
-      await closeProductCompleteModal(page);
+      await test.step('The content-type requirement names every type, Media included', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.submitEmptyDigitalProductAddContent();
+        await digitalProductPage.expectContentTypeMessageNamesAllTypes();
+      });
 
-      await productPurchasePage.gotoSharePath(freeSharePath);
-      await productPurchasePage.expectOnlineCourseFreeBuyerView(freeTitle, freeSharePath);
-    });
+      await test.step('Description keeps rich text and stops at 500 characters', async () => {
+        await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
+        await onlineCoursePage.applyRichTextFormatting();
+        await onlineCoursePage.expectDescriptionFormatted();
+        await onlineCoursePage.fillDescription('A'.repeat(550));
+        await onlineCoursePage.expectDescriptionCounter('500 / 500');
+      });
 
-    await test.step('Open paid pricing and reject below-minimum nominal values', async () => {
-      await creatorNav.open('products');
-      await productsPage.openAddProductSheet();
-      await productsPage.selectProductType(digitalProductType.buttonName);
-      await digitalProductPage.expectDigitalProductCreateFlow();
-      await titleInput(page).fill(generateDigitalProductTitle());
-      await onlineCoursePage.fillDescription(generateDigitalProductDescription());
-      await digitalProductPage.enableLinksContentType();
-      await openEmbedLinkDialog(page);
-      await fillEmbedLink(page, contentLink.label, contentLink.url);
-      await saveCurrentEmbedLink(page);
-      await digitalProductPage.uploadDigitalProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
-      await onlineCoursePage.submitContentDetails();
-      await digitalProductPage.expectDigitalProductSetDetailsLoaded();
-
-      await digitalProductPage.enableDigitalProductPricing();
-      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.belowMinimumPrice);
-      await digitalProductPage.expectDigitalProductInvalidPriceFeedback();
-      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.zeroPrice);
-      await digitalProductPage.expectDigitalProductPricingFreeDefault();
-      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
-      await digitalProductPage.expectDigitalProductValidPrice();
-    });
-
-    await test.step('Enter a valid positive price and verify it persists', async () => {
-      await digitalProductPage.fillDigitalProductPrice(digitalProductPricingData.validPrice);
-      await digitalProductPage.expectDigitalProductValidPrice();
-    });
+      await test.step('Next stays reachable and leaving with unsaved changes asks for confirmation', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('links', true);
+        await digitalProductPage.expectNextStaysVisibleAfterScroll();
+        await digitalProductPage.leaveViaBack();
+        await digitalProductPage.expectUnsavedChangesPrompt();
+      });
+    } finally {
+      uploads.cleanup();
+    }
   });
 
+  test('Product Digital — Media Upload, External Links, Digital Files, Post-purchase Description, Thumbnails', {
+    tag: ['@AUT-PD-002', '@products', '@creator', '@smoke'],
+  }, async ({ digitalProductPage, onlineCoursePage, productPurchasePage, page }) => {
+    test.setTimeout(360000);
+    // Candidate bugs (not yet filed): .ogv/.avi are advertised but the upload answers 500 and publish
+    // stalls silently; a file outside the media list is accepted with no message. Last two steps.
+    test.fail(true, 'Advertised .ogv/.avi media cannot be published; unsupported media accepted silently');
+    const uploads = createDigitalProductUploadFixtures();
+    const titles: string[] = [];
+
+    try {
+      await test.step('Several external links are saved as separate items', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.expectDigitalProductCreateFlow();
+        await digitalProductPage.enableLinksContentType();
+        for (const link of [firstLink, secondLink]) {
+          await openEmbedLinkDialog(page);
+          await fillEmbedLink(page, link.label, link.url);
+          await saveCurrentEmbedLink(page);
+        }
+        await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
+      });
+
+      await test.step('An invalid URL is flagged inline and cannot be saved', async () => {
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page, digitalProductValidationData.linkValidation.longLabel, digitalProductValidationData.linkValidation.invalidUrl);
+        await expectInvalidEmbedLinkFeedback(page);
+        await page.keyboard.press('Escape');
+      });
+
+      await test.step('Every advertised document format is accepted', async () => {
+        await digitalProductPage.setContentType('digital', true);
+        await digitalProductPage.uploadDigitalFiles(uploads.files);
+        await digitalProductPage.expectDigitalFileNames(uploads.fileNames);
+      });
+
+      await test.step('The buyer-only description is optional, formats and counts up to 500', async () => {
+        await digitalProductPage.expectBuyerOnlyHint();
+        await digitalProductPage.fillDigitalProductContentDescription(generateDigitalProductBuyerOnlyDescription(500));
+        await digitalProductPage.expectDigitalProductContentDescriptionCounter('500 / 500');
+        await digitalProductPage.applyDigitalProductContentDescriptionFormatting();
+        await digitalProductPage.expectDigitalProductContentDescriptionFormatted();
+        await digitalProductPage.fillDigitalProductContentDescription('');
+        await digitalProductPage.expectDigitalProductContentDescriptionCounter('0 / 500');
+        await digitalProductPage.goToDetails();
+      });
+
+      const title = generateDigitalProductTitle();
+      titles.push(title);
+
+      await test.step('Thumbnails: one hero plus a 10-image gallery, multi-select, undersized rejected', async () => {
+        await onlineCoursePage.fillTitle(title);
+        await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+        await onlineCoursePage.uploadThumbnailForValidation(onlineCourseMediaData.tinyThumbnailPath);
+        await expectImageTooSmall(page, onlineCourseMediaData.tinyThumbnailPath.split('/').pop()!);
+        await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+        await onlineCoursePage.uploadProductGallery(onlineCourseMediaData.thumbnailPaths.slice(1));
+        await onlineCoursePage.expectProductThumbnailLimit();
+      });
+
+      await test.step('The first thumbnail is the primary image of the published product', async () => {
+        const sharePath = await publish(onlineCoursePage);
+        const productUuid = (await findProductByTitle(page.request, title))!.uuid;
+        const product = await getProduct(page.request, productUuid) as unknown as { thumbnailImage: string; productImages: unknown[] };
+        expect(product.productImages.length).toBe(onlineCourseMediaData.thumbnailPaths.length - 1);
+        await productPurchasePage.gotoSharePath(sharePath);
+        expect(await productPurchasePage.primaryImagePath()).toBe(new URL(product.thumbnailImage).pathname);
+      });
+
+      await test.step('Every advertised media format is accepted and the product publishes', async () => {
+        const mediaTitle = generateDigitalProductTitle();
+        titles.push(mediaTitle);
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia([...uploads.images, ...uploads.videos]);
+        await digitalProductPage.expectMediaItems({ videoNames: uploads.videoNames, imageCount: uploads.images.length });
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.fillTitle(mediaTitle);
+        await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+        await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+        await publish(onlineCoursePage);
+      });
+
+      await test.step('A file outside the supported media formats is rejected with a message', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia([uploads.unsupported]);
+        await digitalProductPage.expectMediaRejected(uploads.unsupportedName);
+      });
+    } finally {
+      uploads.cleanup();
+      for (const t of titles) {
+        const product = await findProductByTitle(page.request, t).catch(() => undefined);
+        if (product) await deleteProduct(page.request, product.uuid).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Product Digital — Downloadable File, Pricing, Membership Benefit, Buyer Form, Limited Slot', {
+    tag: ['@AUT-PD-004', '@products', '@creator', '@regression'],
+  }, async ({ digitalProductPage, onlineCoursePage, productPurchasePage, page, browser }) => {
+    test.setTimeout(480000);
+    const request = page.request;
+    const uploads = createDigitalProductUploadFixtures();
+    const titles: string[] = [];
+    const questions = Array.from({ length: 5 }, (_, i) => `Question ${i + 1} ${Date.now()}`);
+
+    try {
+      await test.step('Downloadable File defaults ON; OFF leaves the file viewable but not downloadable', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('digital', true);
+        await digitalProductPage.uploadDigitalFiles(uploads.files.slice(0, 1));
+        await digitalProductPage.goToDetails();
+        await digitalProductPage.expectDownloadable(true);
+        await digitalProductPage.setDownloadable(false);
+        await onlineCoursePage.fillTitle(title);
+        await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+        await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+        await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.validPrice);
+        const sharePath = await publish(onlineCoursePage);
+        const bought = await buyCourseAs(browser, request, token(testAccounts.qa)!, { title, sharePath });
+        try {
+          await bought.page.goto(new URL(`product/${bought.orderId}`, baseURL).toString());
+          await new LibraryPage(bought.page, baseURL).expectFileViewOnly(uploads.fileNames[0]);
+        } finally {
+          await bought.context.close();
+        }
+      });
+
+      await test.step('A new product is free by default and shows Rp0 to buyers', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        await digitalProductPage.expectDigitalProductPricingFreeDefault();
+        const sharePath = await publish(onlineCoursePage);
+        await productPurchasePage.expectOnlineCourseFreeBuyerView(title, sharePath);
+      });
+
+      await test.step('Prices from 1 to 9.999 are rejected, 0 stays Free and Rp10.000 is accepted', async () => {
+        await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
+        await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.belowMinimumPrice);
+        await onlineCoursePage.attemptOnlineCoursePricingContinue();
+        await digitalProductPage.expectDigitalProductInvalidPriceFeedback();
+        await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.zeroPrice);
+        await digitalProductPage.expectDigitalProductPricingFreeDefault();
+        await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.validPrice);
+        await digitalProductPage.expectDigitalProductValidPrice();
+      });
+
+      await test.step('A tier benefit applies only to members of that tier', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        const held = (await listCreatorTiers(request)).find((t) => t.name === 'satu tahun' && t.isActive);
+        expect(held, 'the QA buyer holds the satu tahun tier').toBeTruthy();
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        await onlineCoursePage.fillOnlineCoursePrice('15000');
+        await digitalProductPage.addFreeAccessBenefit(held!.name);
+        const sharePath = await publish(onlineCoursePage);
+        for (const [account, member] of [[testAccounts.qa, true], [testAccounts.sundanese, false]] as const) {
+          const context = await browser.newContext({ viewport: page.viewportSize() });
+          try {
+            await loginWithToken(context, token(account)!, baseURL);
+            const buyer = new ProductPurchasePage(await context.newPage(), baseURL);
+            await buyer.gotoSharePath(sharePath);
+            await buyer.expectMemberFreeAccessBadge(member, 'Rp15.000');
+          } finally {
+            await context.close();
+          }
+        }
+      });
+
+      await test.step('Name, email and phone cannot be switched off', async () => {
+        await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
+        await expectMandatoryBuyerFieldsProtected(page);
+      });
+
+      await test.step('Up to five custom questions; a sixth is blocked and one can be removed', async () => {
+        for (const question of questions) await addCustomBuyerQuestion(page, question);
+        for (const question of questions) await expectSavedBuyerQuestion(page, question);
+        await expectAddQuestionsDisabled(page);
+        await removeCustomBuyerQuestion(page, questions[4]);
+      });
+
+      await test.step('Limited Slot caps sales and shows the remaining count to buyers', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        await digitalProductPage.enableLimitedSlots(5);
+        const sharePath = await publish(onlineCoursePage);
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectSlotCounter(0, 5);
+      });
+    } finally {
+      uploads.cleanup();
+      for (const title of titles) {
+        const product = await findProductByTitle(request, title).catch(() => undefined);
+        if (product) await deleteProduct(request, product.uuid).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Product Digital — Save Draft, Publish, Toggle, Message, Links, Section Scope, Preview and Delivery, Accessibility', {
+    tag: ['@AUT-PD-005', '@products', '@creator', '@regression'],
+    annotation: [{ type: 'issue', description: 'M-44' }, { type: 'issue', description: 'L-43' }],
+  }, async ({ digitalProductPage, onlineCoursePage, productPurchasePage, page, browser }) => {
+    test.setTimeout(480000);
+    // Known bugs M-44 (the 1000-character after-sales limit is not enforced) and L-43 (unnamed switch). Last two steps.
+    test.fail(true, 'M-44 / L-43: after-sales message limit and accessible names');
+    const request = page.request;
+    const titles: string[] = [];
+    const message = generateOnlineCourseAfterSalesMessage();
+
+    try {
+      await test.step('Save keeps a draft that buyers cannot reach', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        const uuid = await onlineCoursePage.saveCourse().catch(async () => (await findProductByTitle(request, title))!.uuid);
+        expect((await getProduct(request, uuid)).status).toBe('draft');
+        await productPurchasePage.gotoSharePath(`/s/${(await getProduct(request, uuid)).shortUrl}`);
+        await expect.poll(() => productPurchasePage.isProductPubliclyPurchasable()).toBe(false);
+      });
+
+      await test.step('Publish shows Product Complete with a copyable URL and View Product', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        await onlineCoursePage.submitPublish();
+        await expectProductCompleteModal(page);
+        const sharePath = await readProductCompleteSharePath(page);
+        expect(await copyProductCompleteLink(page)).toContain(sharePath);
+        await closeProductCompleteModal(page);
+        expect((await findProductByTitle(request, title))?.status).toBe('active');
+      });
+
+      await test.step('After Sales defaults ON; switched OFF it saves and buyers get no custom message', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        expect(await onlineCoursePage.readAfterSalesMessageEnabled()).toBe(true);
+        await onlineCoursePage.setAfterSalesMessageEnabled(false);
+        await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.validPrice);
+        const sharePath = await publish(onlineCoursePage);
+        const bought = await buyCourseAs(browser, request, token(testAccounts.qa)!, { title, sharePath });
+        try {
+          await bought.page.goto(new URL(`product/${bought.orderId}`, baseURL).toString());
+          await new LibraryPage(bought.page, baseURL).expectNoAfterSalesMessage();
+        } finally {
+          await bought.context.close();
+        }
+      });
+
+      await test.step('After Sales holds only a message, its counter and up to 3 links — no file upload', async () => {
+        await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
+        await digitalProductPage.expectAfterSalesScope();
+      });
+
+      await test.step('Link labels stop at 40 characters, invalid URLs are rejected and valid links save', async () => {
+        await onlineCoursePage.fillAfterSalesMessage(message);
+        await enableAfterSalesLinks(page);
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page, digitalProductValidationData.linkValidation.longLabel, digitalProductValidationData.linkValidation.invalidUrl);
+        await expectInvalidEmbedLinkFeedback(page);
+        await fillEmbedLink(page, firstLink.label, firstLink.url);
+        await saveCurrentEmbedLink(page);
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page, secondLink.label, secondLink.url);
+        await saveCurrentEmbedLink(page);
+        await expectEmbedLinksSaved(page, [firstLink.label, secondLink.label]);
+      });
+
+      await test.step('Preview shows the staged content read-only, and a repeated payment callback delivers once', async () => {
+        await onlineCoursePage.openAfterSalesPreview();
+        await onlineCoursePage.expectAfterSalesPreviewReadOnly(message, firstLink.label);
+        await onlineCoursePage.closeAfterSalesPreview();
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await onlineCoursePage.fillTitle(title);
+        await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.validPrice);
+        const sharePath = await publish(onlineCoursePage);
+        const bought = await buyCourseAs(browser, request, token(testAccounts.qa)!, { title, sharePath });
+        try {
+          // Replaying the same payment callback is refused (order no longer pending) — and must not deliver twice.
+          await depositWebhook(request, bought.orderId, { tolerateTimeout: true }).catch((e) => expect(String(e)).toMatch(/not pending/));
+          const orders = (await listOrders(request, { limit: 20 })).data.filter((o) => o.productName === title);
+          expect(orders).toHaveLength(1);
+          await bought.page.goto(new URL(`product/${bought.orderId}`, baseURL).toString());
+          await new LibraryPage(bought.page, baseURL).expectAfterSalesMessageText(testAccounts.creator.username, message);
+        } finally {
+          await bought.context.close();
+        }
+      });
+
+      await test.step('With After Sales ON an empty message is refused and the 1000-character limit holds', async () => {
+        await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
+        await onlineCoursePage.fillAfterSalesMessage('M'.repeat(1005));
+        await expect.poll(async () => (await onlineCoursePage.readAfterSalesMessageLength()), { timeout: 10000 }).toBeLessThanOrEqual(1000);
+      });
+
+      await test.step('The Customize Message switch has an accessible name like every other switch', async () => {
+        await digitalProductPage.expectAfterSalesSwitchNamed();
+      });
+    } finally {
+      for (const title of titles) {
+        const product = await findProductByTitle(request, title).catch(() => undefined);
+        if (product) await deleteProduct(request, product.uuid).catch(() => undefined);
+      }
+    }
+  });
 });

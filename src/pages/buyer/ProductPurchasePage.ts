@@ -1308,6 +1308,37 @@ export class ProductPurchasePage {
 
   /** Online Course checkout (AUT-FV-171 / TC-OC-B-003..007). */
 
+  /** A tier with a Free Access benefit badges the product for its members only. */
+  async expectMemberFreeAccessBadge(visible: boolean, priceText: string) {
+    const main = this.page.getByRole('main');
+    await expect(main.getByText(priceText).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    const badge = main.getByText(/^Free Access/).filter({ visible: true });
+    if (visible) await expect(badge.first()).toBeVisible({ timeout: 10000 });
+    else await expect(badge).toHaveCount(0);
+  }
+
+  /** Path of the product page's first gallery image (the primary one), unwrapped from /_next/image. */
+  async primaryImagePath(): Promise<string> {
+    // Slides are `group`s inside the carousel `region`; their <img> has an empty alt, so no img role.
+    const firstSlide = this.page.getByRole('main').getByRole('region').getByRole('group').first();
+    await expect(firstSlide.locator('img').first()).toBeAttached({ timeout: 15000 });
+    const src = await firstSlide.locator('img').first().getAttribute('src') ?? '';
+    const real = src.startsWith('/_next/image') ? new URL(src, this.baseURL).searchParams.get('url') ?? src : src;
+    return new URL(real, this.baseURL).pathname;
+  }
+
+  /**
+   * Limited slots with "Show remaining count": the product page shows "Selling fast", a
+   * `<sold> / <total>` counter and "Limited slots, grab yours before it's gone." (the creator
+   * form's helper promises "X of Y slots left", which is not what renders).
+   */
+  async expectSlotCounter(sold: number, total: number) {
+    const main = this.page.getByRole('main');
+    await expect(main.getByText('Selling fast').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(main.getByText(new RegExp(`^${sold}\\s*/\\s*${total}$`)).filter({ visible: true }).first()).toBeVisible();
+    await expect(main.getByText(/Limited slots, grab yours before it.s gone\./).filter({ visible: true }).first()).toBeVisible();
+  }
+
   /** A creator's additional question shows on the checkout; answer it so Pay is not blocked. */
   async expectCheckoutQuestion(label: string, answer = 'Answer from automation') {
     const main = this.page.getByRole('main');

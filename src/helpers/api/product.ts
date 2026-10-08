@@ -639,3 +639,10 @@ export async function getProduct(
 export async function productShortPath(request: APIRequestContext, productUuid: string, token?: string): Promise<string> {
   return `/s/${(await getProduct(request, productUuid, token)).shortUrl}`;
 }
+
+/** The token's product with this exact title, if any (`GET /api/v1/shop/products?title=`). */
+export async function findProductByTitle(request: APIRequestContext, title: string, token?: string): Promise<{ uuid: string; status: ProductStatus } | undefined> {
+  const response = await request.get(apiUrl(`/api/v1/shop/products?page=1&limit=10&title=${encodeURIComponent(title)}`), { headers: getHeaders(token, creatorOrigin()) });
+  if (!response.ok()) throw new Error(`Find product failed: ${response.status()} ${await response.text()}`);
+  return ((await response.json()).data?.data ?? []).find((p: { title: string }) => p.title === title);
+}

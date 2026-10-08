@@ -530,6 +530,32 @@ like the page is broken rather than like the route having moved.
 - Still true: the Description counter counts **words** (60 chars / 10 words → `10 / 500`); Title accepts 556+ chars with no `maxlength`; leaving a dirty form through the sidebar navigates away with no prompt; the consultation reschedule helper reads `up to 1 days in the future` next to the field label `day(s) before session`; the empty membership tier submit (button `Add Membership`) lists `Thumbnail URL is required` under the field labelled Hero Image.
 - Consultation (and other) editors render the Availability section **twice** (mobile + desktop copies) — scope locators with `.filter({ visible: true })` or strict mode trips.
 
+## Digital Download create form, re-checked 2026-10-08
+
+- **The Add Product type is now "Digital Download"** (button `Digital Products Digital Download
+  Downloadable files like templates, PDFs, CSVs, photos, and videos.`); heading `New Digital
+  Download`. The old "Digital Product" label no longer matches.
+- Step 1 = content cards + buyer-only Content Description; Title/Description/Thumbnail/pricing are
+  step 2. Card checkboxes `#content-type-media|links|digital` (no accessible name).
+- Media accepts `.jpg .jpeg .png .gif .webp .svg .mp4 .mov .avi .webm .ogv .mp3 .wav .ogg .m4a
+  .aac .flac`; Digital Files `.pdf .docx .doc .xlsx .xls .csv .zip`. Files only upload **at
+  publish**. **`.ogv` and `.avi` are rejected there** (`POST /file/upload/create` → 500
+  `unsupported content type: video/ogg|video/avi`) and `Next: Publish` then stalls silently — no
+  toast, no product (candidate bug, CL-AUT-047). A `.txt` set into the Media input is listed with
+  no message (candidate bug).
+- Step 2 with Digital Files shows `Downloadable File` (default ON). OFF → the buyer's order page
+  lists the file with `View` but no `Download`.
+- **Limited Slot**: `Limit available slots` reveals `Available slots` (default 100, +/−) and `Show
+  remaining count to buyers` (ON); payload `isLimitProductSales / limitProductSales /
+  showRemainingSlots`. Buyers see `Selling fast · 0 / 5 · Limited slots, grab yours before it's
+  gone.` (sold/total), not the helper's "X of Y slots left".
+- **Membership benefit** needs `Add Benefit` → access (`Everyone active`, tenure options) → type
+  (`Free Access` / `Discount`) → **`Confirm`**; without Confirm the payload carries
+  `tierMembershipBenefit: []`. Members of that tier see a `Free Access` badge on the product page,
+  others only the price.
+- A replayed deposit webhook answers 400 `order status not pending` — no duplicate order.
+- The After Sales section's only file input is the message editor's `Insert image` (`image/*`).
+
 ## Bug-sheet batch 3, 7 Oct 2026
 
 - **Promotion create/edit show no success toast; delete does** (`Promo deleted successfully`). The delete dialog still names no object (`Are you sure you want to delete this promotion?`). Row actions are `Set Inactive / Edit / Delete` behind an unnamed `dropdown-menu-trigger`.

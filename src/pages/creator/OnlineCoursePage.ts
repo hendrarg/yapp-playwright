@@ -809,8 +809,14 @@ export class OnlineCoursePage {
     await this.page.getByRole("button", { name: "Save", exact: true }).locator("visible=true").first().click({ timeout: 10000 });
     const saved = await response;
     expect(saved.ok(), await saved.text()).toBe(true);
-    await expect(this.page).toHaveURL(/\/products\/update\/online-course\/[0-9a-f-]{36}/, { timeout: 20000 });
-    return this.page.url().split("/online-course/")[1].split(/[?#/]/)[0];
+    // Shared by every product form: the edit route is /products/update/<type>/<uuid>.
+    await expect(this.page).toHaveURL(/\/products\/update\/[\w-]+\/[0-9a-f-]{36}/, { timeout: 20000 });
+    return this.page.url().match(/\/products\/update\/[\w-]+\/([0-9a-f-]{36})/)![1];
+  }
+
+  /** Characters the After Sales message editor actually holds. */
+  async readAfterSalesMessageLength(): Promise<number> {
+    return ((await this.afterSalesMessageEditor().innerText()) ?? "").replace(/\n/g, "").length;
   }
 
   async openEdit(productUuid: string) {

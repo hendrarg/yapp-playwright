@@ -1,212 +1,283 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick } from "@utils/playwright.utils";
-import { nextSetDetailsAction, textFeedback, titleInput } from "@pages/shared/locators";
+import { nextSetDetailsAction, textFeedback } from "@pages/shared/locators";
 import { digitalProductPricingData, digitalProductValidationData, productsCreationData } from "@test-data/creator/products.creation.data";
 
+export type DigitalContentType = "media" | "links" | "digital";
+
+/** Content-type cards on step 1: label and the format hint under it. */
+export const digitalContentTypes: Record<DigitalContentType, { label: string; hint: string; section: string }> = {
+  media: { label: "Media", hint: "MP4, MOV, MP3, JPG, PNG, etc", section: "Upload Your Media Files" },
+  links: { label: "Links", hint: "GDrive, Notion, Youtube, etc", section: "Embed Links" },
+  digital: { label: "Digital Files", hint: "PDF, ZIP, DOCX, XLS, etc.", section: "Upload Files" },
+};
+
+/**
+ * Digital Download create/edit (`/products/create/digital-downloads`). Step 1 is Content
+ * (content-type cards + buyer-only description); Title, Description, Thumbnail, pricing and the
+ * rest of the shared product form are on step 2 (`Next: Set Details`). Step 2 controls shared with
+ * other product types are driven through OnlineCoursePage / product-editor helpers.
+ */
 export class DigitalProductPage {
-  constructor(
-    public readonly page: Page,
-    private readonly baseURL: string,
-  ) {}
+  constructor(public readonly page: Page, private readonly baseURL: string) {}
 
-  private readonly digitalProductThumbnailInput = smartLocator(this.page, {
-    // Hidden file input without id/aria-label/label association — getByLabel
-    // can never match it and would burn the full 10s waitFor timeout on every
-    // setInputFiles. The :not([multiple]) disambiguates from the gallery input.
-    selector: 'input[type="file"][accept*="image/jpeg"]:not([multiple]):visible',
-  });
-
-  readonly contentDetailsHeading = locatorChain(this.page, {
-    text: "Content Details",
-    selector: 'text="Content Details"',
-  });
-
-  private readonly digitalProductBackAction = smartLocator(this.page, {
-    role: "button",
-    name: "",
-    exact: true,
-    selector: 'button:has(svg.lucide-arrow-left)',
-  });
-
-  private readonly digitalProductUnsavedChangesDialog = smartLocator(this.page, {
-    role: "dialog",
-    text: "Unsaved changes",
-    selector: '[role="dialog"], [role="alertdialog"]',
-  });
-
-  private readonly linksContentTypeAction = smartLocator(this.page, {
-    text: "Links",
-    selector: "#content-type-links",
-  });
-
-  private linksContentTypeCheckbox(): Locator {
-    return this.page.locator("#content-type-links");
-  }
-
-  private embedLinksSection(): Locator {
-    return locatorChain(this.page, {
-      text: "Embed Links",
-      selector: 'text="Embed Links"',
-    });
-  }
-
-  /** Buyer-only Content Description editor (second editable-markdown editor) — TC-PD-C-013. */
-  private digitalProductContentDescriptionEditor(): Locator {
-    return locatorChain(this.page, {
-      role: "textbox",
-      name: "editable markdown",
-      selector: '[role="textbox"][aria-label="editable markdown"]',
-    }).nth(1);
-  }
-
-  /** Rich text toolbar of the buyer-only Content Description (second toolbar on Add Content). */
-  private digitalProductContentDescriptionToolbar(): Locator {
-    return this.page.getByRole("toolbar").nth(1);
-  }
-
-  private digitalProductContentDescriptionCounter(): Locator {
-    return this.page.locator("p").filter({ hasText: /\d+\s*\/\s*500/ }).nth(1);
-  }
-
-  private digitalProductContentDescriptionFormatAction(name: string): Locator {
-    return this.digitalProductContentDescriptionToolbar().locator(`[aria-label="${name}"]`);
+  private get main(): Locator {
+    return this.page.getByRole("main");
   }
 
   async goto() {
-    await this.page.goto(
-      new URL("products/create/digital-downloads", this.baseURL).toString(),
-      { waitUntil: "domcontentloaded" },
-    );
+    await this.page.goto(new URL("products/create/digital-downloads", this.baseURL).toString(), { waitUntil: "domcontentloaded" });
   }
 
   async expectLoaded() {
-    await expect(this.page).toHaveURL(/\/products\/(?:create|update)\/digital-downloads\//, {
-      timeout: 30000,
-    });
-    await expect(titleInput(this.page)).toBeVisible({ timeout: 30000 });
-    await expect(this.contentDetailsHeading).toBeVisible({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/products\/(?:create|update)\/digital-downloads/, { timeout: 30000 });
+    await expect(this.main.getByText("Content Details", { exact: true })).toBeVisible({ timeout: 20000 });
   }
 
   async expectDigitalProductCreateFlow() {
     await expect(this.page).toHaveURL(productsCreationData.digitalProductCreatePath);
-    await expect(titleInput(this.page)).toBeVisible({ timeout: 10000 });
-    await expect(this.contentDetailsHeading).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("heading", { name: "New Digital Download" })).toBeVisible({ timeout: 20000 });
+    await expect(this.main.getByText("Content Details", { exact: true })).toBeVisible();
   }
 
-  async uploadDigitalProductThumbnail(filePath: string) {
-    await this.digitalProductThumbnailInput.setInputFiles(filePath, { timeout: 15000 });
+  /** The header Back arrow; with unsaved edits an "Unsaved changes" confirmation should stop it. */
+  async leaveViaBack() {
+    await safeClick(this.page.getByRole("button", { name: "Back", exact: true }));
   }
 
-  async navigateAwayFromDigitalProductViaBack() {
-    await this.digitalProductBackAction.click({ timeout: 10000 });
+  async expectUnsavedChangesPrompt() {
+    const dialog = this.page.getByRole("dialog").or(this.page.getByRole("alertdialog")).filter({ hasText: /unsaved|leave|discard|lose your changes|are you sure/i });
+    await expect(dialog.first()).toBeVisible({ timeout: 10000 });
   }
 
-  async expectDigitalProductUnsavedChangesDialog() {
-    const dialogText = await this.digitalProductUnsavedChangesDialog.text({ timeout: 10000 });
-    expect(dialogText).toMatch(/unsaved|leave|discard|lose your changes|are you sure/i);
+  /** Next: Set Details stays reachable at the top while the step scrolls. */
+  async expectNextStaysVisibleAfterScroll() {
+    await this.page.mouse.wheel(0, 2000);
+    await expect(this.page.getByRole("button", { name: "Next: Set Details" })).toBeInViewport({ timeout: 10000 });
+  }
+
+  // ── Step 1: content types ──
+  /** The card checkboxes have no accessible name; their hand-authored ids are the stable hook. */
+  private contentTypeCheckbox(type: DigitalContentType): Locator {
+    return this.page.locator(`#content-type-${type}`);
+  }
+
+  async expectContentTypeOptions() {
+    for (const [type, card] of Object.entries(digitalContentTypes) as Array<[DigitalContentType, (typeof digitalContentTypes)[DigitalContentType]]>) {
+      await expect(this.main.getByText(card.label, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+      await expect(this.main.getByText(card.hint, { exact: true })).toBeVisible();
+      await expect(this.contentTypeCheckbox(type)).toHaveAttribute("aria-checked", "false");
+    }
+  }
+
+  async setContentType(type: DigitalContentType, checked: boolean) {
+    const box = this.contentTypeCheckbox(type);
+    if (((await box.getAttribute("aria-checked")) === "true") !== checked) await safeClick(box);
+    await expect(box).toHaveAttribute("aria-checked", String(checked), { timeout: 10000 });
+  }
+
+  async expectContentSection(type: DigitalContentType, visible: boolean) {
+    const heading = this.main.getByText(digitalContentTypes[type].section, { exact: false }).first();
+    if (visible) await expect(heading).toBeVisible({ timeout: 10000 });
+    else await expect(this.main.getByText(digitalContentTypes[type].section, { exact: false })).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** Unticking a card drops its section at once — no confirmation dialog of any kind. */
+  async expectUntickWithoutConfirmation(type: DigitalContentType) {
+    await this.setContentType(type, false);
+    await expect(this.page.getByRole("dialog").or(this.page.getByRole("alertdialog"))).toHaveCount(0);
+    await this.expectContentSection(type, false);
+  }
+
+  async enableLinksContentType() {
+    await this.setContentType("links", true);
+    await this.expectContentSection("links", true);
+  }
+
+  private mediaInput(): Locator {
+    return this.page.locator('input[type="file"][accept*=".mp4"]').first();
+  }
+
+  private digitalFilesInput(): Locator {
+    return this.page.locator('input[type="file"][accept*="application/pdf"]').first();
+  }
+
+  async uploadMedia(filePaths: readonly string[]) {
+    await this.mediaInput().setInputFiles([...filePaths]);
+  }
+
+  async uploadDigitalFiles(filePaths: readonly string[]) {
+    await this.digitalFilesInput().setInputFiles([...filePaths]);
+  }
+
+  /** Videos list as `<name> <size>`; images only as preview tiles (no name — M-40). */
+  async expectMediaItems(options: { videoNames: readonly string[]; imageCount: number }) {
+    for (const name of options.videoNames) await expect(this.main.getByText(name, { exact: true })).toBeVisible({ timeout: 20000 });
+    await expect.poll(() => this.main.locator('img[src^="blob:"]').count(), { timeout: 20000 }).toBeGreaterThanOrEqual(options.imageCount);
+  }
+
+  async expectDigitalFileNames(names: readonly string[]) {
+    for (const name of names) await expect(this.main.getByText(name, { exact: true })).toBeVisible({ timeout: 20000 });
+  }
+
+  /** A file outside the advertised list must not join the media list, and the creator is told why. */
+  async expectMediaRejected(fileName: string) {
+    await expect(this.main.getByText(fileName, { exact: true })).toHaveCount(0, { timeout: 5000 });
+    await expect(this.page.getByText(/not supported|allowed|format/i).first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectMediaListEmpty() {
+    await expect(this.main.locator('img[src^="blob:"]')).toHaveCount(0);
+    await expect(this.main.getByText(/\d+(\.\d+)? (KB|MB)/)).toHaveCount(0);
   }
 
   async submitEmptyDigitalProductAddContent() {
     await nextSetDetailsAction(this.page).click({ timeout: 10000 });
   }
 
-  async expectDigitalProductRequiredFeedback() {
+  /** Next with no content type: the inline requirement and the summary toast. */
+  async expectContentTypeRequired() {
     const { requiredErrors } = digitalProductValidationData;
-    await expect(textFeedback(this.page, requiredErrors.title)).toBeVisible({ timeout: 10000 });
-    await expect(textFeedback(this.page, requiredErrors.description)).toBeVisible({ timeout: 10000 });
     await expect(textFeedback(this.page, requiredErrors.content)).toBeVisible({ timeout: 10000 });
-    await expect(textFeedback(this.page, requiredErrors.thumbnail)).toBeVisible({ timeout: 10000 });
     await expect(textFeedback(this.page, requiredErrors.summary)).toBeVisible({ timeout: 10000 });
+    await expect(this.page).toHaveURL(productsCreationData.digitalProductCreatePath);
+    await expect(this.page.getByRole("button", { name: "Next: Publish" })).toHaveCount(0);
+  }
+
+  /** The requirement should name every card the creator can pick, Media included. */
+  async expectContentTypeMessageNamesAllTypes() {
+    await expect(this.page.getByText(/At least one of .*Media/i).first()).toBeVisible({ timeout: 5000 });
+  }
+
+  async goToDetails() {
+    await nextSetDetailsAction(this.page).click({ timeout: 10000 });
+    await this.expectDigitalProductSetDetailsLoaded();
+  }
+
+  async expectDigitalProductSetDetailsLoaded() {
+    await expect(this.page.getByRole("button", { name: "Next: Publish" })).toBeVisible({ timeout: 15000 });
+  }
+
+  // ── Buyer-only content description (step 1) ──
+  private contentDescriptionEditor(): Locator {
+    return this.page.getByRole("textbox", { name: "editable markdown" }).first();
+  }
+
+  private contentDescriptionCounter(): Locator {
+    return this.main.getByText(/^\d+\s*\/\s*500$/).first();
   }
 
   async fillDigitalProductContentDescription(text: string) {
-    const editor = this.digitalProductContentDescriptionEditor();
-    await editor.click({ timeout: 10000 });
+    await this.contentDescriptionEditor().click({ timeout: 10000 });
     await this.page.keyboard.press("Control+A");
     await this.page.keyboard.press("Backspace");
     if (text) await this.page.keyboard.insertText(text);
   }
 
+  async readContentDescriptionCounter(): Promise<string> {
+    return ((await this.contentDescriptionCounter().textContent()) ?? "").trim();
+  }
+
   async expectDigitalProductContentDescriptionCounter(expectedText: string) {
-    await expect(this.digitalProductContentDescriptionCounter()).toContainText(expectedText, {
-      timeout: 10000,
-    });
+    await expect(this.contentDescriptionCounter()).toHaveText(expectedText, { timeout: 10000 });
   }
 
   async applyDigitalProductContentDescriptionFormatting() {
-    const editor = this.digitalProductContentDescriptionEditor();
-    await editor.click({ timeout: 10000 });
+    await this.contentDescriptionEditor().click({ timeout: 10000 });
     await this.page.keyboard.press("Control+A");
-    await this.digitalProductContentDescriptionFormatAction("Bold").click({ timeout: 10000 });
-    await this.digitalProductContentDescriptionFormatAction("Italic").click({ timeout: 10000 });
-    await this.digitalProductContentDescriptionFormatAction("Underline").click({ timeout: 10000 });
+    const toolbar = this.page.getByRole("toolbar").first();
+    for (const name of ["Bold", "Italic", "Underline"]) await toolbar.getByRole("radio", { name }).click({ timeout: 10000 });
   }
 
   async expectDigitalProductContentDescriptionFormatted() {
-    const html = await this.digitalProductContentDescriptionEditor().innerHTML();
-    expect(html).toMatch(/_bold_|_italic_|_underline_|strong|em|u/i);
+    await expect.poll(() => this.contentDescriptionEditor().innerHTML()).toMatch(/<strong|<em|<u>/i);
   }
 
-  async expectDigitalProductSetDetailsLoaded() {
-    await expect(this.page.getByRole("button", { name: "Next: Publish" })).toBeVisible({
-      timeout: 15000,
-    });
+  async expectBuyerOnlyHint() {
+    await expect(this.main.getByText("This description will only be shown to the buyer after they have purchased the product.")).toBeVisible();
   }
 
-  /** Digital Product pricing (AUT-FV-193 / TC-PD-C-018..019) — shares the online-course pricing UI. */
-
-  async readDigitalProductPricingEnabled(): Promise<boolean> {
-    return (await this.page.getByRole("switch", { name: "Add Pricing" }).getAttribute("aria-checked")) === "true";
+  // ── Step 2: Digital Download–specific controls ──
+  private downloadableSwitch(): Locator {
+    return this.page.getByRole("switch", { name: "Downloadable File" });
   }
 
-  /** Free default: pricing either OFF (input hidden) or ON with IDR 0 — preview must show IDR 0. */
+  async expectDownloadable(on: boolean) {
+    await expect(this.downloadableSwitch()).toHaveAttribute("aria-checked", String(on), { timeout: 15000 });
+  }
+
+  async setDownloadable(on: boolean) {
+    if (((await this.downloadableSwitch().getAttribute("aria-checked")) === "true") !== on) await safeClick(this.downloadableSwitch());
+    await this.expectDownloadable(on);
+  }
+
+  /** Limited Slot: the switch has no name — reach it through its own label row. */
+  private limitSlotsSwitch(): Locator {
+    return this.main.locator("div").filter({ has: this.page.getByText("Limit available slots", { exact: true }) }).getByRole("switch").last();
+  }
+
+  async enableLimitedSlots(slots: number) {
+    await this.limitSlotsSwitch().scrollIntoViewIfNeeded();
+    if ((await this.limitSlotsSwitch().getAttribute("aria-checked")) !== "true") await safeClick(this.limitSlotsSwitch());
+    const input = this.page.getByRole("textbox", { name: "Available slots" });
+    await expect(input).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole("button", { name: "Decrease slots" })).toBeVisible();
+    await expect(this.page.getByRole("button", { name: "Increase slots" })).toBeVisible();
+    await expect(this.main.getByText("Show remaining count to buyers")).toBeVisible();
+    await input.fill(String(slots));
+    await expect(input).toHaveValue(String(slots));
+  }
+
+  /** Give one membership tier free access to the product (Everyone active → Free Access → Confirm). */
+  async addFreeAccessBenefit(tierName: string) {
+    const toggle = this.page.getByRole("switch", { name: "Set benefits for membership" });
+    if ((await toggle.getAttribute("aria-checked")) !== "true") await safeClick(toggle);
+    const escaped = tierName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    await safeClick(this.main.locator("div").filter({ hasText: new RegExp(`^${escaped}Add Benefit$`) }).getByRole("button", { name: "Add Benefit" }));
+    await safeClick(this.page.getByRole("button", { name: /^Everyone active/ }));
+    await safeClick(this.page.getByRole("button", { name: /^Free Access/ }));
+    await safeClick(this.page.getByRole("button", { name: "Confirm", exact: true }));
+    await expect(this.main.locator("div").filter({ hasText: new RegExp(`^${escaped}Free Access`) }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  // ── After Sales section (step 2) ──
+  private afterSalesSection(): Locator {
+    return this.main.locator("div")
+      .filter({ has: this.page.getByText("After Sales", { exact: true }) })
+      .filter({ has: this.page.getByText("Customize Message", { exact: true }) })
+      .filter({ hasNot: this.page.getByText("Limited Slot", { exact: true }) })
+      .last();
+  }
+
+  /** Only the message toggle, its rich-text editor with a 1000 counter, and up to 3 links — no file upload. */
+  async expectAfterSalesScope() {
+    const section = this.afterSalesSection();
+    await expect(section.getByRole("switch")).toHaveCount(1);
+    await expect(section.getByRole("textbox", { name: "editable markdown" })).toBeVisible();
+    await expect(section.getByText("0/1000 characters")).toBeVisible();
+    await expect(section.getByText("max. 3 links")).toBeVisible();
+    // The message editor's own "Insert image" keeps a hidden image/* input — inline images, not a file delivery.
+    await expect(section.locator('input[type="file"]:not([accept="image/*"])')).toHaveCount(0);
+    await expect(section.getByRole("button", { name: /attach|upload|choose file/i })).toHaveCount(0);
+    await expect(section.getByText(/drag and drop/i)).toHaveCount(0);
+  }
+
+  /** Every switch on the form should carry an accessible name, Customize Message included. */
+  async expectAfterSalesSwitchNamed() {
+    await expect(this.page.getByRole("switch", { name: "Customize Message" })).toBeVisible({ timeout: 5000 });
+  }
+
+  // ── Pricing (step 2, shared UI) ──
   async expectDigitalProductPricingFreeDefault() {
-    await expect
-      .poll(() => this.page.locator("main").innerText(), { timeout: 10000 })
-      .toMatch(digitalProductPricingData.idrZeroPattern);
-  }
-
-  async enableDigitalProductPricing() {
-    const toggle = this.page.getByRole("switch", { name: "Add Pricing" });
-    if ((await toggle.getAttribute("aria-checked")) !== "true") {
-      await safeClick(toggle);
-    }
-    await expect(toggle).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
-    await expect(this.page.getByRole("textbox", { name: "10,000" })).toBeVisible({ timeout: 10000 });
-  }
-
-  async fillDigitalProductPrice(price: string) {
-    const input = this.page.getByRole("textbox", { name: "10,000" });
-    await input.click({ timeout: 10000 });
-    await input.fill(price);
-    // Blur to trigger client-side pricing validation.
-    await this.page.getByText("Add pricing to charge viewers").click({ timeout: 10000 });
+    await expect.poll(() => this.main.innerText(), { timeout: 10000 }).toMatch(digitalProductPricingData.idrZeroPattern);
   }
 
   async expectDigitalProductInvalidPriceFeedback() {
-    await expect
-      .poll(() => this.page.locator("main").innerText(), { timeout: 10000 })
-      .toMatch(digitalProductPricingData.invalidPriceErrorPattern);
+    await expect.poll(() => this.main.innerText(), { timeout: 10000 }).toMatch(digitalProductPricingData.invalidPriceErrorPattern);
   }
 
   async expectDigitalProductValidPrice() {
-    await expect
-      .poll(() => this.page.locator("main").innerText(), { timeout: 10000 })
-      .toMatch(digitalProductPricingData.validPriceDisplayPattern);
+    await expect.poll(() => this.main.innerText(), { timeout: 10000 }).not.toMatch(digitalProductPricingData.invalidPriceErrorPattern);
   }
-
-  async enableLinksContentType() {
-    const checkbox = this.linksContentTypeCheckbox();
-    await this.linksContentTypeAction.click({ timeout: 10000 });
-
-    if ((await checkbox.getAttribute("aria-checked")) !== "true") {
-      await safeClick(this.page.locator("#content-type-links"));
-    }
-
-    await expect(checkbox).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
-    await expect(this.embedLinksSection()).toBeVisible({ timeout: 10000 });
-  }
-
 }

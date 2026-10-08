@@ -15,7 +15,7 @@ export const productsCreationData = {
   productTypes: [
     {
       label: "Digital Product",
-      buttonName: /Digital Products Digital Product Downloadable files/i,
+      buttonName: /Digital Products Digital Download Downloadable files/i,
     },
     {
       label: "Online Course",

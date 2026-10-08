@@ -154,6 +154,20 @@ export class LibraryPage {
     expect(file.suggestedFilename()).toBe(fileName);
   }
 
+  /** Downloadable File OFF: the file can still be viewed, but offers no Download. */
+  async expectFileViewOnly(fileName: string) {
+    const main = this.page.getByRole("main");
+    await expect(main.getByText(fileName, { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(main.getByRole("link", { name: "View" }).or(main.getByRole("button", { name: "View" })).first()).toBeVisible();
+    await expect(main.getByRole("link", { name: "Download", exact: true })).toHaveCount(0);
+  }
+
+  /** With After Sales OFF the order page carries no creator message entry. */
+  async expectNoAfterSalesMessage() {
+    await expect(this.page.getByRole("main").getByText(/./).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByText(new RegExp(`^${ticketPage.seeMessagePrefix} `))).toHaveCount(0);
+  }
+
   /** A content section the creator left empty is not rendered at all. */
   async expectSectionAbsent(heading: string) {
     await expect(this.page.getByRole("main").getByText(heading, { exact: true })).toHaveCount(0);
