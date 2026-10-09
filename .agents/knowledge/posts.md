@@ -57,6 +57,17 @@ fail until the menu is closed (Escape, sent only once the Price dialog has finis
 The pill then reads `Exclusive Rp10.000`. Publishing is `POST /api/v1/posts` with
 `visibility: pay_per_view` and the price. Creator page object: `FeedsPage.publishPost()`.
 
+**Re-checked 2026-10-08 (F&E-14): the two composers now disagree.** The dev lowered the PPV
+floor on purpose. The **landing composer** (`yapp-dev/feeds` → `Your Post`, a `Write something
+here...` textarea with a `Public` visibility button) says `Min. price: Rp1`: 0 keeps `Confirm`
+disabled, while 1 and 5.000 enable it and publish (`200 Post created`, toast `Post created
+successfully`). There, a typed minus sign is stripped (`-5000` → `5.000`). The **creator
+dashboard composer** (`creators-dev/feeds`) still says `Min. price: Rp10.000` and disables 1,
+5.000 and 9.999. On the server, price ≥ 0 is accepted, and a negative price is rejected with
+**500** `price is required and must be >= 0 when isFlexiblePrice is false` (a 500, not a 4xx).
+Wrong-path calls (`{API}/posts` without `/api/v1`) answer `403 not allowed to access this API`,
+which looks like an auth failure but is not one.
+
 **The server enforces nothing.** `POST /api/v1/posts` with
 `{visibility:"pay_per_view", price:0}` or `price:5000` returns `200 Post created`,
 and `PUT` happily lowers an existing PPV post to `price: 0`. That is where Rp0 PPV
@@ -245,9 +256,11 @@ Verified 2026-10-05 with API-seeded products (`productUuids` on `POST /api/v1/po
   `/<creator>/product/<shortId>`, whose `Purchase` opens checkout.
 - A post with no products shows neither the label nor any chip.
 - A **deleted** product drops out (`View Products` count and chips both exclude it).
-- **An `inactive` product is still shown** — counted in `View Products (n)`, rendered as a
-  chip, and clicking it lands on `That page doesn't exist`. Contradicts TC-FE-B-050; AUT-FE-019
-  runs under `test.fail()` until M-60 (F&E-11) is fixed.
+- An `inactive` product is hidden as well. This was fixed 2026-10-09 (F&E-11, be#383): `FindByPostID`
+  now also requires `status = 'active'`, and AUT-FE-019 asserts `View Products (1)` with no
+  `test.fail`. The link row survives, so a reactivated product reappears. Side effect: the
+  creator's edit-post form no longer prefills an inactive linked product, so re-saving the post
+  drops that link.
 - No API changes a product's status; seed an inactive one with `status: 'inactive'` on create.
 
 ## Creator composer: products, editing, lifetime dialog (verified 2026-10-06)

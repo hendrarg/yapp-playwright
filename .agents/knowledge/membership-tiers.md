@@ -450,7 +450,15 @@ Do not mistake the `Per month` figure beside it for the price: `Per month` and
 
 ## The tier form and the API disagree on required fields
 
-Client-side validation on the tier form enforces `Price must be at least IDR 20,000`
+**Updated 2026-10-08: a tier price of 0 is intended, and the form has no price floor.**
+The team confirmed that a `Free` tier is allowed: `bisa 0`, created with `priceIDR: 0`,
+answered `200 Create Tier Membership Successfully` and shows `Free /1 month`. On
+`/membership/create`, the values 0, 1, 5.000, 10.000, 19.999 and 20.000 raise no price
+message on submit. The form still shows `Membership name is required`, `Description is
+required` and `Thumbnail URL is required`. The `IDR 20,000` rule described below no longer
+exists. Only the thumbnail mismatch is still open (L-24 / MEM-14).
+
+Client-side validation (as of September, the price part is superseded) on the tier form enforces `Price must be at least IDR 20,000`
 and `Thumbnail URL is required`. The API enforces **neither** — `POST
 /api/v1/tier-memberships` accepted `priceIDR: 10000`, and its required-field list is
 only `Name`, `Description`, `IsActive`, `Prices`,

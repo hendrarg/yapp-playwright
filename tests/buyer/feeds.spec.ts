@@ -471,11 +471,8 @@ test('Feeds and Exclusive — NSFW Filtering, NSFW Direct Access, NSFW Search, N
 
 test('Feeds and Exclusive — Display Linked Products, No Product State, Product Navigation, Purchase Initiation, Inactive Product, Deleted Product', {
   tag: ['@AUT-FE-019', '@feeds', '@products', '@buyer', '@regression'],
-  annotation: { type: 'issue', description: 'F&E-11' },
 }, async ({ buyerNav, buyerFeedsPage, productPurchasePage, page }) => {
   test.setTimeout(180000);
-  // Known bug M-60: inactive linked products are still listed on the post (and lead to "That page doesn't exist").
-  test.fail(true, 'M-60 / F&E-11: inactive linked product is still displayed on the post');
 
   const creatorToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
   const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
@@ -505,6 +502,8 @@ test('Feeds and Exclusive — Display Linked Products, No Product State, Product
       await buyerFeedsPage.switchToTab('following');
       await buyerFeedsPage.expectPostVisible(plainPost.content);
       await buyerFeedsPage.expectFeedCardProductCount(plainPost.content, null);
+      // Only the active product counts: the deleted and the inactive one are both filtered out.
+      await buyerFeedsPage.expectFeedCardProductCount(linkedPost.content, 1);
       await buyerFeedsPage.gotoPost(postIds[1]);
       await buyerFeedsPage.expectNoLinkedProducts(plainPost.content);
     });
@@ -697,11 +696,8 @@ test('Feeds and Exclusive — Payment Initiation, Successful Purchase, Purchase 
 
 test('Feeds and Exclusive — Profile Structure, Edit Profile, Profile Picture, Username Update', {
   tag: ['@AUT-FE-022', '@feeds', '@profile', '@buyer', '@regression'],
-  annotation: { type: 'issue', description: 'F&E-13' },
 }, async ({ buyerFeedsPage, buyerProfilePage, accountSettingsPage, dbFixtures, page }) => {
   test.setTimeout(180000);
-  // Known bug M-61: a picture upload blanks the display name. Checked softly so the later steps still run.
-  test.fail(true, 'M-61 / F&E-13: profile picture upload blanks the display name');
   // TC-FE-B-064 ("no edit controls") waits on clarification: the buyer app now has /profile/settings (CL-AUT-020).
   const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
   test.skip(!buyerToken, 'Buyer token is required');
@@ -741,7 +737,7 @@ test('Feeds and Exclusive — Profile Structure, Edit Profile, Profile Picture, 
     await accountSettingsPage.uploadProfilePicture(testImages.claude);
     await accountSettingsPage.reload();
     await accountSettingsPage.expectProfilePictureSet();
-    expect.soft((await getAccount(page.request, buyerToken)).name, 'display name after a picture upload').toBe(account.name);
+    expect((await getAccount(page.request, buyerToken)).name, 'display name after a picture upload').toBe(account.name);
   });
 
   await test.step('The new picture shows on the profile and in the account menu', async () => {

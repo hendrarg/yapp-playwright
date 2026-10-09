@@ -108,6 +108,39 @@ periods, and underscores.` The field itself has **no** `minLength`, `maxLength`,
 - **hyphen is rejected**; period and underscore accepted; **uppercase accepted**
 - `../admin` and `<script>alert(1)</script>` fall out of the same format rule
 
+**Guest checkout bypasses every username rule (verified 2026-10-09).** A guest order for
+a new email creates the account, and its username is the email's local part, copied
+as-is. The account is created **when the payment settles**, not at `POST
+/api/v1/orders/quote`: the quote left no user, and user 550 appeared at the
+`webhook/deposit-dev` call. That held even though the webhook answered 400 and the order
+stayed `pending` with `buyer_id` NULL. `k@yopmail.com` produced user 550, username `k`,
+with `username_changed_at` NULL. This is CPA-14.
+
+**Fixed 2026-10-09 (be#388, retested the same day).** Usernames of new guest accounts are
+now normalised as follows:
+- lower-cased;
+- characters outside `[a-z0-9._]` dropped;
+- 4 random digits appended when the result is under 4 characters or already taken;
+- cut to 25 characters.
+
+Observed results:
+- `Q@` → `q6818`
+- `qa+t.x-y1869@` → `qat.xy1869`
+- a 34-char local part → its first 25 characters
+- `asdasd@` → `asdasd1981`
+
+The fix only applies to new accounts. Existing bad usernames, including user 550 `k`, the
+counts below and the duplicates, are left unchanged. Both explicit endpoints do reject it:
+`/accounts/username` and `/accounts/username/change` answer `400 Username must be at
+least 4` for `z`. Dev therefore holds usernames that break the rule:
+- 19 shorter than 4 characters (`a`, `t`, `dd`);
+- 16 longer than 25;
+- 153 with characters outside `[A-Za-z0-9._]`, such as `faqih49+testasdasd`;
+- duplicates (`test` ×6, `asd` ×5, `a` ×2), because uniqueness isn't checked either.
+
+`/t` renders a full public profile. The new `/k` returned 404 right after a pending
+order. A username shared by several accounts makes `/<username>` ambiguous.
+
 **The inline check icon is format-only.** Typing fires **zero** network calls; the
 circle-check just means the value matches the rule. Availability is tested only when
 `Continue` is pressed (`POST /api/v1/accounts/username`), which is what returns

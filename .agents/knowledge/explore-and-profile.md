@@ -110,8 +110,8 @@ The total is computed before the eligibility gates above run. **Never assert on
 
 ## Dead and misleading fields on the account payload
 
-- `GET /accounts` returns **`interests: null` permanently**. The real data is at
-  `GET /accounts/interests`.
+- `GET /accounts` carries **no `interests` key** (fixed 2026-10-09, CP-11; until then it was
+  always `null`). The real data is at `GET /accounts/interests`.
 - The correct profile asset fields are `photoProfileUrl` and `backgroundUrl`.
 
 ## Both test accounts are already creators
@@ -280,10 +280,17 @@ saves immediately** (`PUT /api/v1/accounts/profile/photo`) and shows "Profile Pi
 `Got It!` — no Save needed. `Delete Current Photo` → "Remove Current Photo" → `Yes Remove` sends
 `DELETE /api/v1/accounts/profile/photo` (with no photo it answers 500, S3 key empty).
 
-**Bug M-61 (F&E-13, 2026-10-05): uploading a picture blanks the display name** (`users.name` → `""`; the PUT
-response already carries `name: ""`). With the name empty the settings form loads **both** Username
-and Your Name empty and `Save` stays disabled, so the username can no longer be edited either.
-`dbFixtures.protectProfile()` snapshots name, username, photo and cooldown and restores them.
+**Fixed 2026-10-08 (was M-61 / F&E-13):** a picture upload used to blank the display name
+(`users.name` → `""`; the PUT response carried `name: ""`), which left both Username and Your Name
+empty and `Save` disabled. The endpoint now writes only `photo_profile_path`: the response keeps
+`name`, and `phone_number` survives the upload. `dbFixtures.protectProfile()` snapshots name,
+username, photo and cooldown and restores them. It does **not** restore phone or bio.
+
+**The buyer's public page `/<username>` can render as the link-in-bio template** (seen
+2026-10-08 right after a username change; the QA buyer has `isCreator: true`): banner, avatar
+initial, a `Tip 2850` button, `No links yet.` and a `Supports` tab. This template has **no `main`
+landmark**, and the display name is an `h1`. A check scoped to `main` fails even though the name
+is on screen. An earlier run of the same flow rendered the app layout, which does have `main`.
 
 **A successful change starts a 24-hour cooldown** (`users.username_changed_at`): the next change
 returns **500** `you changed your username recently, you can change it again in 23 hours…`. A test

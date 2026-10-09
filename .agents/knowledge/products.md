@@ -565,6 +565,11 @@ like the page is broken rather than like the route having moved.
 - **Discord Membership edit**: `Next: Publish` stays disabled until something changes; saving a real change still shows `Your product has been successfully created.`
 - **Membership tier Hero Image**: a 686×447 image is accepted with a preview and no error (min 500×500 is only text). The first file input on `/membership/create` belongs to the description editor (`image/*`); the Hero Image input is the one accepting `image/jpeg,…`.
 - **Campaign create** (`/profile/campaigns/create`): a 1×1 banner is accepted with a preview, no error.
+- **2026-10-09 (OC-10): `.wav` is no longer offered.** The panel reads `.pdf, .docx, .xlsx, .csv,
+  .mp3 or .zip` and `accept` has no `.wav`; the backend was not changed. The notes below on
+  `.wav` are history. In a **new, unsaved** course, an attachment block (even `.mp3`) sits at
+  `Uploading...` and fires no `file/upload` request. Seed the course first and `openEdit` it, as
+  AUT-OC-002 does.
 - **Online Course attachment**: `Insert > Attachment` opens an `Upload attachment` panel (`.pdf, .docx, .xlsx, .csv, .mp3, .wav or .zip`); a .wav fails at `POST /api/v1/file/upload/create` → 500, `Upload failed`. The editor autosaves pages (`PUT …/pages/{id}`), but the failed block did not persist after reload.
 - PPV post price has no server floor: `POST /api/v1/posts` with `pay_per_view` and price 0 or 19 999 → 200. `DELETE /api/v1/posts/{uuid}` cleans up (200, then GET 404).
 - `POST /api/v1/tier-memberships` requires only name, description, isActive, prices, tierMembershipProductAndBenefits (an empty array passes); it accepted priceIDR 10 000 and no thumbnail, and **ignored `isActive: false`** (stored true). `DELETE /tier-memberships/{uuid}` soft-deletes (GET afterwards answers 500, not 404).

@@ -94,9 +94,13 @@ export class ProfilePage {
     await expect(this.page.getByRole("button", { name: ownProfileLabels.accountMenu }).locator("img")).toBeVisible({ timeout: 15000 });
   }
 
-/** Visiting /<own username> shows the public profile with the buyer's display name. */
+/**
+   * Visiting /<own username> shows the public profile with the buyer's display name. The page can
+   * render as the link-in-bio template, which has no `main` landmark and puts the name in an h1.
+   */
   async expectOwnPublicProfile(displayName: string) {
-    await expect(this.main.getByText(displayName, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+    const nameHeading = smartLocator(this.page, { role: "heading", name: displayName, exact: true, text: displayName });
+    expect((await nameHeading.text({ timeout: 15000 })).trim()).toBe(displayName);
   }
 
   async expectAuthenticated() {

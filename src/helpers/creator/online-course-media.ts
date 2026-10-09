@@ -8,7 +8,6 @@ const lessonFileNames = [
   "lesson.xlsx",
   "lesson.csv",
   "lesson.mp3",
-  "lesson.wav",
   "lesson.zip",
 ] as const;
 

@@ -78,11 +78,11 @@ test.describe('Creator Online Course', () => {
 
   test('Online Course — Content Type, Episode Editing, Video Upload, Video Management, Video Thumbnail, File Upload, File Management', {
     tag: ['@AUT-OC-002', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'issue', description: 'L-37' }, { type: 'issue', description: 'M-38' }],
+    annotation: { type: 'issue', description: 'M-38' },
   }, async ({ creatorNav, productsPage, onlineCoursePage, page }) => {
     test.setTimeout(360000);
-    // Known bugs: L-37 (.wav advertised but rejected) and M-38 (a removed attachment comes back). Last two steps.
-    test.fail(true, 'L-37 / M-38: lesson file upload and removal');
+    // Known bug M-38: a removed attachment comes back. Last step.
+    test.fail(true, 'M-38: a removed lesson file comes back after saving');
     const lessonFixtures = createOnlineCourseLessonFixtures();
     // Attachments only upload into a course that exists (on the create flow they sit at "Uploading...").
     const seeded = await createOnlineCourseProduct(page.request, generateOnlineCourseProductData());
