@@ -327,6 +327,27 @@ icons, the visibility pill and `Save`. Verified 2026-09-10:
 - Editing a **scheduled** post's time works through the `Posting on …` chip at the top of
   the same dialog.
 
+## Pinned Feeds — one pinned post per creator (verified 2026-10-11)
+
+Shipped on dev per the PRD [[projects/yapp/pinned-feeds - prd|Pinned Feeds]]; TCs `TC-FE-C-081..091`,
+`TC-FE-B-079..086`, all Passed on 11 Oct 2026.
+
+- The post `…` menu on `/feeds` → Published reads `Insights / Edit / Pin to top / Delete`; once pinned the item
+  is `Unpin`. Draft and Scheduled posts offer no pin item.
+- `PUT /api/v1/posts/{uuid}/pin` with `{replace:false}` → 200 `Post pinned` (toast `Post pinned`). With another
+  post already pinned it answers **409 `another post is pinned`** with `data.pinnedPost {uuid, contentPreview}`,
+  and the UI turns that into dialog `Replace pinned post?` — "You can pin one post. This one will be unpinned:
+  "<preview>"" with `Cancel` / `Replace`; Replace re-sends `{replace:true}`. Unpin is `DELETE …/pin`, instant, no
+  dialog. The limit is server-side: a second pin without replace changes nothing.
+- Posts carry `isPinned` in `GET /api/v1/posts/my/posts` and the public feed. The pinned card shows a pin icon +
+  `Pinned` (creator list and public profile), sits first in both, keeps its original age, and is not repeated
+  in the stream or on later pages of `GET /posts/user/{uuid}?visibility=public&page&limit=4`.
+- Editing keeps the pin; deleting a pinned post frees the slot (the next pin needs no replace). The delete dialog
+  does mention the pin. Exclusive posts can be pinned; access is unchanged (unpurchased PPV keeps `Unlock Post`,
+  an active member sees member-only content open). Under `Exclusive Only` a pinned public post is hidden and a
+  pinned exclusive one comes first. Guests see the same pin.
+- A creator with no posts sees only the composer — no pin control; a single post can be pinned with no dialog.
+
 ## Scheduling
 
 The composer's fourth toolbar icon (a clock, `size-5.5`) opens a calendar plus two
