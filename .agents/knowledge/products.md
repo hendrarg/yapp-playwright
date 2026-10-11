@@ -254,6 +254,63 @@ otherwise). The two tier rows go in `ticketPriceConfigurations`; the helper
 `createEventProduct` hardcodes `salesLinks: []`, so after-sales links must be added in the
 UI or a hand-built payload.
 
+**Streaming links and the hybrid tier location (verified 2026-10-11).**
+- **Google Meet generates the link on save.** No URL is typed. The saved
+  `ticketConfiguration.meetingLink` reads `https://meet.google.com/xxx-xxxx-xxx`, created through
+  the creator's Google Calendar, and `googleCalendarEventId` is set (it is set for `custom` too).
+- **The buyer product page never shows a meeting link,** for either platform. It shows only the
+  date, `All Day` or the time range, the venue, and a Google Maps link
+  (`google.com/maps/search/?api=1&query=<venue> <address>`). The link reaches the buyer only on
+  the purchased ticket.
+- **On a hybrid event every ticket tier needs its own `Location`.** It is a required
+  `Choose Location` select with `Offline venue <address>`, `Online venue <platform>` and
+  `Hybrid venue …`. Left empty, `Next: Publish` silently stays put with `Location is required`
+  on the tier.
+- **Step 1 messages.** A hybrid or online event with `Custom` and no link shows
+  `Meeting link is required`; a malformed link shows `Invalid URL`. An untouched Step 1 lists
+  Title, Description, Event date, Start time, Venue name and Venue address as required. End
+  time is not required.
+- **Event times never conflict.** The picker offers 96 slots (every 15 min), none disabled.
+  Picking an end time before the start moves the **start** to one hour before it (14:00 + end
+  12:00 → 11:00–12:00). A later start moves the end to one hour after it (start 20:00 → 21:00).
+  No error is shown.
+- **A percentage discount over 100 is flagged on blur.** Re-checked 2026-10-11; this used to
+  surface only at publish. `Percentage discount cannot exceed 100%` appears under the field as
+  soon as it loses focus, and `Next: Publish` stays blocked. Locator trap: the `%` amount box
+  and `Ticket Quantity` share the placeholder `0`. A page-wide placeholder match types the
+  discount into the quantity, which is how this behaviour stayed hidden.
+- **The gallery holds 10 images beside the thumbnail, 11 in total.** Once the 10th is in, the
+  chooser and its file input disappear. Picking more than 10 files at once uploads **none of
+  them**, with no message.
+- **A tier outside its sales window shows `Sold Out` to buyers.** This applies before the start
+  and after the end alike, with the price still shown and `Select` disabled. A 0-price tier
+  reads `Free /per pax`. Each tier keeps its own window. In the creator form the Start and End
+  date buttons sit inside that tier's block, and past days are disabled.
+- **A non-image thumbnail is refused by name.** For example `song.mp3: File type must be one of
+  image/jpeg, .jpeg, .jpg, image/png, .png, image/gif, .gif, image/webp, .webp`.
+- **An event row's action menu has 7 items** (2026-10-11): Set Inactive, Hide from Profile,
+  Edit, **See Attendances**, Share, Hide, Delete. See Attendances is event-only.
+- **Products tab counts follow the search box.** With a title typed in, `Active (n)` and
+  `Inactive (n)` count only the matches, so compare counts under the same search.
+- **Date formats differ by side.** The creator date button pads the day (`01 November 2026`);
+  the buyer page does not (`Sunday 1 Nov`).
+- **On the buyer page the event description arrives after the header.** Read the page text
+  only once the description is in, or it looks missing. On the edit form, the saved
+  description loads after the editor mounts and replaces anything typed before it.
+- **The guest list page** is `/products/detail/events-ticket/{uuid}`, reached from See Attendances.
+  It has **no `main` landmark**, so read text from `body`. It pages 10 guests at a time, with
+  page numbers and `Next` and no rows-per-page control. `Search Name` filters as you type.
+  The stats read `Attandee` (sic, L-10), `Registered` and `capacity`. Re-checked 2026-10-11 on
+  the seeded event (1a18e717): Registered (14) equalled the rows across pages (10 + 4); the old
+  13 vs 15 gap is gone.
+- **Editing a published event saves without changing its status.** `Next: Publish` on Step 2
+  sends `PUT /api/v1/shop/products/{uuid}` → 200 and shows `Product updated successfully`. The
+  product stays active. Step 1 of the edit form has no Save button.
+- **The description toolbar marks formats as classes, not tags.** It is Lexical: bold, italic
+  and underline end up as classes on a single `strong`, not as `em` or `u`. The toolbar shows
+  an applied format by renaming its button to `Remove bold`, `Remove italic` or
+  `Remove underline`.
+
 **The after-sales link editor's edit dialog is mistitled.** In Step 2 → a tier's
 `Customize after-sales` → `Add Link`, the dialog fields are **URL first, then
 `Customize Label Text`**, and the confirm button is **`Done`**. A saved link row shows an

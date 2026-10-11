@@ -19,6 +19,13 @@ export const eventsTicketsData = {
   rpDiscountAmount: "20000",
   rpDiscountAtTicketPrice: "150000",
   percentDiscountError: "Percentage discount cannot exceed 100%",
+  /** IDR 150.000 less 20% as the buyer page shows it, and the tier quantity as a per-user cap. */
+  buyerDiscountedPricePattern: /Rp120[.,]000/,
+  /** IDR 150.000 less a flat Rp20.000. */
+  buyerFlatDiscountedPricePattern: /Rp130[.,]000/,
+  /** The tier name the pencil control renames the default tier to. */
+  renamedTierName: "Early Bird VIP",
+  buyerQuantityPattern: /Max 100 tix\/user/,
   addAnotherTicketType: "+ Add Another Ticket Type",
   addAnotherTicketTypeText: "Add Another Ticket Type",
   /**

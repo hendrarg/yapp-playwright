@@ -9,4 +9,5 @@ export const eventsGuestsData = {
   guestTableColumns: ["Name", "Email", "Phone", "Status", "Checked-in Time", "Registered Time"] as const,
   filterStatusOptions: ["Active", "Used", "Cancelled"] as const,
   rowsPerPage: 10,
+  summaryLabels: ["Attendee", "Registered"],
 } as const;

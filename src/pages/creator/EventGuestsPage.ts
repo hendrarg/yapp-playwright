@@ -172,6 +172,50 @@ export class EventGuestsPage {
     }
   }
 
+  private searchNameInput(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "Search Name",
+      placeholder: "Search Name",
+    }).first();
+  }
+
+  /** The name in the first guest row (the avatar initial is a separate cell line). */
+  async readFirstGuestName(): Promise<string> {
+    const lines = (await this.guestTableBodyRows().first().innerText()).split("\n").map((line) => line.trim()).filter(Boolean);
+    return lines.find((line) => line.length > 1) ?? lines[0];
+  }
+
+  async searchGuest(name: string) {
+    await this.searchNameInput().fill(name);
+  }
+
+  /** Every remaining row matches the query, and there is at least one. */
+  async expectGuestRowsMatch(name: string) {
+    const rows = this.guestTableBodyRows();
+    await expect.poll(async () => {
+      const texts = await rows.allInnerTexts();
+      return texts.length > 0 && texts.every((text) => text.toLowerCase().includes(name.toLowerCase()));
+    }, { timeout: 15000 }).toBe(true);
+  }
+
+  async expectGuestRowCount(count: number) {
+    await expect(this.guestTableBodyRows()).toHaveCount(count, { timeout: 15000 });
+  }
+
+  /** Pagination is page numbers plus Next; there is no rows-per-page control. */
+  async expectGuestPagination(pages: number) {
+    for (let page = 1; page <= pages; page++) await expect(this.guestPageButton(page)).toBeVisible({ timeout: 10000 });
+    await expect(this.nextGuestPageButton).toBeVisible();
+  }
+
+  /** The two stat labels above the guest table. */
+  async expectGuestSummaryLabels(labels: readonly string[]) {
+    for (const label of labels) {
+      await expect(this.guestSummaryPanel().getByText(new RegExp(`\\b${label}\\b`))).toBeVisible({ timeout: 10000 });
+    }
+  }
+
   async openFilterPanel() {
     await safeClick(this.filterButton);
     await expect(this.filterDialog).toBeVisible({ timeout: 10000 });

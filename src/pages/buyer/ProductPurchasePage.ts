@@ -156,6 +156,8 @@ export class ProductPurchasePage {
     startTime: string;
     endTime: string;
   }) {
+    // The description renders after the header; read the page only once it is there.
+    await expect(this.page.getByRole("main")).toContainText(options.description, { timeout: 15000 });
     const details = smartLocator(this.page, {
       role: "main",
       text: "Product Detail",
@@ -182,7 +184,8 @@ export class ProductPurchasePage {
     expect(bodyText).toContain(options.description);
     expect(bodyText).toContain(options.venue);
     expect(bodyText).toContain(options.address);
-    expect(bodyText).toContain(`${dateMatch![0].split(" ")[0]} ${month}`);
+    // The creator picker pads the day (`01 November 2026`); the buyer page does not (`1 Nov`).
+    expect(bodyText).toContain(`${Number(dateMatch![0].split(" ")[0])} ${month}`);
     expect(bodyText).toContain(options.startTime);
     expect(bodyText).toContain(options.endTime);
   }
@@ -299,6 +302,27 @@ export class ProductPurchasePage {
     await expect(selectButtons).toHaveCount(2, { timeout: 10000 });
     await expect(selectButtons.nth(0)).toBeDisabled();
     await expect(selectButtons.nth(1)).toBeEnabled();
+  }
+
+  /**
+   * One tier card on the event page: its price text, and whether it can be selected. A tier
+   * outside its sales window reads `Sold Out` and its `Select` button is disabled.
+   */
+  async expectEventTierCard(name: string, options: { price: RegExp; onSale: boolean }) {
+    const card = this.page.getByRole('main').locator('div')
+      .filter({ has: this.page.getByText(name, { exact: true }) })
+      .filter({ has: this.page.getByRole('button', { name: 'Select', exact: true }) })
+      .last();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await expect(card).toContainText(options.price);
+    const select = card.getByRole('button', { name: 'Select', exact: true });
+    if (options.onSale) {
+      await expect(select).toBeEnabled();
+      await expect(card.getByText('Sold Out', { exact: true })).toHaveCount(0);
+    } else {
+      await expect(select).toBeDisabled();
+      await expect(card.getByText('Sold Out', { exact: true })).toBeVisible();
+    }
   }
 
   async expectHybridEventAccess(options: {
@@ -591,6 +615,12 @@ export class ProductPurchasePage {
       text: 'Previous slide',
       selector: '[data-slot="carousel-previous"]',
     }).filter({ visible: true }).first();
+  }
+
+  /** A product buyers cannot reach (draft, inactive, deleted) renders the not-found page. */
+  async expectProductPageNotFound() {
+    const notFound = locatorChain(this.page, { role: 'heading', name: "That page doesn't exist", text: "That page doesn't exist" }).first();
+    await expect(notFound).toBeVisible({ timeout: 15000 });
   }
 
   async isProductPubliclyPurchasable(): Promise<boolean> {

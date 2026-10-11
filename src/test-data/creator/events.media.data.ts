@@ -19,6 +19,11 @@ export const eventsMediaData = {
   emptyGalleryNoImageCount: 9,
   gallerySlotCount: 10,
   afterOneUploadNoImageCount: 8,
+  /** The gallery holds ten images beside the thumbnail; picking more than ten at once uploads none. */
+  fullGalleryPaths: Array.from({ length: 10 }, () => testImages.claude),
+  unsupportedFilePath: "src/test-data/assets/gufron-syududu.mp3",
+  unsupportedFileName: "gufron-syududu.mp3",
+  unsupportedTypeMessage: "File type must be one of image/jpeg",
 } as const;
 
 export function generateEventsTitle(): string {

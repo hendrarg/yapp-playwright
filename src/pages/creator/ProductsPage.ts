@@ -218,6 +218,15 @@ export class ProductsPage {
     await expect(this.page.getByText(pattern).first()).toBeVisible({ timeout: 10000 });
   }
 
+  /** The number in a status tab's label, e.g. `Draft (3)`. */
+  async readStatusCount(status: ProductStatusTab): Promise<number> {
+    await expect(this.statusTab(status).first()).toHaveText(/\(\d+\)/, { timeout: 15000 });
+    const text = await this.statusTab(status).first().textContent({ timeout: 10000 });
+    const match = text?.match(/\((\d+)\)/);
+    expect(match?.[1], `expected a numeric ${status} tab count`).toBeTruthy();
+    return Number(match![1]);
+  }
+
   async readActiveCount(): Promise<number> {
     const text = await this.statusTab("Active").first().textContent({ timeout: 10000 });
     const match = text?.match(/\((\d+)\)/);
@@ -309,6 +318,16 @@ export class ProductsPage {
     await expect(this.addNewProductHeading).toBeVisible({ timeout: 10000 });
   }
 
+  /**
+   * The first-run tour (driver.js) is gated on `users.is_complete_onboarding`. When it runs it
+   * covers the page with an overlay and marks `body.driver-active`; neither may be present.
+   */
+  async expectNoOnboardingTour() {
+    // driver.js renders no role or text to anchor on; its class names are the only hook.
+    await expect(this.page.locator(".driver-overlay, .driver-popover")).toHaveCount(0, { timeout: 5000 });
+    await expect(this.page.locator("body")).not.toHaveClass(/\bdriver-active\b/);
+  }
+
   async expectProductTypesAvailable(
     types: readonly (typeof productsCreationData.productTypes)[number][] = productsCreationData.productTypes,
   ) {
@@ -369,13 +388,27 @@ export class ProductsPage {
   }
 
   async setProductInactive(productName: string) {
+    await this.switchProductStatus(productName, "inactive");
+  }
+
+  /** The same `Set Inactive` switch, clicked from the Inactive tab, brings a product back. */
+  async setProductActive(productName: string) {
+    await this.switchProductStatus(productName, "active");
+  }
+
+  /**
+   * `Set Inactive` is a switch whose ON state means inactive; its label never changes. Each click
+   * sends `PUT …/status` with the new status, which is checked here.
+   */
+  private async switchProductStatus(productName: string, status: "active" | "inactive") {
     await this.openProductActionsMenu(productName);
 
     const responsePromise = this.page.waitForResponse(
       (response) =>
         response.url().includes("/api/v1/shop/products") &&
         !response.url().includes("/hide-from-profile") &&
-        ["PATCH", "POST", "PUT"].includes(response.request().method()),
+        ["PATCH", "POST", "PUT"].includes(response.request().method()) &&
+        (!response.url().endsWith("/status") || response.request().postDataJSON()?.status === status),
       { timeout: 15000 },
     );
 

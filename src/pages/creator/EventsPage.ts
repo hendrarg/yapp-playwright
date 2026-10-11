@@ -2,13 +2,15 @@ import type { Dialog, Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
-import { embedLinkDoneButton, embedLinkLabelInput, embedLinkUrlInput, descriptionEditor, galleryInput, heroInput, livePreviewCard, nextSetDetailsAction, saveAsDraftAction, titleInput } from "@pages/shared/locators";
+import { boldAction, embedLinkDoneButton, embedLinkLabelInput, embedLinkUrlInput, descriptionEditor, italicAction, underlineAction, galleryInput, heroInput, livePreviewCard, nextSetDetailsAction, saveAsDraftAction, titleInput } from "@pages/shared/locators";
 import { eventsMediaData } from "@test-data/creator/events.media.data";
 import { eventsAfterSalesData } from "@test-data/creator/events.after-sales.data";
 import { eventsTicketsData, type EventsTicketDiscountType } from "@test-data/creator/events.tickets.data";
 import { eventsPublishData } from "@test-data/creator/events.publish.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
 import { creatorProfile } from "@test-data/buyer/profile.data";
+
+type SalesDay = { month: "current" | "next"; day: "first" | "last" };
 
 export class EventsPage {
   constructor(
@@ -270,8 +272,9 @@ export class EventsPage {
     });
   }
 
+  /** The preview opens as the only dialog on the page; its text is the staged message and links. */
   private afterSalesPreviewDialog(): Locator {
-    return this.page.getByRole("dialog").filter({ hasText: "Links" });
+    return this.page.getByRole("dialog").filter({ visible: true }).last();
   }
 
   async goto() {
@@ -334,11 +337,11 @@ export class EventsPage {
     });
   }
 
-  async selectEventDateNextMonth() {
+  async selectEventDateNextMonth(position: "first" | "last" = "first") {
     await this.eventDateAction().click({ timeout: 10000 });
     const calendarDialog = this.page.getByRole("dialog").last();
     await calendarDialog.getByRole("button", { name: "Go to the Next Month" }).click({ timeout: 10000 });
-    await this.pickEnabledCalendarDay("first");
+    await this.pickEnabledCalendarDay(position);
     await expect(this.page.getByRole("button", { name: "Select event date", exact: true })).toHaveCount(0, {
       timeout: 10000,
     });
@@ -431,24 +434,28 @@ export class EventsPage {
     return this.ticketFieldRow(index, eventsTicketsData.setDiscountLabel).getByRole("switch");
   }
 
-  private discountTypeCombobox(index: number): Locator {
-    // Within the ticket's block two rows match "Discount" — `:has-text` is
-    // case-insensitive so "Set discount" matches as well. The discount row is the one
-    // carrying a combobox; the other carries the switch.
+  /**
+   * Within the ticket's block two rows match "Discount" — `:has-text` is case-insensitive so
+   * "Set discount" matches as well. The discount row is the one carrying a combobox (the type);
+   * the other carries the switch.
+   */
+  private discountRow(index: number): Locator {
     return this.ticketBlock(index)
       .locator('div:has(> label:has-text("Discount"))')
-      .filter({ has: this.page.getByRole("combobox") })
-      .getByRole("combobox");
+      .filter({ has: this.page.getByRole("combobox") });
   }
 
-  private discountAmountInput(type: EventsTicketDiscountType): Locator {
-    const placeholder = type === "Rp" ? "1.000" : "0";
-    return locatorChain(this.page, {
-      role: "textbox",
-      name: placeholder,
-      placeholder,
-      selector: `input[placeholder="${placeholder}"]`,
-    }).last();
+  private discountTypeCombobox(index: number): Locator {
+    return this.discountRow(index).getByRole("combobox");
+  }
+
+  /**
+   * The amount box beside the type select. Scoped to the discount row because the `%` box's
+   * placeholder `0` is shared with Ticket Quantity, so a page-wide placeholder match lands on
+   * the quantity field instead.
+   */
+  private discountAmountInput(index: number): Locator {
+    return this.discountRow(index).getByRole("textbox");
   }
 
   private discountTypeOption(type: EventsTicketDiscountType): Locator {
@@ -500,6 +507,17 @@ export class EventsPage {
 
   private ticketDeleteButton(name: string): Locator {
     return this.ticketHeaderBlock(name).getByRole("button").nth(1);
+  }
+
+  /**
+   * On a hybrid event each tier says which part it sells. The required `Location` select offers
+   * `Offline venue`, `Online venue` and `Hybrid venue`, each followed by the venue or platform.
+   */
+  async selectTicketLocation(index: number, location: "Offline venue" | "Online venue" | "Hybrid venue") {
+    const select = this.ticketFieldRow(index, "Location").getByRole("combobox");
+    await safeClick(select);
+    await this.page.getByRole("option", { name: new RegExp(`^${location}`) }).click({ timeout: 10000 });
+    await expect(select).toContainText(location, { timeout: 10000 });
   }
 
   async expectTicketConfiguration() {
@@ -555,17 +573,31 @@ export class EventsPage {
     });
   }
 
-  async fillTicketSalesPeriodThroughNextMonth(index: number) {
-    const dateButtons = this.page.getByRole("button", {
-      name: /^(Select date|\d{1,2} [A-Za-z]+ \d{4})$/,
-    });
-    await dateButtons.nth(index * 2 + 1).click({ timeout: 10000 });
-    const calendarDialog = this.page.getByRole("dialog").last();
-    await calendarDialog.getByRole("button", { name: "Go to the Next Month" }).click({ timeout: 10000 });
-    await this.pickEnabledCalendarDay("first");
-    await expect(this.page.getByRole("button", { name: "Select date" })).toHaveCount(0, {
-      timeout: 10000,
-    });
+  /** The tier's own Start and End date buttons, in that order. */
+  private ticketSalesPeriodButtons(index: number): Locator {
+    return this.ticketBlock(index).getByRole("button", { name: /^(Select date|\d{1,2} [A-Za-z]+ \d{4})$/ });
+  }
+
+  /** Open a calendar, page forward to this month or next month, and pick its first or last open day. */
+  private async pickSalesDay(button: Locator, pick: SalesDay) {
+    await safeClick(button);
+    const target = new Date();
+    target.setDate(1);
+    if (pick.month === "next") target.setMonth(target.getMonth() + 1);
+    const caption = target.toLocaleString("en-US", { month: "long", year: "numeric" });
+    const dialog = this.page.getByRole("dialog").last();
+    for (let i = 0; i < 3 && !(await dialog.getByText(caption, { exact: true }).isVisible()); i++) {
+      await dialog.getByRole("button", { name: "Go to the Next Month" }).click({ timeout: 10000 });
+    }
+    await expect(dialog.getByText(caption, { exact: true })).toBeVisible({ timeout: 10000 });
+    await this.pickEnabledCalendarDay(pick.day);
+  }
+
+  /** Set one tier's sales window, scoped to that tier so other tiers' dates are untouched. */
+  async setTicketSalesPeriod(index: number, period: { start: SalesDay; end: SalesDay }) {
+    await this.pickSalesDay(this.ticketSalesPeriodButtons(index).nth(0), period.start);
+    await this.pickSalesDay(this.ticketSalesPeriodButtons(index).nth(1), period.end);
+    await expect(this.ticketSalesPeriodButtons(index).filter({ hasText: "Select date" })).toHaveCount(0, { timeout: 10000 });
   }
 
   async setTicketDiscountEnabled(index: number, enabled: boolean) {
@@ -599,18 +631,30 @@ export class EventsPage {
     await expect(combobox).toContainText(type, { timeout: 10000 });
   }
 
-  async fillTicketDiscountAmount(type: EventsTicketDiscountType, amount: string) {
-    const input = this.discountAmountInput(type);
+  async fillTicketDiscountAmount(type: EventsTicketDiscountType, amount: string, index = 0) {
+    await expect(this.discountTypeCombobox(index)).toContainText(type, { timeout: 10000 });
+    const input = this.discountAmountInput(index);
     await safeFill(input, amount);
     await input.press("Tab");
   }
 
-  async expectTicketDiscountAmount(type: EventsTicketDiscountType, amount: string) {
-    await expect(this.discountAmountInput(type)).toHaveValue(amount, { timeout: 10000 });
+  async expectTicketDiscountAmount(type: EventsTicketDiscountType, amount: string, index = 0) {
+    await expect(this.discountTypeCombobox(index)).toContainText(type, { timeout: 10000 });
+    await expect(this.discountAmountInput(index)).toHaveValue(amount, { timeout: 10000 });
   }
 
   async expectPercentDiscountBlocked() {
     await expect(this.percentDiscountError).toBeVisible({ timeout: 10000 });
+  }
+
+  async fillTicketQuantity(index: number, quantity: string) {
+    await safeFill(this.ticketQuantityInput(index), quantity);
+    await this.expectTicketQuantity(index, quantity);
+  }
+
+  /** A non-image file picked as the thumbnail is refused with the accepted types listed. */
+  async expectThumbnailTypeRejected(fileName: string) {
+    await expect(this.page.getByText(new RegExp(`${fileName.replace(/\./g, "\\.")}: ${eventsMediaData.unsupportedTypeMessage}`))).toBeVisible({ timeout: 10000 });
   }
 
   async expectPercentDiscountAllowed() {
@@ -737,9 +781,10 @@ export class EventsPage {
 
   async removeAfterSalesImage() {
     await safeFill(this.afterSalesMessageEditor(), "");
-    await this.afterSalesMessageEditor().getByRole("button", { name: "Delete image" }).click({
-      timeout: 10000,
-    });
+    // Clearing the editor sometimes takes the image with it; only then is there no button left.
+    const deleteImage = this.afterSalesMessageEditor().getByRole("button", { name: "Delete image" });
+    if (await deleteImage.isVisible()) await deleteImage.click({ timeout: 10000 });
+    await expect(this.afterSalesMessageEditor().getByRole("img")).toHaveCount(0, { timeout: 10000 });
     await this.expectAfterSalesMessageCounter(eventsAfterSalesData.emptyCounter);
   }
 
@@ -763,6 +808,52 @@ export class EventsPage {
     });
     await expect(embedLinkUrlInput(this.page)).toBeVisible({ timeout: 10000 });
     await expect(embedLinkLabelInput(this.page)).toBeVisible({ timeout: 10000 });
+  }
+
+  /** The URL field sits above `Customize Label Text`. */
+  async expectAfterSalesLinkFieldOrder() {
+    const url = await embedLinkUrlInput(this.page).boundingBox();
+    const label = await embedLinkLabelInput(this.page).boundingBox();
+    expect(url && label && url.y < label.y, "URL comes before the label").toBe(true);
+  }
+
+  async readAfterSalesLinkLabel(): Promise<string> {
+    return embedLinkLabelInput(this.page).inputValue();
+  }
+
+  /**
+   * Step 2 offers no file upload beyond the thumbnail and its gallery: every file input takes
+   * images only. After Sales offers rich text with image and YouTube embeds plus up to 3 links.
+   */
+  async expectNoAttachmentUpload(imageAcceptList: string) {
+    const accepts: string[] = await this.page.locator('input[type="file"]').evaluateAll((inputs) => inputs.map((input) => input.getAttribute("accept") ?? ""));
+    expect(accepts.length).toBeGreaterThan(0);
+    for (const accept of accepts) expect(accept.split(",").every((type) => imageAcceptList.split(",").includes(type) || type.startsWith("image/"))).toBe(true);
+    const toolbar = this.afterSalesMessageToolbar();
+    await expect(toolbar.getByRole("button", { name: "Insert image" })).toBeVisible({ timeout: 10000 });
+    await expect(toolbar.getByRole("button", { name: "Insert YouTube video" })).toBeVisible();
+    await expect(this.page.getByText("max. 3 links")).toBeVisible();
+    await expect(this.afterSalesBlock("Customize Message").getByText(/attach|file|recording/i)).toHaveCount(0);
+  }
+
+  /** Collapsing a tier hides its fields; expanding brings them back. */
+  async expectTicketTierCollapsible(index: number, name: string) {
+    await this.collapseTicketTier(name);
+    await expect(this.ticketDescriptionInput(index)).toBeHidden({ timeout: 10000 });
+    await this.expandTicketTier(name);
+    await expect(this.ticketDescriptionInput(index)).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Delete removes the tier at once — no confirmation dialog, by design. */
+  async deleteTicketTier(name: string) {
+    let dialogShown = false;
+    const onDialog = () => { dialogShown = true; };
+    this.page.on("dialog", onDialog);
+    await safeClick(this.ticketDeleteButton(name));
+    this.page.off("dialog", onDialog);
+    await expect(this.page.getByText(name, { exact: true })).toHaveCount(0, { timeout: 10000 });
+    await expect(this.page.getByRole("alertdialog")).toHaveCount(0);
+    expect(dialogShown, "no browser confirm before removing a tier").toBe(false);
   }
 
   async fillAfterSalesLink(url: string, label: string) {
@@ -837,11 +928,13 @@ export class EventsPage {
     await this.expectAfterSalesLinkDialog();
   }
 
-  async openAfterSalesLinkEditAndAssertKnownTitle(label: string) {
-    await this.linkEditButton(label).click({ timeout: 10000 });
-    await expect(this.page.getByRole("dialog").getByRole("heading", { name: "Add Link", exact: true }))
-      .toBeVisible({ timeout: 10000 });
-    await expect(embedLinkLabelInput(this.page)).toHaveValue(label, { timeout: 10000 });
+  /** Editing a saved link opens it prefilled, under an edit heading rather than `Add Link`. */
+  async expectAfterSalesLinkEditDialog(link: { url: string; label: string }) {
+    await this.linkEditButton(link.label).click({ timeout: 10000 });
+    const dialog = this.page.getByRole("dialog").filter({ visible: true }).last();
+    await expect(embedLinkUrlInput(this.page)).toHaveValue(link.url, { timeout: 10000 });
+    await expect(embedLinkLabelInput(this.page)).toHaveValue(link.label, { timeout: 10000 });
+    await expect(dialog.getByRole("heading", { name: "Add Link", exact: true })).toHaveCount(0, { timeout: 5000 });
   }
 
   async closeAfterSalesLinkDialog() {
@@ -892,36 +985,6 @@ export class EventsPage {
     await safeFill(this.venueAddressInput(), options.address);
   }
 
-  async expectEventsStep1Values(options: {
-    title: string;
-    description: string;
-    venue: string;
-    address: string;
-    eventDate: string;
-    startTime: string;
-    endTime: string;
-  }) {
-    await expect(titleInput(this.page)).toHaveValue(options.title, { timeout: 10000 });
-    await expect(descriptionEditor(this.page)).toContainText(options.description, { timeout: 10000 });
-    await expect(this.eventDateAction()).toContainText(options.eventDate, { timeout: 10000 });
-    await expect(this.eventTimeButton(0)).toContainText(options.startTime, { timeout: 10000 });
-    await expect(this.eventTimeButton(1)).toContainText(options.endTime, { timeout: 10000 });
-    await expect(this.onSiteRadio())
-      .toHaveAttribute("aria-checked", "true", { timeout: 10000 });
-    await expect(this.venueNameInput()).toHaveValue(options.venue);
-    await expect(this.venueAddressInput()).toHaveValue(options.address);
-  }
-
-  async expectEventsStep2Prepopulated(ticketDescription: string, price: string) {
-    await this.expectTicketConfiguration();
-    await expect(this.ticketDescriptionInput(0)).toHaveValue(ticketDescription, { timeout: 10000 });
-    await this.expectTicketPriceValue(0, price);
-    await this.expectTicketQuantity(0, eventsTicketsData.quantity);
-    await expect(
-      this.page.getByRole("button", { name: /^\d{1,2} [A-Za-z]+ \d{4}$/ }),
-    ).toHaveCount(2, { timeout: 10000 });
-  }
-
   async goBackToEventsStep1() {
     await this.page.getByRole("button", { name: "Back", exact: true }).click({ timeout: 10000 });
     await expect(titleInput(this.page)).toBeVisible({ timeout: 10000 });
@@ -944,6 +1007,214 @@ export class EventsPage {
   async continueToEventsDetails() {
     await nextSetDetailsAction(this.page).click({ timeout: 10000 });
     await this.expectEventsDetailsStep();
+  }
+
+  /** Press `Next: Set Details` without expecting Step 2 — used to read Step 1 validation. */
+  async submitEventsBasicInfo() {
+    await nextSetDetailsAction(this.page).click({ timeout: 10000 });
+  }
+
+  private formMessage(text: string): Locator {
+    return locatorChain(this.page, {
+      text,
+      selector: `[data-slot="form-message"]:has-text("${text}")`,
+    }).first();
+  }
+
+  /** Step 1 kept its URL and shows each inline error, so navigation was blocked. */
+  async expectEventsBasicInfoErrors(messages: readonly string[]) {
+    for (const message of messages) await expect(this.formMessage(message)).toBeVisible({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/products\/(?:create|update)\/events-ticket/);
+    await expect(this.ticketConfigHeading).toBeHidden();
+  }
+
+  /** The time picker offers every slot of the day and disables none of them. */
+  async expectEventTimeSlots(index: 0 | 1, count: number) {
+    await this.eventTimeButton(index).click({ timeout: 10000 });
+    const options = this.page.getByRole("dialog").last().getByRole("option");
+    await expect(options).toHaveCount(count, { timeout: 10000 });
+    await expect(this.page.getByRole("dialog").last().locator('[role="option"][aria-disabled="true"]')).toHaveCount(0);
+    await this.page.keyboard.press("Escape");
+    await expect(options).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectEventTimes(start: string, end: string) {
+    await expect(this.eventTimeButton(0)).toContainText(start, { timeout: 10000 });
+    await expect(this.eventTimeButton(1)).toContainText(end, { timeout: 10000 });
+  }
+
+  private platformSelect(): Locator {
+    return locatorChain(this.page, {
+      role: "combobox",
+      name: "Platform / Streaming Link",
+      selector: "#platform",
+    }).first();
+  }
+
+  private meetingLinkInput(): Locator {
+    return locatorChain(this.page, {
+      role: "textbox",
+      name: "Meeting Link",
+      placeholder: "https://...",
+      selector: 'input[name="ticketConfiguration.meetingLink"]',
+    }).first();
+  }
+
+  /** The online platform select: its options and the preselected value. */
+  async expectOnlinePlatformOptions(options: readonly string[], selected: string) {
+    await expect(this.platformSelect()).toContainText(selected, { timeout: 10000 });
+    await this.platformSelect().click({ timeout: 10000 });
+    await expect(this.page.getByRole("option")).toHaveText([...options], { timeout: 10000 });
+    await this.page.keyboard.press("Escape");
+  }
+
+  async selectOnlinePlatform(platform: "Google Meet" | "Custom") {
+    await this.platformSelect().click({ timeout: 10000 });
+    await this.page.getByRole("option", { name: platform, exact: true }).click({ timeout: 10000 });
+    await expect(this.platformSelect()).toContainText(platform, { timeout: 10000 });
+  }
+
+  async fillMeetingLink(url: string) {
+    await safeFill(this.meetingLinkInput(), url);
+  }
+
+  async readEventsTitleValue(): Promise<string> {
+    return titleInput(this.page).inputValue();
+  }
+
+  async gotoEdit(productUuid: string) {
+    await this.page.goto(new URL(`products/update/events-ticket/${productUuid}`, this.baseURL).toString(), {
+      waitUntil: "domcontentloaded",
+    });
+    await this.expectLoaded();
+    // The saved description arrives after the editor mounts and overwrites anything typed earlier.
+    await expect(descriptionEditor(this.page)).not.toBeEmpty({ timeout: 15000 });
+  }
+
+  /** The `n/2` step indicator in the form header. */
+  async expectStepIndicator(step: "1/2" | "2/2") {
+    await expect(locatorChain(this.page, { text: step, selector: `text="${step}"` }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Every description toolbar control, found by the accessible name the editor gives it. */
+  async expectDescriptionToolbar(controls: readonly string[]) {
+    for (const name of controls) {
+      await expect(locatorChain(this.page, { label: name, selector: `[aria-label="${name}"]` }).first()).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async applyDescriptionFormatting() {
+    await descriptionEditor(this.page).click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await boldAction(this.page).click({ timeout: 10000 });
+    await italicAction(this.page).click({ timeout: 10000 });
+    await underlineAction(this.page).click({ timeout: 10000 });
+  }
+
+  /**
+   * Bold, italic and underline are applied to the text. The editor (Lexical) marks all three as
+   * classes on one `strong`, so read the toolbar instead: with the text selected, each format
+   * button flips to its `Remove …` state.
+   */
+  async expectDescriptionFormatted(text: string) {
+    const editor = descriptionEditor(this.page);
+    await expect(editor).toContainText(text, { timeout: 10000 });
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    for (const format of ["bold", "italic", "underline"]) {
+      const applied = locatorChain(this.page, { role: "radio", name: `Remove ${format}`, exact: true, selector: `[aria-label="Remove ${format}"]` }).first();
+      await expect(applied).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    }
+  }
+
+  async expectTimezone(timezone: string) {
+    await expect(locatorChain(this.page, { text: timezone, selector: `text="${timezone}"` }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  private hybridLocationRadio(): Locator {
+    return locatorChain(this.page, {
+      role: "radio",
+      name: "Hybrid · In-person & virtual",
+      selector: '[role="radio"][value="hybrid"]',
+    }).first();
+  }
+
+  async selectHybridLocation() {
+    await safeClick(this.hybridLocationRadio());
+    await expect(this.hybridLocationRadio()).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+  }
+
+  async fillVenue(name: string, address: string) {
+    await safeFill(this.venueNameInput(), name);
+    await safeFill(this.venueAddressInput(), address);
+  }
+
+  /** With All Day on, the start and end time controls are not rendered at all. */
+  async expectEventTimeInputsHidden() {
+    await expect(this.eventTimeButton(0)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** Step 2 is made of exactly these sections. */
+  async expectEventsDetailsSections(sections: readonly string[]) {
+    for (const section of sections) {
+      await expect(locatorChain(this.page, { text: section, selector: `text="${section}"` }).first()).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  /** Days before today are disabled in the event date picker; today and later are selectable. */
+  async expectPastEventDatesDisabled() {
+    await this.eventDateAction().click({ timeout: 10000 });
+    const days = this.page.getByRole("dialog").last().getByRole("grid").getByRole("button");
+    await expect(days.first()).toBeVisible({ timeout: 10000 });
+    const states = await days.evaluateAll((buttons) => buttons.map((b) => ({ label: b.getAttribute("aria-label") ?? "", disabled: b.hasAttribute("disabled") })));
+    const today = states.findIndex((day) => day.label.startsWith("Today"));
+    expect(today, "the picker marks today").toBeGreaterThanOrEqual(0);
+    expect(states.slice(0, today).every((day) => day.disabled), "every earlier day is disabled").toBe(true);
+    expect(states.slice(today).every((day) => !day.disabled), "today and later days are selectable").toBe(true);
+    await this.page.keyboard.press("Escape");
+  }
+
+  /**
+   * Schedule is one date picker, a start and an end time, the All Day switch and a searchable
+   * timezone picker — no repeat, recurrence or extra-session control.
+   */
+  async expectScheduleControls(timezone: { label: string; options: number; searchPlaceholder: string }) {
+    await expect(this.eventDateAction()).toHaveCount(1);
+    await expect(this.page.getByRole("button", { name: /^Event (start|end) time$/ })).toHaveCount(2, { timeout: 10000 });
+    await expect(this.allDaySwitch.first()).toBeVisible();
+    await expect(this.page.getByText(/repeat|recurr|session/i)).toHaveCount(0);
+    await locatorChain(this.page, { text: timezone.label, selector: `text="${timezone.label}"` }).first().click({ timeout: 10000 });
+    await expect(this.page.getByRole("option")).toHaveCount(timezone.options, { timeout: 10000 });
+    await expect(this.page.getByPlaceholder(timezone.searchPlaceholder)).toBeVisible();
+    await this.page.keyboard.press("Escape");
+  }
+
+  /** On-site asks for Venue Name and Address only — no map link field. */
+  async expectOnSiteVenueFields() {
+    await expect(this.venueNameInput()).toBeVisible({ timeout: 10000 });
+    await expect(this.venueAddressInput()).toBeVisible();
+    await expect(this.page.getByText(/map/i)).toHaveCount(0);
+  }
+
+  private descriptionCounter(): Locator {
+    return locatorChain(this.page, { text: "/ 500", selector: 'text=/^\\d+ \\/ 500$/' }).first();
+  }
+
+  async expectDescriptionCounter(expected: string) {
+    await expect(this.descriptionCounter()).toHaveText(expected, { timeout: 10000 });
+  }
+
+  /** The location radios and the All Day switch are reachable by their accessible names. */
+  async expectFormControlsNamed() {
+    for (const location of ["On-site", "Online", "Hybrid"]) {
+      await expect(this.page.getByRole("radio", { name: new RegExp(`^${location}`) })).toHaveCount(1, { timeout: 5000 });
+    }
+    await expect(this.page.getByRole("switch", { name: "All Day" })).toHaveCount(1, { timeout: 5000 });
+  }
+
+  /** A documented title limit shows up as the input's maxlength. */
+  async expectEventsTitleLimited() {
+    await expect(titleInput(this.page)).toHaveAttribute("maxlength", /^\d+$/, { timeout: 5000 });
   }
 
   async expectEventsDetailsStep() {
@@ -988,6 +1259,14 @@ export class EventsPage {
     });
     await expect(this.uploadedThumbnailButton()).toBeVisible({ timeout: 10000 });
     await expect(this.uploadedGalleryImage(1)).toHaveCount(0);
+  }
+
+  /** A full gallery: every additional slot holds an image and the chooser is gone. */
+  async expectGalleryFull(slots: number) {
+    await expect(this.uploadedGalleryImage(slots)).toBeVisible({ timeout: 30000 });
+    await expect(this.noImagePlaceholder).toHaveCount(0, { timeout: 10000 });
+    await expect(this.galleryChooserHint).toHaveCount(0);
+    await expect(this.galleryFileInput()).toHaveCount(0);
   }
 
   async expectGalleryAfterOneUpload() {

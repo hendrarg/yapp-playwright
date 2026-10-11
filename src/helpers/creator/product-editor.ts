@@ -320,6 +320,30 @@ export async function expectImageTooLarge(page: Page) {
   });
 }
 
+// ── Version history ──────────────────────────────────────────────
+
+/**
+ * `Version history` on any product edit form: the retention rule, then timestamped entries —
+ * the current one with nothing to restore and, after an edit, older ones naming what changed.
+ */
+export async function expectVersionHistory(page: Page, options: { changedField?: string } = {}) {
+  await page.getByRole("button", { name: "Version history" }).click({ timeout: 10000 });
+  const dialog = page.getByRole("dialog", { name: "Version history" });
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  await expect(dialog).toContainText("A version is saved on every edit. The last 10 are kept.");
+  const entries = dialog.getByRole("listitem");
+  await expect(entries.first()).toBeVisible();
+  await expect(entries.first()).toContainText(/\d{2} \w{3} \d{4} · \d{2}:\d{2}/);
+  await expect(entries.first()).toContainText("Nothing to restore from this version");
+  if (options.changedField) {
+    const edit = entries.filter({ hasText: options.changedField }).first();
+    await expect(edit).toContainText(/\d+ changes? ·/);
+    await expect(edit.getByRole("button", { name: "Restore" })).toBeVisible();
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden({ timeout: 5000 });
+}
+
 // ── Product Complete modal ───────────────────────────────────────
 
 export async function expectProductCompleteModal(page: Page) {

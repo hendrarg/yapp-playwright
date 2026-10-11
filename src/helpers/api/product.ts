@@ -641,6 +641,22 @@ export async function productShortPath(request: APIRequestContext, productUuid: 
 }
 
 /** The token's product with this exact title, if any (`GET /api/v1/shop/products?title=`). */
+export interface EventTicketConfiguration {
+  isAllDay: boolean;
+  venueType: 'on_site' | 'online' | 'hybrid';
+  venueName: string;
+  venueAddress: string;
+  platform: 'google_meet' | 'custom';
+  meetingLink: string;
+}
+
+/** The schedule, venue and streaming settings an event product saved (`ticketConfiguration`). */
+export async function getEventTicketConfiguration(request: APIRequestContext, productUuid: string, token?: string): Promise<EventTicketConfiguration> {
+  const response = await request.get(apiUrl(`/api/v1/shop/products/${productUuid}`), { headers: getHeaders(token, creatorOrigin()) });
+  if (!response.ok()) throw new Error(`Get product failed: ${response.status()} ${await response.text()}`);
+  return (await response.json()).data.ticketConfiguration;
+}
+
 export async function findProductByTitle(request: APIRequestContext, title: string, token?: string): Promise<{ uuid: string; status: ProductStatus } | undefined> {
   const response = await request.get(apiUrl(`/api/v1/shop/products?page=1&limit=10&title=${encodeURIComponent(title)}`), { headers: getHeaders(token, creatorOrigin()) });
   if (!response.ok()) throw new Error(`Find product failed: ${response.status()} ${await response.text()}`);

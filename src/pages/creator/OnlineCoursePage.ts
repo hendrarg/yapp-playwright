@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
+import { expectVersionHistory } from "@helpers/creator/product-editor";
 import { onlineCourseAfterSalesData, onlineCoursePricingData, onlineCourseValidationData, type OnlineCourseContentType } from "@test-data/creator/products.creation.data";
 
 export class OnlineCoursePage {
@@ -835,16 +836,7 @@ export class OnlineCoursePage {
 
   /** The icon-only `Version history` button opens the retention rule and timestamped entries. */
   async expectVersionHistory() {
-    await this.page.getByRole("button", { name: "Version history" }).click({ timeout: 10000 });
-    const dialog = this.page.getByRole("dialog", { name: "Version history" });
-    await expect(dialog).toBeVisible({ timeout: 10000 });
-    await expect(dialog).toContainText("A version is saved on every edit. The last 10 are kept.");
-    const entries = dialog.getByRole("listitem");
-    await expect(entries.first()).toBeVisible();
-    await expect(entries.first()).toContainText(/\d{2} \w{3} \d{4} · \d{2}:\d{2}/);
-    await expect(entries.first()).toContainText("Nothing to restore from this version");
-    await this.page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden({ timeout: 5000 });
+    await expectVersionHistory(this.page);
   }
 
   private membershipSwitch(): Locator {
