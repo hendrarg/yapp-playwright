@@ -469,6 +469,90 @@ test('Feeds and Exclusive — NSFW Filtering, NSFW Direct Access, NSFW Search, N
   }
 });
 
+test('Feeds and Exclusive — Like Post, Unlike Post, Add Comment, Comment Validation, Edit Comment, Delete Comment, Comment Authorization, Engagement Count', {
+  tag: ['@AUT-FE-018', '@feeds', '@like', '@comment', '@buyer', '@regression'],
+}, async ({ buyerNav, buyerFeedsPage, page }) => {
+  test.setTimeout(150000);
+
+  const creatorToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
+  test.skip(!creatorToken, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed the creator post');
+
+  const postData = generatePostData({ content: `Engagement ${Date.now()}`, visibility: 'public' });
+  const otherComment = `Other account comment ${Date.now()}`;
+  const ownComment = generateComment();
+  const editedComment = `${ownComment} edited`;
+  let postId = '';
+  let initialLikes = 0;
+
+  try {
+    await test.step('Seed a public post and another account\'s comment', async () => {
+      ({ postId } = await createPost(page.request, postData, creatorToken));
+      await createComment(page.request, postId, otherComment, creatorToken);
+    });
+
+    await test.step('Like a post: count rises by one and the icon turns active', async () => {
+      await buyerNav.open('feeds');
+      await buyerFeedsPage.expectAuthenticated();
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectTabActive(feedsTabs.following);
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      initialLikes = await buyerFeedsPage.getPostLikeCount(postData.content);
+      await buyerFeedsPage.likePost(postData.content);
+      await buyerFeedsPage.expectPostLikedState(postData.content);
+      await expect.poll(() => buyerFeedsPage.getPostLikeCount(postData.content)).toBe(initialLikes + 1);
+    });
+
+    await test.step('Unlike the post: count drops by one and the icon resets', async () => {
+      await buyerFeedsPage.unlikePost(postData.content);
+      await buyerFeedsPage.expectPostUnlikedState(postData.content);
+      await expect.poll(() => buyerFeedsPage.getPostLikeCount(postData.content)).toBe(initialLikes);
+    });
+
+    await test.step('Submit a valid comment: it appears under the buyer\'s identity', async () => {
+      await buyerFeedsPage.gotoPost(postId);
+      await buyerFeedsPage.fillComment(ownComment);
+      await buyerFeedsPage.submitComment(ownComment);
+      await buyerFeedsPage.expectCommentAuthor(ownComment, testAccounts.qa.username);
+    });
+
+    // Edit is only allowed within one minute of posting, so it runs straight after the post.
+    await test.step('Edit the own comment: the new text replaces the old one', async () => {
+      await buyerFeedsPage.editComment(ownComment, editedComment);
+      await buyerFeedsPage.expectCommentHidden(ownComment);
+    });
+
+    await test.step('Empty or whitespace-only comment cannot be submitted', async () => {
+      await buyerFeedsPage.fillComment('');
+      await buyerFeedsPage.expectPostButtonDisabled();
+      await buyerFeedsPage.fillComment('   ');
+      await buyerFeedsPage.expectPostButtonDisabled();
+      await buyerFeedsPage.fillComment('');
+    });
+
+    await test.step('Another account\'s comment offers no edit or delete control', async () => {
+      await buyerFeedsPage.expectNoCommentActions(otherComment);
+    });
+
+    await test.step('Engagement counts match the post data', async () => {
+      const engagement = await getPostEngagement(page.request, postId);
+      expect(engagement.commentCount).toBe(2);
+      await buyerNav.open('feeds');
+      await buyerFeedsPage.switchToTab('following');
+      await buyerFeedsPage.expectPostVisible(postData.content);
+      await expect.poll(() => buyerFeedsPage.getPostLikeCount(postData.content)).toBe(engagement.likeCount);
+      await expect.poll(() => buyerFeedsPage.getPostCommentCount(postData.content)).toBe(engagement.commentCount);
+    });
+
+    await test.step('Delete the own comment after confirming: it leaves the thread', async () => {
+      await buyerFeedsPage.gotoPost(postId);
+      await buyerFeedsPage.deleteComment(editedComment);
+      await buyerFeedsPage.expectCommentVisible(otherComment);
+    });
+  } finally {
+    if (postId) await deletePost(page.request, postId, creatorToken);
+  }
+});
+
 test('Feeds and Exclusive — Display Linked Products, No Product State, Product Navigation, Purchase Initiation, Inactive Product, Deleted Product', {
   tag: ['@AUT-FE-019', '@feeds', '@products', '@buyer', '@regression'],
 }, async ({ buyerNav, buyerFeedsPage, productPurchasePage, page }) => {
@@ -788,89 +872,5 @@ test('Feeds and Exclusive — Username Validation, Creator-Style Empty Profile, 
     await accountSettingsPage.expectUsernameRejected(accountSettingsLabels.validationFailed, username);
     expect((await getAccount(page.request, buyerToken)).username).toBe(username);
   });
-});
-
-test('Feeds and Exclusive — Like Post, Unlike Post, Add Comment, Comment Validation, Edit Comment, Delete Comment, Comment Authorization, Engagement Count', {
-  tag: ['@AUT-FE-018', '@feeds', '@like', '@comment', '@buyer', '@regression'],
-}, async ({ buyerNav, buyerFeedsPage, page }) => {
-  test.setTimeout(150000);
-
-  const creatorToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
-  test.skip(!creatorToken, 'YAPP_TEST_ACCESS_TOKEN_2 must be set to seed the creator post');
-
-  const postData = generatePostData({ content: `Engagement ${Date.now()}`, visibility: 'public' });
-  const otherComment = `Other account comment ${Date.now()}`;
-  const ownComment = generateComment();
-  const editedComment = `${ownComment} edited`;
-  let postId = '';
-  let initialLikes = 0;
-
-  try {
-    await test.step('Seed a public post and another account\'s comment', async () => {
-      ({ postId } = await createPost(page.request, postData, creatorToken));
-      await createComment(page.request, postId, otherComment, creatorToken);
-    });
-
-    await test.step('Like a post: count rises by one and the icon turns active', async () => {
-      await buyerNav.open('feeds');
-      await buyerFeedsPage.expectAuthenticated();
-      await buyerFeedsPage.switchToTab('following');
-      await buyerFeedsPage.expectTabActive(feedsTabs.following);
-      await buyerFeedsPage.expectPostVisible(postData.content);
-      initialLikes = await buyerFeedsPage.getPostLikeCount(postData.content);
-      await buyerFeedsPage.likePost(postData.content);
-      await buyerFeedsPage.expectPostLikedState(postData.content);
-      await expect.poll(() => buyerFeedsPage.getPostLikeCount(postData.content)).toBe(initialLikes + 1);
-    });
-
-    await test.step('Unlike the post: count drops by one and the icon resets', async () => {
-      await buyerFeedsPage.unlikePost(postData.content);
-      await buyerFeedsPage.expectPostUnlikedState(postData.content);
-      await expect.poll(() => buyerFeedsPage.getPostLikeCount(postData.content)).toBe(initialLikes);
-    });
-
-    await test.step('Submit a valid comment: it appears under the buyer\'s identity', async () => {
-      await buyerFeedsPage.gotoPost(postId);
-      await buyerFeedsPage.fillComment(ownComment);
-      await buyerFeedsPage.submitComment(ownComment);
-      await buyerFeedsPage.expectCommentAuthor(ownComment, testAccounts.qa.username);
-    });
-
-    // Edit is only allowed within one minute of posting, so it runs straight after the post.
-    await test.step('Edit the own comment: the new text replaces the old one', async () => {
-      await buyerFeedsPage.editComment(ownComment, editedComment);
-      await buyerFeedsPage.expectCommentHidden(ownComment);
-    });
-
-    await test.step('Empty or whitespace-only comment cannot be submitted', async () => {
-      await buyerFeedsPage.fillComment('');
-      await buyerFeedsPage.expectPostButtonDisabled();
-      await buyerFeedsPage.fillComment('   ');
-      await buyerFeedsPage.expectPostButtonDisabled();
-      await buyerFeedsPage.fillComment('');
-    });
-
-    await test.step('Another account\'s comment offers no edit or delete control', async () => {
-      await buyerFeedsPage.expectNoCommentActions(otherComment);
-    });
-
-    await test.step('Engagement counts match the post data', async () => {
-      const engagement = await getPostEngagement(page.request, postId);
-      expect(engagement.commentCount).toBe(2);
-      await buyerNav.open('feeds');
-      await buyerFeedsPage.switchToTab('following');
-      await buyerFeedsPage.expectPostVisible(postData.content);
-      await expect.poll(() => buyerFeedsPage.getPostLikeCount(postData.content)).toBe(engagement.likeCount);
-      await expect.poll(() => buyerFeedsPage.getPostCommentCount(postData.content)).toBe(engagement.commentCount);
-    });
-
-    await test.step('Delete the own comment after confirming: it leaves the thread', async () => {
-      await buyerFeedsPage.gotoPost(postId);
-      await buyerFeedsPage.deleteComment(editedComment);
-      await buyerFeedsPage.expectCommentVisible(otherComment);
-    });
-  } finally {
-    if (postId) await deletePost(page.request, postId, creatorToken);
-  }
 });
 });
