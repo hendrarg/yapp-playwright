@@ -37,7 +37,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
  */
 const FEATURES = {
   "Products": { gitbook: ["features/product-detail-page"], knowledge: "products" },
-  "Product Digital": { gitbook: ["digital-product", "product-guides/list-digital-product-on-yapp"], knowledge: "products" },
+  "Product Digital": { gitbook: ["digital-product", "product-guides/list-digital-product-on-yapp"], knowledge: "products", prd: ["product-review - prd"] },
   "Discord Membership": { gitbook: ["discord-membership", "third-party-configuration/connect-to-discord"], knowledge: "membership-products" },
   "Consultation": { gitbook: ["consultation", "third-party-configuration/connect-to-google-calendar"], knowledge: "products" },
   "Event & Tickets": { gitbook: ["event-and-tickets"], knowledge: "products" },

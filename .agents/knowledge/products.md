@@ -573,3 +573,38 @@ like the page is broken rather than like the route having moved.
 - **Online Course attachment**: `Insert > Attachment` opens an `Upload attachment` panel (`.pdf, .docx, .xlsx, .csv, .mp3, .wav or .zip`); a .wav fails at `POST /api/v1/file/upload/create` → 500, `Upload failed`. The editor autosaves pages (`PUT …/pages/{id}`), but the failed block did not persist after reload.
 - PPV post price has no server floor: `POST /api/v1/posts` with `pay_per_view` and price 0 or 19 999 → 200. `DELETE /api/v1/posts/{uuid}` cleans up (200, then GET 404).
 - `POST /api/v1/tier-memberships` requires only name, description, isActive, prices, tierMembershipProductAndBenefits (an empty array passes); it accepted priceIDR 10 000 and no thumbnail, and **ignored `isActive: false`** (stored true). `DELETE /tier-memberships/{uuid}` soft-deletes (GET afterwards answers 500, not 404).
+
+## Product Review on the PDP (live on dev, checked 2026-10-11)
+
+PRD: `projects/yapp/product-review - prd`. Digital Product only; an Online Course PDP has no section and
+`/reviews/me` answers `reason: unsupported_product_type`.
+
+- **Where it sits:** a `Reviews & Ratings` block inside the right-hand purchase card, under Purchase /
+  Add To Cart. The header carries the aggregate (`★ 4.5 (2 Ratings)`), then a 5→1 distribution, then the
+  review cards — newest first. The list is in that card, **not** under the description (Overview tab) as
+  the PRD asks.
+- **0 reviews:** no block at all for non-buyers and guests. An eligible buyer sees only the
+  `Write a review...` button — no 0.0, no placeholder. One review is enough for the aggregate.
+- **Form:** dialog `Write a review` → radiogroup `Your rating` (radios `Rate N star(s)`), one textbox with a
+  `n/500` counter that hard-stops at 500, button `Post Review`. No stars → inline
+  `Please select a star rating`, text kept. Rating-only posts fine. The button disables while the POST runs
+  (one request only). A failed POST shows inline `Couldn't submit your review. Please try again.` and keeps
+  stars + text. Success toast: `Thanks! Your review has been posted.`
+- **Cards:** stars, `n.0 · 1m ago`, text, author chip (username; your own reads `You`). **No Verified
+  Purchase badge** even though the API returns `isVerifiedPurchase: true`. No edit/delete affordance.
+- **Non-buyers / guests** read everything and get no CTA, but the PRD's gate message
+  `Only buyers who purchased this product can leave a review.` is never shown.
+- **Creator on own PDP:** reads all, no write CTA, a `Hide` button per card. Hidden card shows
+  `This review is hidden and won't affect the rating.` with **`Show Again`** (not "Restore"); toast
+  `Review hidden. It no longer appears on your product page.` Hidden reviews leave the aggregate for
+  everyone — but **the author still sees their own hidden review** (as `You`, no hidden marker).
+- Editing the product (title/description via `PUT /api/v1/shop/products/{uuid}`) leaves reviews and the
+  aggregate untouched.
+- **API** (`/api/v1/products/{uuid}/reviews`): `GET /summary` (averageRating, totalReviews,
+  distribution), `GET /me` (`isOwner`, `canReview`, `reason`: `not_purchased | already_reviewed |
+  own_product | unsupported_product_type`), `GET ?page&limit&sort=newest`, `POST {rating, text}` → 201,
+  `POST /{id}/hide`. Non-buyer → 403, rating 0/6 → 400 `invalid_rating`, text 501 → 400 `text_too_long`,
+  second review → 409, PUT/PATCH/DELETE on a review → 4xx. Posting reviews quickly from scripts can hit
+  **429** — retry after ~20 s.
+- Eligibility = a completed (deposit-webhooked) purchase; a free digital product that was not claimed is
+  `not_purchased`; after a claim it is untested.
