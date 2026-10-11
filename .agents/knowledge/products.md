@@ -421,11 +421,14 @@ not write a test that asserts reorder through the UI.
 - **`.wav` is advertised but rejected** — the upload answers `Upload failed` every time
   (`L-54`). The other six types in that accept list work.
 
-**Deleting a block does not survive Save** (`M-54`, re-confirmed 2026-09-22): the file
-disappears from the editor, `Save` reports nothing, and a reload brings it back. Text edits,
-new uploads, chapter adds, page renames and chapter deletes all persist through the same
-button — the defect is specific to deleting a block inside a page, and both removal paths
-(block menu `Delete` and the toolbar's `Remove attachment`) behave the same.
+**Deleting a block now survives Save.** This was fixed 2026-09-25 (OC-9) and re-checked
+2026-10-11. The bug was filed as `M-54` and later renumbered `M-38`. A file deleted through
+the block menu stays gone after Save and reload. In `page_files` the deleted file has no
+live row, while the kept file gets a new live row on each save, so the rewrite pattern
+below still holds. AUT-OC-002 now runs without `test.fail`. On a slow dev it can still time
+out in other ways: the block menu's `Delete`, uploads that stay at `Uploading...`, or the
+autosave wait. Those are timing failures, not this bug. The history below explains how the
+defect worked.
 
 **Where page content is actually saved.** The `Save` button on the content step sends
 `PUT /api/v1/shop/products/{uuid}` **with no `pages` key at all** — chapters and pages

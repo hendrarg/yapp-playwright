@@ -1,0 +1,10 @@
+import 'dotenv/config';
+import { sheetsClient } from './lib/sheets-client.mjs';
+const c = await sheetsClient();
+const rows = await c.values(`'Product Digital'!A1:J400`);
+console.log('HEADER', JSON.stringify(rows[0]), 'rows', rows.length);
+const ids = rows.map((r) => r[0] || '');
+const stems = {}; ids.forEach((id, i) => { const m = id.match(/^(TC-PD-[A-Z]+)-(\d+)$/); if (m) { stems[m[1]] = stems[m[1]] || { max: 0, last: 0 }; stems[m[1]].max = Math.max(stems[m[1]].max, +m[2]); stems[m[1]].last = i + 1; } });
+console.log(JSON.stringify(stems));
+console.log([...new Set(rows.slice(1).map((r) => r[1]))].join(' | '));
+console.log('last B row', JSON.stringify(rows[stems['TC-PD-B'].last - 1]).slice(0, 300));
