@@ -347,6 +347,7 @@ Shipped on dev per the PRD [[projects/yapp/pinned-feeds - prd|Pinned Feeds]]; TC
   an active member sees member-only content open). Under `Exclusive Only` a pinned public post is hidden and a
   pinned exclusive one comes first. Guests see the same pin.
 - A creator with no posts sees only the composer — no pin control; a single post can be pinned with no dialog.
+- Pinning the **bottom** post of a fully scrolled Published list (31 posts, infinite scroll in pages of 10) closes the `⋯` menu cleanly on desktop and mobile; the stuck-menu report under F&E-16 is fixed (retested 2026-10-11). The card menu trigger is `button[aria-label="Post options"]` — `aria-haspopup="menu"` also matches the `Account menu` button. Desktop keeps the scroll position after a pin; mobile returns to the top.
 
 ## Scheduling
 
