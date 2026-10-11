@@ -500,11 +500,13 @@ test.describe('Creator Events and Tickets', () => {
         await eventsPage.expectSaveAsDraftAbsent();
       });
 
-      await test.step('On Step 2 the event saves as a draft that buyers cannot open and the creator can resume', async () => {
+      await test.step('On Step 2 a draft needs the tier sales period, then saves as a draft buyers cannot open and the creator can resume', async () => {
         await eventsPage.fillMinimalEventsStep1({ title, description: generateEventsDescription() });
         await eventsPage.continueToEventsDetails();
         await eventsPage.expectSaveAsDraftAvailable();
-        // A tier without a sales period cannot be saved as a draft yet ("Invalid request"); see the bug report.
+        // A draft still needs the tier's mandatory sales period.
+        await eventsPage.expectDraftRefused();
+        expect(await findProductByTitle(page.request, title)).toBeUndefined();
         await eventsPage.fillTicketSalesPeriod(0);
         await saveAsDraft(page);
         const draft = await findProductByTitle(page.request, title);

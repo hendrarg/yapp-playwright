@@ -303,6 +303,12 @@ UI or a hand-built payload.
   The stats read `Attandee` (sic, L-10), `Registered` and `capacity`. Re-checked 2026-10-11 on
   the seeded event (1a18e717): Registered (14) equalled the rows across pages (10 + 4); the old
   13 vs 15 gap is gone.
+- **A draft still needs the mandatory tier fields (expected, confirmed by the team
+  2026-10-11).** `Save as Draft` on Step 2 with a tier that has no sales period is refused:
+  `POST /api/v1/shop/products` → `400 parsing time ""` and the toast `Invalid request`. Nothing
+  is saved and the form stays on the create route. With the sales period filled the draft saves
+  (`Product saved as draft`) and the URL moves to `/products/update/events-ticket/{uuid}`. This
+  is not a bug, although TC-EVT-C-028's "save at any step" reads as if it were.
 - **Editing a published event saves without changing its status.** `Next: Publish` on Step 2
   sends `PUT /api/v1/shop/products/{uuid}` → 200 and shows `Product updated successfully`. The
   product stays active. Step 1 of the edit form has no Save button.

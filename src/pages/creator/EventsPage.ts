@@ -713,6 +713,21 @@ export class EventsPage {
       .toBeGreaterThan(0);
   }
 
+  /**
+   * A draft still needs the tier's mandatory fields: with no sales period the save is refused
+   * (`400`, toast `Invalid request`) and the form stays on the create route.
+   */
+  async expectDraftRefused() {
+    const response = this.page.waitForResponse(
+      (r) => /\/api\/v1\/shop\/products$/.test(new URL(r.url()).pathname) && r.request().method() === "POST",
+      { timeout: 15000 },
+    );
+    await saveAsDraftAction(this.page).click({ timeout: 10000 });
+    expect((await response).status()).toBe(400);
+    await expect(locatorChain(this.page, { text: "Invalid request", selector: 'text="Invalid request"' }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/products\/create\/events-ticket/);
+  }
+
   private completionMeterText(): Locator {
     return this.page.getByText(/^\d+% completed$/).filter({ visible: true });
   }
