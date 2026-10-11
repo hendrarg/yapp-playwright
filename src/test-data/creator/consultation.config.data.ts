@@ -25,3 +25,9 @@ export function generateConsultationAfterSalesLink() {
     url: `https://example.com/${faker.string.alphanumeric({ length: 8, casing: "lower" })}`,
   };
 }
+
+/** After Sales copy and counter on the consultation form. */
+export const consultationAfterSalesData = {
+  purposeCopy: "Turn this on to create personalized messages for your buyers with custom notes and links.",
+  emptyCounter: "0/1000 characters",
+} as const;

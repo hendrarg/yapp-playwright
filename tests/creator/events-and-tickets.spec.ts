@@ -1,6 +1,6 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { addCustomBuyerQuestion, cancelEditBuyerQuestion, expectTitleValue, expectVersionHistory, saveAsDraft, chooseHeroFile, closeProductCompleteModal, completeOpenBuyerQuestion, expectAddQuestionDialog, expectAddQuestionsDisabled, expectEditQuestionDialog, expectHeroNotUploaded, expectImageTooLarge, expectImageTooSmall, expectProductCompleteModal, expectQuestionInputTypes, expectSavedBuyerQuestion, openAddQuestionDialog, openEditBuyerQuestion, readProductCompleteSharePath, submitEmptyQuestionLabel, uploadGallery, uploadHero } from '@helpers/creator/product-editor';
-import { createEventProduct, deleteProduct, findProductByTitle, getEventTicketConfiguration, getProduct } from '@helpers/api/product';
+import { createEventProduct, deleteProduct, findProductByTitle, waitForProductByTitle, getEventTicketConfiguration, getProduct } from '@helpers/api/product';
 import { createOversizedImageFixture } from '@helpers/creator/oversized-image';
 import { buyerEventDatePattern, eventsBasicInfoData, generateEventsVenue } from '@test-data/creator/events.basic-info.data';
 import { eventsBuyerFormData, generateEventsBuyerQuestionLabels, generateEventsBuyerQuestionOptions } from '@test-data/creator/events.buyer-form.data';
@@ -142,7 +142,7 @@ test.describe('Creator Events and Tickets', () => {
         await expectProductCompleteModal(page);
         sharePath = await readProductCompleteSharePath(page);
         await closeProductCompleteModal(page);
-        productUuid = (await findProductByTitle(page.request, title))!.uuid;
+        productUuid = (await waitForProductByTitle(page.request, title)).uuid;
         await productPurchasePage.gotoSharePath(sharePath);
         await productPurchasePage.expectEventDateAndStatus({
           datePattern: buyerEventDatePattern(eventDate),
@@ -263,7 +263,7 @@ test.describe('Creator Events and Tickets', () => {
         await expectProductCompleteModal(page);
         const sharePath = await readProductCompleteSharePath(page);
         await closeProductCompleteModal(page);
-        productUuid = (await findProductByTitle(page.request, title))!.uuid;
+        productUuid = (await waitForProductByTitle(page.request, title)).uuid;
         await productPurchasePage.gotoSharePath(sharePath);
       });
 
@@ -369,7 +369,7 @@ test.describe('Creator Events and Tickets', () => {
         await expectProductCompleteModal(page);
         const sharePath = await readProductCompleteSharePath(page);
         await closeProductCompleteModal(page);
-        productUuid = (await findProductByTitle(page.request, title))!.uuid;
+        productUuid = (await waitForProductByTitle(page.request, title)).uuid;
         await productPurchasePage.gotoSharePath(sharePath);
         await productPurchasePage.expectEventTierCard(paidTier, { price: eventsTicketsData.buyerDiscountedPricePattern, onSale: true });
         await productPurchasePage.expectEventTierCard(freeTier, { price: /Free/, onSale: true });
@@ -462,7 +462,7 @@ test.describe('Creator Events and Tickets', () => {
         await expectProductCompleteModal(page);
         const sharePath = await readProductCompleteSharePath(page);
         await closeProductCompleteModal(page);
-        productUuid = (await findProductByTitle(page.request, title))!.uuid;
+        productUuid = (await waitForProductByTitle(page.request, title)).uuid;
         await productPurchasePage.gotoSharePath(sharePath);
         await productPurchasePage.expectEventTierCard(eventsTicketsData.renamedTierName, { price: eventsTicketsData.buyerDiscountedPricePattern, onSale: true });
         await productPurchasePage.expectEventTierCard(flatTier, { price: eventsTicketsData.buyerFlatDiscountedPricePattern, onSale: true });
@@ -509,7 +509,7 @@ test.describe('Creator Events and Tickets', () => {
         expect(await findProductByTitle(page.request, title)).toBeUndefined();
         await eventsPage.fillTicketSalesPeriod(0);
         await saveAsDraft(page);
-        const draft = await findProductByTitle(page.request, title);
+        const draft = await waitForProductByTitle(page.request, title);
         expect(draft?.status).toBe('draft');
         productUuid = draft!.uuid;
         const listResponse = productsPage.waitForListResponse();

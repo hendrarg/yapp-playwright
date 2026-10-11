@@ -657,6 +657,16 @@ export async function getEventTicketConfiguration(request: APIRequestContext, pr
   return (await response.json()).data.ticketConfiguration;
 }
 
+/** `findProductByTitle`, retried: a product just created can take a moment to show up in the title search. */
+export async function waitForProductByTitle(request: APIRequestContext, title: string, token?: string): Promise<{ uuid: string; status: ProductStatus }> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const product = await findProductByTitle(request, title, token);
+    if (product) return product;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  throw new Error(`Product "${title}" did not appear in the product search`);
+}
+
 export async function findProductByTitle(request: APIRequestContext, title: string, token?: string): Promise<{ uuid: string; status: ProductStatus } | undefined> {
   const response = await request.get(apiUrl(`/api/v1/shop/products?page=1&limit=10&title=${encodeURIComponent(title)}`), { headers: getHeaders(token, creatorOrigin()) });
   if (!response.ok()) throw new Error(`Find product failed: ${response.status()} ${await response.text()}`);

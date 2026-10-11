@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartLocator } from "@utils/heal-utils";
-import { expectVersionHistory } from "@helpers/creator/product-editor";
+import { expectMembershipBenefitsUnavailable, expectMembershipTiersSelectable, expectVersionHistory } from "@helpers/creator/product-editor";
 import { onlineCourseAfterSalesData, onlineCoursePricingData, onlineCourseValidationData, type OnlineCourseContentType } from "@test-data/creator/products.creation.data";
 
 export class OnlineCoursePage {
@@ -839,26 +839,12 @@ export class OnlineCoursePage {
     await expectVersionHistory(this.page);
   }
 
-  private membershipSwitch(): Locator {
-    return this.page.getByRole("switch", { name: "Set benefits for membership" });
-  }
-
-  /** A creator with no tiers gets a disabled switch that says why. */
   async expectMembershipBenefitsUnavailable() {
-    await expect(this.membershipSwitch()).toBeDisabled({ timeout: 15000 });
-    await expect(this.page.getByText("You do not have any membership tiers yet, so this option is disabled.")).toBeVisible();
+    await expectMembershipBenefitsUnavailable(this.page);
   }
 
-  /** With tiers, switching benefits on lists every tier with its own Add Benefit. */
   async expectMembershipTiersSelectable(tierNames: readonly string[]) {
-    await expect(this.membershipSwitch()).toBeEnabled({ timeout: 15000 });
-    if ((await this.membershipSwitch().getAttribute("aria-checked")) !== "true") await this.membershipSwitch().click();
-    await expect(this.membershipSwitch()).toHaveAttribute("aria-checked", "true");
-    const main = this.page.getByRole("main");
-    for (const name of tierNames) {
-      await expect(main.locator("div").filter({ hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}Add Benefit$`) }).first()).toBeVisible({ timeout: 10000 });
-    }
-    await this.membershipSwitch().click();
+    await expectMembershipTiersSelectable(this.page, tierNames);
   }
 
   /** The uploaded video renders as a playable <video> whose first frame is its preview. */

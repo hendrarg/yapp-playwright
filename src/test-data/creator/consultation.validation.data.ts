@@ -11,4 +11,7 @@ export const consultationValidationData = {
   customQuestions: ["Probe Q1", "Probe Q2", "Probe Q3", "Probe Q4", "Probe Q5"] as const,
   additionalQuestionsHeading: "Additional Questions | Max 5",
   afterSalesLinksLabel: "max. 3 links",
+  /** 86 characters, 14 words: the counter should read characters. */
+  counterSample: "Live QA test consultation for validating the booking and availability end to end flow.",
+  overlongTitleLength: 556,
 } as const;

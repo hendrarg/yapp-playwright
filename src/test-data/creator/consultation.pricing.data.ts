@@ -5,6 +5,10 @@ import { getAiText } from "@test-data/ai";
 export const consultationPricingData = {
   validPrice: "12000",
   zeroPrice: "0",
+  /** Every product type takes 0 (Free) or Rp10.000 and up; 1 to 9.999 is refused. */
+  belowMinimumPrice: "9999",
+  minimumPrice: "10000",
+  priceRuleError: "Price must be either 0 or at least Rp10.000",
   /**
    * Currency standard target is the buyer format `Rp12.000` (no decimals); the creator
    * app still renders `Rp12.000,00`. Both are accepted until the app drops the decimals.
@@ -70,3 +74,18 @@ export function parseConsultationDayButtonLabel(label: string, reference = new D
   }
   return candidate;
 }
+
+/** Flexible price, discount and crypto options, and the gates on the create form. */
+export const consultationPriceOptionsData = {
+  flexibleMinimum: "20000",
+  buyerFlexibleMinimum: "20.000",
+  listPrice: "100000",
+  discountPercent: "10",
+  discountedFormPrice: "90,000",
+  buyerDiscountedPrice: /Rp90\.000\s*Rp100\.000\s*10%/,
+  cryptoUsdt: "1",
+  cryptoVoucherCopy: "CRYPTO VOUCHER",
+  heroRequired: "Hero image is required",
+  createRoute: /\/products\/create\/consultation$/,
+  editRoute: /\/products\/update\/appointment\/[0-9a-f-]{36}$/,
+} as const;

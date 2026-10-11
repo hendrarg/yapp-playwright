@@ -759,6 +759,148 @@ export class ProductPurchasePage {
     return dayLabel;
   }
 
+  private consultationCalendarDialog(): Locator {
+    return this.page.getByRole('dialog').filter({ has: this.page.getByRole('grid') }).last();
+  }
+
+  /**
+   * The page shows only the next three open dates; `View all` opens a month calendar whose day
+   * buttons carry the full date as their name (`Monday, October 19th, 2026`). Pick one there.
+   */
+  async selectConsultationDateFromCalendar(date: Date) {
+    const dayButton = await this.consultationCalendarDay(date);
+    await expect(dayButton).toBeEnabled({ timeout: 10000 });
+    // The calendar stays open (Escape does not close it); a day already picked must not be clicked again.
+    if (!/selected/.test((await dayButton.getAttribute('aria-label', { timeout: 10000 })) ?? '')) {
+      await dayButton.click({ timeout: 10000 });
+    }
+    await expect(dayButton).toHaveAccessibleName(/selected/, { timeout: 10000 });
+  }
+
+  /** A date in the `View all` calendar is open (bookable) or disabled. */
+  async expectConsultationCalendarDate(date: Date, open: boolean) {
+    const dayButton = await this.consultationCalendarDay(date);
+    if (open) await expect(dayButton).toBeEnabled({ timeout: 10000 });
+    else await expect(dayButton).toBeDisabled({ timeout: 10000 });
+  }
+
+  /**
+   * A flexible-price consultation advertises its floor, and `Save my spot` first asks the buyer to
+   * `Name a Fair Price` with that floor as the minimum.
+   */
+  async expectConsultationFlexiblePricing(minimum: string) {
+    const main = this.page.getByRole('main');
+    await expect(main.getByText('This creator offers flexible pricing.').filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+    await expect(main.getByText(new RegExp(`start from Rp${minimum.replace('.', '\\.')}`, 'i')).filter({ visible: true }).first()).toBeVisible();
+    await flakyClick(this.consultationSaveMySpotButton().first());
+    const dialog = this.page.getByRole('dialog').filter({ hasText: 'Name a Fair Price' });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog).toContainText(`Min. price: Rp${minimum}`);
+    await expect(dialog.getByRole('button', { name: 'Input Amount' })).toBeVisible();
+  }
+
+  /** A discounted price shows the reduced amount, the struck original and the percentage. */
+  async expectConsultationDiscountedPrice(pattern: RegExp) {
+    // The three parts sit in separate elements, so match the page text rather than one node.
+    await expect(this.page.getByRole('main').first()).toContainText(pattern, { timeout: 20000 });
+  }
+
+  /** With crypto enabled, the checkout voucher list offers the crypto voucher. */
+  async expectCryptoVoucherOffered(copy: string) {
+    await flakyClick(this.page.getByRole('button', { name: 'Choose Voucher' }).filter({ visible: true }).first());
+    await expect(this.page.getByText(copy, { exact: false }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+  }
+
+  /** A paused consultation offers no time slot and no `Save my spot`. */
+  async expectConsultationTakingNoBookings() {
+    await expect(this.page.getByRole('heading', { name: 'Consultation Detail' }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    // Sessions load after the header; an early count of zero proves nothing.
+    await this.page.waitForLoadState('networkidle');
+    await expect(this.page.getByText('Total Amount', { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.consultationTimeSlotButtons()).toHaveCount(0);
+    await expect(this.consultationSaveMySpotButton()).toHaveCount(0);
+  }
+
+  /** A completed booking's transaction page still opens with its success state. */
+  async expectTransactionSuccessful() {
+    await expect(this.page.getByText('Purchase Successful!', { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 20000 });
+  }
+
+  async isConsultationCalendarDateOpen(date: Date): Promise<boolean> {
+    return (await this.consultationCalendarDay(date)).isEnabled();
+  }
+
+  /** Open `View all` if needed, page to the date's month, and return that day's button. */
+  private async consultationCalendarDay(date: Date): Promise<Locator> {
+    const dialog = this.consultationCalendarDialog();
+    if (!(await dialog.isVisible().catch(() => false))) {
+      const viewAll = locatorChain(this.page, { role: 'button', name: 'View all', text: 'View all', exact: true }).filter({ visible: true }).first();
+      await expect(viewAll).toBeVisible({ timeout: 20000 });
+      await flakyClick(viewAll);
+    }
+    const month = date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    await expect(dialog.getByRole('grid')).toBeVisible({ timeout: 10000 });
+    for (let i = 0; i < 12 && (await dialog.getByRole('grid').getAttribute('aria-label', { timeout: 10000 })) !== month; i++) {
+      const forward = new Date(`1 ${await dialog.getByRole('grid').getAttribute('aria-label', { timeout: 10000 })}`) < date;
+      await dialog.getByRole('button', { name: forward ? 'Go to the Next Month' : 'Go to the Previous Month' }).click({ timeout: 10000 });
+    }
+    await expect(dialog.getByRole('grid')).toHaveAttribute('aria-label', month);
+    const day = date.getDate();
+    const suffix = day % 10 === 1 && day !== 11 ? 'st' : day % 10 === 2 && day !== 12 ? 'nd' : day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+    const weekday = date.toLocaleString('en-US', { weekday: 'long' });
+    const monthName = date.toLocaleString('en-US', { month: 'long' });
+    // Today's button is prefixed `Today, `.
+    return dialog.getByRole('button', { name: new RegExp(`^(Today, )?${weekday}, ${monthName} ${day}${suffix}, ${date.getFullYear()}`) });
+  }
+
+  /**
+   * Book a free consultation as a guest: pick the date and time in the calendar, Confirm, then
+   * fill the checkout and press `Pay Rp0`. The order completes at once; the page may stay put.
+   */
+  /** Pick a date and time in the calendar and Confirm, landing on the consultation checkout. */
+  async openConsultationCheckout(date: Date, time: string) {
+    await this.selectConsultationDateFromCalendar(date);
+    const dialog = this.consultationCalendarDialog();
+    await dialog.getByRole('button', { name: time, exact: true }).click({ timeout: 10000 });
+    await dialog.getByRole('button', { name: 'Confirm', exact: true }).click({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/checkout\?.*consultationStartTime=/, { timeout: 20000 });
+  }
+
+  /** Checkout states the buyer's timezone and carries the same offset in the session times. */
+  async expectConsultationCheckoutTimezone(copy: string, urlPattern: RegExp) {
+    await expect(this.page.getByText(copy, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page).toHaveURL(urlPattern);
+  }
+
+  async bookFreeConsultationAsGuest(options: { date: Date; time: string; buyer: { name: string; email: string; phone: string } }) {
+    await this.openConsultationCheckout(options.date, options.time);
+    const field = (placeholder: string) => this.page.getByPlaceholder(placeholder).filter({ visible: true }).first();
+    await field('Enter your name').fill(options.buyer.name);
+    await field('Enter your email').fill(options.buyer.email);
+    await field('Enter phone number').fill(options.buyer.phone);
+    // A "Did you mean …@hotmail.com?" hint can re-render the form and clear the confirmation.
+    await expect(async () => {
+      await field('Re-enter your email').fill(options.buyer.email);
+      await this.page.waitForTimeout(500);
+      await expect(field('Re-enter your email')).toHaveValue(options.buyer.email, { timeout: 1000 });
+    }).toPass({ timeout: 20000 });
+    // The form settles once it echoes the email back; a click before that is ignored.
+    await expect(this.page.getByText(`Receipt & download link will be sent to ${options.buyer.email}`)).toBeVisible({ timeout: 15000 });
+    const pay = this.page.getByRole('button', { name: 'Pay Rp0', exact: true });
+    await expect(pay).toBeEnabled({ timeout: 10000 });
+    const response = this.page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/orders/quote' && r.request().method() === 'POST', { timeout: 30000 });
+    await flakyClick(pay);
+    expect((await response).ok()).toBe(true);
+    await expect(this.page).toHaveURL(/\/transaction\//, { timeout: 30000 });
+  }
+
+  /** The time slots offered for the date picked in the calendar, in order. */
+  async expectCalendarSlotsExactly(slots: readonly string[]) {
+    const times = this.consultationCalendarDialog().getByRole('button', { name: /^\d{2}:\d{2}$/ });
+    await expect(times.first()).toBeVisible({ timeout: 15000 });
+    await expect(times).toHaveText([...slots], { timeout: 15000 });
+  }
+
   async selectConsultationTimeSlot(time = consultationBuyerSchedulingData.expectedSlots[0]) {
     await smartClick(this.page, {
       role: 'button',

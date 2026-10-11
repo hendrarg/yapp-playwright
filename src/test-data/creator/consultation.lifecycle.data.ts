@@ -27,3 +27,11 @@ export function generateConsultationAfterSalesMessage(): string {
 export function consultationWeekdayLabel(date = new Date()): string {
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
 }
+
+/** Save/publish controls and modal copy across the create and edit flows. */
+export const consultationPublishData = {
+  createSaveControls: ["Create Consultation", "Save"],
+  editSaveControls: ["Save as Draft", "Save and Publish"],
+  firstPublish: { heading: "Product Complete", body: "Your product has been successfully created." },
+  republish: { heading: "Your consultation is live!", body: "Your consultation is ready for bookings." },
+} as const;

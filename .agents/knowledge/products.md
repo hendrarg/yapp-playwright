@@ -115,10 +115,12 @@ Page card menu is only Edit / Set as Featured / Share / Delete. Toggling it also
 **resets the product to the front of the My Page arrangement**; restore position by
 dragging the card grip (`PATCH /shop/products/reorder`).
 
-**Status only binds profile visibility.** Inactive products disappear from the
-creator profile but their direct product URL stays 200 with purchase CTAs enabled;
-Draft products are likewise fully purchasable via direct URL. Deletion is real —
-`DELETE /shop/products/{uuid}` and the URL becomes 404.
+**Inactive and Draft products are closed to buyers** (re-checked 2026-10-11, Events and
+Consultation). Their share link (`/s/<shortUrl>`, `/<creator>/product/<shortUrl>`) renders
+`That page doesn't exist`. Setting the product active again brings the page back. This
+replaces the August 2026 observation that status only hid products from the profile and left
+the direct URL purchasable. Deletion is real: `DELETE /shop/products/{uuid}` and the URL
+becomes 404.
 
 ## Online Course: After Sales default
 
@@ -580,6 +582,98 @@ So a test that needs the product detail page should use the creator-handle + sho
 or navigate to it (Explore, the creator's shop, a tier's perk row) — not `/product/{uuid}`. This cost a full run of `TC-MEM-B-046` before it
 was spotted: three different viewer states all landed somewhere else, which reads at first
 like the page is broken rather than like the route having moved.
+
+## Consultation availability (verified 2026-10-11)
+
+**Schedule**
+- **A day holds at most two time ranges.** `Add time slot for <Day>` adds a second range, which
+  starts suggested one hour after the first. With two ranges the Add button is disabled.
+  `Remove time slot for <Day>` removes either range.
+- **Times have no conflict check.** Start and end selects (`Start time for Mon`,
+  `End time for Mon`) each list 96 options, 00:00–23:45. None is disabled, even before the start.
+
+**Setting controls**
+- The Availability tab gives its switches hand-written ids: `#buffer-time`,
+  `#allow-reschedule` and `#booking-frequency`. The `Status` switch reuses `#booking-frequency`,
+  so anchor on the label text instead.
+- Its selects and number boxes are unnamed, except `Minimum notice value`. The page also renders
+  a hidden second copy of the form.
+- **Presets**
+  - Availability Range: 2 weeks / 1 month / **3 months** / 6 months / 1 year.
+  - Duration: 15, 30 and 45 minutes, **1 hour**, 1.5 hours, 2 hours.
+  - Notice unit: Minutes / Hours / Days.
+  - Buffer Before Event and After Event: **5 minutes** / 10 / 15 / 30 minutes / 1 hour.
+  - Reschedule takes a number of days (min 1). Frequency is a count plus `Per Day / Per Week /
+    Per Month`.
+
+**Buyer side**
+- **Slots are spaced by duration plus both buffers, and a slot never crosses a range end.** With
+  1 hour and 5+5 minutes over 09:00–17:00 plus 18:00–19:00, the slots are 09:00, 10:10, 11:20,
+  12:30, 13:40, 14:50, 16:00 and 18:00.
+- **The page shows only the next three open dates** (e.g. `Mon Oct 12 3 slots left`), plus a
+  `View all` link.
+- `View all` opens a month calendar dialog. Its day buttons are named with the full date
+  (`Monday, October 19th, 2026`; the picked one adds `, selected`), and closed days are disabled.
+  The chosen day's time slots appear inside that dialog.
+
+**Booking rules seen from the buyer (2026-10-11)**
+- **A new consultation starts with every day Unavailable.** `Create Consultation` then shows
+  `At least one day must have availability`, which clears as soon as one day has a range.
+  Minimum Notice defaults to `12` `Hours` (number box min 0).
+- **Minimum notice closes whole dates** in the buyer calendar: with 3 Days, tomorrow is
+  disabled.
+- **Limit Booking Frequency counts per creator per day, not per client.** With `1 Per Day`,
+  after one booking that date turns disabled for every new visitor, not just the one who booked.
+- **The Availability Range is not applied to buyers.** The API stores it
+  (`consultationConfig.availabilityRangeValue/Unit`, e.g. 2 weeks), and the edit form shows it,
+  yet the buyer calendar still opens dates a month or more out, with slots. Reported 2026-10-11.
+- **A free consultation books with no payment.** Pick the date and time, press `Confirm`, and you
+  land on `/product/{uuid}/checkout?quantity=1&consultationStartTime=…&consultationEndTime=…`.
+  Name, email, confirm email and phone are needed, then `Pay Rp0` calls `POST
+  /api/v1/orders/quote`. The order is `completed` at once and the page moves to
+  `/product/transaction/{id}`. Pressing `Pay Rp0` before the form echoes `Receipt & download
+  link will be sent to <email>` does nothing.
+
+**Status, save controls and edit flow (2026-10-11)**
+- **The Availability `Status` switch pauses new bookings; it is not the product status.**
+  - It reads `Turn on to accept new bookings. Turn off to pause bookings without deleting the
+    consultation.`
+  - Turning it off asks `Make Consultation Inactive?` (`You won't receive new bookings while
+    inactive. Scheduled sessions will still run as planned.`, buttons `Yes, Inactivate` /
+    `Keep Active`). The switch then reads `Inactive · Not accepting bookings`.
+  - Nothing is sent on toggle. The next Save and Publish stores
+    `consultationConfig.isAcceptNewBooking: false`, the product stays `active`, and the modal
+    still says `Your consultation is live!`.
+  - **Buyers can still book while it is off.** Slots and `Save my spot` stay, and a new guest
+    booking completes. Reported 2026-10-11.
+  - An existing booking's `/product/transaction/{id}` keeps showing `Purchase Successful!`.
+- **Save controls differ by flow** (L-07).
+  - Create Step 2 header: `Create Consultation`, `Save`. `Save` keeps a draft (POST, status
+    `draft`).
+  - Edit Step 2 header: `Save as Draft`, `Save and Publish`.
+  - Step 1 has neither. The header is a `<header>` inside `main`, not a `banner` landmark.
+- **`Save as Draft` on a live consultation takes it down at once**, with no confirmation (PUT,
+  status `draft`). Its share link then shows `That page doesn't exist`.
+- **Publish modal copy differs.**
+  - First publish: `Product Complete` / `Your product has been successfully created.`
+  - Republish: `Your consultation is live!` / `Your consultation is ready for bookings. Share it
+    or manage it from your dashboard.`
+  - Both show the same `/s/<shortUrl>` link with `View Product Page` and `Copy Link To Share`.
+- **Moving availability leaves existing bookings alone.** Changing Monday 09:00–12:00 to
+  13:00–15:00 after a 09:00 booking offers 13:00 and 14:00 for that date, and the 09:00
+  booking's transaction still opens.
+- **After Sales on create versus edit.**
+  - On create, Customize Message is on (editor plus `0/1000 characters`, purpose copy `Turn this
+    on to create personalized messages…`).
+  - A consultation published without touching it reopens on edit with the switch **off**: the
+    on-but-empty state is saved as off (same mechanism as L-49).
+  - On edit, the editor sits in the Details tab. On create there are no tabs.
+- **The `View all` calendar does not close on Escape.** Picking a date already selected again
+  hangs a click, so check the day button's `selected` name first.
+- **Reschedule copy:** helper `Buyers can reschedule up to N days in the future` versus field
+  label `day(s) before session` (L-06).
+- **Timezone:** the picker lists 112 zones, filtered by `Search timezone...`. Checkout states
+  `In your local timezone, Asia/Jakarta (GMT +7:00)` and the URL carries `+07:00`.
 
 ## Bug-sheet retest, 6 Oct 2026
 

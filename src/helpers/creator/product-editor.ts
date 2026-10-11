@@ -32,6 +32,10 @@ export async function fillPrice(page: Page, amount: string) {
   await safeFill(priceInput(page), amount);
 }
 
+export async function expectPriceValue(page: Page, value: string) {
+  await expect(priceInput(page)).toHaveValue(value, { timeout: 10000 });
+}
+
 export async function setPricingEnabled(page: Page, enabled: boolean) {
   const checked = await pricingSwitchAction(page).getAttribute("aria-checked");
   if ((checked === "true") !== enabled) {
@@ -320,6 +324,30 @@ export async function expectImageTooLarge(page: Page) {
   });
 }
 
+// ── Membership benefits ──────────────────────────────────────────
+
+const membershipSwitch = (page: Page) =>
+  page.getByRole("switch", { name: "Set benefits for membership" }).or(page.locator("#enable-benefits")).first();
+
+/** A creator with no tiers gets a disabled switch that says why. */
+export async function expectMembershipBenefitsUnavailable(page: Page) {
+  await expect(membershipSwitch(page)).toBeDisabled({ timeout: 15000 });
+  await expect(page.getByText("You do not have any membership tiers yet, so this option is disabled.")).toBeVisible();
+}
+
+/** With tiers, switching benefits on lists every tier with its own Add Benefit; switched back off after. */
+export async function expectMembershipTiersSelectable(page: Page, tierNames: readonly string[]) {
+  const toggle = membershipSwitch(page);
+  await expect(toggle).toBeEnabled({ timeout: 15000 });
+  if ((await toggle.getAttribute("aria-checked")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  const main = page.getByRole("main");
+  for (const name of tierNames) {
+    await expect(main.locator("div").filter({ hasText: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}Add Benefit$`) }).first()).toBeVisible({ timeout: 10000 });
+  }
+  await toggle.click();
+}
+
 // ── Version history ──────────────────────────────────────────────
 
 /**
@@ -430,6 +458,15 @@ export async function expectInvalidEmbedLinkFeedback(page: Page) {
     timeout: 10000,
   });
   await expect(embedLinkDoneButton(page)).toBeDisabled();
+}
+
+/** A label past 40 characters is cut at 40 with a full counter and no error; the link can still be saved. */
+export async function expectEmbedLinkLabelCapped(page: Page) {
+  const { linkValidation } = digitalProductValidationData;
+  await expect(embedLinkLabelInput(page)).toHaveValue(linkValidation.truncatedLongLabel, { timeout: 10000 });
+  await expect(textFeedback(page, linkValidation.maxLabelCounter)).toBeVisible({ timeout: 10000 });
+  await expect(textFeedback(page, linkValidation.invalidUrlError)).toHaveCount(0);
+  await expect(embedLinkDoneButton(page)).toBeEnabled();
 }
 
 export async function saveCurrentEmbedLink(page: Page) {
