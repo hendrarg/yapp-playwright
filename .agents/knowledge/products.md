@@ -768,3 +768,8 @@ PRD: `projects/yapp/product-review - prd`. Digital Product only; an Online Cours
   **429** — retry after ~20 s.
 - Eligibility = a completed (deposit-webhooked) purchase; a free digital product that was not claimed is
   `not_purchased`; after a claim it is untested.
+
+- **By design (confirmed 2026-10-12, PM/dev):** four PRD deviations are intended, not bugs — no Verified
+  Purchase badge on cards; no "Only buyers…" gate message for non-buyers/guests; the author still sees
+  their own hidden review; aggregate + list live in the right-hand purchase card. Test against the app,
+  not the PRD text, for these.
