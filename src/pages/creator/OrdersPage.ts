@@ -181,6 +181,16 @@ export class OrdersPage {
   }
 
   // ── Order Details ──
+  async openDetail(orderUuid: string) {
+    await this.page.goto(new URL(`orders/${orderUuid}`, this.baseURL).toString(), { waitUntil: "domcontentloaded" });
+    await this.expectDetailOf(orderUuid);
+  }
+
+  /** Revenue names the redeemed promotion: `Promo Code Discount (<promo name>) -Rp<discount>`. */
+  async expectPromoCodeDiscount(promoName: string, discount: number) {
+    await this.expectDetailField(`${D.promoCodeDiscount} (${promoName})`, `-${rupiah(discount)}`);
+  }
+
   async expectDetailOf(orderUuid: string) {
     await expect(this.main.getByRole("heading", { name: `Order #${orderUuid}` })).toBeVisible({ timeout: 20000 });
   }

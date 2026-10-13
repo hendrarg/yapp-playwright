@@ -21,8 +21,9 @@ export function formatPromotionDateDay(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
 }
 
+/** The list pads the day: `05 October 2026`. */
 export function formatPromotionListDate(date: Date): string {
-  const day = date.getDate();
+  const day = String(date.getDate()).padStart(2, "0");
   const month = new Intl.DateTimeFormat("en-GB", { month: "long" }).format(date);
   return `${day} ${month} ${date.getFullYear()}`;
 }

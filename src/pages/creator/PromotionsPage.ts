@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Request } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator } from "@utils/heal-utils";
 import { safeClick, safeFill } from "@utils/playwright.utils";
@@ -27,11 +27,16 @@ export type PromotionCreateResponse = {
 export class PromotionsPage {
   constructor(public readonly page: Page, private readonly baseURL: string) {}
 
-  readonly promotionsHeading = locatorChain(this.page, {
-    role: "heading",
+  /**
+   * Promotions now lives as a tab of Products (`/products?tab=promotions`): a `Products |
+   * Promotions` pair of buttons above the list, with no page heading on desktop.
+   */
+  readonly promotionsTab = locatorChain(this.page, {
+    role: "button",
     name: "Promotions",
-    text: "Promotions",
-  });
+    exact: true,
+    selector: 'main button:text-is("Promotions")',
+  }).filter({ visible: true }).first();
 
   readonly searchInput = locatorChain(this.page, {
     placeholder: "Find promotions",
@@ -143,17 +148,35 @@ export class PromotionsPage {
     return this.page.locator("form").getByText(productName, { exact: true });
   }
 
-  readonly startDateTrigger = this.page.locator(
-    'label:has-text("Start Date") + div[data-slot="popover-trigger"]',
-  );
+  /** Real buttons named `Start date` / `End date` since 2026-10-12 (they were unnamed divs — L-56). */
+  readonly startDateTrigger = locatorChain(this.page, {
+    role: "button",
+    name: "Start date",
+    exact: true,
+    selector: 'label:has-text("Start Date") + [data-slot="popover-trigger"]',
+  }).first();
 
-  readonly endDateTrigger = this.page.locator(
-    'label:has-text("End Date") + div[data-slot="popover-trigger"]',
-  );
+  readonly endDateTrigger = locatorChain(this.page, {
+    role: "button",
+    name: "End date",
+    exact: true,
+    selector: 'label:has-text("End Date") + [data-slot="popover-trigger"]',
+  }).first();
 
   readonly createPromoCodeButton = this.page
     .getByRole("button", { name: "Create Promo Code" })
     .last();
+
+  /** Sonner toasts; the app gives them no test id of their own. */
+  readonly toastMessage = locatorChain(this.page, {
+    testId: "toast",
+    selector: "[data-sonner-toast]",
+  });
+
+  readonly emptyListMessage = locatorChain(this.page, {
+    text: "You haven't set any promo code",
+    selector: "main p:has-text(\"You haven't set any promo code\")",
+  }).filter({ visible: true }).first();
 
   readonly requiredMessage = locatorChain(this.page, {
     text: "Required",
@@ -167,7 +190,7 @@ export class PromotionsPage {
   async expectLoaded() {
     await expect(this.page).toHaveURL(/(?:\/promotions(?:\/?|\?.*)?|\/products\?tab=promotions)$/);
     expect(this.page.url()).not.toContain("/auth");
-    await expect(this.promotionsHeading).toBeVisible({ timeout: 15000 });
+    await expect(this.promotionsTab).toBeVisible({ timeout: 15000 });
     await expect(this.searchInput).toBeVisible({ timeout: 15000 });
   }
 
@@ -203,6 +226,41 @@ export class PromotionsPage {
     await safeClick(this.dateDayButton(dayValue));
     await this.page.keyboard.press("Escape");
     await expect(popover).toBeHidden({ timeout: 2000 });
+  }
+
+  /** Days before today are disabled in the Start Date picker; today is the first selectable day. */
+  async expectPastStartDatesDisabled(today: Date, formatDay: (date: Date) => string) {
+    const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+    await safeClick(this.startDateTrigger);
+    await expect(this.datePopover()).toBeVisible({ timeout: 10000 });
+    await expect(this.dateDayButton(formatDay(yesterday))).toBeDisabled();
+    await expect(this.dateDayButton(formatDay(today))).toBeEnabled();
+    await this.page.keyboard.press("Escape");
+  }
+
+  /** Start/End Date triggers should be real buttons, keyboard reachable. */
+  async expectDateTriggersAccessible() {
+    for (const [trigger, name] of [[this.startDateTrigger, "Start date"], [this.endDateTrigger, "End date"]] as const) {
+      await expect(trigger).toHaveJSProperty("tagName", "BUTTON");
+      await expect(trigger).toHaveAccessibleName(name);
+      await trigger.focus();
+      await this.page.keyboard.press("Enter");
+      await expect(this.datePopover()).toBeVisible({ timeout: 10000 });
+      await this.page.keyboard.press("Escape");
+      await expect(this.datePopover()).toBeHidden({ timeout: 5000 });
+    }
+  }
+
+  /** The row copy control is a button named after the code it copies. */
+  async expectCopyButtonNamed(rowQuery: string, code: string) {
+    await expect(this.promotionCopyButton(rowQuery)).toHaveAccessibleName(`Copy promo code ${code}`);
+  }
+
+  /** Every generated voucher code: the initial one plus `refreshes` regenerations. */
+  async collectGeneratedCodes(refreshes: number): Promise<string[]> {
+    const codes = [await this.discountCodeInput.inputValue()];
+    for (let i = 0; i < refreshes; i += 1) codes.push(await this.refreshVoucherCode());
+    return codes;
   }
 
   async fillPromotionForm(input: PromotionValidationFormData) {
@@ -264,6 +322,41 @@ export class PromotionsPage {
     await safeClick(this.createPromoCodeButton);
   }
 
+  async expectToast(text: string | RegExp) {
+    await expect(this.toastMessage.filter({ hasText: text }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Submit and expect the API to refuse it: the reason comes back as a toast and the form stays on /promotions/create. */
+  async submitPromotionFormExpectRejected(reason: string | RegExp): Promise<number> {
+    const responsePromise = this.page.waitForResponse(
+      (response) => response.url().includes("/api/v1/promos") && response.request().method() === "POST",
+      { timeout: 15000 },
+    );
+    await safeClick(this.createPromoCodeButton);
+    const response = await responsePromise;
+    expect(response.ok(), "promotion should not be created").toBeFalsy();
+    await this.expectToast(reason);
+    await expect(this.page).toHaveURL(/\/promotions\/create/);
+    return response.status();
+  }
+
+  /** Submit and expect the form itself to block it with a field message — no create request is sent. */
+  async submitPromotionFormExpectFieldError(message: string) {
+    let posted = 0;
+    const onRequest = (request: Request) => {
+      if (request.url().includes("/api/v1/promos") && request.method() === "POST") posted += 1;
+    };
+    this.page.on("request", onRequest);
+    try {
+      await safeClick(this.createPromoCodeButton);
+      await expect(this.requiredMessage.filter({ hasText: message })).toBeVisible({ timeout: 10000 });
+      await this.page.waitForTimeout(1500);
+      expect(posted, "no create request while the form is invalid").toBe(0);
+    } finally {
+      this.page.off("request", onRequest);
+    }
+  }
+
   async expectRequiredFieldFeedback() {
     await expect(this.requiredMessage).toHaveCount(4, { timeout: 15000 });
   }
@@ -282,6 +375,21 @@ export class PromotionsPage {
     return (await response.json()) as PromotionCreateResponse;
   }
 
+  /** Like {@link submitPromotionForm}, but also returns the JSON body the form sent. */
+  async submitPromotionFormWithPayload(): Promise<{ payload: Record<string, unknown>; response: PromotionCreateResponse }> {
+    const responsePromise = this.page.waitForResponse(
+      (response) => response.url().includes("/api/v1/promos") && response.request().method() === "POST",
+      { timeout: 15000 },
+    );
+    await safeClick(this.createPromoCodeButton);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    return {
+      payload: response.request().postDataJSON() as Record<string, unknown>,
+      response: (await response.json()) as PromotionCreateResponse,
+    };
+  }
+
   async createDiscountPromotion(
     type: "percentage" | "fixed",
     input: Omit<PromotionValidationFormData, "code">,
@@ -292,22 +400,6 @@ export class PromotionsPage {
     if (options?.voucherPattern) {
       await this.expectAutoGeneratedVoucherCode(options.voucherPattern);
     }
-    return this.submitPromotionForm();
-  }
-
-  async createAffiliatePromotion(
-    input: PromotionValidationFormData,
-    affiliate: { commission: number; search: string; handle: string },
-  ): Promise<PromotionCreateResponse> {
-    await this.fillPromotionForm(input);
-    await this.enableAffiliateCommission(affiliate.commission);
-    await this.assignAffiliateCreator(affiliate.search);
-    await this.expectAssignedAffiliateCreator(affiliate.handle);
-    return this.submitPromotionForm();
-  }
-
-  async createAndSavePromotion(input: PromotionValidationFormData): Promise<PromotionCreateResponse> {
-    await this.fillPromotionForm(input);
     return this.submitPromotionForm();
   }
 
@@ -376,6 +468,20 @@ export class PromotionsPage {
     await safeClick(option);
   }
 
+  /** Search Find Creator and return the offered options once the list has settled. */
+  async searchAffiliateCreators(searchTerm: string): Promise<string[]> {
+    await safeClick(this.findCreatorCombobox);
+    const popover = this.creatorAssignmentPopover();
+    await expect(popover).toBeVisible({ timeout: 10000 });
+    await safeFill(popover.locator("input").first(), searchTerm);
+    const options = popover.locator('[cmdk-item], [data-slot="command-item"]');
+    await expect(options.or(popover.locator("[cmdk-empty]")).first()).toBeVisible({ timeout: 15000 });
+    await this.page.waitForTimeout(1000);
+    const offered = await options.allInnerTexts();
+    await this.page.keyboard.press("Escape");
+    return offered;
+  }
+
   async expectAssignedAffiliateCreator(handle: string) {
     await expect(this.page.getByText(`@${handle}`, { exact: true })).toBeVisible({ timeout: 10000 });
   }
@@ -404,8 +510,23 @@ export class PromotionsPage {
     await expect(this.selectedProductChip(productName)).toBeVisible({ timeout: 10000 });
   }
 
-  async expectProductVisibleInScope(productName: string) {
-    await expect(this.productScopeOption(productName)).toBeVisible({ timeout: 10000 });
+  /** A Find Product option shows only the product name and its price: no status badge, and it is not disabled. */
+  async expectProductOptionInScope(productName: string, price: string) {
+    const option = this.productScopeOption(productName);
+    await expect(option).toBeVisible({ timeout: 10000 });
+    await expect.poll(async () => (await option.innerText()).replace(/\s+/g, " ").trim()).toBe(`${productName} ${price}`);
+    await expect(option).not.toHaveAttribute("aria-disabled", "true");
+  }
+
+  /** The searched product is not offered at all: the picker reads `No products found.` */
+  async expectProductNotOfferedInScope(productName: string) {
+    await expect(this.productScopePopover().getByText(promotionsScopeData.noProductsFound, { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(this.productScopeOption(productName)).toHaveCount(0);
+  }
+
+  async closeProductScopePicker() {
+    await this.page.keyboard.press("Escape");
+    await expect(this.productScopePopover()).toBeHidden({ timeout: 5000 });
   }
 
   async expectProductSelectableInScope(productName: string) {
@@ -417,6 +538,26 @@ export class PromotionsPage {
     await this.searchInput.clear();
     await safeFill(this.searchInput, promotionName);
     await expect(this.promotionRow(promoCode ?? promotionName)).toBeVisible({ timeout: 30000 });
+  }
+
+  /** Type a raw query (name, code, anything) without waiting for a particular row. */
+  async typeSearchQuery(query: string) {
+    await this.searchInput.clear();
+    if (query) await safeFill(this.searchInput, query);
+  }
+
+  private dataRows(): Locator {
+    return this.page.getByRole("row").filter({ has: this.page.getByRole("cell") });
+  }
+
+  async expectSearchEmptyState() {
+    await expect(this.emptyListMessage).toBeVisible({ timeout: 15000 });
+    // The empty state renders inside a table cell of its own; no promotion row is left beside it.
+    await expect(this.dataRows().filter({ hasNotText: "You haven't set any promo code" })).toHaveCount(0);
+  }
+
+  async expectPromotionRowCountAtLeast(count: number) {
+    await expect.poll(async () => this.dataRows().count(), { timeout: 15000 }).toBeGreaterThanOrEqual(count);
   }
 
   private promotionRow(rowQuery: string): Locator {
@@ -432,7 +573,10 @@ export class PromotionsPage {
   }
 
   private promotionCopyButton(rowQuery: string): Locator {
-    return this.promotionActionCell(rowQuery).locator("button:has(svg.lucide-copy)");
+    return this.promotionActionCell(rowQuery)
+      .getByRole("button", { name: /^Copy promo code / })
+      .or(this.promotionActionCell(rowQuery).locator("button:has(svg.lucide-copy)"))
+      .first();
   }
 
   private promotionCopyConfirmationIcon(rowQuery: string): Locator {
@@ -447,15 +591,40 @@ export class PromotionsPage {
       .first();
   }
 
+  /** The list re-renders its rows while it settles, so a click can land on a detached trigger; retry until the menu opens. */
   async openPromotionActions(rowQuery: string) {
-    await safeClick(this.promotionActionsTrigger(rowQuery));
-    await expect(this.page.getByRole("menu")).toBeVisible({ timeout: 10000 });
+    await expect(async () => {
+      if (!(await this.page.getByRole("menu").isVisible())) {
+        await this.promotionActionsTrigger(rowQuery).click({ timeout: 3000 });
+      }
+      await expect(this.page.getByRole("menu")).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 30000 });
+  }
+
+  /** The row actions menu offers exactly these items; `switchOn` is the Set Inactive toggle state. */
+  async expectPromotionActions(rowQuery: string, items: readonly string[], switchOn = false) {
+    await this.openPromotionActions(rowQuery);
+    await expect(this.page.getByRole("menu").getByRole("menuitem")).toHaveText([...items]);
+    await expect(this.setInactiveToggle()).toHaveAttribute("aria-checked", String(switchOn));
+    await this.page.keyboard.press("Escape");
+    await expect(this.page.getByRole("menu")).toBeHidden({ timeout: 5000 });
+  }
+
+  /** Open the row menu and click one of its controls, retrying both while the list re-renders under the click. */
+  private async chooseRowAction(rowQuery: string, control: () => Locator) {
+    await expect(async () => {
+      await this.openPromotionActions(rowQuery);
+      await control().click({ timeout: 3000 });
+    }).toPass({ timeout: 30000 });
+  }
+
+  private rowMenuItem(name: string): Locator {
+    return this.page.getByRole("menu").getByRole("menuitem", { name, exact: true });
   }
 
   async openPromotionEdit(rowQuery: string, promotionName: string) {
-    await this.openPromotionActions(rowQuery);
-    await safeClick(this.page.getByRole("menuitem", { name: "Edit", exact: true }));
-    await expect(this.page).toHaveURL(/\/promotions\/[^/]+\/update/, { timeout: 15000 });
+    await this.chooseRowAction(rowQuery, () => this.rowMenuItem("Edit"));
+    await expect(this.page).toHaveURL(/\/promotions\/[^/]+\/update/,{ timeout: 15000 });
     await expect(this.page.getByRole("heading", { name: promotionName, exact: true })).toBeVisible({
       timeout: 15000,
     });
@@ -471,56 +640,36 @@ export class PromotionsPage {
     return this.page.getByRole("menu").getByRole("switch").or(this.page.locator("#set-inactive"));
   }
 
-  async setPromotionInactive(rowQuery: string) {
-    await this.openPromotionActions(rowQuery);
-    const toggle = this.setInactiveToggle();
-    await expect(toggle).toBeVisible({ timeout: 10000 });
+  /** Flip Set Inactive to `inactive` and return the body sent to `PATCH /promos/{uuid}/status`. */
+  private async toggleStatus(rowQuery: string, inactive: boolean): Promise<Record<string, unknown>> {
     const responsePromise = this.page.waitForResponse(
       (response) =>
         response.url().includes("/promos/") &&
         response.url().includes("/status") &&
-        response.request().method() === "PUT",
-      { timeout: 15000 },
+        response.request().method() === "PATCH",
+      { timeout: 30000 },
     );
-    await safeClick(toggle);
+    await this.openPromotionActions(rowQuery);
+    await expect(this.setInactiveToggle()).toHaveAttribute("aria-checked", String(!inactive));
+    await this.chooseRowAction(rowQuery, () => this.setInactiveToggle());
     const response = await responsePromise;
     expect(response.ok(), await response.text()).toBeTruthy();
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
-    await this.page.keyboard.press("Escape");
+    // The menu closes once the status is saved; the STATUS cell is what callers assert.
+    if (await this.page.getByRole("menu").isVisible()) await this.page.keyboard.press("Escape");
+    return response.request().postDataJSON() as Record<string, unknown>;
   }
 
-  async trySetPromotionInactive(rowQuery: string): Promise<boolean> {
-    try {
-      await this.setPromotionInactive(rowQuery);
-      return true;
-    } catch {
-      await this.page.keyboard.press("Escape").catch(() => undefined);
-      return false;
-    }
+  /** Returns the body sent to `PATCH /promos/{uuid}/status`. */
+  async setPromotionInactive(rowQuery: string): Promise<Record<string, unknown>> {
+    return this.toggleStatus(rowQuery, true);
   }
 
   async setPromotionActive(rowQuery: string) {
-    await this.openPromotionActions(rowQuery);
-    const toggle = this.setInactiveToggle();
-    await expect(toggle).toBeVisible({ timeout: 10000 });
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
-    const responsePromise = this.page.waitForResponse(
-      (response) =>
-        response.url().includes("/promos/") &&
-        response.url().includes("/status") &&
-        response.request().method() === "PUT",
-      { timeout: 15000 },
-    );
-    await safeClick(toggle);
-    const response = await responsePromise;
-    expect(response.ok(), await response.text()).toBeTruthy();
-    await expect(toggle).toHaveAttribute("aria-checked", "false");
-    await this.page.keyboard.press("Escape");
+    await this.toggleStatus(rowQuery, false);
   }
 
   async openDeleteConfirmation(rowQuery: string) {
-    await this.openPromotionActions(rowQuery);
-    await safeClick(this.page.getByRole("menuitem", { name: "Delete", exact: true }));
+    await this.chooseRowAction(rowQuery, () => this.rowMenuItem("Delete"));
     await expect(this.deleteConfirmationDialog()).toBeVisible({ timeout: 10000 });
   }
 
@@ -531,6 +680,10 @@ export class PromotionsPage {
     await expect(dialog).toContainText(/are you sure you want to delete this promotion\?/i);
     await expect(dialog.getByRole("button", { name: /cancel/i })).toBeVisible();
     await expect(dialog.getByRole("button", { name: /confirm/i })).toBeVisible();
+  }
+
+  async expectDeleteConfirmationNames(promotionName: string) {
+    await expect(this.deleteConfirmationDialog()).toContainText(promotionName);
   }
 
   async dismissDeleteConfirmation() {
@@ -574,7 +727,7 @@ export class PromotionsPage {
     await expect(row).toContainText(fields.redeemCount);
   }
 
-  async expectPromotionPeriodInList(rowQuery: string, startDate: string, endDate: string) {
+  async expectPromotionPeriodInList(rowQuery: string, startDate: string | RegExp, endDate: string | RegExp) {
     const row = this.promotionRow(rowQuery);
     await expect(row).toContainText(startDate);
     await expect(row).toContainText(endDate);
@@ -593,7 +746,9 @@ export class PromotionsPage {
   }
 
   async copyPromotionCode(rowQuery: string) {
-    await safeClick(this.promotionCopyButton(rowQuery));
+    await expect(async () => {
+      await this.promotionCopyButton(rowQuery).click({ timeout: 3000 });
+    }).toPass({ timeout: 20000 });
   }
 
   async expectPromotionCodeCopied(expectedCode: string) {
@@ -607,7 +762,7 @@ export class PromotionsPage {
     await expect(this.promotionCopyConfirmationIcon(rowQuery)).toBeVisible({ timeout: 5000 });
   }
 
-  async expectPromotionFormPrefilled(input: PromotionValidationFormData) {
+  async expectPromotionFormPrefilled(input: Pick<PromotionValidationFormData, "name" | "discount" | "code">) {
     await expect(this.nameInput).toHaveValue(input.name);
     await expect(this.discountAmountInput).toHaveValue(String(input.discount));
     await expect(this.discountCodeInput).toHaveValue(input.code);

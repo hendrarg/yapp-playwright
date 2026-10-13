@@ -443,13 +443,19 @@ reaches Meta on yapp-dev via **backend Conversions API** after payment settle. O
 pixel delivery from the browser on yapp-dev without force-enable.** The one client-side
 artefact still worth asserting is the `meta-pixels` request and its payload.
 
-## Promotion: Find Product ignores product status
+## Promotion: Find Product and product status
+
+**Changed 2026-10-12: Find Product now offers Active products only.** Searching the exact
+title of a seeded Draft or Inactive course returns `No products found.`; an Active course
+appears as `<name> Rp<price>`. Everything below this paragraph is the earlier behaviour,
+kept for history — TC-PRM-C-044 still expects it and is marked Need Review.
 
 Verified 2026-09-09 at `/promotions/create` with `Product Type = Selected Product`.
 
 The `Find Product` popover lists **Draft and Inactive products mixed in with Active
 ones and shows no status badge at all** — each row is just name plus price. A promo can
 therefore target a product that is not on sale, with no warning.
+
 
 The price in that popover is also **`Rp0` for every tiered product** (Consultation with
 tiers, Telegram/Discord membership, Events) because it reads the product-level price
@@ -677,7 +683,7 @@ like the page is broken rather than like the route having moved.
 
 ## Bug-sheet retest, 6 Oct 2026
 
-- **Promotion `Find Product` picker has no status filter**: it calls `/shop/products?page=1&limit=10[&title=…]` and returns Draft and Inactive products (searched `PERSIB`, `Montir`, `Zoom Meeting`) with no status marker (L-58 still open). The first page happens to be all Active, so check by searching a draft title.
+- **Changed 2026-10-12 — the picker now hides Draft and Inactive products** (searching a seeded draft or inactive title gives `No products found.`), so L-58 looks fixed; retest before closing. Earlier note: **Promotion `Find Product` picker has no status filter**: it calls `/shop/products?page=1&limit=10[&title=…]` and returns Draft and Inactive products (searched `PERSIB`, `Montir`, `Zoom Meeting`) with no status marker (L-58 still open). The first page happens to be all Active, so check by searching a draft title.
 - `/shop/products?type=<unknown>` ignores the value and returns every product (M-43); `digital_product` is now a real type (1 product), distinct from `digital_download`.
 - Products list: the type filter (`?type=online_course`) changes the rows but not the status-tab counts; a 3-space search gives `No results.` and 0/0/0; Draft rows link to `/products/update/<type>/{uuid}`, two Active Digital Downloads still link to `/products/detail/digital-downloads/{uuid}` while everything else goes to `/products/stats/{uuid}`.
 - `/products/update/consultation/{id}` is still 404; the editor lives at `/products/update/appointment/{id}` (create stays `/products/create/consultation`).
@@ -771,5 +777,26 @@ PRD: `projects/yapp/product-review - prd`. Digital Product only; an Online Cours
 
 - **By design (confirmed 2026-10-12, PM/dev):** four PRD deviations are intended, not bugs — no Verified
   Purchase badge on cards; no "Only buyers…" gate message for non-buyers/guests; the author still sees
-  their own hidden review; aggregate + list live in the right-hand purchase card. Test against the app,
+  their own hidden review; aggregate + list live in the right-hand purchase card (desktop). Test against the app,
   not the PRD text, for these.
+
+- **Mobile Viewport Behavior (checked 2026-10-12):**
+  - **Tab placement:** On mobile viewports (< 768px), there is no right-hand purchase card. Instead, a dedicated
+    **`Review`** tab is added to the tab strip (`Overview`, `About Creator`, `Review`). The Reviews & Ratings
+    block renders inside this tab rather than on the overview description.
+  - **Sticky bottom overlap defect:** On mobile, the sticky bottom bar (`Add to Cart` + `Purchase`, `z-index: 50`)
+    overlaps the bottom of the `Write a review` dialog. The `Post Review` button (y: ~765px, bottom: ~813px) is
+    ~90% covered by the sticky bar (top: 771px), making it difficult to tap without scrolling/dismissing.
+  - **Close button on mobile modal:** The close icon container at the top right of the `Write a review` modal renders
+    as an empty white circle without a visible "X" glyph.
+
+- **Custom Theme Dynamic Colors Gaps (checked 2026-10-12):**
+  - When a creator applies a `customTheme` (with custom `primaryColor`, `secondaryColor`, and `backgroundColor`),
+    the Reviews & Ratings section fails to inherit the creator's theme colors:
+    - **Distribution progress bars:** Hardcoded to default brand purple gradient (`bg-gradient-to-r from-primary/60 to-primary`
+      resolving to `#582AF0`), ignoring the creator's `primaryColor`.
+    - **`Write a review...` button:** Border and text are hardcoded to `#582AF0` (`rgb(88, 42, 240)`).
+    - **`Post Review` button in modal:** Background is hardcoded to `#582AF0` (`rgb(88, 42, 240)`), ignoring `primaryColor`.
+    - **Author chip icons:** Badge icon is hardcoded purple `#582AF0`.
+    - **Stars:** Use neutral `fill-foreground` / black rather than theme primary or amber/gold.
+

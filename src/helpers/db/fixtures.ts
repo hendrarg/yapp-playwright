@@ -18,7 +18,7 @@ import { query } from './client';
 export const WRITABLE = {
   tier_membership_users: ['expired_at', 'deleted_at'],
   // Creator discovery flags: hidden from Explore (the NSFW treatment) and the Official (verified) badge.
-  users: ['is_hide_from_explore', 'is_verified_creator', 'name', 'username', 'username_changed_at', 'photo_profile_path'],
+  users: ['is_hide_from_explore', 'is_verified_creator', 'name', 'username', 'username_changed_at', 'photo_profile_path', 'background_id', 'background_path'],
   // A pending lifetime order the test created, pushed to the state a failed/expired payment leaves.
   post_lifetime_purchases: ['status', 'expired_at'],
 } as const satisfies Record<string, readonly string[]>;
@@ -114,6 +114,17 @@ export class DbFixtures {
     const [row] = await this.exec('SELECT name, username, photo_profile_path FROM users WHERE uuid = $1', [userUuid]);
     if (!row) throw new Error(`users ${userUuid}: not found`);
     await this.set('users', userUuid, { name: row.name, username: row.username, photo_profile_path: row.photo_profile_path, username_changed_at: null });
+  }
+
+  /**
+   * Snapshot the creator's banner and profile picture so a test may replace them in `/customize`.
+   * A gallery banner is `background_id` 1–4 with an empty `background_path`; an uploaded one is a
+   * `background_path` with a null id — both columns come back exactly, no re-upload needed.
+   */
+  async protectAppearanceMedia(userUuid: string): Promise<void> {
+    const [row] = await this.exec('SELECT background_id, background_path, photo_profile_path FROM users WHERE uuid = $1', [userUuid]);
+    if (!row) throw new Error(`users ${userUuid}: not found`);
+    await this.set('users', userUuid, { background_id: row.background_id, background_path: row.background_path, photo_profile_path: row.photo_profile_path });
   }
 
   /** Put every changed row back, newest change first. Collects failures and throws once at the end. */

@@ -62,9 +62,18 @@ export class ProductPurchasePage {
 
     // FLAKY_FIX: product hydration can also replace the primary purchase button.
     await flakyClick(this.page.getByRole('button', { name: /^(Get Product|Purchase)$/ }));
-    // FLAKY_FIX: checkout hydration can replace the voucher entry button after purchase opens.
-    await flakyClick(this.chooseVoucherButton);
-    await expect(this.voucherInput).toBeVisible();
+    await this.openVoucherEntry();
+  }
+
+  /**
+   * FLAKY_FIX: checkout hydration can replace the Choose Voucher button, or fold an open voucher
+   * entry back to it, after the checkout opens. Click until the Redeem Voucher field stays up.
+   */
+  private async openVoucherEntry() {
+    await expect(async () => {
+      if (!(await this.voucherInput.isVisible())) await this.chooseVoucherButton.click({ timeout: 3000 });
+      await expect(this.voucherInput).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 30000 });
   }
 
 /** On an open product page: Purchase opens the checkout (voucher entry visible). */
@@ -75,6 +84,7 @@ export class ProductPurchasePage {
   }
 
   async applyPromotion(code: string) {
+    await this.openVoucherEntry();
     await safeFill(this.voucherInput, code);
     await safeClick(this.applyVoucherButton);
   }
@@ -1532,9 +1542,7 @@ export class ProductPurchasePage {
 
   /** Opens the Redeem Voucher dialog from the online course checkout page. */
   async openOnlineCourseVoucherDialog() {
-    // FLAKY_FIX: checkout hydration can replace the voucher entry button after navigation.
-    await flakyClick(this.chooseVoucherButton);
-    await expect(this.voucherInput).toBeVisible({ timeout: 10000 });
+    await this.openVoucherEntry();
   }
 
   /** TC-OC-B-003: checkout shows product, creator, and quantity 1. */

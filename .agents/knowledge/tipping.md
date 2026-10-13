@@ -145,10 +145,12 @@ appears (consistent with L-70).
 `Button Text` is `#tip-button-label` with `maxlength=40` and an `n/40` counter, and the cap
 is hard — a 41st typed character does not enter.
 
-**There is no colour picker.** The three hex fields — `#tip-button-text-color`,
-`#tip-button-left-color`, `#tip-button-right-color` — are plain `type=text` inputs standing
-alone: the page contains **zero** `input[type=color]` and the string "Choose color" appears
-nowhere.
+**Colour fields are hex text boxes with a picker button (since 2026-10).** `Text Color`,
+`Button Left`, `Button Right` are `type=text` inputs, each followed by a `Choose color` button
+that opens a popover picker (Color/Hue sliders, recent colours). The section also shows an inline
+`Preview` chip with the current label, text colour and left-to-right gradient, and the right-panel
+preview iframe updates as you type. Turning `Show Tip Button` on reveals the fields; off hides them
+(`#tip-button-label` leaves the DOM) and the public profile loses its tip form and Support tab.
 
 **Unsaved edits survive the section toggle.** Turning `Show Tip Button` off unmounts the
 fields (`#tip-button-label` leaves the DOM) and turning it back on restores them with the

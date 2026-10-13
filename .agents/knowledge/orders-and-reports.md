@@ -70,14 +70,19 @@ options 30 / 60 / 90 / `Custom Days` — and it is **not** synchronised with the
 filter. Set the range **inside the dialog**; do not assume the page filter carries
 over.
 
-## Promo attribution lives only in the export
+## Promo attribution: export, order API, and Order Details
 
-If an assertion needs to know which promo an order used, the only source is the
-`Promo Code Name` and `Promo Code Discount` columns of `GET /orders/reports`.
-`GET /shop/orders/{uuid}` does not carry it, and neither does the order-details UI.
+**Changed (YAP-2185 closed 17 Sep 2026; re-verified 2026-10-12).** It is no longer
+export-only. `GET /shop/orders/{uuid}` now returns `promoCodeName` and `promoCodeDiscount`
+as fields of their own, and the creator's `/orders/{uuid}` Revenue block shows a line
+`Promo Code Discount (<promo name>) -Rp<discount>` (e.g. `Product Price Rp99.000 · Promo Code
+Discount (promo278) -Rp10.890 · Subtotal Rp88.110 · … · Received By Seller Rp88.110`).
+The CSV export's `Promo Code Name` / `Promo Code Discount` columns agree.
 
-This is also how the immutability of an old order is verified without making a
-payment.
+A promo order is cheap to make on dev: guest checkout with the code, `Pay`, then
+`depositWebhook` (`buyWithPromotion` in `src/helpers/buyer/promotion-checkout.ts`). Poll
+`getOrder` until `promoCodeName` is set before using it as a baseline. Deactivating or
+editing the promo afterwards leaves that order's detail byte-for-byte unchanged.
 
 ## Order status is not exposed to the creator
 

@@ -381,6 +381,108 @@ export class ProfilePage {
     await expect(this.socialLink()).toBeAttached({ timeout: 10000 });
   }
 
+  /**
+   * Public creator pages are served stale-while-revalidate: the first view after a save can still be
+   * the previous render. Reload until `check` holds.
+   */
+  private async expectAfterRevalidate(check: () => Promise<void>) {
+    await expect(async () => {
+      await this.page.reload({ waitUntil: "domcontentloaded" });
+      await check();
+    }).toPass({ timeout: 60000, intervals: [3000, 5000, 10000] });
+  }
+
+  /** A saved text value (name, role, bio) is rendered on the public profile. */
+  async expectTextShown(value: string) {
+    await this.expectAfterRevalidate(() =>
+      expect(this.main.getByText(value, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 8000 }),
+    );
+  }
+
+  /** The inline tip form's send button carries the creator's saved label. */
+  async expectTipCtaLabelAfterSave(label: string) {
+    await this.expectAfterRevalidate(() => expect(this.sendTipButton).toHaveText(label, { timeout: 8000 }));
+  }
+
+  /** With the Tip Button off the profile shows no tip form and no Support tab. */
+  async expectNoTipSurface() {
+    await this.expectAfterRevalidate(async () => {
+      await expect(this.main.getByRole("button", { name: "Support", exact: true })).toHaveCount(0, { timeout: 8000 });
+      await expect(this.tipCurrencyGroup).toHaveCount(0);
+    });
+  }
+
+  /** The inline tip form offers exactly these IDR quick-amount chips. */
+  async expectQuickTipChips(amounts: readonly string[]) {
+    await this.expectAfterRevalidate(async () => {
+      for (const amount of amounts) {
+        await expect(this.tipFormRoot.getByRole("button", { name: amount, exact: true })).toBeVisible({ timeout: 8000 });
+      }
+    });
+  }
+
+  /** A platform link, e.g. "TikTok profile", pointing at `href` and opening in a new tab. */
+  async expectSocialLink(name: string, href: string) {
+    await this.expectAfterRevalidate(async () => {
+      const link = this.main.getByRole("link", { name }).first();
+      await expect(link).toHaveAttribute("href", href, { timeout: 8000 });
+      await expect(link).toHaveAttribute("target", "_blank");
+    });
+  }
+
+  /** Activate a social link and return the page it opened. */
+  async openSocialLink(name: string): Promise<Page> {
+    const popup = this.page.waitForEvent("popup");
+    await this.main.getByRole("link", { name }).first().click();
+    return popup;
+  }
+
+  /** Source of the public banner image — the first image in main served from a background path. */
+  async bannerSource(): Promise<string> {
+    const banner = this.main.locator('img[src*="background"]').first();
+    await expect(banner).toBeAttached({ timeout: 15000 });
+    return decodeURIComponent((await banner.getAttribute("src")) ?? "");
+  }
+
+  /** The public banner is the file named `fileName` once the page has revalidated. */
+  async expectBannerFile(fileName: string) {
+    await this.expectAfterRevalidate(async () => expect(await this.bannerSource()).toContain(fileName));
+  }
+
+  // ── Text blocks (Links tab) ──
+  /** Run `check` on the Links tab of a freshly revalidated render. */
+  private async expectOnLinksTab(check: () => Promise<void>) {
+    await this.expectAfterRevalidate(async () => {
+      await this.switchToTab("links");
+      await check();
+    });
+  }
+
+  async expectTextBlock(text: string) {
+    await this.expectOnLinksTab(() => expect(this.main.getByText(text).filter({ visible: true }).first()).toBeVisible({ timeout: 8000 }));
+  }
+
+  async expectNoTextBlock(text: string) {
+    await this.expectOnLinksTab(() => expect(this.main.getByText(text)).toHaveCount(0, { timeout: 8000 }));
+  }
+
+  async expectTextBlockTable(cells: readonly string[]) {
+    await this.expectOnLinksTab(async () => {
+      const table = this.main.getByRole("table").filter({ hasText: cells.join("") }).first();
+      await expect(table).toBeVisible({ timeout: 8000 });
+      for (const cell of cells) await expect(table.getByText(cell, { exact: true })).toBeVisible();
+    });
+  }
+
+  /** Text-block formatting reached the public page as real markup: a heading, a bold run, list items. */
+  async expectTextBlockFormatting(format: { heading: string; bold: string; listItems: readonly string[] }) {
+    await this.expectOnLinksTab(async () => {
+      await expect(this.main.getByRole("heading", { name: format.heading })).toBeVisible({ timeout: 8000 });
+      await expect(this.main.locator("strong, b").filter({ hasText: format.bold }).first()).toBeVisible();
+      for (const item of format.listItems) await expect(this.main.getByRole("listitem").filter({ hasText: item }).first()).toBeVisible();
+    });
+  }
+
   async expectSupportTipFormInitialState() {
     await this.expectSupportSectionVisible();
     await this.expectSendTipDisabled();

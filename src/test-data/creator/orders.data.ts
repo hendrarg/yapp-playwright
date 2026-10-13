@@ -54,6 +54,7 @@ export const orderDetailLabels = {
   purchaseDate: "Purchase Date",
   revenue: "Revenue",
   productPrice: "Product Price",
+  promoCodeDiscount: "Promo Code Discount",
   subtotal: "Subtotal",
   receivedBySeller: "Received By Seller",
 } as const;

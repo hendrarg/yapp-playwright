@@ -29,6 +29,9 @@ export interface ShopOrderDetail {
   originalPrice: number;
   priceAfterDiscount: number;
   receivedBySeller: number;
+  /** Set when the buyer redeemed a promo code (name and rupiah discount). */
+  promoCodeName?: string;
+  promoCodeDiscount?: number;
   paidAt: string;
   createdAt: string;
 }

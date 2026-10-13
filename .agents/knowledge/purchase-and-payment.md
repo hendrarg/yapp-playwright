@@ -249,6 +249,48 @@ the shopper literally reads `record not found`. Filed as `YAP-2186`. So do not a
 per-cause message today, and do not use the message to tell a mistyped code from an expired
 one — the API cannot currently distinguish them.
 
+## Creator Promotions page (verified 2026-10-12)
+
+- **Location moved**: Promotions is a tab of Products — `/products?tab=promotions`, with
+  `Products | Orders | Promotions` as **buttons** (no page heading on desktop; a mobile-only `h1`
+  and the sidebar link also say "Promotions", so a bare text locator hits three elements).
+  Search placeholder `Find promotions`; `Create New Promo` → `/promotions/create`.
+- **List columns**: PROMOTION NAME (name, code, `11% off`, `All products`), START DATE, END DATE
+  (`12 October 2026` + `12:42` in separate elements — no space in `textContent`; the day is
+  zero-padded, `05 October 2026`), STATUS, REDEEM, ACTION (copy button + menu).
+- **STATUS is derived from the period unless switched off**: `Not Started` (future), `Active`,
+  `Expired` (past), and `Inactive` when Set Inactive is on. A UI-created promo starting today is
+  `Active` immediately — there is no publish step.
+- **Row menu** is exactly `Set Inactive` (a switch, `#set-inactive`, `aria-checked="false"` when
+  live), `Edit`, `Delete`, the same for every status. The switch fires
+  `PATCH /api/v1/promos/{uuid}/status` with `{"isActive":false|true}` (was PUT), toast
+  `Promo set to inactive`, and the menu closes. The list re-renders after a search settles, so
+  menu clicks can hit detached nodes — retry open+click as one unit.
+- **Search** matches name case-insensitively **and** code. No match shows the same empty state as
+  an empty list, `You haven't set any promo code` / `Start create one to expand your audience`,
+  rendered inside a table row of its own.
+- **Delete** asks `Delete Promotion — Are you sure you want to delete this promotion?`
+  (Cancel / Confirm, no promo name — L-51) and toasts `Promo deleted successfully`. It is a
+  **soft delete**: at checkout the deleted code reads `This promo code is no longer active.`,
+  the same as an expired or inactive code — not `not found`.
+- **Create/edit validation**: empty submit → four `Required` field messages. Discount `150`
+  (percentage) is accepted while typing and refused only on submit — **500**
+  `promo code: percentage discount must be at most 100` as a toast; `100` saves. `0` reaches
+  the API: 400 `{"error":["Discount is required"],"message":"validation failed"}`, toast
+  `validation failed`. A negative value is stopped by the form (`Discount must be a positive
+  number`) and nothing is sent. **Since 2026-10-12** create toasts `Promo code created
+  successfully` and returns to the list; edit and delete toast success too (L-52 fixed).
+- **Period**: the date picker disables every day before today (`button[data-day="M/D/YYYY"]`
+  `disabled`). **Since 2026-10-12** the Start/End Date triggers are real buttons named
+  `Start date` / `End date` (Enter opens the picker, the calendar icon shows), and the row copy
+  button is named `Copy promo code <CODE>` — L-56 fixed; they used to be unnamed divs. The payload is UTC of local midnight — picking 12 Oct in WIB sends
+  `2026-10-11T17:00:00.000Z` — and the list shows it back as `12 October 2026 00:00`.
+- **Affiliate**: off by default; another creator (`sundanese`) can be assigned and saves with
+  `isSetAffiliate: true`. **Since 2026-10-12** the owner is excluded from Find Creator —
+  searching `hendrarg` (or `hendra`) as hendrarg returns nothing while `sundanese` is found
+  (L-57 fixed; it used to offer `@hendrarg`).
+- **Voucher codes** are uppercase alphanumerics of varying length, 8–12 characters (L-55).
+
 **No affiliate promo exists on dev.** A census of all 9 promos found every one with
 `isSetAffiliate: false`, `affiliatorCommissionPercentage: 0`, and `affiliator: null`.
 The order side is already prepared to receive one — `affiliatorCommissionAmount`,

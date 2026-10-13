@@ -2,6 +2,7 @@ import type { PageFixtures } from '../src/fixtures/page.fixtures';
 import type { BuyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 import type { CreatorNavFixtures } from '../src/fixtures/creator-nav.fixture';
 import type { DbFixtureFixtures } from '../src/fixtures/db.fixture';
+import type { AppearanceFixtures } from '../src/fixtures/appearance.fixture';
 import type { BrowserContext } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
 import { baseURL, creatorsBaseURL } from '../config/env';
@@ -15,6 +16,7 @@ import { pageFixtures } from '../src/fixtures/page.fixtures';
 import { buyerNavFixtures } from '../src/fixtures/buyer-nav.fixture';
 import { creatorNavFixtures } from '../src/fixtures/creator-nav.fixture';
 import { dbFixtureFixtures } from '../src/fixtures/db.fixture';
+import { appearanceFixtures } from '../src/fixtures/appearance.fixture';
 
 const headlessEnv = process.env.PW_HEADLESS ?? process.env.PLAYWRIGHT_HEADLESS;
 const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() === 'true';
@@ -22,13 +24,14 @@ const headless = headlessEnv === undefined ? false : headlessEnv.toLowerCase() =
 // Seed the global faker once per worker (per-run seed) before any test-data factory runs.
 getRunSeed();
 
-type MyFixtures = PageFixtures & BuyerNavFixtures & CreatorNavFixtures & DbFixtureFixtures;
+type MyFixtures = PageFixtures & BuyerNavFixtures & CreatorNavFixtures & DbFixtureFixtures & AppearanceFixtures;
 
 export const test = base.extend<MyFixtures>({
   ...pageFixtures,
   ...buyerNavFixtures,
   ...creatorNavFixtures,
   ...dbFixtureFixtures,
+  ...appearanceFixtures,
 });
 
 /**

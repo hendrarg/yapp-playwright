@@ -223,11 +223,24 @@ headless guest render of the public profile showed the table rendered, `document
 (`isActive:false`) is **absent** from that endpoint for both a guest and the owner — it does not
 leak.
 
-**Empty-content guard has a gap (`CP-10` subtask, Low).** The editor disables **Add Text** when
-the body is truly empty, but **whitespace-only content re-enables it**, and the server accepts
-empty / whitespace / all-sanitised-away content (`POST …/link/text` → 200, stored `htmlContent:""`),
-creating a blank block. Same "UI guards, server doesn't validate, whitespace bypasses" family as
-the Tipping quick-amount and Event-title gaps.
+**Empty-content guard: the UI half is fixed, the server half is not (`CP-10`, re-checked
+2026-10-12).** **Add Text** now stays disabled for an empty editor *and* for whitespace only. The
+server still accepts empty / whitespace / all-sanitised-away content (`POST …/link/text` → 200,
+stored `htmlContent:""`), so a blank block is still one API call away. AUT-PRF-013 keeps this as its
+last step under `test.fail`.
+
+**Editor details (2026-10-12).** `Paragraph style` offers only `Normal` and `Heading` (→ `<h2>`);
+after a heading TipTap keeps an empty Normal paragraph at the end. Choosing an option leaves focus
+on the select, so keys typed next reopen it — click back into the editor first. While the select's
+listbox is open, the `Add Text` dialog is `aria-hidden`. Code view: `HTML source` textbox, hint
+"Tables are supported. Links, images, video and scripts are removed on save.", `Back to editor`.
+Each row in the Links list has a hide/show switch (`PUT …/link/text/{id} {isActive}`), `Edit text`
+and `Delete text`; delete asks in an alertdialog "Delete this text?" → `Delete`.
+`DELETE /accounts/link/{id}` on a row that is already gone answers **500 "link not exist."**, not 404.
+
+**The Links list shows only the first 10 blocks.** It loads `link-combination?page=1&limit=10` and
+never asks for page 2, so an 11th block is saved but missing from the list. Keep the creator's link
+count under 10 (hendrarg has 6) — leftover test blocks push new ones off the list.
 
 ## There is no UI for configuring profile tabs
 
@@ -246,12 +259,20 @@ buyer profile, so it does not by itself show a creator's locked exclusive conten
 
 ## My Page is gated by two stacked first-run dialogs
 
+**Since 2026-10, `/profile` is "Home"** (sales, balance and overview cards, "Welcome home, <name>")
+and **My Page lives at `/customize`** — breadcrumb `Home › My Page`, no first-run dialogs there.
+For a new creator, My Page shows one quick-action button per tool picked at onboarding
+(`GET /accounts/creator-favorites`, e.g. Livestream / Digital Download / Membership) plus
+`Edit quick actions`, the tabs Links / Products / Feeds / Memberships, and on Links an `Add Block`
+button with "Add your first link". The share address is now the `Share your page` button, not a
+`yapp.ink/…` text — TC-PRF-C-075's Expected predates the move.
+
 Verified 2026-09-09 on an account that had long since onboarded, so this is not limited to
 brand-new creators. `/profile` opens behind a `Welcome to Yapp!` modal ("All in one
 platform to become more closer and interact with your fans") whose only action is
 `Let's Get Started!` — and pressing it **starts a second overlay**, the single-step tour
-`💬 New: your Messages` whose only visible button is `Go To Messages`. That tour is closable
-through its `×`. Until both are cleared, every control on the page — tabs included — is
+`💬 New: your Messages` whose only visible button is `Go To Messages`. Its `×` (`aria-label
+"Close"`) is no longer visible (2026-10-12) and the copy says "this step can't be skipped". Until both are cleared, every control on the page — tabs included — is
 unclickable, which is the same trap recorded for the Event & Tickets suites.
 
 ## The buyer edits their own profile at /profile/settings
@@ -297,45 +318,73 @@ returns **500** `you changed your username recently, you can change it again in 
 that changes a username must reset `username_changed_at` (DB fixture) to put the old one back —
 learned the hard way on 2026-10-05, when a probe left the buyer renamed until a DB restore.
 
-## Customize: what the profile form actually enforces
+## Customize: the My Page editor (re-verified 2026-10-12)
 
-The creator edits the profile at `/customize` (four section tabs: Theme, Profile, Tip
-Button, Domain), **not** at `/profile` — that route is My Page. Verified 2026-08-31.
+`/customize` is the creator's **My Page editor**. A section nav — `My Page`, `Theme`, `Profile`,
+`Tip Button`, `Domain`, `Clan` — swaps the left workspace (it sits in a second `main` inside the
+shell's `main`). The right panel (`complementary`) holds a **live preview iframe** of the buyer page
+at `<buyer>/<username>/preview` (388px; `Switch preview to desktop view` widens it), a `Preview`
+button, and `Undo` / `Redo` / `Save`. **Nothing auto-saves**: one `Save` commits every section and
+answers with the toast **"Changes saved"**. An unsaved edit raises an inline `role=alert`
+"Unsaved Changes — Please save your changes before leaving this page." and a `beforeunload` prompt
+on reload/close — an in-app link (e.g. Wallet) leaves without asking.
 
-**Only Bio has a length limit.** `#design-profile-bio` carries `maxlength=200` and
-shows an `n/200` counter. `#design-profile-name` (Your Name) and
-`#design-profile-username` (Link) have **no `maxlength` and no counter at all** — the
-same shape as the Event title defect.
+**Save endpoints:** theme + layout `PUT /accounts/profile-customization {customTheme,
+profileLayoutPreference}`; name/bio/role (+ `backgroundID` for a gallery banner) multipart
+`PUT /accounts`; interests `PUT /accounts/interests {interestIDs}`; social links
+`PUT /accounts/social-link {items}`; tip button `PUT /accounts/tip-button` + `POST /quick-amounts`.
+`src/helpers/api/profile-appearance.ts` snapshots and restores all of these (`creatorAppearance`
+fixture); banner and picture come back through `dbFixtures.protectAppearanceMedia()`.
 
-**Required-ness is asymmetric and invisible.** Clearing Your Name leaves `Save`
-disabled forever with no error message, so the field is effectively required but never
-says so. Clearing Link *enables* `Save`. Nothing in the UI explains the difference.
+**Theme.** Presets are a `radiogroup "Theme"` of radios **named** Default, Sunset, Ocean, Forest,
+Midnight (the old unnamed "Aa" buttons are gone, so TC-PRF-C-020 now passes); `Custom` is plain text
+that lights up when custom colours are in use, never a radio. Layout is `radiogroup "Profile layout"`
+(Default / Simple); the preview changes at once — Simple has a top `Menu` button and Links/Products
+tabs, Default the Shops tab. Each colour field has a `Choose color` button (popover with Color/Hue
+sliders and "Recent colors" `Use #…` buttons — it is a picker now).
 
-**Invalid colours are swallowed.** The three custom colour fields
-(`#theme-backgroundColor`, `#theme-primaryColor`, `#theme-secondaryColor`) are plain
-text inputs. A valid hex enables `Save`; `zzzzzz`, `#GGGGGG`, `#12` and `red` are all
-kept verbatim in the field with **no error message**, and `Save` simply stays
-disabled. The disabled button is the only feedback that a value was rejected.
+**Colours are rejected silently, twice over.** Non-hex values (`zzzzzz`, `#GGGGGG`, `#12`, `red`) stay
+verbatim in the field, show no error and keep `Save` disabled. **A valid hex too close to the other
+two theme colours is also ignored** — kept in the field, the preview does not change, `Save` stays
+disabled, no message. Seen: a background equal to the primary, `#123456` against secondary `#0F3460`,
+`#24AA77` against primary `#E94560`, `#FAFAFA` against Midnight's primary `#38BDF8`; accepted:
+`#000000`, `#FFFFFF`, `#654321`. Each field is judged against the current other two, so the order
+matters: a test that sets a full custom theme picks far-apart colours (`#FAFAFA` / `#D7263D` /
+`#22223B`) and an order that works from its starting theme. Default reports its background as
+`lab(100 0 0)` — compare preview colours after painting them on a canvas.
 
-**The palette is 5 + 3, not "about ten".** Theme presets are exactly Default, Sunset,
-Ocean, Forest and Midnight, plus a non-selectable `Custom` entry; the Custom section
-holds exactly three colour controls. There is no ten-colour swatch palette anywhere.
+**Profile.** `Your Name` and `Link` have no maxlength and no counter; `Bio` has `maxlength=200` and an
+`n/200` character counter. Clearing Your Name keeps Save disabled with no message, clearing Link
+enables it. **hendrarg's `Your Name` is empty** (M-61 residue), so a Profile save in tests must fill a
+name first. `Role` is a select ("Select a role") of 10 options — Artist, Content Creator, Community,
+Educator, Entrepreneur, Streamer, Musician/band, Product Designer, Software Developer, Others — the
+current one carries `data-state=checked` and a check icon; there is no empty option. Interest chips
+have no `aria-pressed`/`data-state`: selected = class `bg-primary`, unselected `bg-primary-background`.
+Saving a new **Link** changes the username (and the public URL) — restore it with
+`dbFixtures.protectProfile()`.
 
-**Preview has two device modes.** The `Preview` dialog holds exactly two toggle
-buttons plus Close: the default renders the iframe at **1222px**, the second at
-**388px**. Neither toggle has an accessible name — they are icon-only.
+**Social links** are five unnamed icon buttons in API order tiktok, x, instagram, web, youtube; each
+opens `Update social link for <platform>` with a `@username` box and `Update`. A newly set link is
+saved with `isActive: false` but still renders on the public profile (`TikTok profile` →
+`https://tiktok.com/@<handle>`, `target=_blank`).
 
-**Image upload guidance** (Header Background → Upload tab): `accept="image/*"`, single
-file, and the copy states *wider than 1080px*, *maximum file size 20MB*, *recommended
-aspect ratio 1:1*.
+**Header media.** `Change profile banner` opens `Header Background` with tabs Gallery (4 presets
+`Option 1–4`) and Upload; `Change profile picture` opens `Upload Profile Picture` (with
+`Delete Current Photo`). Both expose a real `input[type=file][accept=image/*]` and lead to a crop
+dialog (`Crop Profile Picture` / `Crop Header`: `Crop target` image, zoom slider, Go back, Close,
+Cancel, Apply). **Escape does not close the crop dialog** — use Cancel. Apply only stages a `data:`
+image; Save writes it. Output: picture 600×600, header 900×506. A gallery banner is `background_id`
+1–4 with an empty `background_path`; an upload is `<uuid>/background/<file>.jpg` with a null id.
+Both upload dialogs still say 1080px / 20MB / **1:1** (L-53 → CP-12, AUT-PRF-008 `test.fail`).
 
-Re-verified 7 Oct 2026 (L-53 → CP-12, still failing): `/customize` → Profile → Header has
-`Change profile banner` (Gallery / Upload tabs) and `Change profile picture`; **both show the same
-guidance** (1080px / 20MB / 1:1). Output is a `data:image/jpeg` preview: banner `Crop Header` →
-**900×506** from a 1920×480 input; profile `Crop Profile Picture` → **600×600** from 1600×1600.
-**On `/customize`, Apply only stages the image** ("You Have Unsaved Changes", needs `Save`) — unlike
-the `/profile` avatar flow, where Apply saves at once. Leaving with unsaved changes raises a
-`beforeunload` dialog. hendrarg's `Your Name` is currently empty (M-61 residue).
+**Public pages lag a save by one view.** The buyer profile is served stale-while-revalidate: the
+first visit after a save can show the previous render (an old banner, even one replaced minutes
+earlier); a reload shows the new one. The creator's own signed-in context also keeps its cached
+account, so check public results from a fresh guest context and reload until they appear
+(`ProfilePage.expectAfterRevalidate`).
+
+**Preview dialog** (`Preview`): two icon-only mode buttons with no accessible name plus `Close`;
+the iframe is 1222px in the first mode and 388px in the second.
 
 ## Explore search fans out to three endpoints
 

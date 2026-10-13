@@ -215,11 +215,11 @@ test.describe('Creator Sessions', () => {
 
   test('Consultation — Availability Range, Minimum Notice, Booking Frequency, Availability Required, Appointment Duration Options, Minimum Notice Configuration', {
     tag: ['@AUT-CON-004', '@sessions', '@creator', '@regression'],
-    annotation: { type: 'issue', description: 'Availability Range not enforced for buyers (bug to be filed, 2026-10-11)' },
+    annotation: { type: 'issue', description: 'P-C-11' },
   }, async ({ consultationPage, browser, page }) => {
     test.setTimeout(360000);
-    // Bug pending a ticket: buyers can book past the Availability Range (2 weeks lets them book a month out). Last step.
-    test.fail(true, 'Availability Range is not enforced on the buyer calendar');
+    // Known bug P-C-11: buyers can book past the Availability Range (2 weeks lets them book a month out). Last step.
+    test.fail(true, 'P-C-11: Availability Range is not enforced on the buyer calendar');
     const rules = consultationBookingRulesData;
     const avail = consultationAvailabilityData;
     const title = generateConsultationTitle();
@@ -479,11 +479,11 @@ test.describe('Creator Sessions', () => {
 
   test('Consultation — Open Edit, Edit Details, Edit Availability, Active Status, Inactive Status, Republish, Edit Route', {
     tag: ['@AUT-CON-007', '@sessions', '@creator', '@regression'],
-    annotation: [{ type: 'issue', description: 'Status off does not stop new bookings (bug to be filed, 2026-10-11)' }, { type: 'issue', description: 'M-02' }],
+    annotation: [{ type: 'issue', description: 'P-C-12' }, { type: 'issue', description: 'M-02' }],
   }, async ({ consultationPage, creatorNav, productsPage, browser, page }) => {
     test.setTimeout(420000);
-    // Bug pending a ticket: with Status off buyers can still book. Known bug M-02: /products/update/consultation/<id> is a 404. Last two steps.
-    test.fail(true, 'Paused consultation still takes bookings / M-02: consultation edit route');
+    // Known bugs P-C-12 (with Status off buyers can still book) and M-02: /products/update/consultation/<id> is a 404. Last two steps.
+    test.fail(true, 'P-C-12 / M-02: paused consultation still takes bookings, consultation edit route');
     const rules = consultationLifecycleRulesData;
     const day = daysFromToday(consultationBookingRulesData.bookableDays);
     const title = generateConsultationTitle();
