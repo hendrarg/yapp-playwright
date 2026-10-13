@@ -212,21 +212,54 @@ export class DigitalProductPage {
     await this.expectDownloadable(on);
   }
 
-  /** Limited Slot: the switch has no name — reach it through its own label row. */
+  private detailsPanel(): Locator {
+    return this.page.getByRole("tabpanel", { name: "Details" });
+  }
+
+  /**
+   * Slot limit lives on Details. Edit from the list opens Content, and Next stays there
+   * until the Links card (`#content-type-links`) is checked. The label is rendered twice.
+   */
+  async openLimitedSlotStep() {
+    const label = this.detailsPanel().getByText("Limit available slots", { exact: true });
+    if (await label.isVisible().catch(() => false)) return;
+    const linksBox = this.page.locator("#content-type-links").locator("visible=true");
+    await expect(async () => {
+      if ((await linksBox.getAttribute("aria-checked")) !== "true") await linksBox.click({ timeout: 2000 });
+      await expect(linksBox).toHaveAttribute("aria-checked", "true", { timeout: 2000 });
+    }).toPass({ timeout: 15000 });
+    await nextSetDetailsAction(this.page).click({ timeout: 10000 });
+    await expect(label).toBeVisible({ timeout: 15000 });
+  }
+
+  /** Limited Slot: the switch has no name. The innermost row that contains the label holds it. */
   private limitSlotsSwitch(): Locator {
-    return this.main.locator("div").filter({ has: this.page.getByText("Limit available slots", { exact: true }) }).getByRole("switch").last();
+    return this.detailsPanel().locator("div").filter({ hasText: "Limit available slots" }).last().getByRole("switch");
   }
 
   async enableLimitedSlots(slots: number) {
-    await this.limitSlotsSwitch().scrollIntoViewIfNeeded();
-    if ((await this.limitSlotsSwitch().getAttribute("aria-checked")) !== "true") await safeClick(this.limitSlotsSwitch());
-    const input = this.page.getByRole("textbox", { name: "Available slots" });
+    const panel = this.detailsPanel();
+    const toggle = this.limitSlotsSwitch();
+    await toggle.scrollIntoViewIfNeeded();
+    if ((await toggle.getAttribute("aria-checked")) !== "true") await safeClick(toggle);
+    const input = panel.getByRole("textbox", { name: "Available slots" });
     await expect(input).toBeVisible({ timeout: 10000 });
-    await expect(this.page.getByRole("button", { name: "Decrease slots" })).toBeVisible();
-    await expect(this.page.getByRole("button", { name: "Increase slots" })).toBeVisible();
-    await expect(this.main.getByText("Show remaining count to buyers")).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Decrease slots" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Increase slots" })).toBeVisible();
+    await expect(panel.getByText("Show remaining count to buyers")).toBeVisible();
     await input.fill(String(slots));
     await expect(input).toHaveValue(String(slots));
+  }
+
+  /** Header control on the digital-download editor. Keeps an active product published. */
+  async saveAndPublish() {
+    const response = this.page.waitForResponse(
+      (candidate) => /\/api\/v1\/shop\/products\/[0-9a-f-]{36}$/.test(new URL(candidate.url()).pathname) && ["PUT", "POST"].includes(candidate.request().method()),
+      { timeout: 20000 },
+    );
+    await safeClick(this.page.getByRole("button", { name: "Save and Publish", exact: true }).locator("visible=true"));
+    const saved = await response;
+    expect(saved.ok(), await saved.text()).toBe(true);
   }
 
   /** Give one membership tier free access to the product (Everyone active → Free Access → Confirm). */

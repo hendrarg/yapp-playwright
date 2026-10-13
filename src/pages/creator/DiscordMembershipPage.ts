@@ -1,8 +1,8 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { smartClick, smartLocator } from "@utils/heal-utils";
 import { expectDescriptionContains, expectProductCompleteModal, expectTitleValue, readProductCompleteSharePath } from "@helpers/creator/product-editor";
-import { boldAction, italicAction, italicApplied, nextSetDetailsAction, textFeedback, titleInput, underlineAction, underlineApplied } from "@pages/shared/locators";
+import { boldAction, italicAction, italicApplied, nextSetDetailsAction, productCompleteDialog, textFeedback, titleInput, underlineAction, underlineApplied } from "@pages/shared/locators";
 import { discordMembershipValidationData } from "@test-data/creator/membership.data";
 import { productsCreationData } from "@test-data/creator/products.creation.data";
 
@@ -63,12 +63,6 @@ export class DiscordMembershipPage {
     role: "switch",
     name: "Customize Message",
     selector: 'button[role="switch"]:has(+ label:has-text("Customize Message"))',
-  });
-
-  private readonly discordMembershipAfterSalesEditor = smartLocator(this.page, {
-    role: "textbox",
-    name: "editable markdown",
-    selector: '[contenteditable="true"][role="textbox"]',
   });
 
   private readonly discordMembershipHideFromExploreSwitch = smartLocator(this.page, {
@@ -134,6 +128,10 @@ export class DiscordMembershipPage {
     }
   }
 
+  async expectDiscordFeedback(message: string) {
+    await expect(textFeedback(this.page, message)).toBeVisible({ timeout: 10000 });
+  }
+
   async fillDiscordMembershipTitle(title: string) {
     await this.discordMembershipTitleInput.fill(title, { timeout: 10000 });
   }
@@ -179,12 +177,33 @@ export class DiscordMembershipPage {
     await underlineApplied(this.page).text();
   }
 
-  async expectDiscordMembershipDescriptionCounter(expected = discordMembershipValidationData.descriptionLimit) {
+  private afterSalesMessageEditor(): Locator {
+    return this.afterSalesScope().getByRole("textbox", { name: "editable markdown" }).locator("visible=true");
+  }
+
+  /** Bold, italic, and underline stay on the After Sales message. */
+  async applyDiscordAfterSalesFormatting() {
+    const editor = this.afterSalesMessageEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    const scope = this.afterSalesScope();
+    await scope.getByRole("radio", { name: "Bold", exact: true }).locator("visible=true").click({ timeout: 10000 });
+    await scope.getByRole("radio", { name: "Italic", exact: true }).locator("visible=true").click({ timeout: 10000 });
+    await scope.getByRole("radio", { name: "Underline", exact: true }).locator("visible=true").click({ timeout: 10000 });
+    await expect.poll(() => editor.innerHTML(), { timeout: 10000 }).toMatch(/<(strong|b|em|i|u)\b/i);
+  }
+
+  async expectDiscordMembershipDescriptionCounter(expected: string = discordMembershipValidationData.descriptionLimit) {
     const counter = smartLocator(this.page, {
       text: expected,
       selector: `p:has-text("${expected}")`,
     });
     await expect(await counter.text()).toBe(expected);
+  }
+
+  /** Soft check so a wrong counter does not skip the later known-bug steps. */
+  async expectDiscordDescriptionCounter(expected: string) {
+    await expect.soft(this.page.getByText(expected, { exact: true }).locator("visible=true")).toBeVisible({ timeout: 10000 });
   }
 
   async selectDiscordMembershipDuration(value: string, currentUnit: string, unit: string) {
@@ -308,15 +327,21 @@ export class DiscordMembershipPage {
     if ((await this.discordMembershipCustomizeMessageSwitch.getAttribute("aria-checked")) !== "true") {
       await this.discordMembershipCustomizeMessageSwitch.click({ timeout: 10000 });
     }
-    await this.discordMembershipAfterSalesEditor.text({ timeout: 10000 });
-    await this.discordMembershipAfterSalesEditor.click({ timeout: 10000 });
+    const editor = this.afterSalesMessageEditor();
+    await editor.click({ timeout: 10000 });
     await this.page.keyboard.press("Control+A");
-    await this.page.keyboard.insertText(message);
+    await this.page.keyboard.press("Backspace");
+    if (message) {
+      await this.page.keyboard.insertText(message);
+      await expect(editor).toContainText(message, { timeout: 10000 });
+    } else {
+      await expect(this.afterSalesScope().getByText("0/1000 characters", { exact: true })).toBeVisible({ timeout: 10000 });
+    }
   }
 
   async expectDiscordMembershipAfterSalesMessage(message: string) {
     expect(await this.discordMembershipCustomizeMessageSwitch.getAttribute("aria-checked")).toBe("true");
-    expect(await this.discordMembershipAfterSalesEditor.text()).toContain(message);
+    await expect(this.afterSalesMessageEditor()).toContainText(message, { timeout: 10000 });
   }
 
   async setDiscordMembershipHideFromExplore(enabled: boolean) {
@@ -415,6 +440,182 @@ export class DiscordMembershipPage {
     const match = this.page.url().match(/\/products\/update\/discord-membership\/([^/?#]+)/);
     expect(match?.[1], "expected Discord Membership product uuid in URL").toBeTruthy();
     return match![1];
+  }
+
+  async openDiscordMembershipEdit(productUuid: string) {
+    await this.page.goto(
+      new URL(`products/update/discord-membership/${productUuid}`, this.baseURL).toString(),
+      { waitUntil: "domcontentloaded" },
+    );
+    await this.expectLoaded();
+  }
+
+  async expectDiscordOnFirstStep() {
+    await expect(this.page.getByRole("button", { name: "Next: Set Details" })).toBeVisible({ timeout: 10000 });
+    await expect.poll(async () => this.page.locator("body").innerText()).toMatch(/1\s*\/\s*2/);
+  }
+
+  /** The duration unit menu. Live labels are Days, Month, Years. */
+  async expectDiscordDurationUnitLabels(labels: readonly string[] = discordMembershipValidationData.durationUnits) {
+    await smartClick(this.page, {
+      role: "combobox",
+      name: "Month",
+      text: "Month",
+      selector: 'button[role="combobox"]',
+    });
+    for (const label of labels) {
+      await expect(this.page.getByRole("option", { name: label, exact: true })).toBeVisible({ timeout: 10000 });
+    }
+    await this.page.keyboard.press("Escape");
+  }
+
+  async readDiscordMembershipTitle(): Promise<string> {
+    return (await this.discordMembershipTitleInput.getAttribute("value")) ?? "";
+  }
+
+  /** A documented title limit is the input maxlength. */
+  async expectDiscordMembershipTitleLimited() {
+    const maxLength = await this.discordMembershipTitleInput.getAttribute("maxlength");
+    expect(maxLength ?? "").toMatch(/^\d+$/);
+  }
+
+  async readDiscordMembershipDurationValue(): Promise<string> {
+    return (await this.discordMembershipDurationValueInput.getAttribute("value")) ?? "";
+  }
+
+  async readDiscordDurationUnit(): Promise<string> {
+    const combo = this.page.getByRole("combobox").filter({ hasText: /^(Days|Month|Years)$/ });
+    await expect(combo).toHaveCount(1, { timeout: 10000 });
+    return ((await combo.innerText()) ?? "").trim();
+  }
+
+  async expectDiscordPublishEnabled(enabled: boolean) {
+    const button = this.page.getByRole("button", { name: "Next: Publish" });
+    if (enabled) await expect(button).toBeEnabled({ timeout: 10000 });
+    else await expect(button).toBeDisabled({ timeout: 10000 });
+  }
+
+  /** Zero is not a duration: the form stays on step 1 and says the field is required. */
+  async expectDiscordZeroDurationBlocked() {
+    await this.discordMembershipDurationValueInput.fill("0", { timeout: 10000 });
+    await this.submitDiscordMembershipDetails();
+    await expect(textFeedback(this.page, "Duration is required")).toBeVisible({ timeout: 10000 });
+    await this.expectDiscordOnFirstStep();
+  }
+
+  async expectDiscordServerMenu(serverName: string) {
+    await this.discordMembershipServerSelect.click({ timeout: 10000 });
+    await expect(this.page.getByRole("option", { name: serverName, exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(
+      this.page.getByRole("option", { name: discordMembershipValidationData.connectServerOption, exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+    await this.page.keyboard.press("Escape");
+  }
+
+  async expectDiscordRoleRequired() {
+    await this.submitDiscordMembershipDetails();
+    await expect(textFeedback(this.page, "Discord Role cannot be empty")).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectDiscordRoleOption(roleName: string) {
+    await this.discordMembershipRoleSelect.click({ timeout: 10000 });
+    await expect(this.page.getByRole("option", { name: roleName, exact: true })).toBeVisible({ timeout: 10000 });
+    await this.page.keyboard.press("Escape");
+  }
+
+  async expectDiscordPrimaryThumbnail() {
+    await expect(this.page.getByRole("button", { name: /Uploaded image Thumbnail/i })).toBeVisible({ timeout: 10000 });
+  }
+
+  private afterSalesScope(): Locator {
+    return this.page
+      .getByRole("main")
+      .locator("div")
+      .filter({ has: this.page.getByText("After Sales", { exact: true }) })
+      .filter({ has: this.page.getByText("Customize Message", { exact: true }) })
+      .last();
+  }
+
+  async readDiscordCustomizeMessage(): Promise<boolean> {
+    return (await this.discordMembershipCustomizeMessageSwitch.getAttribute("aria-checked")) === "true";
+  }
+
+  async setDiscordCustomizeMessage(enabled: boolean) {
+    const toggle = this.discordMembershipCustomizeMessageSwitch;
+    if ((await toggle.getAttribute("aria-checked")) !== String(enabled)) {
+      await toggle.click({ timeout: 10000 });
+    }
+    expect(await toggle.getAttribute("aria-checked")).toBe(String(enabled));
+  }
+
+  async expectDiscordAfterSalesDefaultOn(purposeCopy: string, emptyCounter: string) {
+    expect(await this.discordMembershipCustomizeMessageSwitch.getAttribute("aria-checked")).toBe("true");
+    await expect(this.page.getByText(purposeCopy, { exact: true }).locator("visible=true")).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(emptyCounter, { exact: true }).locator("visible=true")).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Switch off hides the editor. The purpose sentence stays; there is no separate default-email line. */
+  async expectDiscordAfterSalesOff(purposeCopy: string, emptyCounter: string) {
+    expect(await this.readDiscordCustomizeMessage()).toBe(false);
+    await expect(this.page.getByText(purposeCopy, { exact: true }).locator("visible=true")).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(emptyCounter, { exact: true })).toHaveCount(0);
+  }
+
+  async expectDiscordAfterSalesCounter(counter: string) {
+    await expect(this.afterSalesScope().getByText(counter, { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  private afterSalesPreviewButton(): Locator {
+    return this.afterSalesScope().getByRole("button", { name: "Preview", exact: true });
+  }
+
+  async expectDiscordAfterSalesPreviewEnabled(enabled: boolean) {
+    const button = this.afterSalesPreviewButton();
+    await expect(button).toBeVisible({ timeout: 10000 });
+    if (enabled) await expect(button).toBeEnabled();
+    else await expect(button).toBeDisabled();
+  }
+
+  async openDiscordAfterSalesPreview() {
+    await this.afterSalesPreviewButton().click({ timeout: 10000 });
+    await expect(this.page.getByRole("dialog").locator("visible=true")).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectDiscordAfterSalesPreviewReadOnly(message: string, linkLabel?: string) {
+    const dialog = this.page.getByRole("dialog").locator("visible=true");
+    await expect(dialog.getByText(message, { exact: false })).toBeVisible({ timeout: 10000 });
+    if (linkLabel) await expect(dialog.getByText(linkLabel, { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(dialog.locator('[contenteditable="true"]')).toHaveCount(0);
+    await expect(dialog.getByRole("textbox")).toHaveCount(0);
+  }
+
+  async closeDiscordAfterSalesPreview() {
+    await this.page.keyboard.press("Escape");
+    await expect(this.page.getByRole("dialog").locator("visible=true")).toBeHidden({ timeout: 10000 });
+  }
+
+  async expectDiscordNamedSwitch(name: string) {
+    await expect(this.page.getByRole("switch", { name, exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Correct behaviour: the switch has an accessible name. Soft so a later page can be checked too. */
+  async expectDiscordCustomizeMessageNamed() {
+    await expect.soft(this.page.getByRole("switch", { name: "Customize Message", exact: true })).toBeVisible({ timeout: 5000 });
+  }
+
+  /** An edit confirmation talks about an update, not a newly created product. */
+  async expectDiscordUpdateConfirmation() {
+    const dialog = productCompleteDialog(this.page);
+    await expect(dialog).toBeVisible({ timeout: 60000 });
+    await expect(dialog).not.toContainText(/successfully created/i);
+    await expect(dialog).toContainText(/updated|saved|changes/i);
+  }
+
+  /** The first-run tour must not sit on top of the form. */
+  async expectDiscordFormUsable() {
+    await expect(this.page.locator(".driver-overlay, .driver-popover")).toHaveCount(0, { timeout: 5000 });
+    await expect(this.page.locator("body")).not.toHaveClass(/\bdriver-active\b/);
+    await this.submitDiscordMembershipDetails();
   }
 
 }

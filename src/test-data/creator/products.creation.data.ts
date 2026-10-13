@@ -39,7 +39,31 @@ export const productsCreationData = {
   consultationCreatePath: /\/products\/create\/consultation/,
   onlineCourseCreatePath: /\/products\/create\/online-course/,
   eventsTicketCreatePath: /\/products\/create\/events-ticket/,
+  telegramMembershipCreatePath: /\/products\/create\/telegram-membership/,
 } as const;
+
+/** Add New Product sheet, in the order the modal renders (checked 2026-10-13). */
+export const productTypeSheet = [
+  { group: "Digital Products", label: "Online Course", buttonName: /Digital Products Online Course Provide interactive courses/i },
+  { group: "Digital Products", label: "Digital Download", buttonName: /Digital Products Digital Download Downloadable files/i },
+  { group: "Memberships", label: "Exclusive Content", buttonName: /Memberships Exclusive Content Offer fans subscription/i },
+  { group: "Memberships", label: "Telegram Membership", buttonName: /Memberships Telegram Membership Get premium insights/i },
+  { group: "Memberships", label: "Discord Membership", buttonName: /Memberships Discord Membership Sell access to private Discord/i },
+  { group: "Appointment", label: "Consultation", buttonName: /Appointment Consultation Create and manage paid bookings/i },
+  { group: "Appointment", label: "Events and Tickets", buttonName: /Appointment Events and Tickets Ideal for webinars/i },
+] as const;
+
+/** Options in the products-list type combobox. Exclusive Content is not one of them. */
+export const productTypeFilterOptions = [
+  "All types",
+  "Consultation",
+  "Digital Download",
+  "Digital Product",
+  "Discord Membership",
+  "Online Course",
+  "Telegram Membership",
+  "Event Ticket",
+] as const;
 
 /** Online Course content editor labels and defaults (AUT-FV-161 / TC-OC-C-001..033). */
 export const onlineCourseStructureData = {

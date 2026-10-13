@@ -32,6 +32,7 @@ texts in the DOM, so scope locators to `tabpanel "Products"` and filter text to 
   questions), Order Details (`Order items: N`, Purchase Date, product image/type/name,
   price, `Nx`), and Revenue (Product Price, Subtotal, Platform Fee and Payment Gateway Fee
   "(Buyer pays)", Received By Seller). Nothing is editable; `Back` returns to `/orders`.
+- A just-completed order is on the first page of `/orders` (newest first) and stays there after the product is deleted. Filling Search with that product title did not show the row within 20s, so do not use the search box to find an order by product name.
 - APIs: list `GET /api/v1/shop/orders?page&limit&status=completed&start_date&end_date
   &direction=desc[&product_type=a,b][&q=]`, overview `GET /api/v1/shop/orders/summary
   ?start_date&end_date` (`totalEarnings`, `totalEarningOnRangeTime`,

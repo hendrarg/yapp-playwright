@@ -413,3 +413,16 @@ positive. Count the `creators/explore` payload instead.
 testing, so the keyword actually sent was not the one intended and the result is not
 evidence either way. Worth settling, because the creator product search and promo code
 redemption both *reject* padded input.
+
+## Public profile appearance flags & responsive locators
+
+Verified 2026-10-13 on dev (`tests/buyer/profile.spec.ts` refactor):
+
+- **Hide Support Section (`isSupportPrivate`)**: Toggles the visibility of the `Support` tab in the public profile tab navigation (`Shops`, `Links`, `Feeds`, `Support`). The `Support` tab only renders when `isTipButton` is enabled and `isSupportPrivate: false`. When `isSupportPrivate: true`, the tab is omitted from the tablist while other content remains available.
+- **Multipart `PUT /api/v1/accounts` requirement**: When mutating profile account flags via multipart request in Playwright, do NOT include `'Content-Type': 'application/json'` header (`getMultipartHeaders()` strips it). Otherwise, the server ignores the multipart boundary and changes to `isSupportPrivate` or `isEnableEngagement` silently fail to persist.
+- **Public Link Combination Endpoint**: Public Links tab data uses singular `/api/v1/account/{uuid}/link-combination` (not plural `/accounts/`). It requires `Origin` and `Referer` headers to pass backend CORS/CSRF validation without throwing 403 Forbidden.
+- **Quick Amounts fallback**: When custom quick amounts are disabled (`isEnabled: false`), `/tip` and profile tip forms fall back to the system defaults (`Rp20.000`, `Rp50.000`, `Rp100.000`). Custom creator amounts (e.g. `Rp10.000`) are absent, but the chip list does not drop to count 0.
+- **Show Followers (`isEnableEngagement`)**: Toggles the follower count text on the public profile. When `false`, follower count is not rendered in the profile bio header.
+- **Responsive duplicate nodes in DOM**: Public profile renders hidden mobile elements (e.g. mobile header username/handle `<p class="... text-xs">` and mobile tip button `<button>`) even at desktop viewport sizes (1440×900). Locators matching text or roles must filter for `{ visible: true }` or scope to paragraph/heading elements rather than raw `.first()`.
+
+

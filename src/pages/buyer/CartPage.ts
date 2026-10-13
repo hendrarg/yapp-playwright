@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { trackAuthToken } from "@helpers/auth/validate-token";
 import { locatorChain } from "@utils/heal-utils";
@@ -21,6 +21,61 @@ export class CartPage {
 
   async expectAuthenticated() {
     await this.auth.expectValid();
+  }
+
+  get main() {
+    return locatorChain(this.page, {
+      role: "main",
+      selector: "main",
+    });
+  }
+
+  get selectAllCheckbox() {
+    return this.main.getByRole("checkbox", { name: "Select All" });
+  }
+
+  get checkoutButton() {
+    return this.main.getByRole("button", { name: buyerEventsDetailData.cartCheckout.checkOut });
+  }
+
+  async selectAll() {
+    await safeClick(this.selectAllCheckbox);
+  }
+
+  async expectEmptyCart() {
+    await expect(this.main.getByText("Your cart is empty")).toBeVisible({ timeout: 10000 });
+    await expect(this.main.getByText("Total Amount")).toBeVisible({ timeout: 10000 });
+    await expect(this.main.getByText("Rp0", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.checkoutButton).toBeDisabled({ timeout: 10000 });
+  }
+
+  get cartSummaryCard(): Locator {
+    return this.main
+      .locator('div')
+      .filter({ has: this.page.getByRole('heading', { name: 'Cart Summary', exact: true }) })
+      .filter({ hasText: 'Total Amount' })
+      .last();
+  }
+
+  async expectCartSummary(options: { count: number; totalAmount: string }) {
+    await expect(this.cartSummaryCard).toBeVisible({ timeout: 10000 });
+    await expect(this.cartSummaryCard.getByText("Total Amount")).toBeVisible({ timeout: 10000 });
+    await expect(this.cartSummaryCard.getByText(options.totalAmount, { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.cartSummaryCard.getByText(String(options.count), { exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectCartItem(options: {
+    title: string;
+    type?: string;
+    creator?: string;
+    price?: string;
+  }) {
+    await expect(this.main).toBeVisible({ timeout: 15000 });
+    const item = this.main.locator("div").filter({ hasText: options.title }).filter({ has: this.page.getByRole("checkbox") }).last();
+    await expect(item).toBeVisible({ timeout: 15000 });
+    if (options.type) await expect(item.getByText(options.type, { exact: true })).toBeVisible({ timeout: 5000 });
+    if (options.creator) await expect(this.main.getByText(options.creator, { exact: true })).toBeVisible({ timeout: 5000 });
+    if (options.price) await expect(item.getByText(options.price, { exact: true })).toBeVisible({ timeout: 5000 });
   }
 
   async expectEventTicketItem(options: {

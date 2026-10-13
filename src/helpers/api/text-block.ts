@@ -17,18 +17,18 @@ export interface TextBlockWrite {
   block: TextBlock | null;
 }
 
-export async function createTextBlock(request: APIRequestContext, htmlContent: string, token?: string): Promise<TextBlockWrite> {
+export async function createTextBlock(request: APIRequestContext, htmlContent: string, token?: string, isActive = false): Promise<TextBlockWrite> {
   const response = await request.post(apiUrl('/api/v1/accounts/link/text'), {
     headers: headers(token),
-    data: { htmlContent, isActive: false, position: 0, usedCodeView: true },
+    data: { htmlContent, isActive, position: 0, usedCodeView: true },
   });
   return { status: response.status(), block: response.ok() ? ((await response.json()).data as TextBlock) : null };
 }
 
-export async function updateTextBlock(request: APIRequestContext, id: number, htmlContent: string, token?: string): Promise<TextBlockWrite> {
+export async function updateTextBlock(request: APIRequestContext, id: number, htmlContent: string, token?: string, isActive = false): Promise<TextBlockWrite> {
   const response = await request.put(apiUrl(`/api/v1/accounts/link/text/${id}`), {
     headers: headers(token),
-    data: { htmlContent, isActive: false, position: 0, usedCodeView: true },
+    data: { htmlContent, isActive, position: 0, usedCodeView: true },
   });
   return { status: response.status(), block: response.ok() ? ((await response.json()).data as TextBlock) : null };
 }

@@ -13,3 +13,9 @@ export function getHeaders(token?: string, origin = 'https://yapp-dev.yapp.ink')
     Referer: `${origin}/`,
   };
 }
+
+export function getMultipartHeaders(token?: string, origin = 'https://yapp-dev.yapp.ink') {
+  const { 'Content-Type': _json, ...rest } = getHeaders(token, origin);
+  return rest;
+}
+

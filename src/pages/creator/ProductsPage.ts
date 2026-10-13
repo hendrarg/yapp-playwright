@@ -95,6 +95,18 @@ export class ProductsPage {
     selector: '[role="menuitem"]:has-text("Set Inactive") [role="switch"]',
   });
 
+  private readonly typeFilter = smartLocator(this.page, {
+    role: "combobox",
+    name: "Filter by product type",
+    selector: '[aria-label="Filter by product type"]',
+  });
+
+  private readonly noResultsRow = smartLocator(this.page, {
+    role: "row",
+    name: "No results.",
+    text: "No results.",
+  });
+
   private productActionMenuItem(name: string): Locator {
     return this.productActionMenu().getByRole("menuitem", { name, exact: true });
   }
@@ -104,7 +116,7 @@ export class ProductsPage {
   }
 
   private productTypeButton(buttonName: RegExp): Locator {
-    return this.addProductSheet().getByRole("button", { name: buttonName });
+    return this.addProductSheet().getByRole("button", { name: buttonName }).locator("visible=true");
   }
 
   private productRows(productName: string): Locator {
@@ -555,5 +567,273 @@ export class ProductsPage {
     const match = href!.match(/\/s\/[A-Za-z0-9_-]+/);
     expect(match?.[0], "expected share path").toBeTruthy();
     return match![0];
+  }
+
+  async searchValue(): Promise<string> {
+    return this.searchInput.inputValue();
+  }
+
+  /**
+   * Fill the search box and wait until that result is on screen. A repeated query can come
+   * from the list already loaded, so a missing request is fine. Whitespace is not a title.
+   */
+  async searchProductsNow(query: string) {
+    const responsePromise = this.page.waitForResponse((response) => {
+      if (!response.url().includes("/api/v1/shop/products") || response.request().method() !== "GET") return false;
+      return new URL(response.url()).searchParams.get("title") === query;
+    }, { timeout: 15000 }).then((response) => response, () => null);
+    await safeFill(this.searchInput, query);
+    await expect(this.searchInput).toHaveValue(query);
+    const response = await responsePromise;
+    if (response) expect(response.ok(), await response.text()).toBeTruthy();
+    const needle = query.trim().toLowerCase();
+    if (!needle || needle !== query.toLowerCase()) return;
+    const table = this.page.getByRole("table");
+    const hit = await expect.poll(async () => (await table.innerText()).toLowerCase().includes(needle), { timeout: 4000 }).toBe(true).then(() => true, () => false);
+    if (hit) return;
+    await expect.poll(async () => (await table.innerText()).toLowerCase(), { timeout: 10000 }).toContain("no results");
+  }
+
+  /** Emptying the box restores the loaded list in the browser. It does not send a new list request. */
+  async clearSearchNow() {
+    const table = this.page.getByRole("table");
+    const before = await table.innerText();
+    await safeFill(this.searchInput, "");
+    await expect(this.searchInput).toHaveValue("");
+    await expect.poll(async () => table.innerText(), { timeout: 10000 }).not.toBe(before);
+  }
+
+  async expectNoResultsRow() {
+    expect(await this.noResultsRow.text({ timeout: 15000 })).toMatch(/No results/);
+  }
+
+  /** The search text stays in the field and is not written into the address bar. */
+  async expectSearchKeptLocally(query: string) {
+    await expect(this.searchInput).toHaveValue(query);
+    const url = new URL(this.page.url());
+    expect(url.searchParams.get("title")).toBeNull();
+    expect(url.searchParams.get("q")).toBeNull();
+    expect(url.searchParams.get("keyword")).toBeNull();
+  }
+
+  async readStatusCounts(): Promise<Record<ProductStatusTab, number>> {
+    return {
+      Active: await this.readStatusCount("Active"),
+      Inactive: await this.readStatusCount("Inactive"),
+      Draft: await this.readStatusCount("Draft"),
+    };
+  }
+
+  async expectListColumns() {
+    for (const header of ["IMAGE", "PRODUCT NAME", "VIEW", "SALES", "SLOTS", "PRICE", "REVENUE", "STATUS", "ACTION"]) {
+      await expect(this.page.getByRole("columnheader", { name: header, exact: true })).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  /** Thumbnail and title are both links named after the product. They must share one href. */
+  private async nameLinkHrefs(productName: string): Promise<string[]> {
+    const links = this.productRow(productName).getByRole("link", { name: productName, exact: true });
+    await expect(links.first()).toBeVisible({ timeout: 10000 });
+    const hrefs = await links.evaluateAll((els) => els.map((el) => el.getAttribute("href") ?? ""));
+    expect(hrefs.length, `expected a name link for ${productName}`).toBeGreaterThan(0);
+    expect(new Set(hrefs).size, `name links for ${productName} should share one destination`).toBe(1);
+    return hrefs;
+  }
+
+  async expectProductRowDetails(productName: string) {
+    const row = this.productRow(productName);
+    await expect(row).toBeVisible({ timeout: 15000 });
+    await this.nameLinkHrefs(productName);
+    await expect(row.getByRole("link", { name: /\/s\// })).toBeVisible();
+    await expect(row.getByRole("img").first()).toBeVisible();
+    const text = await row.innerText();
+    expect(text, "row should show counts, a price, and a status").toMatch(/\d/);
+    expect(text).toMatch(/Rp|Free|Start from/);
+    expect(text).toMatch(/ACTIVE|INACTIVE|DRAFT/);
+  }
+
+  async readSlotsCell(productName: string): Promise<string> {
+    const cell = this.productRow(productName).getByRole("cell").nth(4);
+    await expect(cell).toBeVisible({ timeout: 10000 });
+    return (await cell.innerText()).replace(/\s+/g, "");
+  }
+
+  async readNameLinkPath(productName: string): Promise<string> {
+    return (await this.nameLinkHrefs(productName))[0];
+  }
+
+  async typeFilterLabel(): Promise<string> {
+    return (await this.typeFilter.text()).trim();
+  }
+
+  /**
+   * Choose a type. The label updates immediately. When a products GET is sent, it has to succeed.
+   * The list can also refresh from the page already loaded, so a missing request is fine.
+   */
+  async selectTypeFilter(option: string) {
+    const table = this.page.getByRole("table");
+    const before = await table.innerText();
+    const responsePromise = this.page
+      .waitForResponse(
+        (response) => response.url().includes("/api/v1/shop/products") && response.request().method() === "GET",
+        { timeout: 15000 },
+      )
+      .then((response) => response, () => null);
+    await this.typeFilter.click();
+    await safeClick(this.page.getByRole("option", { name: option, exact: true }).locator("visible=true").first());
+    await expect.poll(async () => (await this.typeFilter.text()).trim(), { timeout: 10000 }).toBe(option);
+    const rowsSettled = expect.poll(async () => table.innerText(), { timeout: 10000 }).not.toBe(before).then(() => null);
+    const response = await Promise.race([responsePromise, rowsSettled]);
+    if (response) expect(response.ok(), await response.text()).toBeTruthy();
+    await rowsSettled;
+  }
+
+  async expectTypeFilterOptions(options: readonly string[]) {
+    await this.typeFilter.click();
+    for (const option of options) {
+      await expect(this.page.getByRole("option", { name: option, exact: true })).toBeVisible({ timeout: 10000 });
+    }
+    await expect(this.page.getByRole("option", { name: "Exclusive Content", exact: true })).toHaveCount(0);
+    await this.page.keyboard.press("Escape");
+  }
+
+  async visibleProductTypes(): Promise<string[]> {
+    const labels = new Set([
+      "Consultation",
+      "Digital Download",
+      "Digital Product",
+      "Discord Membership",
+      "Online Course",
+      "Telegram Membership",
+      "Event Ticket",
+    ]);
+    const rows = this.page.getByRole("row");
+    const count = await rows.count();
+    const types: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const lines = ((await rows.nth(i).innerText()) ?? "").split("\n").map((line) => line.trim()).filter(Boolean);
+      const firstLine = lines[0];
+      if (!firstLine || firstLine === "IMAGE" || firstLine === "No results.") continue;
+      types.push(lines.find((line) => labels.has(line)) ?? firstLine);
+    }
+    return types;
+  }
+
+  async closeAddProductSheet() {
+    await this.page.keyboard.press("Escape");
+    await expect(this.addProductSheet()).toBeHidden({ timeout: 10000 });
+  }
+
+  async expectAddProductTypes(types: readonly { readonly buttonName: RegExp; readonly group: string }[]) {
+    for (const group of ["Digital Products", "Memberships", "Appointment"]) {
+      await expect(this.addProductSheet().getByText(group, { exact: true }).locator("visible=true").first()).toBeVisible({ timeout: 10000 });
+    }
+    for (const type of types) {
+      const button = this.productTypeButton(type.buttonName);
+      await expect(button).toBeVisible({ timeout: 10000 });
+      await expect(button).toContainText(type.group);
+    }
+  }
+
+  /** Back from a create form reached via Add Product. A confirmation dialog would fail this. */
+  async expectReturnedWithoutUnsavedPrompt() {
+    const dialog = this.page.getByRole("alertdialog").or(this.page.getByRole("dialog")).filter({ hasText: /unsaved|discard|leave|lose your changes/i });
+    await expect(dialog).toHaveCount(0);
+    await expect(this.page).toHaveURL(/\/products\/?(?:\?|#|$)/, { timeout: 15000 });
+  }
+
+  async expectInactiveSwitch(productName: string, checked: boolean) {
+    await this.openProductActionsMenu(productName);
+    expect(await this.setInactiveSwitchAction.getAttribute("aria-checked")).toBe(String(checked));
+    await this.page.keyboard.press("Escape");
+  }
+
+  /**
+   * The list `Set Inactive` switch. ON means inactive. The click sends
+   * `PUT …/status` and a toast, and the menu closes.
+   */
+  async setProductStatusFromMenu(productName: string, status: "active" | "inactive") {
+    await this.openProductActionsMenu(productName);
+    const toast = status === "inactive" ? "Product set to inactive" : "Product set to active";
+    const responsePromise = this.page.waitForResponse((response) => {
+      if (response.request().method() !== "PUT") return false;
+      return /\/api\/v1\/shop\/products\/[0-9a-f-]{36}\/status$/.test(new URL(response.url()).pathname)
+        && response.request().postDataJSON()?.status === status;
+    }, { timeout: 15000 });
+    const toastPromise = this.page.getByText(toast, { exact: true }).first().waitFor({ state: "visible", timeout: 15000 });
+    await this.setInactiveSwitchAction.click({ timeout: 10000 });
+    const dialog = this.statusChangeConfirmationDialog();
+    if (await dialog.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await safeClick(dialog.getByRole("button", { name: /confirm|set inactive|yes/i }).first());
+    }
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    expect(response.request().postDataJSON()).toEqual({ status });
+    await toastPromise;
+    await expect(this.productActionMenu()).toBeHidden({ timeout: 10000 });
+  }
+
+  /** List switch. ON hides the product from the public profile and leaves Explore alone. */
+  async setHideFromProfileFromMenu(productName: string, hidden: boolean) {
+    await this.openProductActionsMenu(productName);
+    const toggle = this.hideFromProfileSwitch().locator("visible=true");
+    await expect(toggle).toBeVisible({ timeout: 10000 });
+    const responsePromise = this.page.waitForResponse((response) => {
+      if (response.request().method() !== "PUT" || !response.url().includes("/hide-from-profile")) return false;
+      return response.request().postDataJSON()?.isHideFromProfile === hidden;
+    }, { timeout: 15000 });
+    await safeClick(toggle);
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    expect(response.request().postDataJSON()).toEqual({ isHideFromProfile: hidden });
+  }
+
+  async hideFromExplore(productName: string, hidden: boolean) {
+    await this.openProductActionsMenu(productName);
+    const responsePromise = this.page.waitForResponse(
+      (response) => response.url().includes("/hide-from-explore") && response.request().method() === "PUT",
+      { timeout: 15000 },
+    );
+    await safeClick(this.productActionMenuItem(hidden ? "Hide" : "Unhide"));
+    const response = await responsePromise;
+    expect(response.ok(), await response.text()).toBeTruthy();
+    expect(response.request().postDataJSON()).toEqual({ isHideFromExplore: hidden });
+  }
+
+  async expectMenuItem(productName: string, label: string) {
+    await this.openProductActionsMenu(productName);
+    await expect(this.productActionMenuItem(label)).toBeVisible({ timeout: 10000 });
+    await this.page.keyboard.press("Escape");
+  }
+
+  async confirmDelete() {
+    const dialog = this.deleteConfirmationDialog();
+    await safeClick(dialog.getByRole("button", { name: /confirm/i }));
+    await expect(dialog).toBeHidden({ timeout: 15000 });
+  }
+
+  async deleteDialogText(): Promise<string> {
+    return (await this.deleteConfirmationDialog().innerText()) ?? "";
+  }
+
+  async actionsTriggerName(productName: string): Promise<string> {
+    const trigger = this.productActionsTrigger(productName);
+    await expect(trigger).toBeVisible({ timeout: 10000 });
+    return ((await trigger.getAttribute("aria-label")) ?? (await trigger.innerText())).trim();
+  }
+
+  async copyLinkName(): Promise<string> {
+    const label = await this.copyProductUrlAction.getAttribute("aria-label");
+    const text = await this.copyProductUrlAction.text();
+    return (label ?? text).trim();
+  }
+
+  async waitForSuccessToast(timeout = 5000): Promise<boolean> {
+    try {
+      await this.page.locator("[data-sonner-toast]").first().waitFor({ state: "visible", timeout });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

@@ -570,6 +570,123 @@ export async function createDigitalProduct(
   return { productUuid, uploadId: thumbnail.uploadId, key: thumbnail.key, body };
 }
 
+export interface CreateDiscordMembershipOptions {
+  title: string;
+  description: string;
+  thumbnailImagePath: string;
+  price?: number;
+  status?: ProductStatus;
+  thankYouNote?: string;
+  isHideFromExplore?: boolean;
+  /** Linked server name. The guild list has no roles, so the role is copied from an existing membership. */
+  serverName?: string;
+}
+
+/** Guild id plus the role and duration already used by one of this creator's Discord memberships. */
+async function linkedDiscordMembership(
+  request: APIRequestContext,
+  serverName: string,
+  token?: string,
+): Promise<{ guildId: number; roleId: string; duration: number }> {
+  const headers = getCreatorHeaders(token);
+  const guildsResponse = await request.get(apiUrl('/api/v1/discord/guilds'), { headers });
+  if (!guildsResponse.ok()) {
+    throw new Error(`List Discord guilds failed: ${guildsResponse.status()} ${await guildsResponse.text()}`);
+  }
+  const guilds = ((await guildsResponse.json()).data?.data ?? []) as Array<{ id: number; name: string }>;
+  const guild = guilds.find((item) => item.name === serverName) ?? guilds[0];
+  if (!guild) throw new Error('The creator account has no linked Discord server');
+
+  const listResponse = await request.get(
+    apiUrl('/api/v1/shop/products?page=1&limit=1&status=active&type=discord_membership'),
+    { headers },
+  );
+  if (!listResponse.ok()) {
+    throw new Error(`List Discord memberships failed: ${listResponse.status()} ${await listResponse.text()}`);
+  }
+  const existing = ((await listResponse.json()).data?.data ?? []) as Array<{ uuid: string }>;
+  if (!existing[0]) throw new Error('An existing Discord membership is required to copy its linked role');
+
+  const detailResponse = await request.get(apiUrl(`/api/v1/shop/products/${existing[0].uuid}`), { headers });
+  if (!detailResponse.ok()) {
+    throw new Error(`Read Discord membership failed: ${detailResponse.status()} ${await detailResponse.text()}`);
+  }
+  const detail = (await detailResponse.json()).data as { discordRoleId?: string; discordRoleDuration?: number };
+  if (!detail.discordRoleId) throw new Error('Existing Discord membership has no role id');
+  return {
+    guildId: guild.id,
+    roleId: detail.discordRoleId,
+    // 30 days in Go nanoseconds, the duration a 1 Month membership stores when the source row has none.
+    duration: Number(detail.discordRoleDuration) || 30 * 24 * 60 * 60 * 1e9,
+  };
+}
+
+/** Active Discord Membership on the creator's linked server. `discordGuildId` is the guild row id, not the snowflake. */
+export async function createDiscordMembershipProduct(
+  request: APIRequestContext,
+  options: CreateDiscordMembershipOptions,
+  token?: string,
+): Promise<CreatedProduct> {
+  const headers = getCreatorHeaders(token);
+  const link = await linkedDiscordMembership(request, options.serverName ?? "Hendra's server", token);
+  const thumbnail = await uploadFile(request, { filePath: options.thumbnailImagePath, token, headers });
+  const price = options.price ?? 0;
+  const response = await request.post(apiUrl('/api/v1/shop/products'), {
+    headers,
+    data: {
+      title: options.title,
+      description: options.description,
+      thumbnailImage: thumbnail.uploadId,
+      productImages: [],
+      isSetPrice: price > 0,
+      price,
+      isSetDiscount: false,
+      discount: 0,
+      discountType: 'percentage',
+      isFlexiblePrice: false,
+      maximumFlexiblePrice: null,
+      isSchedulePublish: false,
+      isHideFromExplore: options.isHideFromExplore ?? false,
+      isAvailability: false,
+      status: options.status ?? 'active',
+      additionalQuestions: [],
+      contentSetting: {
+        isDownloadable: false,
+        isRequireLoginToPurchase: false,
+        isNSFW: false,
+        isBlurContent: false,
+        isOneTimeView: false,
+      },
+      isAllowCustomerChooseQuantity: false,
+      isLimitProductSales: false,
+      limitProductSales: 0,
+      isEnableCrypto: false,
+      isCryptoFlexiblePrice: false,
+      categoryIDs: [],
+      isAcceptPublicAffiliator: false,
+      affiliateCommissionType: 'percentage',
+      affiliateCommission: 0,
+      affiliateCommissionCrypto: 0,
+      isFreeForMembers: false,
+      purchaseButtonText: 'Purchase',
+      privateDescription: '',
+      thankYouNote: options.thankYouNote ?? '',
+      salesLinks: [],
+      productType: 'discord_membership',
+      discordGuildId: link.guildId,
+      discordRoleId: link.roleId,
+      discordRoleDuration: link.duration,
+    },
+  });
+  if (!response.ok()) {
+    throw new Error(`Create Discord membership failed: ${response.status()} ${await response.text()}`);
+  }
+  const body = await response.json();
+  const productUuid = productUuidFromBody(body);
+  if (!productUuid) throw new Error(`Create Discord membership response did not include product uuid: ${JSON.stringify(body)}`);
+  return { productUuid, uploadId: thumbnail.uploadId, key: thumbnail.key, body };
+}
+
 export async function deleteProduct(
   request: APIRequestContext,
   productUuid: string,
@@ -622,6 +739,64 @@ export async function expectProductStatus(
   expect(response.ok(), await response.text()).toBeTruthy();
   const body = await response.json();
   expect(body.data.status).toBe(status);
+}
+
+/** `PUT /api/v1/shop/products/{uuid}/status` — the list switch and the old edit-page switch. */
+export async function setProductStatus(
+  request: APIRequestContext,
+  productUuid: string,
+  status: 'active' | 'inactive',
+  token?: string,
+) {
+  const response = await request.put(apiUrl(`/api/v1/shop/products/${productUuid}/status`), {
+    headers: getCreatorHeaders(token),
+    data: { status },
+  });
+  expect(response.ok(), await response.text()).toBeTruthy();
+}
+
+/** `PUT /api/v1/shop/products/{uuid}/hide-from-explore`. Body is required, same shape as hide-from-profile. */
+export async function setProductHiddenFromExplore(
+  request: APIRequestContext,
+  productUuid: string,
+  isHideFromExplore: boolean,
+  token?: string,
+) {
+  const response = await request.put(apiUrl(`/api/v1/shop/products/${productUuid}/hide-from-explore`), {
+    headers: getCreatorHeaders(token),
+    data: { isHideFromExplore },
+  });
+  expect(response.ok(), await response.text()).toBeTruthy();
+}
+
+export async function expectProductHiddenFromExplore(
+  request: APIRequestContext,
+  productUuid: string,
+  isHideFromExplore: boolean,
+  token?: string,
+) {
+  const response = await request.get(apiUrl(`/api/v1/shop/products/${productUuid}`), {
+    headers: getCreatorHeaders(token),
+  });
+  expect(response.ok(), await response.text()).toBeTruthy();
+  const body = await response.json();
+  expect(body.data.isHideFromExplore).toBe(isHideFromExplore);
+}
+
+/** `totalResults` for the creator product list. `type` is sent as the UI writes it, commas included. */
+export async function countProducts(
+  request: APIRequestContext,
+  query: { status?: ProductStatus; title?: string; type?: string } = {},
+  token?: string,
+): Promise<number> {
+  const params = new URLSearchParams({ page: '1', limit: '1' });
+  if (query.status) params.set('status', query.status);
+  if (query.title !== undefined) params.set('title', query.title);
+  let path = `/api/v1/shop/products?${params.toString()}`;
+  if (query.type) path += `&type=${query.type}`;
+  const response = await request.get(apiUrl(path), { headers: getCreatorHeaders(token) });
+  expect(response.ok(), await response.text()).toBeTruthy();
+  return (await response.json()).data.totalResults as number;
 }
 
 /** `GET /api/v1/shop/products/{uuid}` as the owner sees it (status, shortUrl, title…). */

@@ -99,21 +99,18 @@ The menu label always reads `Set Inactive` for Active, Inactive, and Draft alike
 the state lives in the switch, not the label, so reactivation is available from the
 list too.
 
+**Checked again 2026-10-13.** The Online Course editor and the Discord Membership editor
+do not render a Set Inactive switch on step 1 or step 2. The products-list actions menu
+still does (`#set-inactive` inside the menu item; `aria-checked="true"` means inactive). The switch itself has no accessible name `Set Inactive` — that string is the menu item around it.
+That click sends the status PUT, shows `Product set to inactive` / `Product set to active`,
+and closes the menu. Draft rows use the same six items, with the switch off.
+
 **`Save and Publish` re-activates the product, and that is intended.** Publishing
 means putting it on sale. Confirmed by the product owner 2026-08-19. Practical
 consequence: change status with the switch and navigate away — do not save
 afterwards.
 
-**`Hide from Profile` has an unwired UI, which is expected.** The menu item sends
-nothing, and the product owner classified that as expected on 2026-08-19 — it is not
-a defect. The feature itself works via
-`PUT /api/v1/shop/products/{uuid}/hide-from-profile` with `{"isHideFromProfile":true}`
-(body required; empty body gives 400 `IsHideFromProfile is required`). It removes the
-product from `yapp-dev.yapp.ink/{username}` for anonymous visitors while the direct
-URL stays 200 with purchase CTAs live. No other UI control sets the flag — the My
-Page card menu is only Edit / Set as Featured / Share / Delete. Toggling it also
-**resets the product to the front of the My Page arrangement**; restore position by
-dragging the card grip (`PATCH /shop/products/reorder`).
+**Hide from Profile and Hide cover different surfaces.** Hide from Profile takes the product off the public creator profile and leaves it on Explore. Hide takes it off Explore and leaves it on the profile. The direct URL stays open either way. The list switch sends `PUT /api/v1/shop/products/{uuid}/hide-from-profile` with `{"isHideFromProfile":true|false}` and a settled product answers **200** `Update Product Hide From Profile Successfully`. Hide sends `PUT …/hide-from-explore` with `{"isHideFromExplore":true|false}`. One Hide-from-Profile click in the same second the product was created answered 500 `product not exist.` for a uuid `DELETE` then accepted. An empty hide-from-profile body used to return 400 `IsHideFromProfile is required`. The My Page card menu is still only Edit / Set as Featured / Share / Delete. Toggling the flag also **resets the product to the front of the My Page arrangement**; restore position by dragging the card grip (`PATCH /shop/products/reorder`).
 
 **Inactive and Draft products are closed to buyers** (re-checked 2026-10-11, Events and
 Consultation). Their share link (`/s/<shortUrl>`, `/<creator>/product/<shortUrl>`) renders
@@ -164,9 +161,15 @@ Online Course section above.
 Consultation: turning `Customize Message` on and saving a message persists it (the switch
 still reads ON after a reload). Emptying that message with the switch still ON and saving
 again returns `PUT /api/v1/shop/products` **200** with no validation message and no toast
-— and after a reload the switch is back OFF with the message gone (`L-67`). So "After
-Sales ON" is not a state the product can hold on its own; it is derived from a non-empty
-saved message.
+— and after a reload the switch is back OFF with the message gone (`L-67`). Discord
+Membership does the same (2026-10-13): `Next: Publish` with the switch on and an empty
+editor completes, and reopening the product shows the switch off. So "After Sales ON"
+is not a state the product can hold on its own; it is derived from a non-empty saved
+message.
+
+On Discord Membership, turning the switch off hides the editor and the
+`0/1000 characters` counter. The purpose sentence stays on the page. There is no
+separate sentence about a default email.
 
 ## Route and label asymmetries
 
@@ -328,7 +331,7 @@ no delete inside it (`L-14`, still open 2026-09-23).
 
 ## Leaving the create flow discards silently
 
-Verified 2026-09-01 on Digital Download. Pressing `Back` on Step 1 with a filled Title
+Verified 2026-09-01 on Digital Download, and again 2026-10-13 on Consultation. Pressing `Back` on Step 1 with a filled Title
 navigates straight to `/products` — **no confirmation dialog, no browser
 `beforeunload` prompt** — and **no draft is auto-created**: the typed title does not
 appear on the Draft tab. Explicit `Save as Draft` is the only thing that persists work.
@@ -361,10 +364,12 @@ picker.
 
 Verified 2026-09-09 on dev while testing the Step 2 rows.
 
-**Product rows are not links.** `/products` renders a table with no `a[href]` per row —
-clicking the name cell navigates to `/products/stats/{uuid}`, and that page carries the
-`Edit` button that opens `/products/update/{slug}/{uuid}`. Scraping hrefs off the list
-returns nothing; go through the stats page (or hold the uuid) instead.
+**Name cells are links, and the target depends on status** (re-checked 2026-10-13).
+An Active row's name is an `<a href="/products/stats/{uuid}">`, including Digital Download.
+A Draft row's name links straight to the editor, `/products/update/<type>/{uuid}`.
+The Edit item in the actions menu opens that same editor. The October 6 note that two
+Active Digital Downloads still linked to `/products/detail/digital-downloads/{uuid}` no
+longer matches the rows on the list.
 
 Edit slugs seen so far: `appointment` (Consultation), `discord-membership`,
 `events-ticket`, `digital-downloads`, `telegram-membership`, `online-course`, and
@@ -532,7 +537,11 @@ gap, not an editor bug — and `page_files` rows are **rewritten on every page s
 - Create step 2 `Save` → `POST /shop/products` with `status: draft`, then redirects to
   `/products/update/online-course/{uuid}`. **Edit step 2 now has `Publish`** (disabled until
   something changes) next to `Save`, `Preview` and the icon-only `Version history`; `Save` on an
-  active course keeps it active. Neither shows a toast (L-52).
+  active course keeps it active. Neither shows a toast (L-52, seen 2026-10-08 on the editor's own Save).
+  Rechecked 2026-10-13 from the products list: Edit → change the title → `Save` did raise a sonner toast.
+  Confirming delete from the list still raises none. That dialog reads `Delete Product` and
+  `Are you sure you want to delete this product?` and does not name the product. The row's actions
+  control and the share dialog's copy control still have no accessible name.
 - `Version history` dialog: "A version is saved on every edit. The last 10 are kept." and entries
   like `a few seconds ago Current 08 Oct 2026 · 10:39 · Nothing to restore from this version`.
 - The live preview shows a free course as **`Rp0`** (was `IDR 0`).
@@ -685,7 +694,8 @@ like the page is broken rather than like the route having moved.
 
 - **Changed 2026-10-12 — the picker now hides Draft and Inactive products** (searching a seeded draft or inactive title gives `No products found.`), so L-58 looks fixed; retest before closing. Earlier note: **Promotion `Find Product` picker has no status filter**: it calls `/shop/products?page=1&limit=10[&title=…]` and returns Draft and Inactive products (searched `PERSIB`, `Montir`, `Zoom Meeting`) with no status marker (L-58 still open). The first page happens to be all Active, so check by searching a draft title.
 - `/shop/products?type=<unknown>` ignores the value and returns every product (M-43); `digital_product` is now a real type (1 product), distinct from `digital_download`.
-- Products list: the type filter (`?type=online_course`) changes the rows but not the status-tab counts; a 3-space search gives `No results.` and 0/0/0; Draft rows link to `/products/update/<type>/{uuid}`, two Active Digital Downloads still link to `/products/detail/digital-downloads/{uuid}` while everything else goes to `/products/stats/{uuid}`.
+- Products list (re-checked 2026-10-13): the type combobox is named `Filter by product type` and defaults to `All types`. Its options are Consultation, Digital Download, Digital Product, Discord Membership, Online Course, Telegram Membership, and Event Ticket — not Exclusive Content. Choosing Digital Product sets `?type=digital_product,digital_download,online_course` (an umbrella). Event Ticket sets `?type=ticket_event`. The filter changes the rows and stays selected when the status tab changes. Choosing a type updates the combobox and the table even when no `GET /api/v1/shop/products` arrives within 15s. Tab counts follow a search miss and ignore the type filter (Digital Download selected: Active tab still 39, while `totalResults` for that type was 9). Clearing a search returns page 1 of the status, so a hit such as Sikancil — active, but not on that first page — is absent again. A search miss, including a 3-space query, is a table row `No results.` and the tabs read 0/0/0. A hit filters the rows; the tab badge can stay on the unfiltered total until it refreshes. The query is not written to the URL. Search matches the title only, so a share URL or slug returns that empty row. Emptying the box restores the list already loaded in the browser and does not send another `GET /shop/products`. Repeating a query uses that cached result the same way. An unlimited SLOTS cell is an em dash; a capped product shows `sold/total`. The thumbnail and the title are both links and share one href. Active name links go to `/products/stats/{uuid}`; Draft name links go to `/products/update/<type>/{uuid}`. The Add New Product sheet shows seven cards; the group names `Digital Products`, `Memberships`, and `Appointment` are the colored lines on those cards. The same names also exist as accordion triggers that stay hidden on this layout, so a text lookup has to use the visible card line.
+- Digital Download edit opened from the list is Content first. `Next: Set Details` stays on Content until a content-type card is checked, and the inline text is `At least one content type is required`. The visible checkbox is `#content-type-links` (a duplicate copy of the card is also in the DOM). Details (`2/2`) holds Title, Description, Thumbnail, and `Limit available slots`. The header buttons are `Save as Draft` and `Save and Publish`, and `Set Inactive` is still on this editor. The slot label is rendered twice; scope it to the Details tabpanel.
 - `/products/update/consultation/{id}` is still 404; the editor lives at `/products/update/appointment/{id}` (create stays `/products/create/consultation`).
 - Flexible-price consultation (`Start from Rp…`): `Save my spot` first opens a `Name a Fair Price` dialog; its confirm button is literally named `Input Amount`. Only after that does it go to `/product/{uuid}/checkout?…&givenPrice=…`, where a logged-in buyer's email is prefilled **and disabled**.
 
@@ -728,7 +738,7 @@ like the page is broken rather than like the route having moved.
 - **Self-affiliate still saves**: `Find Creator` offers the promo owner (`@hendrarg`) and `POST` carries `affiliatorUUID` = the owner's uuid → 200.
 - Generated promo codes vary 8–12 characters; the regenerate button next to `Discount code` has no accessible name; the code field stays editable.
 - **After-sales Customize Message over 1000 chars now blocks Save — silently**: the editor accepts 1005 chars (`1005/1000 characters`), then `Save as Draft` sends no request and shows nothing; at 900 chars it saves (PUT 200, then redirects to /profile). Switch ON with an empty message still saves (PUT 200, no message) and reloads as OFF.
-- **Discord Membership edit**: `Next: Publish` stays disabled until something changes; saving a real change still shows `Your product has been successfully created.`
+- **Discord Membership edit**: `Next: Publish` stays disabled until something changes; saving a real change still shows `Your product has been successfully created.` Advanced Settings on that editor are `Schedule Publish`, `Availability`, and `Hide from Explore` (2026-10-13). There is no `Set benefits for membership` switch. A custom buyer question added on that form is absent after publish and reopen; price, Hide from Explore, the after-sales note, and after-sales links from the same save are still there. Duration `0` stays on step 1 and the field reports `Duration is required`. The title input keeps 556 characters and has no `maxlength`.
 - **Membership tier Hero Image**: a 686×447 image is accepted with a preview and no error (min 500×500 is only text). The first file input on `/membership/create` belongs to the description editor (`image/*`); the Hero Image input is the one accepting `image/jpeg,…`.
 - **Campaign create** (`/profile/campaigns/create`): a 1×1 banner is accepted with a preview, no error.
 - **2026-10-09 (OC-10): `.wav` is no longer offered.** The panel reads `.pdf, .docx, .xlsx, .csv,

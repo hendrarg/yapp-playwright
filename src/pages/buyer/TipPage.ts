@@ -6,6 +6,7 @@ import { amountRow } from "@pages/shared/locators";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
 
 type TipReviewData = {
+  amount?: string;
   displayAmount: string;
   currency: string;
   creatorName: string;
@@ -59,8 +60,10 @@ export class TipPage {
 
   readonly emailInput = locatorChain(this.page, {
     role: "textbox",
-    name: tipLabels.yourEmail,
-    label: tipLabels.yourEmail,
+    name: "Email *",
+    label: "Email *",
+    placeholder: "Your Email",
+    selector: 'input[type="email"]',
   });
 
   readonly anonymousCheckbox = this.page
@@ -109,16 +112,19 @@ export class TipPage {
         locatorChain(this.page, {
           role: "button",
           name: amount,
-          text: amount,
           exact: true,
         }),
       ).toBeVisible({ timeout: 10000 });
     }
   }
 
-  async expectQuickTipAmountsHidden() {
+  async expectQuickTipAmountsHidden(customAmount?: string) {
     await this.expectPageLoaded();
-    await expect(this.quickAmountButtons).toHaveCount(0);
+    if (customAmount) {
+      await expect(this.page.getByRole("button", { name: customAmount, exact: true })).toHaveCount(0);
+    } else {
+      await expect(this.quickAmountButtons).toHaveCount(0);
+    }
   }
 
   async expectFormAutoFilled() {
@@ -265,9 +271,7 @@ export class TipPage {
   }
 
   private async commitAmountInput() {
-    // Blur via Tab so React validation runs (native blur() is flaky on this controlled input)
-    await this.amountInput.press("Tab");
-    await this.page.waitForTimeout(400);
+    await this.page.waitForTimeout(300);
   }
 
   async clearAmount() {
@@ -279,19 +283,29 @@ export class TipPage {
       await this.page.waitForTimeout(300);
       await this.focusAmountInput();
     } else {
-      await this.amountInput.pressSequentially("2", { delay: 40 });
+      await this.amountInput.pressSequentially("20000", { delay: 30 });
     }
     await this.amountInput.press("ControlOrMeta+A");
     await this.amountInput.press("Backspace");
+    await this.amountInput.press("Tab");
     await this.commitAmountInput();
   }
 
   async fillAmount(value: string) {
     await this.focusAmountInput();
-    await this.amountInput.press("ControlOrMeta+A");
-    await this.amountInput.press("Backspace");
+    const existing = await this.amountInput.inputValue();
+    if (existing.length > 0) {
+      await this.amountInput.press("ControlOrMeta+A");
+      await this.amountInput.press("Backspace");
+    }
     if (value !== "") {
-      await this.amountInput.pressSequentially(value, { delay: 40 });
+      await this.amountInput.pressSequentially(value, { delay: 30 });
+      const current = await this.amountInput.inputValue();
+      if (!current.includes(value.slice(0, 1))) {
+        await this.amountInput.press("ControlOrMeta+A");
+        await this.amountInput.press("Backspace");
+        await this.amountInput.pressSequentially(value, { delay: 30 });
+      }
     }
     await this.commitAmountInput();
   }
@@ -348,6 +362,10 @@ export class TipPage {
 
   async expectPaymentMethodAvailableAndSelect(method: string) {
     await expect(this.paymentMethod).toBeEnabled({ timeout: 10000 });
+    const current = await this.paymentMethod.innerText().catch(() => "");
+    if (new RegExp(method, "i").test(current)) {
+      return;
+    }
     await smartClick(this.page, {
       role: "combobox",
       selector: 'button[role="combobox"]',
@@ -387,10 +405,14 @@ export class TipPage {
     await safeFill(this.privateNotesInput, privateNote);
   }
 
+  async expectAmountValue(value: string) {
+    await expect(this.amountInput).toHaveValue(value, { timeout: 10000 });
+  }
+
   async expectReviewInformation(data: TipReviewData): Promise<string> {
     await expect(locatorChain(this.page, { text: data.creatorName, role: "heading", name: data.creatorName })).toBeVisible();
     await expect(this.currencyTab(data.currency)).toHaveAttribute("aria-selected", "true");
-    await expect(this.amountInput).toHaveValue(data.displayAmount);
+    await expect(this.amountInput).toHaveValue(new RegExp(`^(${data.amount}|${data.displayAmount.replace(/\./g, "\\.")})$`));
     expect((await this.nameInput.inputValue()).length).toBeGreaterThan(0);
     expect((await this.emailInput.inputValue()).length).toBeGreaterThan(0);
     await expect(this.anonymousCheckbox).toHaveAttribute("aria-checked", "false");

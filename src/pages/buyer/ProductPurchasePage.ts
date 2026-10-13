@@ -534,6 +534,68 @@ export class ProductPurchasePage {
     await expect(this.page).toHaveURL(/\/cart/);
   }
 
+  get addToCartButton(): Locator {
+    return this.page.getByRole('button', { name: 'Add To Cart', exact: true }).filter({ visible: true }).first();
+  }
+
+  async clickAddToCart() {
+    await expect(async () => {
+      await safeClick(this.addToCartButton);
+      await expect(this.productAddedDialog).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
+  }
+
+  async expectAddToCartDisabled() {
+    await expect(this.addToCartButton).toBeVisible({ timeout: 10000 });
+    await expect(this.addToCartButton).toBeDisabled({ timeout: 5000 });
+  }
+
+  async expectAddToCartEnabled() {
+    await expect(this.addToCartButton).toBeVisible({ timeout: 10000 });
+    await expect(this.addToCartButton).toBeEnabled({ timeout: 10000 });
+  }
+
+  async expectNoAddToCartButton() {
+    await expect(this.page.getByRole('button', { name: 'Add To Cart', exact: true })).toHaveCount(0);
+  }
+
+  async expectPurchaseButtonVisible() {
+    await expect(this.page.getByRole('button', { name: 'Purchase', exact: true })).toBeVisible({ timeout: 10000 });
+  }
+
+  async clickFirstSelectTicket() {
+    const selectButton = this.page.getByRole('button', { name: 'Select', exact: true }).filter({ visible: true }).first();
+    await safeClick(selectButton);
+  }
+
+  async expectSaveSpotVisible() {
+    const slotCta = this.page.getByRole('button', { name: /Save my spot/i }).first();
+    await expect(slotCta).toBeVisible({ timeout: 10000 });
+  }
+
+  get productAddedDialog(): Locator {
+    return this.page.getByRole('dialog').filter({ hasText: 'Product Added' }).first();
+  }
+
+  async expectProductAdded(options?: { title?: string; creator?: string }) {
+    await expect(this.productAddedDialog).toBeVisible({ timeout: 15000 });
+    if (options?.title) {
+      await expect(this.productAddedDialog.getByText(options.title).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    }
+    if (options?.creator) {
+      await expect(this.productAddedDialog.getByText(options.creator).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async clickSeeCart() {
+    await safeClick(this.productAddedDialog.getByRole('button', { name: 'See Cart', exact: true }));
+    await expect(this.page).toHaveURL(/\/cart/);
+  }
+
+  async clickCloseProductAdded() {
+    await safeClick(this.productAddedDialog.getByRole('button', { name: 'Close', exact: true }));
+  }
+
   private eventSelectTicketButton(): Locator {
     const [primary] = buildSmartStrategies(this.page, {
       role: 'button',
@@ -633,13 +695,10 @@ export class ProductPurchasePage {
     await expect(notFound).toBeVisible({ timeout: 15000 });
   }
 
+  /** Free products say Get Product. Priced products say Purchase. */
   async isProductPubliclyPurchasable(): Promise<boolean> {
-    try {
-      await this.purchaseAction.text({ timeout: 1500 });
-      return true;
-    } catch {
-      return false;
-    }
+    const action = this.page.getByRole("button", { name: /^(Get Product|Purchase)$/ }).locator("visible=true").first();
+    return expect(action).toBeVisible({ timeout: 3000 }).then(() => true, () => false);
   }
 
   async expectConsultationProductLoaded(title: string) {
@@ -1033,17 +1092,24 @@ export class ProductPurchasePage {
     await expect(this.consultationCheckoutEmailInput()).toBeVisible({ timeout: 5000 });
   }
 
+  async expectConsultationCheckoutEmailReadOnly() {
+    const emailInput = this.consultationCheckoutEmailInput();
+    if (await emailInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await expect(emailInput).toBeDisabled({ timeout: 5000 });
+    }
+  }
+
   /**
    * Fill the buyer identity fields when the dialog asks for them — a signed-in buyer
    * gets them pre-filled and the inputs are absent — then confirm the booking.
    */
   async submitConsultationCheckout(buyer: { name: string; email: string }) {
     const nameInput = this.consultationCheckoutNameInput();
-    if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false) && await nameInput.isEnabled().catch(() => false)) {
       await nameInput.fill(buyer.name);
     }
     const emailInput = this.consultationCheckoutEmailInput();
-    if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false) && await emailInput.isEnabled().catch(() => false)) {
       await emailInput.fill(buyer.email);
     }
     await this.consultationCheckoutDialogRoot().getByRole('button', { name: 'Join' }).click();
@@ -1249,6 +1315,13 @@ export class ProductPurchasePage {
         .filter({ visible: true })
         .first(),
     ).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectConsultationMeetingPlatformFixed() {
+    const overview = this.page.getByRole('tab', { name: consultationBuyerDetailData.overviewTab });
+    await overview.click({ timeout: 10000 });
+    await expect(this.page.getByText('Google Meet', { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(/Meeting link will be sent to your email after booking completed/i).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
   }
 
   async expectConsultationSlideActive(index: number) {

@@ -58,3 +58,36 @@ export const exploreFilters = {
   sortBy: ["newest", "popular", "price-asc", "price-desc"] as const,
   category: ["digital", "physical", "service", "all"] as const,
 };
+
+export const cartTestData = {
+  digitalProduct: {
+    title: 'Preset Premiere Pro Cinematic',
+    sharePath: '/s/_W0fWEsA-S',
+    creator: 'hendrarg',
+    price: 'Rp15.000',
+    type: 'Digital Product',
+  },
+  discordMembership: {
+    title: 'Germa 66',
+    sharePath: '/s/yn275_wR-w',
+    creator: 'hendrarg',
+    price: 'Rp25.000',
+    type: 'Discord Membership',
+  },
+  onlineCourse: {
+    title: 'New layout',
+    sharePath: '/s/zLERepYS8W',
+    creator: 'hendrarg',
+  },
+  event: {
+    title: 'Gorgeous Rubber Gloves',
+    sharePath: '/s/MMFHWHIlH7',
+    creator: 'hendrarg',
+  },
+  consultation: {
+    title: 'Bedah Strategi Konten',
+    sharePath: '/s/vkjs-wzVjb',
+    creator: 'hendrarg',
+  },
+};
+

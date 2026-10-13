@@ -127,7 +127,13 @@ export class ProfilePage {
   }
 
   get followerCountText() {
-    return this.page.getByText(/followers/);
+    return this.main.getByText(/followers/i);
+  }
+
+  async expectFollowerCountVisible() {
+    await this.expectAfterRevalidate(async () => {
+      await expect(this.followerCountText.first()).toBeVisible({ timeout: 8000 });
+    });
   }
 
   // ── Share profile ──
@@ -224,13 +230,34 @@ export class ProfilePage {
     await expect(btn, `Tab "${label}" should be active`).toHaveAttribute("data-state", "active", { timeout: 10000 });
   }
 
+  /** Shops cards lazy-load. Scroll until the named card is in the DOM, or the grid stops growing. */
+  private async scrollShops(untilTitle?: string) {
+    const target = untilTitle ? this.productCards.filter({ hasText: untilTitle }).first() : null;
+    let previous = -1;
+    let stable = 0;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      if (target && (await target.count()) > 0) {
+        await target.scrollIntoViewIfNeeded().catch(() => undefined);
+        return;
+      }
+      const count = await this.productCards.count();
+      stable = count === previous ? stable + 1 : 0;
+      if (count > 0 && stable >= 2) return;
+      previous = count;
+      await this.page.mouse.wheel(0, 1400);
+      await this.page.waitForTimeout(400);
+    }
+  }
+
   async expectProductHiddenOnShops(productTitle: string) {
+    await this.scrollShops();
     await expect(this.productCards.filter({ hasText: productTitle })).toHaveCount(0, {
       timeout: 10000,
     });
   }
 
   async expectProductVisibleOnShops(productTitle: string) {
+    await this.scrollShops(productTitle);
     await expect(this.productCards.filter({ hasText: productTitle }).first()).toBeVisible({
       timeout: 10000,
     });
@@ -276,7 +303,7 @@ export class ProfilePage {
 
   // ── Support section (right column) — tip form ──
   private get supportSectionHeading() {
-    return this.main.getByText(this.creatorContext.supportHeading, { exact: true }).first();
+    return this.main.locator("p").filter({ hasText: this.creatorContext.supportHeading }).first();
   }
 
   readonly tipCurrencyGroup = this.main.getByRole("group", { name: "Tip currency" });
@@ -326,13 +353,22 @@ export class ProfilePage {
   }
 
   async expectSupportSectionVisible() {
-    await expect(this.supportSectionHeading).toBeVisible({ timeout: 10000 });
-    await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 10000 });
-    await expect(this.idrButton).toBeVisible({ timeout: 10000 });
-    await expect(this.usdtButton).toBeVisible({ timeout: 10000 });
-    await expect(this.tipInput).toBeVisible({ timeout: 10000 });
-    await expect(this.tipSuggestions.first()).toBeVisible({ timeout: 10000 });
-    await expect(this.sendTipButton).toBeVisible({ timeout: 10000 });
+    await this.expectAfterRevalidate(async () => {
+      await expect(this.tabButton(profileTabs.support)).toBeVisible({ timeout: 8000 });
+      await expect(this.supportSectionHeading).toBeVisible({ timeout: 8000 });
+      await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 8000 });
+      await expect(this.idrButton).toBeVisible({ timeout: 8000 });
+      await expect(this.usdtButton).toBeVisible({ timeout: 8000 });
+      await expect(this.tipInput).toBeVisible({ timeout: 8000 });
+      await expect(this.tipSuggestions.first()).toBeVisible({ timeout: 8000 });
+      await expect(this.sendTipButton).toBeVisible({ timeout: 8000 });
+    });
+  }
+
+  async expectSupportSectionHidden() {
+    await this.expectAfterRevalidate(async () => {
+      await this.expectNoTab(profileTabs.support);
+    });
   }
 
   async expectSendTipDisabled() {
@@ -356,7 +392,7 @@ export class ProfilePage {
   }
 
   async expectHandleVisible(handle: string) {
-    await expect(this.page.getByText(handle, { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(this.main.getByText(handle, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
   }
 
   /** Asserts an unsaved draft value never reached the public profile. */
@@ -466,6 +502,11 @@ export class ProfilePage {
     await this.expectOnLinksTab(() => expect(this.main.getByText(text)).toHaveCount(0, { timeout: 8000 }));
   }
 
+  async expectNoExecutableScripts() {
+    const dangerousElements = await this.main.locator("script, iframe").count();
+    expect(dangerousElements).toBe(0);
+  }
+
   async expectTextBlockTable(cells: readonly string[]) {
     await this.expectOnLinksTab(async () => {
       const table = this.main.getByRole("table").filter({ hasText: cells.join("") }).first();
@@ -505,13 +546,15 @@ export class ProfilePage {
   async expectQuickTipAmountsVisible(amounts?: readonly string[]) {
     const expected = amounts ?? this.creatorContext.tipSuggestions.idr;
     expect(expected.length, "creator must have configured quick tip amounts").toBeGreaterThan(0);
-    await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 10000 });
-    await expect(this.tipInput).toBeVisible({ timeout: 10000 });
-    for (const amount of expected) {
-      await expect(this.tipFormRoot.getByRole("button", { name: amount, exact: true })).toBeVisible({
-        timeout: 10000,
-      });
-    }
+    await this.expectAfterRevalidate(async () => {
+      await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 8000 });
+      await expect(this.tipInput).toBeVisible({ timeout: 8000 });
+      for (const amount of expected) {
+        await expect(this.tipFormRoot.getByRole("button", { name: amount, exact: true })).toBeVisible({
+          timeout: 8000,
+        });
+      }
+    });
   }
 
   /** Tip form remains usable but no Quick Tip amount chips (TC-PRF-B-015). */

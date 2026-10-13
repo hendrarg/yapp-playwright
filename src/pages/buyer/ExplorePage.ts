@@ -183,6 +183,18 @@ export class ExplorePage {
     }
   }
 
+  /** Explore search has no element whose text is exactly this product title. */
+  async expectProductTitleAbsent(title: string) {
+    await this.searchCreators(title);
+    await expect(this.page.getByRole('main').getByText(title, { exact: true })).toHaveCount(0);
+  }
+
+  /** Explore search shows this product title. */
+  async expectProductTitleVisible(title: string) {
+    await this.searchCreators(title);
+    await expect(this.page.getByRole('main').getByText(title, { exact: true }).first()).toBeVisible({ timeout: 20000 });
+  }
+
   /** A product title is (or is not) found by the global Explore search. */
   async expectGlobalSearchFindsProduct(title: string, found: boolean) {
     await this.searchCreators(title);
