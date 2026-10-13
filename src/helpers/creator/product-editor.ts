@@ -374,6 +374,11 @@ export async function expectVersionHistory(page: Page, options: { changedField?:
 
 // ── Product Complete modal ───────────────────────────────────────
 
+/** Soft and shorter, so a stalled publish still lets the later known-bug step run. */
+export async function expectProductCompleteModalSoft(page: Page) {
+  await expect.soft(productCompleteDialog(page)).toBeVisible({ timeout: 15000 });
+}
+
 export async function expectProductCompleteModal(page: Page) {
   const dialog = productCompleteDialog(page);
   await expect(dialog).toBeVisible({ timeout: 60000 });

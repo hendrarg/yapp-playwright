@@ -565,7 +565,10 @@ export class ProductPurchasePage {
 
   async clickFirstSelectTicket() {
     const selectButton = this.page.getByRole('button', { name: 'Select', exact: true }).filter({ visible: true }).first();
-    await safeClick(selectButton);
+    await expect(async () => {
+      await flakyClick(selectButton);
+      await expect(this.addToCartButton).toBeEnabled({ timeout: 2000 });
+    }).toPass({ timeout: 15000, intervals: [500, 1000, 2000] });
   }
 
   async expectSaveSpotVisible() {
@@ -866,6 +869,20 @@ export class ProductPurchasePage {
     await expect(dialog).toBeVisible({ timeout: 10000 });
     await expect(dialog).toContainText(`Min. price: Rp${minimum}`);
     await expect(dialog.getByRole('button', { name: 'Input Amount' })).toBeVisible();
+  }
+
+  async fillFlexiblePriceAmount(amount: string) {
+    const dialog = this.page.getByRole('dialog').filter({ hasText: 'Name a Fair Price' });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    const input = dialog.locator('input').first();
+    await safeFill(input, amount);
+  }
+
+  async submitFlexiblePriceAmount() {
+    const dialog = this.page.getByRole('dialog').filter({ hasText: 'Name a Fair Price' });
+    const submitBtn = dialog.getByRole('button', { name: 'Input Amount', exact: true });
+    await safeClick(submitBtn);
+    await expect(dialog).toBeHidden({ timeout: 10000 });
   }
 
   /** A discounted price shows the reduced amount, the struck original and the percentage. */

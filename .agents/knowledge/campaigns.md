@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, campaigns]
 project: yapp
 created: 2026-09-30
-updated: 2026-09-30
+updated: 2026-10-13
 sources: 0
 status: active
 ---
@@ -59,6 +59,11 @@ through the UI — block the `POST` with `page.route` when only FE validation is
 Activate/Deactivate commit instantly with **no toast and no confirmation**; only the badge
 changes. Products toast `Product set to inactive` / `Product set to active`.
 
+The manage page has two Withdraw buttons (Rupiah and USDT). The IDR dialog is titled
+`Withdraw - IDR` and shows Asset, Destination, Amount, and `Balance: Rp0` on one line (there is
+no standalone "Balance" label). The amount placeholder is `Minimum withdrawal Rp150.000`. A zero
+balance still opens the dialog; the test does not submit a withdrawal.
+
 ## Inactive does not close the campaign
 
 Same as inactive products ([[products]] → Status lifecycle): an inactive campaign disappears from
@@ -77,10 +82,23 @@ live. An unknown slug renders an in-page `Error / Failed to load campaign detail
   is required`, `Thumbnail is required` (verified by screenshot 2026-09-30; an earlier DOM colour
   scan missed them). Goal `1` passes with no message — there is no Rp10.000-style floor (a live
   campaign has goal `Rp 100`).
-- **The slug is derived from the title and readonly.** On edit the readonly link preview
-  follows the title as you type and the request carries the new `shortUrl`, but the server keeps
-  the original slug — the preview shows a link that will not exist.
+- **The slug is derived from the title.** The preview shows `yapp.ink/campaign` beside a text
+  input that holds the slug (`probe-slug-drive` after typing “Probe Slug Drive”). On edit the
+  preview follows the new title immediately and the saved `title` updates, but
+  `GET /api/v1/campaigns/{uuid}` still returns the
+  original `shortUrl` (re-checked 2026-10-13: preview `rustic-ceramic-cheese-drive-712806`, saved
+  `gorgeous-concrete-shirt-drive-712806`). The preview shows a link that will not exist. This is
+  not listed as a known bug on the campaign sheet, so the automation keeps the sheet's expected
+  result and the row stays Planned.
 - Upload copy disagrees: cover `max 50MB`, supporting photos `no larger than 500 MB`. Label
-  `Currency to be receive` (sic).
+  `Currency to be receive` (sic). The title box placeholder is `e.g., Help me launch my next music album`
+  and is not labelled for the accessible name. The goal box placeholder is `Target`; `IDR` is a
+  separate prefix, not part of the placeholder. Publishing also requires the description
+  (`Description is required`). A cover that is accepted shows `img[alt="Uploaded image"]` with an
+  icon button that has no accessible name. Choosing a file only shows a local preview;
+  `POST /api/v1/file/upload/create` starts when Publish or Save as Draft is clicked, and the
+  campaign write waits until that upload finishes. The support and leaderboard switches also have no
+  accessible name; the label is a sibling in the same row. Re-checked 2026-10-13: a 1×1 cover is
+  still accepted with no error that names the file (L-05).
 - List money renders `Rp 100.000` (with a space); Products render `Rp0` / `Rp10.000` (no space) —
   see [[currency-format]].

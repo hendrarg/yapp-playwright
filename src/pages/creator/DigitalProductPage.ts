@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { safeClick } from "@utils/playwright.utils";
@@ -32,7 +34,7 @@ export class DigitalProductPage {
 
   async expectLoaded() {
     await expect(this.page).toHaveURL(/\/products\/(?:create|update)\/digital-downloads/, { timeout: 30000 });
-    await expect(this.main.getByText("Content Details", { exact: true })).toBeVisible({ timeout: 20000 });
+    await expect(this.main.getByText("Content Details", { exact: true }).locator("visible=true").first()).toBeVisible({ timeout: 20000 });
   }
 
   async expectDigitalProductCreateFlow() {
@@ -58,10 +60,15 @@ export class DigitalProductPage {
   }
 
   // ── Step 1: content types ──
-  /** The card checkboxes have no accessible name; their hand-authored ids are the stable hook. */
+  /**
+   * The card checkboxes have no accessible name, and a hidden duplicate shares the id.
+   * State is read from the visible checkbox; the visible card title is what toggles it.
+   */
   private contentTypeCheckbox(type: DigitalContentType): Locator {
-    return this.page.locator(`#content-type-${type}`);
+    return this.page.locator(`#content-type-${type}`).locator("visible=true");
   }
+
+
 
   async expectContentTypeOptions() {
     for (const [type, card] of Object.entries(digitalContentTypes) as Array<[DigitalContentType, (typeof digitalContentTypes)[DigitalContentType]]>) {
@@ -73,8 +80,10 @@ export class DigitalProductPage {
 
   async setContentType(type: DigitalContentType, checked: boolean) {
     const box = this.contentTypeCheckbox(type);
-    if (((await box.getAttribute("aria-checked")) === "true") !== checked) await safeClick(box);
-    await expect(box).toHaveAttribute("aria-checked", String(checked), { timeout: 10000 });
+    await expect(async () => {
+      if (((await box.getAttribute("aria-checked")) === "true") !== checked) await box.click({ timeout: 3000 });
+      await expect(box).toHaveAttribute("aria-checked", String(checked), { timeout: 2000 });
+    }).toPass({ timeout: 15000 });
   }
 
   async expectContentSection(type: DigitalContentType, visible: boolean) {
@@ -112,6 +121,10 @@ export class DigitalProductPage {
   }
 
   /** Videos list as `<name> <size>`; images only as preview tiles (no name — M-40). */
+  async readMediaImageCount(): Promise<number> {
+    return this.main.locator('img[src^="blob:"]').count();
+  }
+
   async expectMediaItems(options: { videoNames: readonly string[]; imageCount: number }) {
     for (const name of options.videoNames) await expect(this.main.getByText(name, { exact: true })).toBeVisible({ timeout: 20000 });
     await expect.poll(() => this.main.locator('img[src^="blob:"]').count(), { timeout: 20000 }).toBeGreaterThanOrEqual(options.imageCount);
@@ -147,16 +160,17 @@ export class DigitalProductPage {
 
   /** The requirement should name every card the creator can pick, Media included. */
   async expectContentTypeMessageNamesAllTypes() {
-    await expect(this.page.getByText(/At least one of .*Media/i).first()).toBeVisible({ timeout: 5000 });
+    await expect.soft(this.page.getByText(/At least one of .*Media/i).first()).toBeVisible({ timeout: 5000 });
   }
 
   async goToDetails() {
-    await nextSetDetailsAction(this.page).click({ timeout: 10000 });
+    const next = this.page.getByRole("button", { name: /Next: (?:Set|Edit) Details/ }).locator("visible=true").first();
+    await next.click({ timeout: 10000 });
     await this.expectDigitalProductSetDetailsLoaded();
   }
 
   async expectDigitalProductSetDetailsLoaded() {
-    await expect(this.page.getByRole("button", { name: "Next: Publish" })).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByRole("button", { name: /^(?:Next: Publish|Save and Publish)$/ }).locator("visible=true").first()).toBeVisible({ timeout: 15000 });
   }
 
   // ── Buyer-only content description (step 1) ──
@@ -181,6 +195,11 @@ export class DigitalProductPage {
 
   async expectDigitalProductContentDescriptionCounter(expectedText: string) {
     await expect(this.contentDescriptionCounter()).toHaveText(expectedText, { timeout: 10000 });
+  }
+
+  /** Soft variant so a word-count bug does not skip the later known-bug steps. */
+  async expectDigitalProductContentDescriptionCounterSoft(expectedText: string) {
+    await expect.soft(this.contentDescriptionCounter()).toHaveText(expectedText, { timeout: 10000 });
   }
 
   async applyDigitalProductContentDescriptionFormatting() {
@@ -298,7 +317,107 @@ export class DigitalProductPage {
 
   /** Every switch on the form should carry an accessible name, Customize Message included. */
   async expectAfterSalesSwitchNamed() {
-    await expect(this.page.getByRole("switch", { name: "Customize Message" })).toBeVisible({ timeout: 5000 });
+    await expect.soft(this.page.getByRole("switch", { name: "Customize Message" })).toBeVisible({ timeout: 5000 });
+  }
+
+  async openEdit(productUuid: string) {
+    await this.page.goto(new URL(`products/update/digital-downloads/${productUuid}`, this.baseURL).toString(), { waitUntil: "domcontentloaded" });
+    await this.expectLoaded();
+  }
+
+  /** First visit should leave the form clickable, with no driver.js tour on top. */
+  async expectFormReadyWithoutTour() {
+    await expect(this.page.locator(".driver-overlay, .driver-popover")).toHaveCount(0);
+    await expect(this.page.locator("body")).not.toHaveClass(/driver-active/);
+    await this.setContentType("media", true);
+    await expect(this.page.getByRole("button", { name: "Next: Set Details" })).toBeEnabled();
+  }
+
+  /** The Media card advertises audio as well as images and video. */
+  async expectMediaAdvertisesAudio() {
+    const accept = ((await this.mediaInput().getAttribute("accept")) ?? "").toLowerCase();
+    for (const extension of [".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac"]) {
+      expect(accept, accept).toContain(extension);
+    }
+    await expect(this.main.getByText(digitalContentTypes.media.hint, { exact: true })).toBeVisible();
+  }
+
+  /** Each content-type checkbox should expose its card label as its accessible name. */
+  async expectContentTypeCheckboxesNamed() {
+    for (const card of Object.values(digitalContentTypes)) {
+      await expect.soft(this.page.getByRole("checkbox", { name: card.label, exact: true }).first()).toBeVisible({ timeout: 5000 });
+    }
+  }
+
+  /** Image and video rows should both show the file name and its size. */
+  async expectMediaFileListedWithSize(fileName: string) {
+    await expect.soft(this.main.getByText(fileName, { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect.soft(
+      this.main.locator("div").filter({ hasText: fileName }).filter({ hasText: /\d+(\.\d+)?\s*(KB|MB)/ }).first(),
+    ).toBeVisible({ timeout: 5000 });
+  }
+
+  async dropMedia(filePaths: readonly string[]) {
+    await this.dropFiles(digitalContentTypes.media.section, filePaths);
+  }
+
+  async dropDigitalFiles(filePaths: readonly string[]) {
+    await this.dropFiles(digitalContentTypes.digital.section, filePaths);
+  }
+
+  async removeNamedFile(fileName: string) {
+    const name = this.main.getByText(fileName, { exact: true });
+    const row = this.main.locator("div").filter({ hasText: fileName }).filter({ has: this.page.getByRole("button") }).last();
+    const named = row.getByRole("button", { name: /remove|delete|close/i });
+    if (await named.count()) await named.first().click({ timeout: 10000 });
+    else await row.getByRole("button").last().click({ timeout: 10000 });
+    await expect(name).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** A count or size past the stated media limit names the problem. */
+  async expectUploadLimitMessage() {
+    await expect(this.page.getByText(/limit|maximum|too many|exceed|up to \d+|only \d+/i).first()).toBeVisible({ timeout: 8000 });
+  }
+
+  async expectDigitalFileRejected(fileName: string) {
+    const escaped = fileName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    await expect(this.page.getByText(new RegExp(`${escaped}.*File type must be one of|not supported|invalid format`, "i")).first()).toBeVisible({ timeout: 8000 });
+    await expect(this.main.getByText(fileName, { exact: true })).toHaveCount(0);
+  }
+
+  /** Ask to untick a filled card. The confirmation has to appear before the files disappear. */
+  async requestContentTypeOff(type: DigitalContentType) {
+    await this.contentTypeCheckbox(type).click({ timeout: 10000 });
+  }
+
+  async expectDiscardConfirmation() {
+    const dialog = this.page.getByRole("dialog").or(this.page.getByRole("alertdialog"));
+    await expect(dialog.first()).toBeVisible({ timeout: 5000 });
+  }
+
+  private async dropFiles(sectionTitle: string, filePaths: readonly string[]) {
+    const hint = sectionTitle === digitalContentTypes.media.section ? ".mp4" : ".pdf";
+    const zone = this.main.locator("div.border-dashed").filter({ hasText: hint }).locator("visible=true");
+    const payload = filePaths.map((filePath) => ({
+      name: path.basename(filePath),
+      mime: mimeFor(filePath),
+      base64: fs.readFileSync(filePath).toString("base64"),
+    }));
+    const dataTransfer = await this.page.evaluateHandle((files) => {
+      const scope = globalThis as any;
+      const transfer = new scope.DataTransfer();
+      for (const file of files) {
+        const binary = scope.atob(file.base64) as string;
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        transfer.items.add(new scope.File([bytes], file.name, { type: file.mime }));
+      }
+      return transfer;
+    }, payload);
+    await zone.dispatchEvent("dragenter", { dataTransfer });
+    await zone.dispatchEvent("dragover", { dataTransfer });
+    await zone.dispatchEvent("drop", { dataTransfer });
+    await dataTransfer.dispose();
   }
 
   // ── Pricing (step 2, shared UI) ──
@@ -313,4 +432,12 @@ export class DigitalProductPage {
   async expectDigitalProductValidPrice() {
     await expect.poll(() => this.main.innerText(), { timeout: 10000 }).not.toMatch(digitalProductPricingData.invalidPriceErrorPattern);
   }
+}
+
+function mimeFor(filePath: string): string {
+  const extension = path.extname(filePath).toLowerCase();
+  if (extension === ".mp4" || extension === ".mov" || extension === ".webm") return "video/mp4";
+  if (extension === ".pdf") return "application/pdf";
+  if (extension === ".txt") return "text/plain";
+  return "image/png";
 }

@@ -717,8 +717,13 @@ like the page is broken rather than like the route having moved.
   .aac .flac`; Digital Files `.pdf .docx .doc .xlsx .xls .csv .zip`. Files only upload **at
   publish**. **`.ogv` and `.avi` are rejected there** (`POST /file/upload/create` → 500
   `unsupported content type: video/ogg|video/avi`) and `Next: Publish` then stalls silently — no
-  toast, no product (candidate bug, CL-AUT-047). A `.txt` set into the Media input is listed with
-  no message (candidate bug).
+  toast, no product (candidate bug, CL-AUT-047). Re-checked 2026-10-13: publishing `.ogv` and `.avi`
+  still never opens Product Complete. A `.txt` dropped into Media is no longer listed, and there is
+  still no rejection message. Text bytes renamed to `.pdf`/`.docx`/`.zip` are listed on step 1, then
+  `Next: Publish` stalls the same way — clear those stubs before a real publish. The Media drop
+  zone is the dashed `Attach File(s)` box (`Select Files`). Eleven files (every image extension
+  plus five videos) all stay listed; the zone shows no count or size cap and no limit message.
+  A listed video row can be removed from its own button.
 - Step 2 with Digital Files shows `Downloadable File` (default ON). OFF → the buyer's order page
   lists the file with `View` but no `Download`.
 - **Limited Slot**: `Limit available slots` reveals `Available slots` (default 100, +/−) and `Show

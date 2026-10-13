@@ -6,7 +6,7 @@ import { depositWebhook } from '@helpers/api/webhook';
 import { loginWithToken } from '@helpers/auth/token-login';
 import { buyCourseAs } from '@helpers/buyer/course-purchase';
 import { createDigitalProductUploadFixtures } from '@helpers/creator/digital-product-media';
-import { addCustomBuyerQuestion, closeProductCompleteModal, copyProductCompleteLink, enableAfterSalesLinks, expectAddQuestionsDisabled, expectEmbedLinksSaved, expectImageTooSmall, expectInvalidEmbedLinkFeedback, expectMandatoryBuyerFieldsProtected, expectProductCompleteModal, expectSavedBuyerQuestion, fillEmbedLink, openEmbedLinkDialog, readProductCompleteSharePath, removeCustomBuyerQuestion, saveCurrentEmbedLink } from '@helpers/creator/product-editor';
+import { addCustomBuyerQuestion, closeProductCompleteModal, copyProductCompleteLink, enableAfterSalesLinks, expectAddQuestionsDisabled, expectEmbedLinksSaved, expectImageTooSmall, expectInvalidEmbedLinkFeedback, expectMandatoryBuyerFieldsProtected, expectProductCompleteModal, expectProductCompleteModalSoft, expectSavedBuyerQuestion, fillEmbedLink, openEmbedLinkDialog, readProductCompleteSharePath, removeCustomBuyerQuestion, saveCurrentEmbedLink } from '@helpers/creator/product-editor';
 import { LibraryPage } from '@pages/buyer/LibraryPage';
 import { ProductPurchasePage } from '@pages/buyer/ProductPurchasePage';
 import type { DigitalProductPage } from '@pages/creator/DigitalProductPage';
@@ -99,7 +99,7 @@ test.describe('Creator Digital Product', () => {
         await onlineCoursePage.applyRichTextFormatting();
         await onlineCoursePage.expectDescriptionFormatted();
         await onlineCoursePage.fillDescription('A'.repeat(550));
-        await onlineCoursePage.expectDescriptionCounter('500 / 500');
+        await onlineCoursePage.expectDescriptionCounterSoft('500 / 500');
       });
 
       await test.step('Next stays reachable and leaving with unsaved changes asks for confirmation', async () => {
@@ -148,6 +148,8 @@ test.describe('Creator Digital Product', () => {
         await digitalProductPage.setContentType('digital', true);
         await digitalProductPage.uploadDigitalFiles(uploads.files);
         await digitalProductPage.expectDigitalFileNames(uploads.fileNames);
+        // The stubs are extension-only. Leaving them on the form makes publish stall at file upload.
+        await digitalProductPage.expectUntickWithoutConfirmation('digital');
       });
 
       await test.step('The buyer-only description is optional, formats and counts up to 500', async () => {
@@ -186,15 +188,33 @@ test.describe('Creator Digital Product', () => {
       await test.step('Every advertised media format is accepted and the product publishes', async () => {
         const mediaTitle = generateDigitalProductTitle();
         titles.push(mediaTitle);
+        const publishableVideos = uploads.videos.filter((file) => !/\.(?:ogv|avi)$/i.test(file));
         await digitalProductPage.goto();
         await digitalProductPage.setContentType('media', true);
-        await digitalProductPage.uploadMedia([...uploads.images, ...uploads.videos]);
-        await digitalProductPage.expectMediaItems({ videoNames: uploads.videoNames, imageCount: uploads.images.length });
+        await digitalProductPage.uploadMedia([...uploads.images, ...publishableVideos]);
+        await digitalProductPage.expectMediaItems({
+          videoNames: publishableVideos.map((file) => file.split(/[\\/]/).pop()!),
+          imageCount: uploads.images.length,
+        });
         await digitalProductPage.goToDetails();
         await onlineCoursePage.fillTitle(mediaTitle);
         await onlineCoursePage.fillDescription(generateDigitalProductDescription());
         await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
         await publish(onlineCoursePage);
+      });
+
+      await test.step('Advertised .ogv and .avi media can be published', async () => {
+        const stalled = uploads.videos.filter((file) => /\.(?:ogv|avi)$/i.test(file));
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia(stalled);
+        await digitalProductPage.expectMediaItems({ videoNames: stalled.map((file) => file.split(/[\\/]/).pop()!), imageCount: 0 });
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.fillTitle(generateDigitalProductTitle());
+        await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+        await onlineCoursePage.uploadProductThumbnail(onlineCourseMediaData.thumbnailPaths[0]);
+        await onlineCoursePage.submitPublish();
+        await expectProductCompleteModalSoft(page);
       });
 
       await test.step('A file outside the supported media formats is rejected with a message', async () => {
@@ -209,6 +229,73 @@ test.describe('Creator Digital Product', () => {
         const product = await findProductByTitle(page.request, t).catch(() => undefined);
         if (product) await deleteProduct(page.request, product.uuid).catch(() => undefined);
       }
+    }
+  });
+
+  test('Product Digital — Media Upload, Digital Files, Thumbnail Rejection Message, Deselect Without Confirmation', {
+    tag: ['@AUT-PD-003', '@products', '@creator', '@regression'],
+    annotation: { type: 'issue', description: 'M-41' },
+  }, async ({ digitalProductPage, onlineCoursePage, page }) => {
+    test.setTimeout(240000);
+    // Known bug M-41: unticking a filled content type discards its files with no confirmation. Last step.
+    test.fail(true, 'M-41: unticking a content type discards its files without confirmation');
+    const uploads = createDigitalProductUploadFixtures();
+
+    try {
+      await test.step('Several media files can be added from the picker and by drop, and one can be removed', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia(uploads.videos.slice(0, 2));
+        await digitalProductPage.expectMediaItems({ videoNames: uploads.videoNames.slice(0, 2), imageCount: 0 });
+        const imagesBefore = await digitalProductPage.readMediaImageCount();
+        await digitalProductPage.dropMedia([uploads.images[0]]);
+        await expect.poll(() => digitalProductPage.readMediaImageCount(), { timeout: 15000 }).toBeGreaterThan(imagesBefore);
+        await digitalProductPage.removeNamedFile(uploads.videoNames[0]);
+      });
+
+      await test.step('A full set of media files stays listed, and a count error is shown if one is applied', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia([...uploads.images, ...uploads.videos]);
+        await digitalProductPage.expectMediaItems({ videoNames: uploads.videoNames, imageCount: uploads.images.length });
+      });
+
+      await test.step('Several digital files can be added and removed, and an unsupported format is refused', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('digital', true);
+        await digitalProductPage.uploadDigitalFiles(uploads.files.slice(0, 2));
+        await digitalProductPage.expectDigitalFileNames(uploads.fileNames.slice(0, 2));
+        await digitalProductPage.dropDigitalFiles([uploads.files[2]]);
+        await digitalProductPage.expectDigitalFileNames([uploads.fileNames[2]]);
+        await digitalProductPage.removeNamedFile(uploads.fileNames[0]);
+        await digitalProductPage.uploadDigitalFiles([uploads.unsupported]);
+        await digitalProductPage.expectDigitalFileRejected(uploads.unsupportedName);
+      });
+
+      await test.step('An undersized thumbnail is refused in a toast that names the file', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.enableLinksContentType();
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page, firstLink.label, firstLink.url);
+        await saveCurrentEmbedLink(page);
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.fillTitle(generateDigitalProductTitle());
+        await onlineCoursePage.fillDescription(generateDigitalProductDescription());
+        const fileName = onlineCourseMediaData.tinyThumbnailPath.split('/').pop()!;
+        await onlineCoursePage.uploadThumbnailForValidation(onlineCourseMediaData.tinyThumbnailPath);
+        await expectImageTooSmall(page, fileName);
+      });
+
+      await test.step('Unticking a filled content type asks before the files are discarded', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('digital', true);
+        await digitalProductPage.uploadDigitalFiles(uploads.files.slice(0, 1));
+        await digitalProductPage.expectDigitalFileNames(uploads.fileNames.slice(0, 1));
+        await digitalProductPage.requestContentTypeOff('digital');
+        await digitalProductPage.expectDiscardConfirmation();
+      });
+    } finally {
+      uploads.cleanup();
     }
   });
 
@@ -412,13 +499,97 @@ test.describe('Creator Digital Product', () => {
       await test.step('With After Sales ON an empty message is refused and the 1000-character limit holds', async () => {
         await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
         await onlineCoursePage.fillAfterSalesMessage('M'.repeat(1005));
-        await expect.poll(async () => (await onlineCoursePage.readAfterSalesMessageLength()), { timeout: 10000 }).toBeLessThanOrEqual(1000);
+        await expect.soft.poll(async () => onlineCoursePage.readAfterSalesMessageLength(), { timeout: 10000 }).toBeLessThanOrEqual(1000);
       });
 
       await test.step('The Customize Message switch has an accessible name like every other switch', async () => {
         await digitalProductPage.expectAfterSalesSwitchNamed();
       });
     } finally {
+      for (const title of titles) {
+        const product = await findProductByTitle(request, title).catch(() => undefined);
+        if (product) await deleteProduct(request, product.uuid).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Product Digital — Edit, future changes, republish, and URL stays, Title Length, Description Counter, Media List, Audio, Overlay, Accessibility', {
+    tag: ['@AUT-PD-006', '@products', '@creator', '@regression'],
+    annotation: [
+      { type: 'issue', description: 'M-46' },
+      { type: 'issue', description: 'M-26' },
+      { type: 'issue', description: 'M-40' },
+      { type: 'issue', description: 'L-43' },
+    ],
+  }, async ({ digitalProductPage, onlineCoursePage, page }) => {
+    test.setTimeout(300000);
+    // Known bugs last: M-46 title cap, M-26 word counter, M-40 image row, L-43 unnamed checkboxes.
+    test.fail(true, 'M-46 / M-26 / M-40 / L-43: title cap, description unit, media rows, content-type names');
+    const request = page.request;
+    const uploads = createDigitalProductUploadFixtures();
+    const titles: string[] = [];
+    const stepOne = 'one two three four five six seven eight nine ten eleven';
+    const stepTwo = 'alpha beta gamma delta epsilon zeta eta theta iota kappa';
+
+    try {
+      await test.step('The form is usable on the first visit, with no tour covering it', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.expectFormReadyWithoutTour();
+      });
+
+      await test.step('The Media upload lists audio formats as well as images and video', async () => {
+        await digitalProductPage.expectMediaAdvertisesAudio();
+      });
+
+      await test.step('Editing a published product keeps its URL and shows the saved change', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        const sharePath = await publish(onlineCoursePage);
+        const product = (await findProductByTitle(request, title))!;
+        const edited = `Future buyers see this note ${Date.now().toString().slice(-4)}`;
+        await digitalProductPage.openEdit(product.uuid);
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.fillDescription(edited);
+        await digitalProductPage.saveAndPublish();
+        expect((await getProduct(request, product.uuid)).shortUrl).toBe(sharePath.replace(/^\/s\//, ''));
+        await digitalProductPage.openEdit(product.uuid);
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.expectDescriptionContains(edited);
+      });
+
+      await test.step('The content description counter counts characters on both steps', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.fillDigitalProductContentDescription(stepOne);
+        await digitalProductPage.expectDigitalProductContentDescriptionCounterSoft(`${stepOne.length} / 500`);
+        await digitalProductPage.setContentType('links', true);
+        await openEmbedLinkDialog(page);
+        await fillEmbedLink(page, firstLink.label, firstLink.url);
+        await saveCurrentEmbedLink(page);
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.fillDescription(stepTwo);
+        await onlineCoursePage.expectDescriptionCounterSoft(`${stepTwo.length} / 500`);
+      });
+
+      await test.step('An image and a video both list the file name and the size', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.setContentType('media', true);
+        await digitalProductPage.uploadMedia([uploads.images[0], uploads.videos[0]]);
+        await digitalProductPage.expectMediaItems({ videoNames: [uploads.videoNames[0]], imageCount: 1 });
+        await digitalProductPage.expectMediaFileListedWithSize(uploads.images[0].split(/[\\/]/).pop()!);
+      });
+
+      await test.step('Each content-type checkbox exposes its label', async () => {
+        await digitalProductPage.expectContentTypeCheckboxesNamed();
+      });
+
+      await test.step('The title stops at its documented limit and shows that limit', async () => {
+        await digitalProductPage.goToDetails();
+        await onlineCoursePage.fillTitle('T'.repeat(556));
+        await onlineCoursePage.expectTitleCappedSoft(556);
+      });
+    } finally {
+      uploads.cleanup();
       for (const title of titles) {
         const product = await findProductByTitle(request, title).catch(() => undefined);
         if (product) await deleteProduct(request, product.uuid).catch(() => undefined);

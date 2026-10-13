@@ -89,5 +89,12 @@ export const cartTestData = {
     sharePath: '/s/vkjs-wzVjb',
     creator: 'hendrarg',
   },
+  flexibleConsultation: {
+    title: 'Katalon Studio',
+    sharePath: '/s/4X3Eal1N9w',
+    creator: 'hendrarg',
+    minimumPrice: '100.000',
+    type: 'Consultation',
+  },
 };
 

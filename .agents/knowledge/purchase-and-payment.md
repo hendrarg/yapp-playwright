@@ -343,7 +343,7 @@ from IDR 0 to IDR 20.000). The fee breakdown appears only at checkout, so do not
 for it on the cart page.
 
 **`Check out` is disabled until something is selected** and enables as soon as one item
-is checked; checking an item auto-checks its creator group. When navigating to `/cart` with items in the cart, `Select All` is **checked by default**, with the initial Cart Summary reflecting the full count and total amount.
+is checked; checking an item auto-checks its creator group. When navigating to `/cart` or reloading the page with items in the cart (verified 2026-10-13), `Select All` and item checkboxes load **unselected by default** (`aria-checked="false"`), with initial Cart Summary showing `Rp0` (0 items) and a disabled `Check out` button. Selecting an item or clicking `Select All` activates the summary calculations and enables checkout.
 
 **Locator trap (2026-09-09):** the page renders a **second, hidden `Select All`
 checkbox** for the mobile layout, so a raw `[role="checkbox"]` count is one higher than

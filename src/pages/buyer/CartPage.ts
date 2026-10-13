@@ -31,15 +31,22 @@ export class CartPage {
   }
 
   get selectAllCheckbox() {
-    return this.main.getByRole("checkbox", { name: "Select All" });
+    return this.main.getByRole("checkbox", { name: "Select All" }).filter({ visible: true }).first();
   }
 
   get checkoutButton() {
     return this.main.getByRole("button", { name: buyerEventsDetailData.cartCheckout.checkOut });
   }
 
-  async selectAll() {
-    await safeClick(this.selectAllCheckbox);
+  async selectAll(check = true) {
+    const box = this.selectAllCheckbox;
+    const target = check ? "true" : "false";
+    await expect(async () => {
+      if ((await box.getAttribute("aria-checked")) !== target) {
+        await safeClick(box);
+      }
+      await expect(box).toHaveAttribute("aria-checked", target, { timeout: 2000 });
+    }).toPass({ timeout: 10000, intervals: [500, 1000] });
   }
 
   async expectEmptyCart() {
@@ -147,5 +154,49 @@ export class CartPage {
   async expectPaymentSuccess() {
     const dialog = this.page.getByRole("dialog").filter({ hasText: buyerEventsDetailData.cartCheckout.paymentSuccess }).first();
     await expect(dialog).toBeVisible({ timeout: 30000 });
+  }
+
+  getItemRow(title: string): Locator {
+    return this.main
+      .locator("div")
+      .filter({ hasText: title })
+      .filter({ has: this.page.getByRole("checkbox") })
+      .last();
+  }
+
+  async toggleItemCheckbox(title: string) {
+    const row = this.getItemRow(title);
+    await safeClick(row.getByRole("checkbox").first());
+  }
+
+  async removeItem(title: string) {
+    const row = this.getItemRow(title);
+    const removeBtn = row.getByRole("button").filter({ has: this.page.locator("svg") }).last();
+    await safeClick(removeBtn);
+    const confirmDialog = this.page.getByRole("dialog").filter({ hasText: /delete|remove|hapus/i });
+    if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const confirmBtn = confirmDialog.getByRole("button", { name: /yes|delete|remove|hapus|confirm/i }).first();
+      await safeClick(confirmBtn);
+    }
+    await expect(this.main.getByText(title, { exact: true })).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectNoQuantityControls() {
+    await expect(this.main.locator('input[type="number"]')).toHaveCount(0);
+    await expect(this.main.getByRole("spinbutton")).toHaveCount(0);
+  }
+
+  async expectNoFeeBreakdown() {
+    await expect(this.cartSummaryCard.getByText("Service Fee", { exact: false })).toHaveCount(0);
+    await expect(this.cartSummaryCard.getByText("Platform Fee", { exact: false })).toHaveCount(0);
+    await expect(this.cartSummaryCard.getByText("Payment Gateway Fee", { exact: false })).toHaveCount(0);
+  }
+
+  async expectCheckoutEnabled(enabled: boolean) {
+    if (enabled) {
+      await expect(this.checkoutButton).toBeEnabled({ timeout: 10000 });
+    } else {
+      await expect(this.checkoutButton).toBeDisabled({ timeout: 10000 });
+    }
   }
 }

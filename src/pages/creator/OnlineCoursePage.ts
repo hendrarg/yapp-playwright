@@ -678,6 +678,11 @@ export class OnlineCoursePage {
     await expect(this.detailsDescriptionCounter()).toContainText(expectedText, { timeout: 10000 });
   }
 
+  /** Soft variant so a wrong unit does not skip the later known-bug steps. */
+  async expectDescriptionCounterSoft(expectedText: string) {
+    await expect.soft(this.detailsDescriptionCounter()).toContainText(expectedText, { timeout: 10000 });
+  }
+
   async applyRichTextFormatting() {
     const editor = this.detailsDescriptionEditor();
     await editor.click({ timeout: 10000 });
@@ -908,6 +913,12 @@ export class OnlineCoursePage {
   /** A documented title limit shows up as the input's maxlength. */
   async expectTitleLimited() {
     await expect(this.detailsTitleInput()).toHaveAttribute("maxlength", /^\d+$/, { timeout: 5000 });
+  }
+
+  /** Soft variant: a missing cap must not skip the later known-bug steps. */
+  async expectTitleCappedSoft(maxExclusive: number) {
+    expect.soft((await this.readTitleValue()).length, "title should stop at the documented limit").toBeLessThan(maxExclusive);
+    expect.soft((await this.detailsTitleInput().getAttribute("maxlength")) ?? "", "title should expose maxlength").toMatch(/^\d+$/);
   }
 
   async deleteAllChapters() {

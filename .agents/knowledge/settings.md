@@ -1,4 +1,4 @@
-﻿---
+---
 title: Settings
 category: project
 tags: [yapp, product, automation, settings]
@@ -123,11 +123,19 @@ active and tracking events.` and **prints the Pixel Access Token back in full, u
 next to the Pixel ID. Values land in `user_third_party_settings.meta_pixel_id` /
 `meta_pixel_token` in plaintext.
 
-`Disconnect` opens a confirm dialog whose body is **the wrong copy**: *"This will
-permanently disconnect Hendra's server from your account"* — the Discord/Telegram server
-wording reused for the pixel, with the creator's first name interpolated. Confirming does
-clear both columns to `NULL`. A product that kept its own pixel is unaffected; the two
-levels are stored and cleared independently.
+`Disconnect` opens a confirm dialog: *"Disconnect Pixel? You'll stop sending tracking
+events from Yapp to this Pixel. You can reconnect anytime."* with buttons `Cancel`,
+`Yes, Disconnect`, and `Close`. Confirming calls `POST /api/v1/meta-pixel/reset-settings`,
+clears both columns to `NULL`, and displays a `Tracking Stopped` success dialog with
+button `Back to settings`.
+
+Saving credentials in `Set Up Facebook Pixel ID` calls `PUT /api/v1/accounts` and displays
+a `Pixel Connected` success dialog (*"You're all set! We'll start tracking key events on
+your Yapp pages."*) with button `Back to settings`.
+
+**Responsive DOM duplicates:** "See what we track", "Set Up", and carousel headings
+(`Page View`, etc.) render both desktop and mobile variants inside the cards/dialogs.
+Locators must scope with `.filter({ visible: true })` or `.first()`.
 
 ## QA Meta Pixel credentials (18 Sep 2026)
 

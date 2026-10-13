@@ -26,6 +26,23 @@ export const campaignTemplates = {
 
 // ── Factory ──────────────────────────────────────────────────────
 
+export function generateCampaignTitle(): string {
+  return getAiText("campaign:name", () => `${faker.commerce.productName()} Drive`);
+}
+
+export const campaignEditorData = {
+  goal: "100000",
+  updatedGoal: "150000",
+  cardColor: "#112233",
+  progressBackground: "#334455",
+  progressBar: "#667788",
+  columns: ["IMAGE", "CAMPAIGN NAME", "GOALS", "CURRENT", "STATUS", "ACTION"],
+  statusTabs: ["All", "Active", "Inactive", "Collaboration"],
+  titleRequired: "Campaign title is required",
+  emptyCollaboration: "No results.",
+  coverHint: /500\s*×\s*500|50\s*MB/i,
+} as const;
+
 export function generateCampaign(overrides?: Partial<CampaignInput>): CampaignInput {
   const start = faker.date.future();
   const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
