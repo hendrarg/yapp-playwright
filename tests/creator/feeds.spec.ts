@@ -20,7 +20,7 @@ test.describe('Creator Feeds', () => {
   });
 
   test('Feeds and Exclusive — Pay per view Price, Exclusive Toggle, Exclusive Publish, Preview Teaser, Linked Products, Unlock All Configuration, Edit Exclusive Description, Edit PPV Price', {
-    tag: ['@AUT-FE-002', '@feeds', '@creator', '@regression'],
+    tag: ['@AUT-FE-002', '@feeds', '@creator', '@smoke'],
   }, async ({ creatorFeedsPage, browser, page }) => {
     test.setTimeout(300000);
     // The TCs still quote a Rp20.000 floor; the app enforces Rp10.000 (clarification CL-AUT-023).

@@ -104,11 +104,13 @@ test.describe('Creator Referral', () => {
     await dbFixtures.attachReferral(creator.uuid, sundanese.uuid, new Date(referralJoinDates.newer.at));
 
     await test.step('Referral Summary shows Lifetime Earnings and the number of active referrals', async () => {
-      await referralPage.goto();
-      await referralPage.expectReferralInfo();
-      const summary = await referralPage.readSummary();
-      expect(summary.lifetimeEarnings).toMatch(/^Rp[\d.,]+$/);
-      expect(summary.activeReferrals).toBe('2');
+      await expect(async () => {
+        await referralPage.page.reload({ waitUntil: 'domcontentloaded' });
+        await referralPage.expectReferralInfo();
+        const summary = await referralPage.readSummary();
+        expect(summary.lifetimeEarnings).toMatch(/^Rp[\d.,]+$/);
+        expect(summary.activeReferrals).toBe('2');
+      }).toPass({ timeout: 15000 });
     });
 
     await test.step('Referred users appear in the Referral List', async () => {
