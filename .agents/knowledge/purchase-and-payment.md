@@ -532,3 +532,12 @@ the digital-product and course orders completed after it (orders do complete; th
 `/shop/orders` lists them). Tests that wait for "Your Download Is Ready" / "Course Enrollment
 Confirmed" will time out until delivery recovers, so check the inbox before reading such a failure
 as a product regression.
+
+## A failed quote leaves the buyer on checkout with no message (2026-10-14)
+
+When the payment partner is down, `POST /orders/quote` answers **500** `unexpected status code:
+503. err : bank partner temporarily unavailable` (seen for over an hour on dev on 2026-10-14).
+The checkout page shows **no toast and no inline error** — `Pay Rp…` simply does nothing and the
+URL stays on `/product/{uuid}/checkout`. Every purchase-based test fails at
+`payOnlineCourseCheckout` (waiting for `/transaction/`) for that whole window; check the quote
+response before suspecting the test.

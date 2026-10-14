@@ -167,6 +167,35 @@ points outside the range. Verified 2026-09-02 — this used to fail (the page nu
 kept, leaving `Page 20 of 20` over a 4-page result), so do not copy assertions from
 older notes that expected the stale number.
 
+## /analytics today: Revenue Overview + Audience & Reach on one page (2026-10-14)
+
+`/analytics` now carries both halves: **Revenue Overview** on top and the former `/statistics`
+content below as **Audience & Reach** (Audience, Activity over time, Buyer journey, the Products
+table). The older sections in this note describe the split as it was.
+
+- **Cards:** Total Revenue, Tipping Revenue, Product Sales, Campaign Activations, PPV, Membership,
+  Lifetime Access — each `Rp…` plus a growth figure. The growth is the **absolute** change to one
+  decimal (`13.6%` for an API `tippingChange` of −13.58); the direction is only an icon. A
+  `Last synced: YYYY-MM-DD HH:MM` line sits under the range button.
+- **Data:** `GET /creator/analytics/summary?start_date&end_date` (fields `totalRevenue`,
+  `totalRevenueTipping`, `totalRevenueProduct`, `totalRevenueCampaign`, `totalRevenuePostPurchase`
+  = PPV, `totalRevenueTierMembershipPurchase`, `totalRevenuePostLifetimePurchase`, each with a
+  `…Change`), plus `earning/daily` for the chart. Dates are Asia/Jakarta; `Last N days` ends today
+  and starts N−1 days back (default `Last 7 days`).
+- **Range picker:** a dialog with a radiogroup — All time, Last 7 / 14 / 30 / 90 days, Last 6
+  months, Last 1 year — that applies on click and closes, **except** re-picking the range already in
+  force, which leaves it open and fetches nothing (react-query cache). `Custom Date` is a
+  react-day-picker grid in the same dialog: the first day cell fetches that single day, the second
+  applies the range and the button reads `5 Oct 2026 - 9 Oct 2026`; the dialog stays open until
+  Escape. The page can fire the same summary request twice and drop the first — a
+  `waitForResponse` on it may get a body-less response; read responses as they arrive.
+- **Chart:** a recharts **bar** chart; each source's bars use the colour of the swatch beside its
+  switch (Tipping `#EA47B6`, Product Sales `#6491F3`). Turning a switch off removes that colour's
+  bars at once; on brings them back.
+- **Audience** still reads "How many people came, and whether that is going up or down." while
+  Profile views counts page loads — re-confirmed 2026-10-14 on the empty creator: three anonymous
+  loads of the public profile moved it by exactly 3 (AUT-ANL-002; TC-ANL-C-011 Need Review).
+
 ## /statistics is a NEW page, not a replacement for /analytics
 
 **Corrected 2026-09-02 after an error.** An earlier pass concluded that `/analytics`

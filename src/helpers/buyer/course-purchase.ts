@@ -33,3 +33,19 @@ export async function buyCourseAs(
     throw e;
   }
 }
+
+/**
+ * Start a checkout as `buyerToken` and stop at the payment page — the order exists but stays
+ * pending (no deposit webhook). Returns the order id.
+ */
+export async function checkoutWithoutPaying(browser: Browser, buyerToken: string, course: { title: string; sharePath: string }): Promise<string> {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  try {
+    await loginWithToken(context, buyerToken, baseURL);
+    const checkout = new ProductPurchasePage(await context.newPage(), baseURL);
+    await checkout.openOnlineCourseCheckout(course.title, course.sharePath);
+    return await checkout.payOnlineCourseCheckout({ name: 'QA Buyer', phone: phone() });
+  } finally {
+    await context.close();
+  }
+}
