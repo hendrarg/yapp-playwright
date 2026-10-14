@@ -18,7 +18,7 @@ import { query } from './client';
 export const WRITABLE = {
   tier_membership_users: ['expired_at', 'deleted_at'],
   // Creator discovery flags: hidden from Explore (the NSFW treatment) and the Official (verified) badge.
-  users: ['is_hide_from_explore', 'is_verified_creator', 'name', 'username', 'username_changed_at', 'photo_profile_path', 'background_id', 'background_path'],
+  users: ['is_hide_from_explore', 'is_verified_creator', 'name', 'username', 'username_changed_at', 'photo_profile_path', 'background_id', 'background_path', 'referrer_id', 'apply_referral_code_at'],
   // A pending lifetime order the test created, pushed to the state a failed/expired payment leaves.
   post_lifetime_purchases: ['status', 'expired_at'],
 } as const satisfies Record<string, readonly string[]>;
@@ -125,6 +125,17 @@ export class DbFixtures {
     const [row] = await this.exec('SELECT background_id, background_path, photo_profile_path FROM users WHERE uuid = $1', [userUuid]);
     if (!row) throw new Error(`users ${userUuid}: not found`);
     await this.set('users', userUuid, { background_id: row.background_id, background_path: row.background_path, photo_profile_path: row.photo_profile_path });
+  }
+
+  /**
+   * Make `referredUuid` a referral of `referrerUuid` that joined at `appliedAt` — the state a sign-up
+   * through the referral link leaves, which dev cannot produce (the creator OTP sign-up is the
+   * only path). Restored to the account's own values in teardown.
+   */
+  async attachReferral(referrerUuid: string, referredUuid: string, appliedAt: Date): Promise<void> {
+    const [referrer] = await this.exec('SELECT id FROM users WHERE uuid = $1', [referrerUuid]);
+    if (!referrer) throw new Error(`users ${referrerUuid}: not found`);
+    await this.set('users', referredUuid, { referrer_id: referrer.id, apply_referral_code_at: appliedAt });
   }
 
   /** Put every changed row back, newest change first. Collects failures and throws once at the end. */
