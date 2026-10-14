@@ -121,17 +121,22 @@ test.describe('Creator Analytics', () => {
       for (const source of revenueSources) if ((await analyticsPage.barsIn(await analyticsPage.sourceColor(source))) > 0) charted.push(source);
       expect(charted.length, 'the last 90 days need revenue from at least two sources').toBeGreaterThanOrEqual(2);
       await analyticsPage.setSourceShown(charted[0], false);
-      expect(await analyticsPage.barsIn(await analyticsPage.sourceColor(charted[0]))).toBe(0);
+      const color = await analyticsPage.sourceColor(charted[0]);
+      await expect.poll(() => analyticsPage.barsIn(color)).toBe(0);
     });
 
     await test.step('Turning it back on shows its bars again', async () => {
       await analyticsPage.setSourceShown(charted[0], true);
-      expect(await analyticsPage.barsIn(await analyticsPage.sourceColor(charted[0]))).toBeGreaterThan(0);
+      const color = await analyticsPage.sourceColor(charted[0]);
+      await expect.poll(() => analyticsPage.barsIn(color)).toBeGreaterThan(0);
     });
 
     await test.step('Several enabled sources are drawn together', async () => {
       for (const source of revenueSources) await analyticsPage.setSourceShown(source, true);
-      for (const source of charted) expect(await analyticsPage.barsIn(await analyticsPage.sourceColor(source)), source).toBeGreaterThan(0);
+      for (const source of charted) {
+        const color = await analyticsPage.sourceColor(source);
+        await expect.poll(() => analyticsPage.barsIn(color), { message: source }).toBeGreaterThan(0);
+      }
       charted = [];
     });
 
