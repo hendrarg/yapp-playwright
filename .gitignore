@@ -31,3 +31,6 @@ node_modules/
 !.env.example
 .google-sheets-token.json
 .google-sheets-service-account.json
+
+# k6 run output (scripts/perf-run.mjs)
+/perf/results/

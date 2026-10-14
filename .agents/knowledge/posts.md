@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, posts]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-09
+updated: 2026-10-14
 sources: 0
 status: active
 ---
@@ -384,3 +384,12 @@ M-21) looks fixed.** The modal's `<video>` now has `controls = true`; a click pa
 `Space` resumes, and programmatic `currentTime` writes (forward and back) stick. The modal
 buttons are `Close modal` and `Like post`. Feed scroll position survives open + `Escape`. The creator-side card, by
 contrast, does render `Play 00:00 00:30 Mute Enter fullscreen`.
+
+## Creator Feeds loads comments once per post (2026-10-14)
+
+Opening creator `/feeds` fires `GET /posts/my/posts?type=published` and `?type=draft`, then one
+`GET /posts/{uuid}/comments?page=1&limit=10` **per visible post** — 10 posts, 10 extra requests
+(N+1). At 1 VU each one is ~80 ms; the k6 `creator-dashboard` scenario replays it on purpose so a
+load run shows what it costs. The dashboard shell on every creator page also calls
+`GET /accounts/domain`, which answers **404** for a creator without a custom domain — expected,
+not an error.

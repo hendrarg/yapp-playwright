@@ -76,7 +76,9 @@ function snapshot() {
     encoding: "utf8",
     maxBuffer: 64 << 20,
   });
-  const rows = JSON.parse(raw);
+  // Windows PowerShell 5.1 leaves some control characters in CommandLine unescaped,
+  // which JSON.parse rejects. The output is -Compress'd, so any raw one sits inside a string.
+  const rows = JSON.parse(raw.replace(/[\u0000-\u001f]/g, " "));
   return (Array.isArray(rows) ? rows : [rows]).map((r) => ({
     pid: r.ProcessId,
     ppid: r.ParentProcessId,

@@ -1,0 +1,78 @@
+name: Performance (k6)
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'perf/scenarios/<name>.ts'
+        type: choice
+        default: buyer-browse
+        options: [ buyer-browse, creator-dashboard, buyer-checkout, social-write, buyer-vitals ]
+      profile:
+        description: 'Load shape — anything but smoke needs a slot agreed with BE/DevOps'
+        type: choice
+        default: smoke
+        options: [ smoke, load, stress, spike, soak ]
+  schedule:
+    # Weekly smoke, Monday 20:00 UTC (03:00 WIB Tuesday) — after the nightly E2E run
+    # (19:00 UTC) so the two never share the staging API. Smoke only; never schedule load.
+    - cron: '0 20 * * 1'
+
+# One perf run at a time: two load runs against the same shared API would skew both.
+concurrency:
+  group: perf
+  cancel-in-progress: false
+
+jobs:
+  k6:
+    name: k6 ${{ inputs.scenario || 'smoke matrix' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      YAPP_BASE_URL: https://yapp-dev.yapp.ink/
+      YAPP_CREATORS_BASE_URL: https://creators-dev.yapp.ink/
+      YAPP_API_BASE_URL: https://staging.yapp.ink/
+      YAPP_TEST_ACCESS_TOKEN: "${{ secrets.YAPP_TEST_ACCESS_TOKEN }}"
+      YAPP_TEST_ACCESS_TOKEN_BUYER: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_BUYER }}"
+      YAPP_TEST_ACCESS_TOKEN_2: "${{ secrets.YAPP_TEST_ACCESS_TOKEN_2 }}"
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        cache: npm
+    - run: npm ci
+    - uses: grafana/setup-k6-action@v1
+      with:
+        k6-version: '2.2.0'
+    - name: Type-check perf scripts
+      run: npm run typecheck:perf
+    - name: Run k6
+      # A manual dispatch runs the picked scenario/profile (--confirm: dispatching a
+      # heavy profile is the operator's confirmation). The weekly schedule smokes the
+      # read-only scenarios; buyer-checkout (QA buyer's cart) and social-write (test-account
+      # follow + comments) touch E2E fixtures, so they only run on demand. buyer-vitals
+      # uses the runner's preinstalled Google Chrome.
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          npm run perf -- "${{ inputs.scenario }}" --profile "${{ inputs.profile }}" --confirm
+        else
+          status=0
+          for s in buyer-browse creator-dashboard buyer-vitals; do npm run perf -- "$s" || status=1; done
+          exit $status
+        fi
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() && hashFiles('perf/results/**') != '' }}
+      with:
+        name: k6-results
+        path: |
+          perf/results/*.html
+          perf/results/*.json
+          perf/results/*-endpoints.md
+        retention-days: 30
+    - name: Per-endpoint table
+      if: ${{ !cancelled() && hashFiles('perf/results/*-endpoints.md') != '' }}
+      run: |
+        for f in perf/results/*-endpoints.md; do
+          echo "### $(basename "$f" -endpoints.md)" >> "$GITHUB_STEP_SUMMARY"
+          cat "$f" >> "$GITHUB_STEP_SUMMARY"
+        done

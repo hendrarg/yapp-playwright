@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, explore-and-profile]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-29
+updated: 2026-10-14
 sources: 0
 status: active
 ---
@@ -46,6 +46,47 @@ rewritten (CL-AUT-029).
 
 Never write a popularity assertion against the Popular Products section; assert the
 curated order instead.
+
+## Public profile API — the singular `/account/` family (2026-10-14)
+
+Captured from the browser on `/<username>` (guest). The public profile reads from
+**`/api/v1/account/...`** (singular); `/accounts` (plural) is the signed-in user's own account.
+Guessing `/users/{username}`, `/accounts/{username}` or `/creators/{username}` gets 401/404.
+
+- `GET /account/username/{username}` (resolves the uuid), then in parallel:
+  `/account/{uuid}/social-link`, `/account/{uuid}/quick-amounts`,
+  `/account/{uuid}/tier-memberships`, `/account/{uuid}/link-combination`,
+  `/account/{uuid}/products` (+ `/products/pinned`), `/account/username/{username}/profile-tabs`,
+  `/account/username/{username}/profile-customization`, `/posts/user/{uuid}?visibility=public`,
+  `/rate/exchange`, `/lifetime-prices/{username}/check`.
+- Every profile visit also fires **`POST /view/counter/{uuid}`**, which writes to view stats. Leave it
+  out of anything replayed in bulk (the k6 `buyer-browse` scenario skips it).
+- **`/account/{uuid}/quick-amounts` answers HTTP 500 with body `{"status":404,"message":"quick
+  amount not found"}`** for a creator who never saved quick amounts (5 of 7 featured creators on
+  2026-10-14). The page copes and falls back to the default chips, but the API reports a 5xx for
+  a normal empty state.
+- **Featured creators can include a broken account**: `testuser123` (user id 14, not deleted) is in
+  `GET /creators/featured`, but `/account/username/testuser123` and its uuid endpoints all
+  answer 500 `user not found.` (`profile-tabs` 404). Do not pick a random featured creator for a
+  profile assertion without checking it resolves.
+
+## Some images fail in the Next.js optimizer (2026-10-14)
+
+Seen by the k6 `buyer-vitals` run on landing / explore / profile / product, as a guest:
+
+- **`/_next/image` → 400 `Unsupported image format`** when the source asset on `asset-dev.yapp.ink`
+  is served **without a `Content-Type` header** — the bytes are a valid PNG/JPEG (e.g. a product
+  thumbnail of creator `d52a08cb…`), so the upload stored no content type.
+- **`/_next/image` → 403 `Error loading source image`** when the signed source URL itself answers
+  CloudFront **`AccessDenied`** while unexpired — `hendrarg`'s current profile photo
+  (`84ae3e39…/photo-profile/1c93a3de….jpg`) is one. Likely a missing object.
+- A visual assertion on these images (thumbnail, avatar) fails for the asset, not the page.
+
+## A product share link is the slowest public page (2026-10-14)
+
+`/s/<shortUrl>` redirects to `/<creator>/product/<shortUrl>`; in real Chromium (guest) the product
+page measured TTFB p75 ~2.3 s and LCP p75 ~3.6 s, against ≤0.6 s TTFB / ≤2.3 s LCP for landing,
+explore and creator profile. Small sample (4 visits) — see `perf/baseline.md`.
 
 ## What discovery actually excludes
 

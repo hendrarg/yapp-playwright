@@ -13,6 +13,8 @@ Before making changes, every AI agent must read:
 2. `.agents/rules/code-style.md`
 3. `.agents/rules/testing.md`
 
+When the task touches `perf/` (k6), also read `.agents/rules/performance.md`.
+
 When the task matches a workflow in `.agents/skills/registry.md`, read the matching `.agents/skills/*/SKILL.md` before acting. Treat `.agents/commands/` as the command catalog for common project operations.
 
 When the task touches a product area, read the matching note in `.agents/knowledge/` — start from `.agents/knowledge/index.md`. Those notes record how the app actually behaves on dev (defaults, validation boundaries, fixtures, UI traps) and exist because an earlier session assumed the obvious behavior and was wrong. They describe observed behavior, so they rank below this guide and `.agents/rules/`, and below the sheets on anything the sheets state.
@@ -100,6 +102,9 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
 | `npm run mcp:clean` | Close leftover MCP Playwright browsers and this repo's MCP servers |
 | `npm run db:shell -- "<SQL>"` | Read-only SQL against the dev database (needs `PSQL_*` in `.env`) |
+| `npm run perf -- <scenario> [--profile <p>] [--confirm]` | k6 performance run of `perf/scenarios/<scenario>.ts` (needs the `k6` binary, not npm). Default profile `smoke`; any other profile needs `--confirm` because staging is shared. Reports land in `perf/results/` |
+| `npm run perf:smoke` | k6 buyer-browse smoke (1 VU, 1 min) |
+| `npm run typecheck:perf` | Type-check `perf/` against k6 types (separate from the Node tsconfig) |
 
 ## Architecture
 
@@ -114,6 +119,7 @@ src/
     creator/nav.ts      creatorNav routes (creatorAuthTest)
   utils/                Playwright utilities and flaky/heal helpers
 config/env.ts           environment variable access
+perf/                   k6 load tests (own runtime: no Node/Playwright imports) — config/, lib/, scenarios/
 
 AGENTS.md               this guide — source of truth for every agent
 .agents/                runtime.md, rules/, skills/, commands/, knowledge/ — the only place to edit
@@ -205,6 +211,10 @@ feature tag, role tag, and priority tag.
 GitHub Actions workflow: `.github/workflows/playwright.yml`. The static checks run before the
 browser test job; tag and locator audits remain advisory while the backlog below exists.
 See `.agents/rules/ci.md` for CI environment, secrets, and validation details.
+
+k6 runs in its own workflow, `.github/workflows/perf.yml`: manual dispatch (scenario + profile)
+and a weekly read-only smoke. It never runs on push/PR. Compare results against
+`perf/baseline.md`; an expired token secret fails the run up front (refresh it per `ci.md`).
 
 The local gate is `.githooks/pre-commit`; enable it with
 `git config core.hooksPath .githooks`. Do not bypass it unless explicitly necessary.
