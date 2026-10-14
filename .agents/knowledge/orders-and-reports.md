@@ -23,9 +23,14 @@ Aug 2026 test sessions.
 the sidebar item and top-nav link **`/orders`**: overview cards `Lifetime Earnings` and a
 period card (`All time earnings`, or `30 days earnings` etc. when a preset is picked), then
 **Performance Details** with tabs Products / Tipping / Campaigns Activations / PPV /
-Membership / Lifetime Access. The Products tab holds Search, the time and product filters,
-`Export as CSV`, the table and the pager. The hidden tabs render their own pager and empty
-texts in the DOM, so scope locators to `tabpanel "Products"` and filter text to visible.
+Membership / Lifetime Access (all automated Oct 2026).
+- **Products tab**: Search, time and product filters, `Export as CSV`, table and pager.
+- **Tipping tab**: combobox sort (`Recent` / `Leaderboard`), supporter card with relative time, amount, and message if any.
+- **Campaigns Activations tab**: donation cards with donation type, donor name, relative time, and amount without user message.
+- **PPV tab**: table columns `ORDER ID`, `CUSTOMER`, `POST`, `PURCHASE DATE`, `TOTAL PRICE`, date range preset, `Export as CSV`.
+- **Membership tab**: table columns `ORDER ID`, `CUSTOMER`, `MEMBERSHIP NAME`, `PURCHASE DATE`, `TOTAL PRICE`, date range preset, `Export as CSV`.
+- **Lifetime Access tab**: table columns `ORDER ID`, `CUSTOMER`, `AMOUNT`, `PURCHASE DATE`, `TOTAL PRICE`, date range preset, `Export as CSV`.
+The hidden tabs render their own pager and empty texts in the DOM, so scope locators to `tabpanel "<tabName>"` and filter text to visible.
 
 - **A row opens Order Details at `/orders/<orderUuid>`**: `Order #<uuid>`, Customer Details
   (Name, Username `-`, Email, Phone Number, Payment Method), Additional Questions (custom
