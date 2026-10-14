@@ -53,3 +53,59 @@ export const landingCopy = {
 export function generateGetYappUsername(): string {
   return `${faker.string.alphanumeric({ length: 8, casing: 'lower' })}${faker.string.numeric(4)}`;
 }
+
+/** Header anchors and the section each one scrolls to. */
+export const landingAnchors = [
+  { name: 'Features', sectionId: 'features-root' },
+  { name: 'Pricing', sectionId: 'pricing' },
+  { name: 'FAQ', sectionId: 'faq' },
+] as const;
+
+export const landingPricing = {
+  heading: 'Simple Plans',
+  planName: 'Free to start',
+  price: '$0 / Month',
+  cta: 'Start Creating For Free',
+  features: [
+    'Sell digital products',
+    'Launch fundraising campaigns',
+    'Collect tips & donations',
+    'Build your link page with full customization',
+    'Use livestream overlays for YouTube & OBS',
+    'Access creator analytics',
+  ],
+} as const;
+
+export const landingMulticurrency = {
+  heading: 'Get Paid by your fans globally',
+  currencies: ['SGD', 'IDR', 'USD', 'EUR', 'PHP'],
+} as const;
+
+export const landingJoinYapp = {
+  intro: 'Join Yapp, if you are...',
+  cta: 'Be A Creator',
+  /** Sample creator pages shown beside the persona card. */
+  samplePages: ['yapp.ink/theresalearns', 'yapp.ink/mutiajaveline', 'yapp.ink/andersonnsteven', 'yapp.ink/hartzel'],
+} as const;
+
+/**
+ * Footer "Creators" quick link → the feature card it brings to the front of the carousel.
+ * "Campaign" opening the exclusive-content card is the agreed copy (product owner, 2026-09-23 —
+ * see knowledge explore-and-profile: the landing feature section).
+ */
+export const footerQuickLinks = [
+  { label: 'Digital Products', card: 'Sell Digital Products' },
+  { label: 'Campaign', card: 'Monetize Your Exclusive Content' },
+  { label: 'Stream Overlay', card: 'Engage Your Viewers In Real Time' },
+  { label: 'Tipping', card: 'Receive Support From Your Fans' },
+] as const;
+
+export const landingSocialLinks = [
+  { name: 'Instagram', href: 'https://www.instagram.com/yappcreators.id' },
+  { name: 'LinkedIn', href: 'https://www.linkedin.com/company/yappcreators/' },
+] as const;
+
+/** Every creator sign-up CTA on the landing page. */
+export const creatorSignUpCtas = ['Become a Creator', 'Sign Up for Free', 'Be A Creator', 'Start Creating For Free'] as const;
+
+export const mobileMenuItems = ['Features', 'Explore', 'Pricing', 'FAQ', 'Log In'] as const;

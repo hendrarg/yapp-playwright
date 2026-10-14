@@ -1,5 +1,7 @@
 import { test as guestTest, expect } from '../test-base';
-import { landingCopy, generateGetYappUsername } from '@test-data/buyer/landing.data';
+import { baseURL, creatorsBaseURL } from '@config/env';
+import { LandingPage } from '@pages/buyer/LandingPage';
+import { creatorSignUpCtas, footerQuickLinks, generateGetYappUsername, landingAnchors, landingCopy, landingJoinYapp, landingMulticurrency, landingPricing, landingSocialLinks, mobileMenuItems } from '@test-data/buyer/landing.data';
 
 guestTest.describe('Buyer Landing Page', () => {
   guestTest('Landing Page — Page Load, Header Navigation, Hero Copy, Primary CTA, Header Menu, Feature Tabs', {
@@ -91,6 +93,69 @@ guestTest.describe('Buyer Landing Page', () => {
       const username = generateGetYappUsername();
       await landingPage.submitGetYapp(username);
       await landingPage.expectCreatorJoinFormVisible(landingPage.page, username);
+    });
+  });
+
+  guestTest('Landing Page — Anchor Navigation, Pricing Section, Multicurrency Section, Join Yapp Section, Footer Quick Links, Footer Social Links, Authentication Entry, Responsive Header', {
+    tag: ['@AUT-LP-003', '@landing', '@buyer', '@regression'],
+  }, async ({ buyerNav, landingPage, browser }) => {
+    guestTest.setTimeout(180000);
+    await guestTest.step('Header Features, Pricing and FAQ scroll their section in just below the sticky header', async () => {
+      await buyerNav.open('landing');
+      for (const anchor of landingAnchors) await landingPage.followHeaderAnchor(anchor.name, anchor.sectionId);
+    });
+
+    await guestTest.step('Pricing shows the free plan, its price, the CTA and the included features', async () => {
+      await landingPage.expectPricingSection(landingPricing);
+    });
+
+    await guestTest.step('Multicurrency states the supported currencies and shows their artwork', async () => {
+      await landingPage.expectMulticurrencySection(landingMulticurrency);
+    });
+
+    await guestTest.step('Join Yapp shows the persona card, its copy, Be A Creator and the sample creator pages', async () => {
+      await landingPage.expectJoinYappSection(landingJoinYapp);
+    });
+
+    await guestTest.step('Each footer Creators link brings its feature card to the front', async () => {
+      for (const link of footerQuickLinks) await landingPage.openFooterQuickLink(link.label, link.card);
+    });
+
+    await guestTest.step('Footer Instagram and LinkedIn open the official profiles in a new tab', async () => {
+      for (const social of landingSocialLinks) {
+        await landingPage.expectSocialLink(social.href);
+        const tab = await landingPage.openSocialLink(social.href);
+        await expect.poll(() => tab.url(), { timeout: 15000 }).toContain(new URL(social.href).hostname.replace(/^www\./, ''));
+        await tab.close();
+      }
+    });
+
+    await guestTest.step('Header Log In opens the sign-in page on the same host', async () => {
+      await buyerNav.open('landing');
+      await landingPage.openLogIn();
+    });
+
+    await guestTest.step('At 390×844 the header collapses into a working Menu drawer', async () => {
+      const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+      try {
+        const landing = new LandingPage(await mobile.newPage(), baseURL);
+        await landing.goto();
+        await landing.expectMobileHeader();
+        await landing.openMobileMenu(mobileMenuItems);
+      } finally {
+        await mobile.close();
+      }
+    });
+  });
+
+  guestTest('Landing Page — Environment Config', {
+    tag: ['@AUT-LP-004', '@landing', '@buyer', '@regression'],
+  }, async ({ buyerNav, landingPage }) => {
+    await guestTest.step('Every creator sign-up CTA points at the creators host of this environment', async () => {
+      await buyerNav.open('landing');
+      const hrefs = await landingPage.creatorCtaHrefs(creatorSignUpCtas);
+      expect(hrefs.length).toBeGreaterThanOrEqual(creatorSignUpCtas.length);
+      for (const href of hrefs) expect(new URL(href).host).toBe(new URL(creatorsBaseURL).host);
     });
   });
 });
