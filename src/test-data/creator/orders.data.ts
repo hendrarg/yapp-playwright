@@ -58,3 +58,34 @@ export const orderDetailLabels = {
   subtotal: "Subtotal",
   receivedBySeller: "Received By Seller",
 } as const;
+
+/** Orders CSV export dialog options and headers. */
+export const ordersExportData = {
+  options: ["30 days", "60 days", "90 days", "Custom Days"] as const,
+  presets: ["30 days", "60 days", "90 days"] as const,
+  expectedHeaders: [
+    "Order ID",
+    "Asset Name",
+    "Product ID",
+    "Product Name",
+    "Payment Method",
+    "Price Paid By Buyer",
+    "Received By Seller",
+    "Purchase Date (UTC)",
+    "Buyer Email",
+    "Buyer Name",
+    "Buyer Phone Number",
+  ] as const,
+  productHeaders: ["Asset Name", "Product ID", "Product Name"] as const,
+  buyerHeaders: ["Buyer Email", "Buyer Name", "Buyer Phone Number"] as const,
+  paymentHeaders: ["Payment Method", "Price Paid By Buyer", "Received By Seller"] as const,
+  promoHeaders: ["Promo Code Name", "Promo Code Discount"] as const,
+  affiliateHeaders: [
+    "Commission ID",
+    "Affiliator Username",
+    "Affiliator Name",
+    "Public Affiliate Username",
+    "Public Affiliate Name",
+    "Public Affiliate Commission Amount",
+  ] as const,
+};

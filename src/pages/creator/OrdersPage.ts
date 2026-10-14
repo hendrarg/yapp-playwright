@@ -173,6 +173,31 @@ export class OrdersPage {
     for (const row of rows) expect(allowed, `row ${row.id} type`).toContain(row.type);
   }
 
+  async clipboard(): Promise<string> {
+    return this.page.evaluate(() =>
+      (navigator as Navigator & { clipboard: { readText(): Promise<string> } }).clipboard.readText(),
+    );
+  }
+
+  async copyOrderId(rowIndex = 0): Promise<string> {
+    const row = this.dataRows().nth(rowIndex);
+    const copyBtn = row.getByRole("cell").nth(0).getByRole("button").first();
+    await safeClick(copyBtn);
+    const toast = this.page.locator('[data-slot="toast"], [data-sonner-toast="true"], [role="status"]').first();
+    await expect(toast).toBeVisible({ timeout: 5000 }).catch(() => {});
+    return this.clipboard();
+  }
+
+  async copyBuyerEmail(rowIndex = 0): Promise<string> {
+    const row = this.dataRows().nth(rowIndex);
+    const customer = row.getByRole("cell").nth(1);
+    const emailBtn = customer.getByRole("button").nth(0);
+    await safeClick(emailBtn);
+    const toast = this.page.locator('[data-slot="toast"], [data-sonner-toast="true"], [role="status"]').first();
+    await expect(toast).toBeVisible({ timeout: 5000 }).catch(() => {});
+    return this.clipboard();
+  }
+
   async openRow(index = 0): Promise<string> {
     await safeClick(this.dataRows().nth(index).getByRole("cell").nth(3));
     await expect(this.page).toHaveURL(/\/orders\/[0-9a-f-]{36}$/, { timeout: 20000 });
@@ -345,12 +370,16 @@ export class OrdersPage {
   }
 
   /** All Time, All Products, empty search, no reset button, first page of the full list. */
-  async expectDefaultFilters(totalPages: number) {
+  async expectDefaultFilters(totalPages?: number) {
     await expect(this.timeTrigger()).toHaveText("All Time", { timeout: 15000 });
     await expect(this.productTrigger()).toHaveText("All Products");
     await expect(this.searchInput).toHaveValue("");
     await expect(this.resetFilterButton).toHaveCount(0);
-    await expect(this.pageIndicator).toHaveText(`Page 1 of ${totalPages}`, { timeout: 15000 });
+    if (totalPages !== undefined) {
+      await expect(this.pageIndicator).toHaveText(`Page 1 of ${totalPages}`, { timeout: 15000 });
+    } else {
+      await expect(this.pageIndicator).toHaveText(/^Page 1 of \d+$/, { timeout: 15000 });
+    }
   }
 
   async goToLastPage(): Promise<string> {
@@ -380,4 +409,114 @@ export class OrdersPage {
     this.page.on("response", (r) => { if (r.status() >= 400) failedRequests.push(`${r.status()} ${r.url()}`); });
     return { runtime, failedRequests };
   }
+
+  // ── CSV Export ──
+
+  get exportDialog(): Locator {
+    return this.page.getByRole("dialog", { name: "Export as CSV" });
+  }
+
+  async openExportDialog() {
+    await safeClick(this.exportCsvButton);
+    await expect(this.exportDialog).toBeVisible({ timeout: 15000 });
+  }
+
+  async closeExportDialog() {
+    const cancelBtn = this.exportDialog.getByRole("button", { name: "Cancel", exact: true });
+    if (await cancelBtn.isVisible()) {
+      await safeClick(cancelBtn);
+    }
+    await expect(this.exportDialog).toBeHidden({ timeout: 15000 });
+  }
+
+  async expectExportRangeOptions(options: readonly string[]) {
+    const trigger = this.exportDialog.getByRole("combobox").or(this.exportDialog.getByRole("button", { name: /days/i })).first();
+    await safeClick(trigger);
+    for (const opt of options) {
+      await expect(this.page.locator('[role="option"], [data-slot="select-item"]').filter({ hasText: opt })).toBeVisible({ timeout: 10000 });
+    }
+    await safeClick(this.page.locator('[role="option"], [data-slot="select-item"]').filter({ hasText: options[0] }));
+  }
+
+  async selectExportPreset(preset: string) {
+    const trigger = this.exportDialog.getByRole("combobox").or(this.exportDialog.getByRole("button", { name: /days/i })).first();
+    await safeClick(trigger);
+    await safeClick(this.page.locator('[role="option"], [data-slot="select-item"]').filter({ hasText: preset }));
+  }
+
+  async selectCustomExportRange() {
+    const trigger = this.exportDialog.getByRole("combobox").or(this.exportDialog.getByRole("button", { name: /days/i })).first();
+    await safeClick(trigger);
+    await safeClick(this.page.locator('[role="option"], [data-slot="select-item"]').filter({ hasText: "Custom Days" }));
+    const popover = this.page.locator('[data-slot="popover-content"]').filter({ has: this.page.locator('[role="grid"]') });
+    await expect(popover).toBeVisible({ timeout: 10000 });
+    const dayButtons = popover.locator('button:not([disabled])').filter({ hasText: /^\d+$/ });
+    const count = await dayButtons.count();
+    if (count >= 2) {
+      await safeClick(dayButtons.first());
+      await safeClick(dayButtons.nth(Math.min(5, count - 1)));
+    }
+    // Dismiss the calendar popover by clicking dialog header
+    await this.exportDialog.locator('[data-slot="dialog-title"]').click().catch(() => {});
+  }
+
+  async downloadExportCsv(): Promise<{ filename: string; content: string; lines: string[] }> {
+    const [download] = await Promise.all([
+      this.page.waitForEvent("download", { timeout: 30000 }),
+      safeClick(this.exportDialog.getByRole("button", { name: "Download", exact: true })),
+    ]);
+    const filename = download.suggestedFilename();
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    const content = Buffer.concat(chunks).toString("utf8");
+    const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
+    if (await this.exportDialog.isVisible()) {
+      const closeBtn = this.exportDialog.getByRole("button", { name: "Close" }).or(this.exportDialog.getByRole("button", { name: "Cancel" }));
+      if (await closeBtn.first().isVisible()) await safeClick(closeBtn.first());
+    }
+    return { filename, content, lines };
+  }
+
+  async selectTab(tabName: string) {
+    await safeClick(this.page.getByRole("tab", { name: tabName, exact: true }));
+    await expect(this.tabPanel(tabName)).toBeVisible({ timeout: 10000 });
+  }
+
+  tabPanel(tabName: string): Locator {
+    return this.page.getByRole("tabpanel", { name: tabName });
+  }
+
+  async selectTippingSort(sortOption: "Recent" | "Leaderboard") {
+    const panel = this.tabPanel("Tipping");
+    const trigger = panel.getByRole("combobox");
+    await safeClick(trigger);
+    await safeClick(this.page.locator('[role="option"], [data-slot="select-item"]').filter({ hasText: sortOption }));
+  }
+
+  async selectTabTimeRange(tabName: string, range: string) {
+    const panel = this.tabPanel(tabName);
+    const trigger = panel.getByRole("combobox").or(panel.getByRole("button", { name: /^(All Time|Last \d+ days|Custom Date.*)$/i })).first();
+    await safeClick(trigger);
+    await safeClick(this.page.locator('[role="option"], [data-slot="select-item"], [role="radio"]').filter({ hasText: range }));
+  }
+
+  async exportTabCsv(tabName: string): Promise<{ filename: string; content: string; lines: string[] }> {
+    const panel = this.tabPanel(tabName);
+    const exportBtn = panel.getByRole("button", { name: "Export as CSV", exact: true });
+    const downloadPromise = this.page.waitForEvent("download", { timeout: 10000 }).catch(() => null);
+    await safeClick(exportBtn);
+    const directDownload = await downloadPromise;
+    if (directDownload) {
+      const filename = directDownload.suggestedFilename();
+      const stream = await directDownload.createReadStream();
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+      const content = Buffer.concat(chunks).toString("utf8");
+      const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      return { filename, content, lines };
+    }
+    return this.downloadExportCsv();
+  }
 }
+
