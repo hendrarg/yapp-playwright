@@ -6,13 +6,16 @@ import { ExplorePage } from '@pages/buyer/ExplorePage';
 import { LibraryPage } from '@pages/buyer/LibraryPage';
 import { ProductPurchasePage } from '@pages/buyer/ProductPurchasePage';
 import { ProfilePage } from '@pages/buyer/ProfilePage';
-import { baseURL } from '@config/env';
+import { baseURL, creatorsBaseURL } from '@config/env';
+import { signInWithEmailOtp } from '@helpers/auth/otp-login';
+import { loginWithToken } from '@helpers/auth/token-login';
+import { ProductsPage } from '@pages/creator/ProductsPage';
 import { creatorProfile } from '@test-data/buyer/profile.data';
 import { generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseProductData, productTypeFilterOptions, productTypeSheet, productsCreationData } from '@test-data/creator/products.creation.data';
 import { productsSearchData } from '@test-data/creator/products.search.data';
 import { productRowActions, productsStatusData } from '@test-data/creator/products.status.data';
 import { testImages } from '@test-data/creator/post.data';
-import { testAccounts } from '@test-data/users';
+import { inboxAccounts, testAccounts } from '@test-data/users';
 
 const tokenOf = (envVar: string) => process.env[envVar]?.replace(/"/g, '');
 const creatorToken = () => tokenOf('YAPP_TEST_ACCESS_TOKEN');
@@ -125,6 +128,46 @@ test.describe('Creator Products List', () => {
     } finally {
       if (productUuid) await deleteProduct(page.request, productUuid, token).catch(() => undefined);
     }
+  });
+
+  test('Products — Product List, Pagination, Empty State', {
+    tag: ['@AUT-PROD-002', '@products', '@creator', '@regression'],
+  }, async ({ creatorNav, productsPage, page, browser }) => {
+    test.setTimeout(180000);
+
+    await test.step('Pagination controls and page indicator are functional on product list', async () => {
+      await creatorNav.open('products');
+      await productsPage.expectLoaded();
+      await productsPage.selectStatusTab('Active');
+      await productsPage.expectPageIndicator(/^Page 1 of \d+$/);
+      await expect(page.getByRole('button', { name: 'Go to first page' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Go to previous page' })).toBeDisabled();
+    });
+
+    await test.step('Empty search yields empty state with Page 1 of 0 indicator', async () => {
+      await productsPage.searchProductsNow('zzz-no-match-product-query');
+      await expect(page.getByRole('cell', { name: 'No results.' })).toBeVisible({ timeout: 10000 });
+      await productsPage.expectPageIndicator(/Page (?:1|0) of 0/);
+      await expect(page.getByRole('button', { name: 'Go to first page' })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Go to next page' })).toBeDisabled();
+      await productsPage.clearSearchNow();
+    });
+
+    await test.step('A creator with no products sees zero counts on all tabs and call to create', async () => {
+      const creator = await browser.newContext({ viewport: page.viewportSize() });
+      try {
+        const signIn = await creator.newPage();
+        const { token } = await signInWithEmailOtp(signIn, baseURL, inboxAccounts.emptyCreator);
+        await loginWithToken(creator, token, creatorsBaseURL);
+        const emptyProductsPage = new ProductsPage(signIn, creatorsBaseURL);
+        await emptyProductsPage.goto();
+        await expect(emptyProductsPage.emptyHeading).toBeVisible({ timeout: 10000 });
+        await expect(emptyProductsPage.emptyHint).toBeVisible({ timeout: 5000 });
+        await expect(emptyProductsPage.createProductCta).toBeVisible({ timeout: 10000 });
+      } finally {
+        await creator.close();
+      }
+    });
   });
 
   test('Products — Search', {

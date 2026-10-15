@@ -161,6 +161,19 @@ token1 (`hendrarg`) and token2 (`anthony_mosciski`) are both `isCreator: true`, 
 `Be A Creator` CTA always routes to the creator dashboard and the buyer-to-creator
 onboarding flow never opens on either of them.
 
+- The footer promotion card on `/explore` uses `[content-visibility:auto]` and contains copy
+  "Turn your ideas Into Income" and "Start creating and selling your digital products today."
+  with an image decoration and a `Be A Creator` button.
+- When clicked by an authenticated creator account, it opens a new tab to `creators-dev.yapp.ink/profile`
+  directly (greeting with a first-time "Welcome to Yapp!" modal if not previously dismissed, after which
+  the creator dashboard / "Home" / "My Page" is directly accessible without onboarding).
+- When clicked by an unauthenticated guest visitor, it opens a new tab to `creators-dev.yapp.ink/auth`
+  with the login/email input form, leaving the original tab on `/explore`.
+- Shared products displayed in both Popular Products and Recommended sections display consistent
+  prices (e.g. matching "Start from Rp10.000", fixed prices, or "Free", and paid products are never
+  advertised as Free).
+
+
 ## Landing page CTAs are anchor + button pairs
 
 Every landing CTA renders an `<a href>` wrapping a `<button>` that has no `href` of its

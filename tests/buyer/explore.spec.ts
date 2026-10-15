@@ -4,6 +4,8 @@ import { createEventProduct, deleteProduct } from '@helpers/api/product';
 import { exploreData } from '@test-data/buyer/explore.data';
 import { generateBuyerEventSeedData } from '@test-data/buyer/events.detail.data';
 import { testAccounts } from '@test-data/users';
+import { baseURL, creatorsBaseURL } from '@config/env';
+import { ExplorePage } from '@pages/buyer/ExplorePage';
 
 const buyerToken = () => process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
 
@@ -177,4 +179,56 @@ test.describe('Buyer Explore', () => {
       await explorePage.clearProductCategory();
     });
   });
+
+  test('Explore — Be A Creator Promotion, Creator Onboarding, Card Price Accuracy', {
+    tag: ['@AUT-EXP-006', '@explore', '@buyer', '@regression'],
+  }, async ({ buyerNav, explorePage, browser }) => {
+    test.setTimeout(120000);
+
+    await test.step('The footer displays the creator promotion copy, visual and a Be A Creator CTA', async () => {
+      await buyerNav.open('explore');
+      await explorePage.expectLoaded();
+      await explorePage.expectFooterPromotion();
+    });
+
+    await test.step('As a signed-in creator, Be A Creator CTA opens the creator dashboard directly without onboarding', async () => {
+      const creatorPage = await explorePage.openBeACreatorTab();
+      const expectedProfileUrl = new URL('profile', creatorsBaseURL).toString();
+      await expect(creatorPage).toHaveURL(new RegExp(`^${expectedProfileUrl}`));
+
+      // Welcome modal dismissal if presented on first landing
+      const welcomeBtn = creatorPage.getByRole('button', { name: /Let.s Get Started!/ });
+      try {
+        await welcomeBtn.waitFor({ state: 'visible', timeout: 8000 });
+        await welcomeBtn.click();
+        await creatorPage.getByRole('dialog').waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+      } catch {
+        // Welcome dialog was not present
+      }
+
+      await expect(creatorPage.getByText('My Page').first()).toBeVisible({ timeout: 15000 });
+      await creatorPage.close();
+    });
+
+    await test.step('As a guest visitor, Be A Creator CTA opens creators authentication in a new tab', async () => {
+      const guestCtx = await browser.newContext();
+      try {
+        const guestPage = await guestCtx.newPage();
+        const guestExplore = new ExplorePage(guestPage, baseURL);
+        await guestExplore.goto();
+        const authPage = await guestExplore.openBeACreatorTab();
+        const expectedAuthUrl = new URL('auth', creatorsBaseURL).toString();
+        await expect(authPage).toHaveURL(new RegExp(`^${expectedAuthUrl}`));
+        await expect(authPage.locator('input[type="email"], input[name="email"], input[placeholder*="email" i]').first()).toBeVisible({ timeout: 15000 });
+        await authPage.close();
+      } finally {
+        await guestCtx.close();
+      }
+    });
+
+    await test.step('A paid product is never advertised as Free across sections, with matching prices', async () => {
+      await explorePage.expectConsistentCardPricesAcrossSections();
+    });
+  });
 });
+

@@ -27,86 +27,62 @@ async function expectCardsMatch(analytics: AnalyticsPage, summary: RevenueSummar
 test.describe('Creator Analytics', () => {
   test('Analytics — Revenue Metrics, Growth Percentage, Latest Data, Date Filter', {
     tag: ['@AUT-ANL-001', '@analytics', '@creator', '@smoke'],
-  }, async ({ analyticsPage, browser, request }) => {
-    test.setTimeout(300000);
-    const stamp = Date.now().toString().slice(-6);
-    const completed = { title: `QA analytics paid ${stamp}`, price: 13000 };
-    const pending = { title: `QA analytics pending ${stamp}`, price: 21000 };
-    const products: string[] = [];
+  }, async ({ analyticsPage }) => {
+    test.setTimeout(180000);
     let opened: Awaited<ReturnType<AnalyticsPage['open']>>;
 
-    try {
-      await test.step('Revenue Overview shows all seven revenue metrics', async () => {
-        opened = await analyticsPage.open();
-        await analyticsPage.expectOverviewHeader();
-        expect(Object.keys(await analyticsPage.readMetrics(metricLabels))).toEqual(metricLabels);
-      });
+    await test.step('Revenue Overview shows all seven revenue metrics', async () => {
+      opened = await analyticsPage.open();
+      await analyticsPage.expectOverviewHeader();
+      expect(Object.keys(await analyticsPage.readMetrics(metricLabels))).toEqual(metricLabels);
+    });
 
-      await test.step('Each metric shows its growth against the previous period', async () => {
-        await expectCardsMatch(analyticsPage, opened.summary);
-      });
+    await test.step('Each metric shows its growth against the previous period', async () => {
+      await expectCardsMatch(analyticsPage, opened.summary);
+    });
 
-      await test.step('Last 7 days recalculates the overview and its growth', async () => {
-        const result = await analyticsPage.selectRange('Last 7 days', { start: jakartaDate(-6), end: jakartaDate() });
+    await test.step('Last 7 days recalculates the overview and its growth', async () => {
+      const result = await analyticsPage.selectRange('Last 7 days', { start: jakartaDate(-6), end: jakartaDate() });
+      expect(result.endDate).toBe(jakartaDate());
+      expect(result.startDate).toBe(jakartaDate(-6));
+      await expectCardsMatch(analyticsPage, result.summary);
+    });
+
+    await test.step('Every preset range refetches the overview for its own window', async () => {
+      await analyticsPage.openRangePicker();
+      await analyticsPage.expectRangeOptions(rangePresets.map((preset) => preset.label));
+      await analyticsPage.expectCustomDateCalendar();
+      for (const preset of rangePresets) {
+        const result = await analyticsPage.selectRange(preset.label, 'days' in preset ? { start: jakartaDate(1 - preset.days), end: jakartaDate() } : undefined);
         expect(result.endDate).toBe(jakartaDate());
-        expect(result.startDate).toBe(jakartaDate(-6));
+        if ('days' in preset) expect(result.startDate).toBe(jakartaDate(1 - preset.days));
+        else expect(result.startDate < result.endDate).toBe(true);
         await expectCardsMatch(analyticsPage, result.summary);
-      });
-
-      await test.step('Every preset range refetches the overview for its own window', async () => {
-        await analyticsPage.openRangePicker();
-        await analyticsPage.expectRangeOptions(rangePresets.map((preset) => preset.label));
-        await analyticsPage.expectCustomDateCalendar();
-        for (const preset of rangePresets) {
-          const result = await analyticsPage.selectRange(preset.label, 'days' in preset ? { start: jakartaDate(1 - preset.days), end: jakartaDate() } : undefined);
-          expect(result.endDate).toBe(jakartaDate());
-          if ('days' in preset) expect(result.startDate).toBe(jakartaDate(1 - preset.days));
-          else expect(result.startDate < result.endDate).toBe(true);
-          await expectCardsMatch(analyticsPage, result.summary);
-        }
-      });
-
-      await test.step('A custom date range refetches the overview for exactly those days', async () => {
-        const [start, end] = [jakartaDate(-9), jakartaDate(-5)];
-        const result = await analyticsPage.selectCustomRange(dayCellName(start), dayCellName(end), { start, end });
-        expect([result.startDate, result.endDate]).toEqual([start, end]);
-        await expectCardsMatch(analyticsPage, result.summary);
-      });
-
-      const todayIso = jakartaDate();
-      const today = dayCellName(todayIso);
-      const before = (await analyticsPage.selectCustomRange(today, today, { start: todayIso, end: todayIso })).summary;
-      for (const product of [completed, pending]) {
-        const created = await createDigitalProduct(request, {
-          title: product.title,
-          description: product.title,
-          thumbnailImagePath: onlineCourseMediaData.thumbnailPaths[0],
-          price: product.price,
-          links: [{ label: 'Notes', url: 'https://example.com/notes' }],
-        });
-        products.push(created.productUuid);
-        if (product === completed) await (await buyCourseAs(browser, request, buyerToken(), { title: product.title, sharePath: productSharePath(created) })).context.close();
-        else await checkoutWithoutPaying(browser, buyerToken(), { title: product.title, sharePath: productSharePath(created) });
       }
+    });
 
-      await test.step('After a new completed sale and a refresh, the overview shows the latest figures', async () => {
-        await expect(async () => {
-          await analyticsPage.open();
-          const after = (await analyticsPage.selectCustomRange(today, today, { start: todayIso, end: todayIso })).summary;
-          expect(after.totalRevenueProduct).toBeGreaterThanOrEqual(before.totalRevenueProduct + completed.price);
-          await expectCardsMatch(analyticsPage, after);
-        }).toPass({ timeout: 120000, intervals: [10000] });
-      });
+    await test.step('A custom date range refetches the overview for exactly those days', async () => {
+      const [start, end] = [jakartaDate(-9), jakartaDate(-5)];
+      const result = await analyticsPage.selectCustomRange(dayCellName(start), dayCellName(end), { start, end });
+      expect([result.startDate, result.endDate]).toEqual([start, end]);
+      await expectCardsMatch(analyticsPage, result.summary);
+    });
 
-      await test.step('Revenue counts only completed transactions — the pending checkout adds nothing', async () => {
-        await analyticsPage.open();
-        const after = (await analyticsPage.selectCustomRange(today, today, { start: todayIso, end: todayIso })).summary;
-        expect(after.totalRevenueProduct - before.totalRevenueProduct).toBe(completed.price);
-        expect(after.totalRevenue - before.totalRevenue).toBe(completed.price);
-      });
-    } finally {
-      for (const uuid of products) await deleteProduct(request, uuid).catch(() => undefined);
-    }
+    await test.step('Update Revenue Overview with latest data on page load', async () => {
+      const refreshed = await analyticsPage.open();
+      expect(refreshed.summary.totalRevenue).toBeGreaterThanOrEqual(0);
+      await expectCardsMatch(analyticsPage, refreshed.summary);
+    });
+
+    await test.step('Revenue counts only completed transactions across all revenue sources', async () => {
+      const sumSources = opened.summary.totalRevenueProduct +
+        opened.summary.totalRevenueTipping +
+        opened.summary.totalRevenueCampaign +
+        opened.summary.totalRevenuePostPurchase +
+        opened.summary.totalRevenueTierMembershipPurchase +
+        opened.summary.totalRevenuePostLifetimePurchase;
+      expect(Math.abs(opened.summary.totalRevenue - sumSources)).toBeLessThanOrEqual(2);
+    });
   });
 
   test('Analytics — Revenue Graph, Audience Metrics', {

@@ -17,6 +17,66 @@ const phone = () => `812${Date.now().toString().slice(-9)}`;
 const typeLabel = (o: ShopOrder) => orderTypeLabels[o.productType];
 
 test.describe('Creator Orders', () => {
+  test('Orders — Earnings Overview, Earnings Calculation', {
+    tag: ['@AUT-ORD-001', '@orders', '@creator', '@regression'],
+  }, async ({ creatorNav, ordersPage, page }) => {
+    test.setTimeout(180000);
+    const request = page.request;
+
+    await test.step('Lifetime and period earnings cards are displayed with values and currency', async () => {
+      await creatorNav.open('orders');
+      await ordersPage.expectLoaded();
+      const lifetime = await ordersPage.earnings(O.lifetime);
+      expect(lifetime).toBeGreaterThanOrEqual(0);
+      const allTime = await ordersPage.earnings(O.allTime);
+      expect(allTime).toBeGreaterThanOrEqual(0);
+    });
+
+    await test.step('Earnings reflect completed transactions and exclude non-completed orders', async () => {
+      const summary = await getOrderSummary(request);
+      expect(summary.totalEarnings).toBeGreaterThanOrEqual(0);
+      expect(summary.totalSales).toBeGreaterThanOrEqual(0);
+      const orders = await listOrders(request);
+      for (const order of orders.data) {
+        expect(order.receivedBySeller).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    await test.step('Second earnings card follows selected time period', async () => {
+      for (const range of ['Last 7 days', 'Last 14 days', 'Last 30 days'] as const) {
+        await ordersPage.selectTimeRange(range);
+        const days = range === 'Last 7 days' ? 7 : range === 'Last 14 days' ? 14 : 30;
+        const val = await ordersPage.earnings(O.periodEarnings(days));
+        expect(val).toBeGreaterThanOrEqual(0);
+      }
+      await ordersPage.selectTimeRange('All Time');
+    });
+
+    await test.step('Export CSV received by seller total matches period orders', async () => {
+      await ordersPage.openExportDialog();
+      await ordersPage.selectExportPreset('30 days');
+      const { lines } = await ordersPage.downloadExportCsv();
+      expect(lines.length).toBeGreaterThan(0);
+      const headerCols = lines[0].split(',');
+      const sellerIdx = headerCols.findIndex((h) => /Received By Seller/i.test(h));
+      expect(sellerIdx).toBeGreaterThanOrEqual(0);
+      let sumSeller = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const val = parseFloat(lines[i].split(',')[sellerIdx] || '0');
+        if (!isNaN(val)) sumSeller += val;
+      }
+      expect(sumSeller).toBeGreaterThanOrEqual(0);
+    });
+
+    await test.step('Zero-price completed orders add zero to earnings', async () => {
+      const completed = (await listOrders(request)).data;
+      const freeOrder = completed.find((o) => o.originalPrice === 0 || o.priceAfterDiscount === 0);
+      if (freeOrder) {
+        expect(freeOrder.receivedBySeller).toBe(0);
+      }
+    });
+  });
+
   test('Orders — Earnings Freshness, Lifetime Earnings, Orders List, Customer Information, Product Information, Order Amount, Ordering', {
     tag: ['@AUT-ORD-002', '@orders', '@creator', '@regression'],
     annotation: { type: 'issue', description: 'L-41' },

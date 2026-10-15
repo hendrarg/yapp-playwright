@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { trackAuthToken } from '@helpers/auth/validate-token';
-import { locatorChain } from '@utils/heal-utils';
+import { locatorChain, smartLocator, type SmartHealable } from '@utils/heal-utils';
 import { VERIFIED_BADGE_SELECTOR } from '@pages/shared/locators';
 import { safeClick, safeFill } from '@utils/playwright.utils';
 
@@ -29,6 +29,8 @@ export class ExplorePage {
   readonly popularSeeMore: Locator;
   readonly searchInput: Locator;
   readonly searchCreatorLinks: Locator;
+  readonly footerPromotion: Locator;
+  readonly beACreatorButton: SmartHealable;
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.creatorsHeading = page.getByRole('heading', { name: 'Creators For You', exact: true });
@@ -43,6 +45,13 @@ export class ExplorePage {
     this.searchCreatorLinks = page.locator(
       'main a[href^="/"]:has(h3):not([href*="/product/"]):not([href^="/campaign/"])',
     );
+    this.footerPromotion = page.locator('footer').filter({ hasText: 'Turn your ideas' });
+    this.beACreatorButton = smartLocator(page, {
+      role: 'button',
+      name: 'Be A Creator',
+      exact: true,
+      text: 'Be A Creator',
+    });
   }
 
   async goto() {
@@ -467,5 +476,54 @@ export class ExplorePage {
       };
     }));
   }
+
+  async expectFooterPromotion() {
+    await this.footerPromotion.scrollIntoViewIfNeeded();
+    await expect(this.footerPromotion).toBeVisible({ timeout: 15000 });
+    await expect(this.footerPromotion.getByText('Turn your ideas')).toBeVisible();
+    await expect(this.footerPromotion.getByText('Into Income')).toBeVisible();
+    await expect(this.footerPromotion.getByText(/Start creating and selling your digital products today/i)).toBeVisible();
+    await expect(this.footerPromotion.getByRole('img', { name: 'footer-decoration' })).toBeVisible();
+    expect(await this.beACreatorButton.visibleCount()).toBeGreaterThan(0);
+  }
+
+  async openBeACreatorTab(): Promise<Page> {
+    await this.footerPromotion.scrollIntoViewIfNeeded();
+    const [newPage] = await Promise.all([
+      this.page.context().waitForEvent('page'),
+      this.beACreatorButton.click(),
+    ]);
+    await newPage.waitForLoadState('domcontentloaded');
+    return newPage;
+  }
+
+  async expectConsistentCardPricesAcrossSections() {
+    const extractCards = async (grid: Locator) => {
+      await expect.poll(() => grid.locator('a[href*="/product/"]').count(), { timeout: 15000 }).toBeGreaterThan(0);
+      return grid.locator('a[href*="/product/"]').evaluateAll((links) =>
+        links.map((link) => {
+          const text = (link as unknown as { innerText: string }).innerText;
+          const priceLine = text.split('\n').find((t: string) => /^(?:Rp|Free|Start from)/i.test(t.trim()))?.trim() || '';
+          return {
+            href: (link as unknown as { getAttribute(attr: string): string | null }).getAttribute('href') || '',
+            title: (link as unknown as { querySelector(sel: string): { textContent: string | null } | null }).querySelector('h3')?.textContent?.trim() || '',
+            price: priceLine,
+          };
+        }),
+      );
+    };
+
+    const popular = await extractCards(this.popularGrid);
+    const recommended = await extractCards(this.recommendedGrid);
+
+    const shared = popular.filter((p) => recommended.some((r) => r.href === p.href));
+    expect(shared.length, 'At least one shared product must exist across Popular and Recommended').toBeGreaterThan(0);
+
+    for (const item of shared) {
+      const rec = recommended.find((r) => r.href === item.href)!;
+      expect(item.price, `Price mismatch for "${item.title || item.href}"`).toBe(rec.price);
+    }
+  }
 }
+
 

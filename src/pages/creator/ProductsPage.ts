@@ -836,4 +836,12 @@ export class ProductsPage {
       return false;
     }
   }
+
+  get pageIndicator(): Locator {
+    return this.page.getByText(/^Page \d+ of \d+$/).filter({ visible: true });
+  }
+
+  async expectPageIndicator(pattern: RegExp | string) {
+    await expect(this.pageIndicator).toHaveText(pattern, { timeout: 15000 });
+  }
 }
