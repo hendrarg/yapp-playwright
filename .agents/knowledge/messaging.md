@@ -50,8 +50,8 @@ test cases were written against, so check this before scoping a messaging TC.
   `GET /api/v1/dm/buyers/{buyerUUID}/labels`** (`data: null` once removed). As of
   2026-10-02 `GET /api/v1/dm/conversations` **carries them again** as
   `counterParty.label[]` (it did not on 2026-09-08), so the list payload works for a
-  badge assertion but the per-buyer endpoint is the authority. The badge still renders
-  only on the inbox row, never in the thread header (L-29).
+  badge assertion but the per-buyer endpoint is the authority. Since 2026-10-15 (L-29 / M&B-15 fixed) the badge renders on the inbox row **and** in the
+  thread header beside the buyer's name.
 - **Full badge lifecycle re-verified 2026-10-02** (M-29 closed): Add → `Member marked`;
   menu flips to `Edit Mark Badge`, modal prefilled with label + colour + `Remove`;
   `Remove` → `Mark removed` and the row badge disappears; `Delete <name>` in the label
@@ -66,13 +66,11 @@ test cases were written against, so check this before scoping a messaging TC.
 - **Broadcast audiences are single-select** — Followers / Subscribers / Custom List.
   There is no Supporters segment and no per-tier filter. Custom-list candidates are
   limited to followers.
-- **The inbound DM policy gates the outbound broadcast audience** (2026-10-02, M-59).
-  `accessPolicy` from Messaging Settings changes the `Send to` options on reload:
-  `subscriber_only` → Followers and Custom List **disabled** (`data-disabled`), default
-  Subscribers; `followers_and_subscribers` → all three enabled, default Followers;
-  `none` → all three enabled again, default Followers, and **Subscribers counts 0 People**.
-  So an earlier session's "Followers/Custom List greyed out" screenshot is a policy
-  artefact, not the segment design — note the policy before asserting audience options.
+- **The inbound DM policy no longer touches the broadcast audience** (M-59 / M&B-20 fixed,
+  verified 2026-10-15). With `accessPolicy` set to `subscriber_only`, `followers_and_subscribers`
+  or `none`, `Send to` is identical: default Followers, all three options enabled, Subscribers
+  keeps its real count (it used to drop to 0 under `none`). Older screenshots with Followers /
+  Custom List greyed out show the pre-fix coupling.
 
 ## Buyer app
 
@@ -261,21 +259,22 @@ a `Post something here...` composer, `Open attachment menu`, `Cancel`, `Send Bro
 - The **segment control is a radio group**, not a multi-select — `Followers`,
   `Subscribers`, `Custom List`, with exactly one `data-state="checked"` at any moment.
   Overlapping segments therefore cannot be combined and no unique-recipient count exists.
-  All three options carry the same wrong subtitle, *"If they click, all followers will be
-  notified."* (`L-50`).
+  Each option now has its own subtitle (L-33 / M&B-19 fixed 2026-10-15): Followers *"Everyone who
+  follows you will get this broadcast."*, Subscribers *"Only your paid members will get this
+  broadcast."*, Custom List *"Only the people on lists you pick will get this broadcast."* The
+  radios' accessible names carry subtitle + count, e.g. `Subscribers Only your paid members … 4 People`.
 - The **`N People` button** opens a second panel, `Message recipient`, listing every
   person in the segment with a checkbox plus `Select All` — the only way to trim a
   broadcast, and it stays inside one segment.
 - The attachment menu is `Link Product`, `Link Campaign`, `Request Tip`, `Link Post`,
   `Media`, `Link Membership`, each with its own one-line description.
-- **Broadcast `Request Tip` sends on its own button** (2026-10-02). The Tip Request card
-  now sits inline in the composer (10K/25K/50K + IDR field + `Request Rp<amount>`), and
-  clicking `Request Rp<amount>` fires `POST /api/v1/dm/broadcasts` with
-  `contentType: "tip"` to the **whole current segment** immediately — `Send Broadcast` is
-  never pressed. Today the BE rejects it (400 `ContentType must be one of: text media gif
-  emoticon product campaign post tier_membership`, toast `validation failed`), so nothing
-  goes out. Once M-27 is fixed this will broadcast instantly: trim the recipients to a
-  test account through `N People` **before** clicking it.
+- **Broadcast `Request Tip` is staged, then sent with the broadcast** (M-27 / M&B-9 fixed
+  2026-10-15). The inline Tip Request card holds 10K / 25K / 50K, an IDR field and `Remove tip
+  request` — there is no `Request` button any more and picking an amount sends nothing.
+  `Send Broadcast` posts `{contentType: "tip", tipAmount}` → 200, toast `Broadcast queued for N
+  recipient(s).`, and the recipient gets a `tip` message. To keep a test send small, open
+  `N People` (dialog `Followers (9)`), press `Select All` to clear every box, tick one test
+  account and `Save` — the button then reads `1 People`.
 - **The pickers do not share a confirm button**: `Select Post` commits with **`Apply`**,
   `Select Membership Tier` with **`Confirm`**. Clicking the row alone attaches nothing,
   and the composer behind stays reachable, so a send fired too early goes out empty —
@@ -296,3 +295,10 @@ a `Post something here...` composer, `Open attachment menu`, `Cancel`, `Send Bro
   does not hold and **`Subscribed`** for one they do. Tapping the subscribed one lands on
   `/profile/membership` → Active, showing the plan and next billing date rather than a
   checkout.
+
+## Link Product picker refetches on every open (2026-10-15)
+
+`Select Product` (Link Product, from the DM or broadcast attachment menu) issues a fresh
+`GET /shop/products` each time it opens, so a product set inactive meanwhile is no longer offered —
+no reload needed (L-32 / M&B-18 fixed). Rows are a thumbnail, type, title, price and a checkbox, with
+a `Search by name` box.
