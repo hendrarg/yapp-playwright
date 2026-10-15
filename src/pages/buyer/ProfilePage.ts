@@ -234,6 +234,9 @@ export class ProfilePage {
     await expect(async () => {
       await safeClick(button);
       await expect(button).toHaveAttribute("data-state", "active", { timeout: 2000 });
+      if (tab === "feeds") {
+        await expect(this.allFeedsToggle).toBeVisible({ timeout: 2000 });
+      }
     }).toPass({ timeout: 30000 });
     await waitForLoaded(this.page);
   }

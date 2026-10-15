@@ -212,7 +212,7 @@ test('Feeds and Exclusive — Infinite Scroll, Creator Profile Feed, Exclusive T
     });
 
     await test.step('An anonymous visitor sees public and locked posts on the profile Feeds tab', async () => {
-      const guestContext = await browser.newContext();
+      const guestContext = await browser.newContext({ viewport: page.viewportSize() });
       try {
         const guestProfile = new ProfilePage(await guestContext.newPage(), baseURL);
         await guestProfile.goto(creator.username);
