@@ -406,11 +406,11 @@ test.describe('Creator Digital Product', () => {
 
   test('Product Digital — Save Draft, Publish, Toggle, Message, Links, Section Scope, Preview and Delivery, Accessibility', {
     tag: ['@AUT-PD-005', '@products', '@creator', '@regression'],
-    annotation: [{ type: 'issue', description: 'M-44' }, { type: 'issue', description: 'L-43' }],
+    annotation: { type: 'issue', description: 'L-43' },
   }, async ({ digitalProductPage, onlineCoursePage, productPurchasePage, page, browser }) => {
     test.setTimeout(480000);
-    // Known bugs M-44 (the 1000-character after-sales limit is not enforced) and L-43 (unnamed switch). Last two steps.
-    test.fail(true, 'M-44 / L-43: after-sales message limit and accessible names');
+    // Known bug L-43 (unnamed Customize Message switch). Last step.
+    test.fail(true, 'L-43: after-sales switch has no accessible name');
     const request = page.request;
     const titles: string[] = [];
     const message = generateOnlineCourseAfterSalesMessage();
@@ -438,11 +438,11 @@ test.describe('Creator Digital Product', () => {
         expect((await findProductByTitle(request, title))?.status).toBe('active');
       });
 
-      await test.step('After Sales defaults ON; switched OFF it saves and buyers get no custom message', async () => {
+      await test.step('After Sales defaults OFF; left off it saves and buyers get no custom message', async () => {
         const title = generateDigitalProductTitle();
         titles.push(title);
         await reachDetails(digitalProductPage, onlineCoursePage, title);
-        expect(await onlineCoursePage.readAfterSalesMessageEnabled()).toBe(true);
+        expect(await onlineCoursePage.readAfterSalesMessageEnabled()).toBe(false);
         await onlineCoursePage.setAfterSalesMessageEnabled(false);
         await onlineCoursePage.fillOnlineCoursePrice(digitalProductPricingData.validPrice);
         const sharePath = await publish(onlineCoursePage);
@@ -499,7 +499,9 @@ test.describe('Creator Digital Product', () => {
       await test.step('With After Sales ON an empty message is refused and the 1000-character limit holds', async () => {
         await reachDetails(digitalProductPage, onlineCoursePage, generateDigitalProductTitle());
         await onlineCoursePage.fillAfterSalesMessage('M'.repeat(1005));
-        await expect.soft.poll(async () => onlineCoursePage.readAfterSalesMessageLength(), { timeout: 10000 }).toBeLessThanOrEqual(1000);
+        await onlineCoursePage.expectSaveBlockedByAfterSales(/Customize Message must be at most 1000 characters/);
+        await onlineCoursePage.fillAfterSalesMessage('');
+        await onlineCoursePage.expectSaveBlockedByAfterSales(/After-sales message is required when Customize Message is on/);
       });
 
       await test.step('The Customize Message switch has an accessible name like every other switch', async () => {

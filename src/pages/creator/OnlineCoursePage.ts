@@ -820,6 +820,26 @@ export class OnlineCoursePage {
     return this.page.url().match(/\/products\/update\/[\w-]+\/([0-9a-f-]{36})/)![1];
   }
 
+  /**
+   * Save is refused for an After Sales validation error: no product request, a toast and the
+   * inline error carry the same text (PM-5 / PM-6, 2026-10-15).
+   */
+  async expectSaveBlockedByAfterSales(error: RegExp) {
+    let sent = 0;
+    const count = (r: { url(): string; method(): string }) => {
+      if (/\/api\/v1\/shop\/products/.test(r.url()) && ["POST", "PUT"].includes(r.method())) sent++;
+    };
+    this.page.on("request", count);
+    try {
+      await this.page.getByRole("button", { name: "Save", exact: true }).locator("visible=true").first().click({ timeout: 10000 });
+      await expect(this.page.locator("[data-sonner-toast]").filter({ hasText: error }).first()).toBeVisible({ timeout: 10000 });
+      await expect(this.page.getByText(error).filter({ visible: true }).first()).toBeVisible();
+      expect(sent).toBe(0);
+    } finally {
+      this.page.off("request", count);
+    }
+  }
+
   /** Characters the After Sales message editor actually holds. */
   async readAfterSalesMessageLength(): Promise<number> {
     return ((await this.afterSalesMessageEditor().innerText()) ?? "").replace(/\n/g, "").length;

@@ -723,11 +723,14 @@ export class ConsultationPage {
     expect(checked, "Customize Message toggle should be off").toBe("false");
   }
 
-  /** Customize Message on, its editor and the 0/1000 counter exposed, under the purpose copy. */
-  async expectAfterSalesDefaultOn(purposeCopy: string, emptyCounter: string) {
-    await expect(this.afterSalesCustomizeSwitch()).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+  /**
+   * Customize Message starts off under its purpose copy (default OFF since PM-6, 2026-10-15);
+   * switched on it exposes the editor and the 0/1000 counter.
+   */
+  async expectAfterSalesDefaultOffThenEditable(purposeCopy: string, emptyCounter: string) {
+    await expect(this.afterSalesCustomizeSwitch()).toHaveAttribute("aria-checked", "false", { timeout: 10000 });
     await expect(this.page.getByText(purposeCopy, { exact: true }).filter({ visible: true }).first()).toBeVisible();
-    await expect(this.afterSalesMessageEditor()).toBeVisible();
+    await this.enableConsultationAfterSalesMessage();
     await expect(this.page.getByText(emptyCounter, { exact: true }).filter({ visible: true }).first()).toBeVisible();
   }
 
@@ -743,8 +746,12 @@ export class ConsultationPage {
     await this.page.keyboard.press("Backspace");
   }
 
+  /** Save refused: toast plus inline error, and the editor is back in view on the After Sales field. */
   async expectAfterSalesMessageBlocked() {
-    await expect(this.page.getByText(/please fill|required|enter a message/i).first()).toBeVisible({ timeout: 5000 });
+    const error = /After-sales message is required when Customize Message is on/;
+    await expect(this.page.locator("[data-sonner-toast]").filter({ hasText: error }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByText(error).filter({ visible: true }).first()).toBeVisible();
+    await expect(this.afterSalesMessageEditor()).toBeInViewport();
   }
 
   async fillConsultationAfterSalesMessage(message: string) {

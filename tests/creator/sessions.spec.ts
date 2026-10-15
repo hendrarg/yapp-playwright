@@ -390,12 +390,8 @@ test.describe('Creator Sessions', () => {
 
   test('Consultation — Section and Toggle, Message, Links, Preview, Edit Published, Create versus Edit Default, Link Label Truncation', {
     tag: ['@AUT-CON-006', '@sessions', '@creator', '@regression'],
-    annotation: [{ type: 'issue', description: 'M-44' }, { type: 'issue', description: 'L-49' }],
   }, async ({ consultationPage, page }) => {
     test.setTimeout(300000);
-    // Known bugs M-44 / L-49: an empty message under Customize Message saves without a warning and
-    // comes back switched off, which is also why an untouched consultation reopens with it off. Last two steps.
-    test.fail(true, 'M-44 / L-49: empty after-sales message is not blocked');
     const { linkValidation } = digitalProductValidationData;
     const title = generateConsultationTitle();
     const message = generateConsultationAfterSalesPreviewMessage();
@@ -404,10 +400,10 @@ test.describe('Creator Sessions', () => {
     let editDefault: string | null = null;
 
     try {
-      await test.step('On a new consultation Customize Message is on, with its purpose copy, editor and 0/1000 counter', async () => {
+      await test.step('On a new consultation Customize Message starts off under its purpose copy; switched on it shows the editor and 0/1000 counter', async () => {
         await consultationPage.goto();
         await consultationPage.expectConsultationCreateFlow();
-        await consultationPage.expectAfterSalesDefaultOn(consultationAfterSalesData.purposeCopy, consultationAfterSalesData.emptyCounter);
+        await consultationPage.expectAfterSalesDefaultOffThenEditable(consultationAfterSalesData.purposeCopy, consultationAfterSalesData.emptyCounter);
       });
 
       await test.step('The message counts toward 1000 characters', async () => {
@@ -470,7 +466,7 @@ test.describe('Creator Sessions', () => {
       });
 
       await test.step('A consultation published without touching After Sales opens on edit with the create default', async () => {
-        expect(editDefault).toBe('true');
+        expect(editDefault).toBe('false');
       });
     } finally {
       for (const uuid of uuids) await deleteProduct(page.request, uuid).catch(() => undefined);

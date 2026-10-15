@@ -124,10 +124,10 @@ becomes 404.
 The After Sales "Customize Message" switch has two different defaults, because
 `aria-checked` derives from the product's saved config rather than a static default:
 
-- **Create form** — the switch starts ON.
+- **Create form** — the switch starts **OFF** since 2026-10-15 (PM-6; it used to start ON).
+  Verified on Consultation and Digital Product.
 - **Edit mode of a product with no saved config** (`thankYouNote=""`,
-  `salesLinks=[]`) — the switch reads OFF. The create-form ON state is not persisted
-  until a message is actually saved.
+  `salesLinks=[]`) — the switch reads OFF, so create and edit now agree (TC-CON-C-051).
 
 For an API-seeded course expect OFF unless the seed includes `thankYouNote` and/or
 `salesLinks`. Use the `{ title, url }` shape for `salesLinks` — a plain `label`
@@ -164,7 +164,17 @@ it per product type:
 The `Customize Message` toggle default is the one thing that is *not* shared — see the
 Online Course section above.
 
-**An empty message is not rejected, it is discarded.** Verified 2026-09-10 on a
+**Save validation since 2026-10-15 (PM-5 / PM-6, be#406 + dashboard#513), verified on Consultation
+edit and Digital Product create:** over 1000 characters the editor shows inline `Customize Message
+must be at most 1000 characters` (counter e.g. `1005/1000 characters`); switch ON with an empty
+message and no link shows `After-sales message is required when Customize Message is on`. Either
+way Save / Save as Draft sends **no request**, raises a toast with the same text and jumps back to
+the After Sales field (from Set Availability to Details). The server also answers `PUT
+/api/v1/shop/products/{uuid}` with a 1001-char `thankYouNote` → 400 with that message (1000 → 200).
+ON with only a link still saves. Per the dev, Online Course edit, Discord and Events Ticket do not
+run this form validation yet — the paragraph below still describes them.
+
+**Before that fix, an empty message was not rejected, it was discarded.** Verified 2026-09-10 on a
 Consultation: turning `Customize Message` on and saving a message persists it (the switch
 still reads ON after a reload). Emptying that message with the switch still ON and saving
 again returns `PUT /api/v1/shop/products` **200** with no validation message and no toast
@@ -685,10 +695,9 @@ like the page is broken rather than like the route having moved.
   13:00–15:00 after a 09:00 booking offers 13:00 and 14:00 for that date, and the 09:00
   booking's transaction still opens.
 - **After Sales on create versus edit.**
-  - On create, Customize Message is on (editor plus `0/1000 characters`, purpose copy `Turn this
-    on to create personalized messages…`).
-  - A consultation published without touching it reopens on edit with the switch **off**: the
-    on-but-empty state is saved as off (same mechanism as L-49).
+  - On create, Customize Message is **off** since 2026-10-15 (purpose copy `Turn this on to
+    create personalized messages…`; switched on: editor plus `0/1000 characters`).
+  - A consultation published without touching it reopens on edit with the switch off too.
   - On edit, the editor sits in the Details tab. On create there are no tabs.
 - **The `View all` calendar does not close on Escape.** Picking a date already selected again
   hangs a click, so check the day button's `selected` name first.
@@ -749,7 +758,7 @@ like the page is broken rather than like the route having moved.
 - **Promotion create/edit show no success toast; delete does** (`Promo deleted successfully`). The delete dialog still names no object (`Are you sure you want to delete this promotion?`). Row actions are `Set Inactive / Edit / Delete` behind an unnamed `dropdown-menu-trigger`.
 - **Self-affiliate still saves**: `Find Creator` offers the promo owner (`@hendrarg`) and `POST` carries `affiliatorUUID` = the owner's uuid → 200.
 - Generated promo codes vary 8–12 characters; the regenerate button next to `Discount code` has no accessible name; the code field stays editable.
-- **After-sales Customize Message over 1000 chars now blocks Save — silently**: the editor accepts 1005 chars (`1005/1000 characters`), then `Save as Draft` sends no request and shows nothing; at 900 chars it saves (PUT 200, then redirects to /profile). Switch ON with an empty message still saves (PUT 200, no message) and reloads as OFF.
+- **After-sales Customize Message over 1000 chars** (superseded 2026-10-15 — see *Save validation* under After Sales): Save is now refused with a toast and inline error. A valid save still redirects to /profile (`Consultation saved as draft`).
 - **Discord Membership edit**: `Next: Publish` stays disabled until something changes; saving a real change still shows `Your product has been successfully created.` Advanced Settings on that editor are `Schedule Publish`, `Availability`, and `Hide from Explore` (2026-10-13). There is no `Set benefits for membership` switch. A custom buyer question added on that form is absent after publish and reopen; price, Hide from Explore, the after-sales note, and after-sales links from the same save are still there. Duration `0` stays on step 1 and the field reports `Duration is required`. The title input keeps 556 characters and has no `maxlength`.
 - **Membership tier Hero Image**: a 686×447 image is accepted with a preview and no error (min 500×500 is only text). The first file input on `/membership/create` belongs to the description editor (`image/*`); the Hero Image input is the one accepting `image/jpeg,…`.
 - **Campaign create** (`/profile/campaigns/create`): a 1×1 banner is accepted with a preview, no error.
