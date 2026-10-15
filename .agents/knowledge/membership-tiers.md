@@ -454,11 +454,16 @@ Do not mistake the `Per month` figure beside it for the price: `Per month` and
 The team confirmed that a `Free` tier is allowed: `bisa 0`, created with `priceIDR: 0`,
 answered `200 Create Tier Membership Successfully` and shows `Free /1 month`. On
 `/membership/create`, the values 0, 1, 5.000, 10.000, 19.999 and 20.000 raise no price
-message on submit. The form still shows `Membership name is required`, `Description is
-required` and `Thumbnail URL is required`. The `IDR 20,000` rule described below no longer
-exists. Only the thumbnail mismatch is still open (L-24 / MEM-14).
+message on submit. Empty submit (`Add Membership`) now shows `Membership name is required`,
+`At least one price tier is required`, `Description is required` and **`Hero Image is
+required`** (renamed from `Thumbnail URL is required`, MEM-18, 2026-10-15). The `IDR 20,000` rule
+described below no longer exists. **Since 2026-10-15 the API enforces the thumbnail too**
+(MEM-14): `POST /api/v1/tier-memberships` without `thumbnailURL` → 400 `["ThumbnailURL is
+required"]`, and `isActive: false` is stored false. On update an empty `thumbnailURL` keeps the
+old one. **Hero Image under 500×500 is rejected** on create/edit (MEM-13):
+`<file>: Image must be at least 500 × 500 pixels (this one is 686 × 447)`, no preview.
 
-Client-side validation (as of September, the price part is superseded) on the tier form enforces `Price must be at least IDR 20,000`
+Historical (superseded 2026-10-15 — see above): client-side validation on the tier form enforces `Price must be at least IDR 20,000`
 and `Thumbnail URL is required`. The API enforces **neither** — `POST
 /api/v1/tier-memberships` accepted `priceIDR: 10000`, and its required-field list is
 only `Name`, `Description`, `IsActive`, `Prices`,
@@ -581,9 +586,14 @@ Verified 2026-09-10 with an active subscription whose entitlement row exists
 (`tier_membership_user_benefits`, `access_mode=membership_bound`, valid a month out).
 
 The buyer product page asks
-`GET /api/v1/tier-membership-users/products/{productUUID}/benefit-check`, and it answers
-**`{"hasBenefit": false}`** for the very buyer who holds that entitlement, so that page
-keeps its ordinary purchase CTA (`M-39`).
+`GET /api/v1/tier-membership-users/products/{productUUID}/benefit-check`. **Since 2026-10-15
+(be#406) it answers `{"hasBenefit": true, "accessMode": "membership_bound"}`** for an active
+member of an Online Course perk and `{"hasBenefit": false}` once the subscription expires — but
+the product page **still shows its ordinary CTA** (`Get Product` on a free course) either way;
+the FE ignores the answer (M-25 / MEM-17 reopened). Fixture: QA buyer subscription
+`87336a51-…` (id 100, tier 95) holds benefit 305 for sundanese's `Belajar Openclaw`
+(`ababebb3-…`, `/s/5YyuTuk5XW`); it expired 2026-10-10, so revive it with
+`dbFixtures.setMembershipExpiryIn` and restore.
 
 **The perk itself does work — it lives on a different surface.** `/profile/membership`
 → tap the active membership → the detail panel lists `Rewards` with the perk row
@@ -1046,6 +1056,14 @@ tier — otherwise a green result means nothing.
 Also unopened: whether `Add Exclusive Post` on the tier form offers the gate control (a post
 perk gated through the API stores the value fine).
 
-**Aside:** `POST /api/v1/tier-memberships` with `isActive: false` comes back
-`isActive: true`, and a `thumbnailURL` the API accepts is echoed as `""` unless it came from
+**Aside:** `POST /api/v1/tier-memberships` with `isActive: false` is stored false since
+2026-10-15 (it used to come back `true`), and a `thumbnailURL` the API accepts is echoed as `""` unless it came from
 the upload flow. Seed an inactive tier by creating then updating it.
+
+## Tier descriptions render embedded media (verified 2026-10-15, MEM-16)
+
+The tier description editor stores markdown with `::youtube{#<id>}` and `![alt](url)`. Buyers
+now see them rendered — a `youtube.com/embed/<id>` iframe and the image — on the
+`/{creator}/membership` cards (inside `Show More`), the profile benefit sheet, the tier detail
+page and the tier list dialog; no raw markup reaches the page. Fixture: hendrarg's `tier last`
+(`special / pake / telor` + `::youtube{#_AifxZGxwuk}` + an image).
