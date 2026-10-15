@@ -133,6 +133,13 @@ For an API-seeded course expect OFF unless the seed includes `thankYouNote` and/
 `salesLinks`. Use the `{ title, url }` shape for `salesLinks` — a plain `label`
 causes a 500 `sales link title is required`.
 
+## Online Course: Terminology, Editor Blocks, and Word Counter
+
+- **Terminology**: The creator studio uses strictly **Chapter** and **Page** naming (the legacy term "Episode" is completely absent in buttons, menus, and outlines).
+- **Editor Insert Blocks**: The page body toolbar provides an `Insert` dropdown menu offering 5 supported block types: `Video`, `Attachment`, `Image`, `Carousel`, and `Product`.
+- **Word Counter**: The editor toolbar features a real-time word counter on the right (`span.text-muted-foreground`) displaying the word count with its explicit unit label (e.g. `11 words` or `1 word`).
+- **First-run overlay**: The driver.js onboarding tour overlay (`.driver-overlay` and `body.driver-active`) does not appear on the course creation form.
+
 ## After Sales is one shared contract on every product type
 
 Verified 2026-08-31 on Discord Membership and Event & Tickets, and consistent with

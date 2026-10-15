@@ -515,4 +515,33 @@ test.describe('Creator Online Course', () => {
       await deleteProduct(request, created.productUuid).catch(() => undefined);
     }
   });
+
+  test('Online Course — Terminology, Word Counter Labelling, Insert Block Types, First-Run Overlay', {
+    tag: ['@AUT-OC-008', '@products', '@creator', '@regression'],
+  }, async ({ creatorNav, onlineCoursePage }) => {
+    test.setTimeout(120000);
+
+    await test.step('First-run tour overlay does not block form interactions on arrival', async () => {
+      await creatorNav.open('products');
+      await onlineCoursePage.goto();
+      await onlineCoursePage.expectLoaded();
+      await onlineCoursePage.expectNoDriverOverlay();
+    });
+
+    await test.step('Creator UI consistently uses Chapter and Page naming, with no legacy Episode terminology', async () => {
+      await onlineCoursePage.expectChapterAndPageButtons();
+      await onlineCoursePage.expectNoEpisodeTerminology();
+    });
+
+    await test.step('Insert menu offers all supported block types (Video, Attachment, Image, Carousel, Product)', async () => {
+      await onlineCoursePage.expectInsertMenuBlockTypes();
+    });
+
+    await test.step('Page body editor word counter displays count and word unit accurately', async () => {
+      const sampleText = 'one two three four five six seven eight nine ten eleven';
+      await onlineCoursePage.fillPageBody(sampleText);
+      await onlineCoursePage.expectPageBodyWordCounter('11 words');
+    });
+  });
 });
+

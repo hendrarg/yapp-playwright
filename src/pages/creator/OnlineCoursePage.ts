@@ -929,4 +929,42 @@ export class OnlineCoursePage {
     await this.expectChapterCount(0);
   }
 
+  async expectNoDriverOverlay() {
+    await expect(this.page.locator(".driver-overlay")).toHaveCount(0);
+    await expect(this.page.locator("body.driver-active")).toHaveCount(0);
+  }
+
+  async expectChapterAndPageButtons() {
+    await this.addChapterButton.text({ timeout: 15000 });
+    await this.addPageButton.text({ timeout: 15000 });
+    expect(await this.addChapterButton.visibleCount()).toBeGreaterThan(0);
+    expect(await this.addPageButton.visibleCount()).toBeGreaterThan(0);
+  }
+
+  async expectNoEpisodeTerminology() {
+    const episodeButtons = this.page.getByRole("button", { name: /episode/i });
+    expect(await episodeButtons.count(), 'UI should not use legacy "Episode" terminology').toBe(0);
+  }
+
+  async expectInsertMenuBlockTypes(expectedTypes: readonly string[] = ["Video", "Attachment", "Image", "Carousel", "Product"]) {
+    const insertBtn = this.page.getByRole("button", { name: "Insert", exact: true }).locator("visible=true").first();
+    await insertBtn.click({ timeout: 10000 });
+    for (const type of expectedTypes) {
+      await expect(this.page.getByRole("menuitem", { name: type, exact: true })).toBeVisible({ timeout: 10000 });
+    }
+    await this.page.keyboard.press("Escape");
+  }
+
+  async fillPageBody(text: string) {
+    const editor = this.freeTextEditor();
+    await editor.click({ timeout: 10000 });
+    await this.page.keyboard.press("Control+A");
+    await this.page.keyboard.press("Backspace");
+    await this.page.keyboard.insertText(text);
+  }
+
+  async expectPageBodyWordCounter(expected: string) {
+    const counter = this.page.locator("span.text-muted-foreground").filter({ hasText: /\b\d+\s+words?\b/i }).first();
+    await expect(counter).toContainText(expected, { timeout: 10000 });
+  }
 }
