@@ -1,8 +1,10 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { safeClick } from "@utils/playwright.utils";
-import { smartLocator } from "@utils/heal-utils";
-import { creatorFeedsLabels as labels } from "@test-data/creator/post.data";
+import { locatorChain, smartLocator } from "@utils/heal-utils";
+import { creatorFeedsLabels as labels, formatScheduleLabel as scheduleLabel } from "@test-data/creator/post.data";
+
+export type FeedsTab = keyof typeof labels.tabs;
 
 export interface ComposerPost {
   content: string;
@@ -157,11 +159,10 @@ export class FeedsPage {
   // ── Editing a published post ──
   readonly editDialog = this.page.getByRole("dialog", { name: labels.editDialog });
 
-  async openEditPost(content: string) {
+  async openEditPost(content: string, tab: FeedsTab = "published") {
     await this.goto();
-    const card = this.page.getByRole("main").locator("div").filter({ hasText: content }).filter({ has: this.page.locator("svg.lucide-ellipsis") }).last();
-    await safeClick(card.locator("button:has(svg.lucide-ellipsis)").first());
-    await safeClick(this.page.getByRole("menuitem", { name: labels.postMenuEdit, exact: true }));
+    await this.openTab(tab);
+    await this.choosePostAction(content, labels.menu.edit);
     await expect(this.editDialog).toBeVisible({ timeout: 10000 });
   }
 
@@ -194,6 +195,353 @@ export class FeedsPage {
     await safeClick(this.editDialog.getByRole("button", { name: labels.save, exact: true }));
     expect((await saved).status(), "saving the edited post").toBe(200);
     await expect(this.editDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  // ── Composer state ──
+  private get composerPostButton() {
+    return this.composer.getByRole("button", { name: labels.publish, exact: true });
+  }
+
+  async expectPublishEnabled(enabled: boolean) {
+    if (enabled) await expect(this.composerPostButton).toBeEnabled({ timeout: 10000 });
+    else await expect(this.composerPostButton).toBeDisabled({ timeout: 10000 });
+  }
+
+  /** What the composer offers: the media input's accept list, the body's limits, and its form fields. */
+  async composerConstraints(): Promise<{ accept: string; multiple: boolean; maxLength: string | null; fields: number; titleField: number }> {
+    const media = this.composer.locator('input[type="file"]').first();
+    const body = this.composer.getByRole("textbox");
+    return {
+      accept: (await media.getAttribute("accept")) ?? "",
+      multiple: (await media.getAttribute("multiple")) !== null,
+      maxLength: await body.getAttribute("maxlength"),
+      fields: await this.composer.locator("textarea, input:not([type=file])").count(),
+      titleField: await this.composer.getByRole("textbox", { name: /title/i }).count(),
+    };
+  }
+
+  /** Close the composer with content in it and keep it: `Save to Draft?` → `Save Draft`. Returns the draft uuid. */
+  async closeComposerAsDraft(): Promise<string> {
+    await safeClick(this.composer.getByRole("button", { name: labels.close, exact: true }));
+    const ask = this.page.getByRole("dialog", { name: labels.saveDraftDialog });
+    await expect(ask).toBeVisible({ timeout: 10000 });
+    const created = this.page.waitForResponse((r) => /\/api\/v1\/posts$/.test(r.url()) && r.request().method() === "POST", { timeout: 30000 });
+    await safeClick(ask.getByRole("button", { name: labels.saveDraft, exact: true }));
+    const response = await created;
+    expect(response.status(), "saving the draft").toBe(200);
+    expect(JSON.parse(response.request().postData() ?? "{}").status).toBe("draft");
+    await expect(this.toast(labels.draftSavedToast)).toBeVisible({ timeout: 10000 });
+    return (await response.json()).data.uuid;
+  }
+
+  /** Compose text (plus products and an image) and close the composer into a draft. Returns the draft uuid. */
+  async saveDraft(post: ComposerPost): Promise<string> {
+    await this.goto();
+    await this.openComposer();
+    await this.fillComposer(post.content);
+    // Before the image: an attached image adds its own × button and shifts the toolbar buttons.
+    if (post.productTitles?.length) await this.attachProducts(post.productTitles);
+    if (post.imagePath) {
+      await this.composer.locator('input[type="file"][multiple]').setInputFiles(post.imagePath);
+      await expect(this.composer.getByRole("img").first()).toBeVisible({ timeout: 20000 });
+    }
+    return this.closeComposerAsDraft();
+  }
+
+  /** Composer toolbar → Draft Posts → the draft; it reopens as `Publish Post` with everything that was saved. */
+  async resumeDraft(content: string) {
+    await this.goto();
+    await this.openComposer();
+    // The toolbar icons have no accessible names; the drafts one is the file-text icon.
+    await safeClick(this.composer.getByRole("button").filter({ has: this.page.locator("svg.lucide-file-text") }));
+    const drafts = this.page.getByRole("dialog", { name: labels.draftPostsDialog });
+    await expect(drafts).toBeVisible({ timeout: 10000 });
+    await safeClick(drafts.getByRole("button").filter({ hasText: content }).first());
+    await expect(this.publishDraftDialog).toBeVisible({ timeout: 10000 });
+  }
+
+  readonly publishDraftDialog = this.page.getByRole("dialog", { name: labels.publishDraftDialog });
+
+  async expectResumedDraft(content: string, productTitle: string, images: number) {
+    await expect(this.publishDraftDialog.getByRole("textbox")).toHaveValue(content);
+    await expect(this.publishDraftDialog).toContainText(productTitle);
+    // The product chip brings its own thumbnail (alt = product title) next to the media images.
+    await expect(this.publishDraftDialog.getByRole("img", { name: productTitle, exact: true })).toBeVisible();
+    await expect(this.publishDraftDialog.getByRole("img")).toHaveCount(images + 1);
+  }
+
+  // ── Scheduling ──
+  /** The clock icon in a composer toolbar opens the date + 12-hour time picker. */
+  private async pickSchedule(dialog: Locator, trigger: Locator, when: Date) {
+    await safeClick(trigger);
+    const picker = this.page.locator('[data-slot="popover-content"]:visible').last();
+    await expect(picker).toBeVisible({ timeout: 10000 });
+    await safeClick(picker.locator(`button[data-day="${when.getMonth() + 1}/${when.getDate()}/${when.getFullYear()}"]`));
+    // Controlled inputs: fill() is reset on re-render, real keystrokes stick.
+    const hour = String(((when.getHours() + 11) % 12) + 1).padStart(2, "0");
+    for (const [name, value] of [["12hours", hour], ["minutes", String(when.getMinutes()).padStart(2, "0")]] as const) {
+      const input = picker.locator(`input[name="${name}"]`);
+      await input.click();
+      await input.press("ControlOrMeta+a");
+      await input.pressSequentially(value, { delay: 50 });
+      await expect(input).toHaveValue(value);
+    }
+    const meridiem = when.getHours() >= 12 ? "PM" : "AM";
+    if ((await picker.getByRole("combobox").innerText()).trim() !== meridiem) {
+      await safeClick(picker.getByRole("combobox"));
+      await safeClick(this.page.getByRole("option", { name: meridiem, exact: true }));
+    }
+    // One Escape can be spent closing the AM/PM list; press again only while the picker is still up,
+    // because an extra Escape would close the composer itself.
+    await expect(async () => {
+      if (await picker.isVisible()) await this.page.keyboard.press("Escape");
+      await expect(picker).toBeHidden({ timeout: 1500 });
+    }).toPass({ timeout: 10000 });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(`${labels.postingOn} ${scheduleLabel(when)}`);
+  }
+
+  /** Compose a public post and schedule it; returns the new uuid and the `scheduledAt` the request carried. */
+  async schedulePost(content: string, when: Date): Promise<{ uuid: string; scheduledAt: string }> {
+    await this.goto();
+    await this.openComposer();
+    await this.fillComposer(content);
+    // The clock button has no name, no lucide class and no test id — its icon's size class is the only hook (needs a data-testid).
+    await this.pickSchedule(this.composer, this.composer.getByRole("button").filter({ has: this.page.locator('svg[class~="size-5.5"]') }), when);
+    const created = this.page.waitForResponse((r) => /\/api\/v1\/posts$/.test(r.url()) && r.request().method() === "POST", { timeout: 30000 });
+    await safeClick(this.composer.getByRole("button", { name: labels.schedulePost, exact: true }));
+    const response = await created;
+    expect(response.status(), "scheduling the post").toBe(200);
+    await expect(this.toast(labels.scheduledToast)).toBeVisible({ timeout: 10000 });
+    await expect(this.composer).toBeHidden({ timeout: 10000 });
+    return { uuid: (await response.json()).data.uuid, scheduledAt: JSON.parse(response.request().postData() ?? "{}").scheduledAt };
+  }
+
+  /** Scheduled tab → Edit → the `Posting on …` chip → a new time → Save. Returns the saved `scheduledAt`. */
+  async reschedulePost(content: string, when: Date): Promise<string> {
+    await this.openEditPost(content, "scheduled");
+    await this.pickSchedule(this.editDialog, this.editDialog.getByRole("button", { name: new RegExp(`^${labels.postingOn}`) }), when);
+    const saved = this.page.waitForResponse((r) => /\/api\/v1\/posts\/[^/]+$/.test(r.url()) && r.request().method() === "PUT", { timeout: 20000 });
+    await safeClick(this.editDialog.getByRole("button", { name: labels.save, exact: true }));
+    const response = await saved;
+    expect(response.status(), "saving the new schedule").toBe(200);
+    await expect(this.editDialog).toBeHidden({ timeout: 10000 });
+    return (await response.json()).data.scheduledAt;
+  }
+
+  /** The Scheduled tab card names the upcoming time with `Posting on …` (L-15: it says `Posted on`). */
+  async expectScheduledCardLabel(content: string, when: Date) {
+    await this.goto();
+    await this.openTab("scheduled");
+    // The schedule line sits below the post body, outside the inner card that postCard() returns.
+    const card = this.page.getByRole("main").locator("div").filter({ hasText: content }).filter({ hasText: new RegExp(`Post(ed|ing) on ${scheduleLabel(when)}`) }).last();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await expect(card).toContainText(`${labels.postingOn} ${scheduleLabel(when)}`);
+  }
+
+  // ── Post list, tabs and the per-post menu ──
+  async openTab(tab: FeedsTab) {
+    const tabButton = smartLocator(this.page, { role: "tab", name: labels.tabs[tab], exact: true, text: labels.tabs[tab] });
+    await tabButton.click();
+    await expect(this.page.getByRole("tab", { name: labels.tabs[tab], exact: true })).toHaveAttribute("aria-selected", "true");
+  }
+
+  /** The innermost element holding both the post text and its `Post options` button — one post card. */
+  private postCard(content: string): Locator {
+    return this.page.getByRole("main").locator("div").filter({ has: this.page.getByRole("button", { name: labels.postOptions }) }).filter({ hasText: content }).last();
+  }
+
+  async expectPostListed(content: string, tab: FeedsTab = "published") {
+    await this.openTab(tab);
+    await expect(this.postCard(content)).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectPostNotListed(content: string, tab: FeedsTab = "published") {
+    await this.openTab(tab);
+    await expect(this.page.getByRole("main").getByText(content, { exact: true })).toHaveCount(0, { timeout: 15000 });
+  }
+
+  async openPostMenu(content: string) {
+    const menu = this.page.getByRole("menu");
+    await expect(async () => {
+      if (!(await menu.isVisible())) await this.postCard(content).getByRole("button", { name: labels.postOptions }).click({ timeout: 3000 });
+      await expect(menu).toBeVisible({ timeout: 2000 });
+    }).toPass({ timeout: 20000 });
+  }
+
+  async postMenuItems(content: string): Promise<string[]> {
+    await this.openPostMenu(content);
+    const items = (await this.page.getByRole("menuitem").allInnerTexts()).map((s) => s.trim());
+    await this.page.keyboard.press("Escape");
+    await expect(this.page.getByRole("menu")).toBeHidden({ timeout: 5000 });
+    return items;
+  }
+
+  async choosePostAction(content: string, item: string) {
+    await this.openPostMenu(content);
+    const menuItem = this.page.getByRole("menuitem", { name: item, exact: true });
+    // Fail with the menu's real items rather than waiting forever on one that is not offered.
+    await expect(menuItem, `"${item}" in the post menu`).toBeVisible({ timeout: 5000 });
+    await safeClick(menuItem);
+  }
+
+  /** Card texts of the Published list, top to bottom. */
+  async publishedOrder(): Promise<string[]> {
+    await this.openTab("published");
+    return this.page.getByRole("main").getByRole("button", { name: labels.postOptions })
+      .evaluateAll((buttons) => buttons.map((b) => (b.parentElement?.textContent ?? "").replace(/\s+/g, " ").trim()));
+  }
+
+  // ── Pinning ──
+  readonly replacePinDialog = this.page.getByRole("dialog", { name: labels.replacePinDialog });
+
+  /** Pin to top with no pin in place: toast `Post pinned`, the card moves first with the `Pinned` label. */
+  async pinPost(content: string) {
+    await this.choosePostAction(content, labels.menu.pin);
+    await expect(this.toast(labels.pinnedToast)).toBeVisible({ timeout: 10000 });
+    await this.expectPinnedFirst(content);
+  }
+
+  /** Pin to top while another post is pinned: the replace dialog quotes the opening words of the pinned post. */
+  async requestPinReplacing(content: string, pinnedContent: string) {
+    await this.choosePostAction(content, labels.menu.pin);
+    await expect(this.replacePinDialog).toBeVisible({ timeout: 10000 });
+    // Long posts are cut to their opening words and end with an ellipsis.
+    const quoted = ((await this.replacePinDialog.innerText()).match(/“([^”]+)”/)?.[1] ?? "").replace(/(…|\.\.\.)$/, "").trim();
+    expect(quoted.length, "the dialog quotes the pinned post").toBeGreaterThan(0);
+    expect(pinnedContent.startsWith(quoted), `"${quoted}" opens the pinned post`).toBe(true);
+    await expect(this.replacePinDialog.getByRole("button", { name: labels.cancel, exact: true })).toBeVisible();
+    await expect(this.replacePinDialog.getByRole("button", { name: labels.replace, exact: true })).toBeVisible();
+  }
+
+  async answerReplaceDialog(choice: "cancel" | "replace") {
+    await safeClick(this.replacePinDialog.getByRole("button", { name: choice === "cancel" ? labels.cancel : labels.replace, exact: true }));
+    await expect(this.replacePinDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async unpinPost(content: string) {
+    await this.choosePostAction(content, labels.menu.unpin);
+    await expect(this.replacePinDialog).toBeHidden();
+    await expect(this.page.getByRole("dialog")).toHaveCount(0, { timeout: 5000 });
+  }
+
+  async expectPinnedFirst(content: string) {
+    await expect.poll(async () => (await this.publishedOrder())[0] ?? "", { timeout: 15000 }).toContain(content);
+    await expect(this.postCard(content).getByText(labels.pinnedLabel, { exact: true })).toBeVisible();
+    await expect(this.page.getByRole("main").getByText(labels.pinnedLabel, { exact: true })).toHaveCount(1);
+  }
+
+  async expectNotPinned(content: string) {
+    await expect(this.postCard(content).getByText(labels.pinnedLabel, { exact: true })).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectNoPinnedPost() {
+    await this.openTab("published");
+    await expect(this.page.getByRole("main").getByText(labels.pinnedLabel, { exact: true })).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** A creator with no posts sees the composer and nothing to pin. */
+  async expectEmptyFeeds() {
+    await this.openTab("published");
+    await expect(this.page.getByRole("main").getByText(labels.composerPlaceholder).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByRole("main").getByRole("button", { name: labels.postOptions })).toHaveCount(0);
+    await expect(this.page.getByRole("main").getByText(labels.pinnedLabel, { exact: true })).toHaveCount(0);
+    await expect(this.page.getByRole("menuitem", { name: labels.menu.pin })).toHaveCount(0);
+  }
+
+  // ── Deleting ──
+  readonly deleteDialog = this.page.getByRole("dialog", { name: labels.deleteDialog });
+
+  async openDeletePost(content: string) {
+    await this.choosePostAction(content, labels.menu.delete);
+    await expect(this.deleteDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.deleteDialog).toContainText(labels.deleteWarning);
+  }
+
+  async expectDeleteMentionsPin(mentioned: boolean) {
+    if (mentioned) await expect(this.deleteDialog).toContainText(labels.deletePinnedNote);
+    else await expect(this.deleteDialog).not.toContainText(labels.deletePinnedNote);
+  }
+
+  async cancelDelete() {
+    await safeClick(this.deleteDialog.getByRole("button", { name: labels.cancel, exact: true }));
+    await expect(this.deleteDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async confirmDelete() {
+    const deleted = this.page.waitForResponse((r) => /\/api\/v1\/posts\/[^/]+$/.test(r.url()) && r.request().method() === "DELETE", { timeout: 20000 });
+    await safeClick(this.deleteDialog.getByRole("button", { name: labels.menu.delete, exact: true }));
+    expect((await deleted).status(), "deleting the post").toBe(200);
+    await expect(this.deleteDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  // ── Insights ──
+  /** Post menu → Insights: total views, likes and comments as the dialog prints them. */
+  async readInsights(content: string): Promise<{ views: number; likes: number; comments: number }> {
+    await this.choosePostAction(content, labels.menu.insights);
+    const dialog = this.page.getByRole("dialog", { name: labels.insightsDialog });
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    const text = (await dialog.innerText()).replace(/\s+/g, " ");
+    await safeClick(dialog.getByRole("button", { name: labels.close, exact: true }).last());
+    await expect(dialog).toBeHidden({ timeout: 10000 });
+    const read = (re: RegExp) => Number(text.match(re)?.[1] ?? NaN);
+    return { views: read(/(\d+) Total views/), likes: read(/Likes (\d+)/), comments: read(/Comments (\d+)/) };
+  }
+
+  // ── Editing media and products of a published post ──
+  /** Each media tile in Edit Post is an image with its own (unnamed) remove button. */
+  private get editMediaRemoveButtons() {
+    return this.editDialog.locator("div:has(> img)").getByRole("button");
+  }
+
+  /** Remove `count` media items, optionally upload replacements, then Save. */
+  async editPostMedia(content: string, change: { remove: number; add?: string[] }) {
+    await this.openEditPost(content);
+    for (let i = 0; i < change.remove; i += 1) {
+      const before = await this.editMediaRemoveButtons.count();
+      await safeClick(this.editMediaRemoveButtons.first());
+      await expect(this.editMediaRemoveButtons).toHaveCount(before - 1, { timeout: 10000 });
+    }
+    if (change.add?.length) {
+      const before = await this.editMediaRemoveButtons.count();
+      await this.editDialog.locator('input[type="file"][multiple]').setInputFiles(change.add);
+      await expect(this.editMediaRemoveButtons).toHaveCount(before + change.add.length, { timeout: 30000 });
+    }
+    await this.saveEditDialog();
+  }
+
+  /** Add or remove linked products of a published post through Edit Post → Add product. */
+  async editPostProducts(content: string, change: { add?: string[]; remove?: string[] }) {
+    await this.openEditPost(content);
+    if (change.add?.length) {
+      await safeClick(this.editDialog.getByRole("button", { name: labels.addProduct }));
+      await expect(this.selectProductDialog).toBeVisible({ timeout: 10000 });
+      for (const title of change.add) {
+        const row = this.selectProductDialog.locator("label").filter({ has: this.page.getByRole("img", { name: title, exact: true }) });
+        await safeClick(row.getByRole("checkbox"));
+      }
+      await safeClick(this.selectProductDialog.getByRole("button", { name: labels.addProducts }));
+      await expect(this.selectProductDialog).toBeHidden({ timeout: 10000 });
+    }
+    // Unticking every product in Select Product disables its button, so a link is removed with the × on its chip.
+    for (const title of change.remove ?? []) {
+      const chip = this.editDialog.locator('[data-slot="card"]').filter({ has: this.page.getByRole("img", { name: title, exact: true }) });
+      await safeClick(chip.getByRole("button"));
+    }
+    for (const title of change.add ?? []) await expect(this.editDialog).toContainText(title);
+    for (const title of change.remove ?? []) await expect(this.editDialog).not.toContainText(title);
+    await this.saveEditDialog();
+  }
+
+  private async saveEditDialog() {
+    const saved = this.page.waitForResponse((r) => /\/api\/v1\/posts\/[^/]+$/.test(r.url()) && r.request().method() === "PUT", { timeout: 20000 });
+    await safeClick(this.editDialog.getByRole("button", { name: labels.save, exact: true }));
+    expect((await saved).status(), "saving the edited post").toBe(200);
+    await expect(this.editDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  private toast(text: string) {
+    return locatorChain(this.page, { testId: "toast", selector: "[data-sonner-toast]" }).filter({ hasText: text }).first();
   }
 
   // ── Lifetime (Unlock All) configuration ──

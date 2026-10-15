@@ -630,6 +630,11 @@ export class ProfilePage {
     await expect(this.creatorPostByContent(content)).toBeVisible({ timeout: 15000 });
   }
 
+  /** A listed post shows this many media tiles (`Open post media` buttons). */
+  async expectCreatorPostMediaCount(content: string, count: number) {
+    await expect(this.creatorPostByContent(content).getByRole("button", { name: profileLabels.openPostMedia })).toHaveCount(count, { timeout: 15000 });
+  }
+
   /** A post of this creator is listed but gated: it offers `Unlock Post`, not its content. */
   async expectCreatorPostLocked(content: string) {
     const post = this.creatorPostByContent(content);

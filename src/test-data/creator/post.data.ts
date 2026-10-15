@@ -68,4 +68,55 @@ export const creatorFeedsLabels = {
   publishedToast: 'Post published successfully',
   /** The PPV and lifetime price floors the forms state ("Min. price: Rp10.000"). */
   minPrice: 10000,
+  // ── Post list, menus and dialogs (verified 2026-10-15) ──
+  postOptions: 'Post options',
+  tabs: { published: 'Published', draft: 'Draft', scheduled: 'Scheduled' },
+  close: 'Close',
+  saveDraftDialog: 'Save to Draft?',
+  saveDraft: 'Save Draft',
+  draftSavedToast: 'Draft saved successfully',
+  draftPostsDialog: 'Draft Posts',
+  publishDraftDialog: 'Publish Post',
+  schedulePost: 'Schedule Post',
+  scheduledToast: 'Post scheduled successfully',
+  /** Composer and Edit Post say `Posting on 15 Oct 2026, 11:28 AM`; the Scheduled tab card says `Posted on` (L-15). */
+  postingOn: 'Posting on',
+  menu: { insights: 'Insights', edit: 'Edit', pin: 'Pin to top', unpin: 'Unpin', delete: 'Delete' },
+  pinnedToast: 'Post pinned',
+  pinnedLabel: 'Pinned',
+  replacePinDialog: 'Replace pinned post?',
+  replace: 'Replace',
+  cancel: 'Cancel',
+  deleteDialog: 'Delete Post',
+  deleteWarning: "If you delete this post, you won't be able to restore it",
+  deletePinnedNote: 'This post is pinned. Deleting it also removes it from the top of your Feeds.',
+  insightsDialog: 'Insights',
+  addProduct: 'Add product',
+  /** The composer's media input: wider than product thumbnails (adds BMP and SVG), several files at once. */
+  composerMediaAccept: 'image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml,video/*',
 } as const;
+
+/** A schedule as the composer prints it: `15 Oct 2026, 11:28 AM` (local time). */
+export function formatScheduleLabel(when: Date): string {
+  const month = when.toLocaleString('en-US', { month: 'short' });
+  const hour = ((when.getHours() + 11) % 12) + 1;
+  const minutes = String(when.getMinutes()).padStart(2, '0');
+  return `${when.getDate()} ${month} ${when.getFullYear()}, ${hour}:${minutes} ${when.getHours() >= 12 ? 'PM' : 'AM'}`;
+}
+
+/** A schedule `minutesAhead` from now, on a whole minute — the picker has no seconds. */
+export function scheduleTimeAhead(minutesAhead: number): Date {
+  const when = new Date(Date.now() + minutesAhead * 60_000);
+  when.setSeconds(0, 0);
+  return when;
+}
+
+/** Title of a course seeded to be linked to a post. */
+export function generateLinkedProductTitle(): string {
+  return `${faker.commerce.productName()} ${faker.string.alphanumeric(6)}`;
+}
+
+/** Post text for creator feeds tests — free text from the AI-aware factory, made unique per call. */
+export function generatePostContent(): string {
+  return `${getAiText('post:content', () => faker.lorem.sentence())} ${faker.string.alphanumeric(6)}`;
+}

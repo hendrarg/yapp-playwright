@@ -21,6 +21,8 @@ export const WRITABLE = {
   users: ['is_hide_from_explore', 'is_verified_creator', 'name', 'username', 'username_changed_at', 'photo_profile_path', 'background_id', 'background_path', 'referrer_id', 'apply_referral_code_at'],
   // A pending lifetime order the test created, pushed to the state a failed/expired payment leaves.
   post_lifetime_purchases: ['status', 'expired_at'],
+  // A creator's own posts, soft-deleted for the test so its feed is empty or holds one seeded post.
+  posts: ['deleted_at'],
 } as const satisfies Record<string, readonly string[]>;
 
 /** Tables whose test-created rows may be soft-deleted for good (`deleted_at = now()`), never restored. */
@@ -48,13 +50,12 @@ export class DbFixtures {
 
   constructor(
     private readonly exec: Executor = (sql, params) => query(sql, params),
-    env: NodeJS.ProcessEnv = process.env,
-  ) {
-    assertDbFixturesAllowed(env);
-  }
+    private readonly env: NodeJS.ProcessEnv = process.env,
+  ) {}
 
   /** Set whitelisted columns on the one row with this uuid; the previous values are restored later. */
   async set<T extends WritableTable>(table: T, uuid: string, values: Partial<Record<WritableColumn<T>, unknown>>): Promise<void> {
+    assertDbFixturesAllowed(this.env);
     const allowed: readonly string[] = WRITABLE[table];
     if (!allowed) throw new Error(`Table ${table} is not writable by DB fixtures`);
     const columns = Object.keys(values);
@@ -136,6 +137,19 @@ export class DbFixtures {
     const [referrer] = await this.exec('SELECT id FROM users WHERE uuid = $1', [referrerUuid]);
     if (!referrer) throw new Error(`users ${referrerUuid}: not found`);
     await this.set('users', referredUuid, { referrer_id: referrer.id, apply_referral_code_at: appliedAt });
+  }
+
+  /**
+   * Hide every live post of this account (soft delete), so its Feeds look empty — the state of a creator
+   * who never posted. Each post is snapshotted; `restoreAll()` brings them all back. Returns how many were hidden.
+   */
+  async hidePosts(userUuid: string): Promise<number> {
+    const rows = await this.exec(
+      'SELECT p.uuid FROM posts p JOIN users u ON u.id = p.user_id WHERE u.uuid = $1 AND p.deleted_at IS NULL',
+      [userUuid],
+    );
+    for (const row of rows) await this.set('posts', String(row.uuid), { deleted_at: new Date() });
+    return rows.length;
   }
 
   /** Put every changed row back, newest change first. Collects failures and throws once at the end. */

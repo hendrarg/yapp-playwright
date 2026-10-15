@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, posts]
 project: yapp
 created: 2026-09-04
-updated: 2026-10-14
+updated: 2026-10-15
 sources: 0
 status: active
 ---
@@ -319,6 +319,13 @@ icons, the visibility pill and `Save`. Verified 2026-09-10:
 
 - **Removing a media item** fires `DELETE …/assets` (`Asset deleted`) immediately, then
   `Save` sends `PUT` — 3 images → 2, and the survivors stay on the post detail.
+  **Re-checked 2026-10-15:** removing the *only* image of a post (to replace it) fired no `…/assets`
+  request within 20 s; the tile disappears at once and the change lands with `Save` (the post then
+  holds just the new asset, with a new uuid). Do not wait on that request — assert the tile count and
+  read `GET /posts/{uuid}` after saving. Each tile is an `img` with its own unnamed `×` button.
+- **Linked products in Edit Post** are cards (`data-slot="card"`: thumbnail with `alt` = title, title,
+  price) each with an unnamed `×` — that `×` is the only way to unlink one. Unticking every product in
+  `Select Product` turns its button into a disabled `Add Products`, so the picker cannot remove.
 - **Replacing media** is remove + upload in the same dialog; the asset uuid changes and
   the buyer surface serves the new file (checked by downloading it — the pixels changed
   from blue to green).
@@ -348,8 +355,54 @@ Shipped on dev per the PRD [[projects/yapp/pinned-feeds - prd|Pinned Feeds]]; TC
   pinned exclusive one comes first. Guests see the same pin.
 - A creator with no posts sees only the composer — no pin control; a single post can be pinned with no dialog.
 - Pinning the **bottom** post of a fully scrolled Published list (31 posts, infinite scroll in pages of 10) closes the `⋯` menu cleanly on desktop and mobile; the stuck-menu report under F&E-16 is fixed (retested 2026-10-11). The card menu trigger is `button[aria-label="Post options"]` — `aria-haspopup="menu"` also matches the `Account menu` button. Desktop keeps the scroll position after a pin; mobile returns to the top.
+- **The replace dialog quotes only the opening words** of the pinned post, cut with `…` when longer
+  (e.g. `“Halo semuanya, materi baru baru saja diunggah ke platform! Y…”`) — assert a prefix, not the
+  whole body.
+- **Stale menu after Unpin (found 2026-10-15, candidate bug, not yet filed):** after unpinning, the
+  post that moves into the top slot still offers `Unpin` (not `Pin to top`) in its `…` menu until the
+  page is reloaded; the unpinned post's own menu is correct. Reproduced with a public post pinned then
+  unpinned while a newer PPV post sat above it — the PPV menu read `Insights / Edit / Unpin / Delete`,
+  and `Pin to top` after a reload. Reload before pinning another post right after an Unpin.
+
+## Composer toolbar, drafts, and the creator post list (verified 2026-10-15)
+
+- **The composer has no category control** — not in the dialog, not in the `POST /api/v1/posts`
+  payload. Its toolbar is media (`lucide-image`), linked products, `Draft Posts` (`lucide-file-text`),
+  schedule (the clock), then the visibility pill and `Post`. TC-FE-C-004 ("optional category") has
+  nothing to act on; raised as clarification CL-AUT-051.
+- **Closing the composer with content asks `Save to Draft?`** ("Save to drafts to edit and post at a
+  later time.") with `Discard` / `Save Draft`. `Save Draft` sends `POST /api/v1/posts` with
+  `status: "draft"` (media and `productUuids` included) and toasts `Draft saved successfully`; the
+  post lands in the `Draft` tab. `createPost({ status: 'draft' })` seeds one.
+- **Resuming a draft:** composer → `Draft Posts` (a dialog listing drafts) → click one → it reopens as
+  dialog **`Publish Post`** with the text, the media and the product chip restored (the chip brings
+  its own thumbnail `img`, so count media images as total − products).
+- **Per-post menu** (`button "Post options"`): Published `Insights / Edit / Pin to top / Delete`;
+  Scheduled `Insights / Edit / Delete`; no pin item on Draft or Scheduled.
+- **Insights** is a dialog: `Total views` (split `Explore` / `Profile` %), `Total Interactions` with
+  `Likes` and `Comments`, and a Revenue block ("not available for public posts"). Views are
+  `viewFromExplore + viewFromProfile` on `GET /posts/{uuid}`.
+- **Delete** asks dialog `Delete Post` — "If you delete this post, you won't be able to restore it"
+  (`Delete` / `Cancel`); afterwards `GET /posts/{uuid}` answers 404 for buyers too.
+- `POST /api/v1/posts/{uuid}/like` likes as the token's account (no body).
+- **`GET /posts/my/posts` returns at most 10 posts per page whatever `limit` says** — page through
+  it for a full count. New and pinned posts are always on page 1.
+- **The public profile feed is not a stable place to look for a seeded post** on `hendrarg`: other
+  runs keep adding posts, and the Feeds tab shows a handful at a time. Prove buyer visibility with
+  `GET /posts/user/{creatorUuid}?visibility=public` (`getPublicPostIds`) and the post's own URL.
+- The QA buyer account (`anthony_mosciski`) is also a creator: it opens `creators-dev/feeds` with three
+  fixture posts (member-only, PPV, public) other tests rely on. For an empty or one-post feed, hide
+  them with `dbFixtures.hidePosts(uuid)` (soft delete, restored in teardown) — never delete them.
 
 ## Scheduling
+
+**Typing the time (2026-10-15):** the hour/minute inputs are controlled — `fill()` is reset to
+`12` / `00` on re-render; click, select all and type real keystrokes. A past time is refused in the
+client with the toast `Cannot schedule post with past date/time`. Scheduling sends `POST
+/api/v1/posts` with `status: "active"` and `scheduledAt: "2026-10-15T11:28:00+07:00"` and toasts
+`Post scheduled successfully`; the API also takes `scheduledAt` on create (an ISO time), which is
+how tests seed scheduled posts. One `Escape` may only close the AM/PM list — press again only while
+the picker is still open, because one more closes the composer.
 
 The composer's fourth toolbar icon (a clock, `size-5.5`) opens a calendar plus two
 `type="tel"` inputs (`name="12hours"`, `name="minutes"`) and an **AM/PM Radix Select**

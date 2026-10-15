@@ -864,6 +864,11 @@ export class FeedsPage {
     await expect(this.page.getByText(/Unlock|unlock/i).first()).toBeVisible({ timeout: 5000 });
   }
 
+  /** The open post detail shows this many media tiles (`Open post media`). */
+  async expectPostMediaCount(count: number) {
+    await expect(this.page.getByRole("main").getByRole("button", { name: feedsLabels.openPostMedia })).toHaveCount(count, { timeout: 15000 });
+  }
+
   /** The post body text is readable on the open post detail. */
   async expectPostBodyVisible(content: string) {
     await expect(this.page.getByRole("main").getByText(content, { exact: false }).first()).toBeVisible({ timeout: 10000 });

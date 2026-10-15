@@ -15,6 +15,10 @@ export interface CreatePostOptions {
   mediaPath?: string;
   /** Several images in order — a gallery post. Takes precedence over `imagePath`/`mediaPath`. */
   imagePaths?: string[];
+  /** `draft` saves it to the Draft tab instead of publishing. */
+  status?: 'active' | 'draft';
+  /** ISO time with offset (the composer sends `2026-10-15T11:28:00+07:00`); the post waits in Scheduled until then. */
+  scheduledAt?: string;
 }
 
 /**
@@ -36,13 +40,15 @@ export async function createPost(
     imagePath,
     mediaPath = imagePath,
     imagePaths,
+    status = 'active',
+    scheduledAt,
   } = options;
   const mediaPaths = imagePaths?.length ? imagePaths : mediaPath ? [mediaPath] : [];
 
   if (!mediaPaths.length) {
     const response = await request.post(apiUrl('/api/v1/posts'), {
       headers: h(),
-      data: { content, status: 'active', visibility, assets: [], productUuids, price, isFlexiblePrice, tierMembershipUuids },
+      data: { content, status, visibility, assets: [], productUuids, price, isFlexiblePrice, tierMembershipUuids, scheduledAt },
     });
     if (!response.ok()) {
       throw new Error(`Create post failed: ${response.status()} ${await response.text()}`);
@@ -58,8 +64,9 @@ export async function createPost(
     headers: h(),
     data: {
       content,
-      status: 'active',
+      status,
       visibility,
+      scheduledAt,
       assets: uploads.map((u, order) => ({ url: u.uploadId, assetType: u.assetType, order })),
       productUuids,
       price,
@@ -72,6 +79,69 @@ export async function createPost(
   }
   const post = await postRes.json();
   return { postId: post.data?.uuid ?? post.uuid, uploadId: uploads[0].uploadId };
+}
+
+/** One row of `GET /api/v1/posts/my/posts?type=…` — the creator's own Published / Draft / Scheduled lists. */
+export interface MyPost {
+  uuid: string;
+  content: string;
+  isPinned: boolean;
+  scheduledAt: string | null;
+  likeCount: number;
+  commentCount: number;
+}
+
+export async function getMyPosts(request: APIRequestContext, type: 'published' | 'draft' | 'scheduled', token?: string): Promise<MyPost[]> {
+  const response = await request.get(apiUrl(`/api/v1/posts/my/posts?type=${type}&page=1&limit=100`), { headers: getHeaders(token) });
+  if (!response.ok()) throw new Error(`My posts failed: ${response.status()} ${await response.text()}`);
+  const body = await response.json();
+  const list: MyPost[] = body.data?.data ?? body.data ?? [];
+  return list.map((p) => ({ uuid: p.uuid, content: p.content, isPinned: Boolean(p.isPinned), scheduledAt: p.scheduledAt ?? null, likeCount: Number(p.likeCount ?? 0), commentCount: Number(p.commentCount ?? 0) }));
+}
+
+/** Uuids of a creator's public feed as a viewer gets it — the list the profile Feeds tab renders, newest first. */
+export async function getPublicPostIds(request: APIRequestContext, creatorUuid: string, token?: string): Promise<string[]> {
+  const response = await request.get(apiUrl(`/api/v1/posts/user/${creatorUuid}?visibility=public&page=1&limit=50`), { headers: getHeaders(token) });
+  if (!response.ok()) throw new Error(`Public posts failed: ${response.status()} ${await response.text()}`);
+  const body = await response.json();
+  return ((body.data?.data ?? body.data ?? []) as Array<{ uuid: string }>).map((p) => p.uuid);
+}
+
+/** `GET /api/v1/posts/{uuid}` as the token's account: the HTTP status and, when found, the post. */
+export interface PostDetail {
+  content: string;
+  isPinned: boolean;
+  assets: Array<{ uuid: string; url: string }>;
+  products: Array<{ uuid: string }>;
+  viewFromExplore: number;
+  viewFromProfile: number;
+  likeCount: number;
+  commentCount: number;
+}
+
+export async function getPost(request: APIRequestContext, postId: string, token?: string): Promise<{ status: number; data?: PostDetail }> {
+  const response = await request.get(apiUrl(`/api/v1/posts/${postId}`), { headers: getHeaders(token) });
+  return { status: response.status(), data: response.ok() ? (await response.json()).data : undefined };
+}
+
+/** Like a post as the token's account (`POST /api/v1/posts/{uuid}/like`). */
+export async function likePost(request: APIRequestContext, postId: string, token?: string): Promise<void> {
+  const response = await request.post(apiUrl(`/api/v1/posts/${postId}/like`), { headers: getHeaders(token) });
+  if (!response.ok()) throw new Error(`Like post failed: ${response.status()} ${await response.text()}`);
+}
+
+/**
+ * `PUT /api/v1/posts/{uuid}/pin` — one pinned post per creator. Without `replace` a second pin answers 409
+ * `another post is pinned` with `data.pinnedPost {uuid, contentPreview}`; the raw status and body are returned.
+ */
+export async function pinPost(request: APIRequestContext, postId: string, replace: boolean, token?: string): Promise<{ status: number; body: { message?: string; data?: { pinnedPost?: { uuid: string; contentPreview: string } } } }> {
+  const response = await request.put(apiUrl(`/api/v1/posts/${postId}/pin`), { headers: getHeaders(token), data: { replace } });
+  return { status: response.status(), body: await response.json().catch(() => ({})) };
+}
+
+export async function unpinPost(request: APIRequestContext, postId: string, token?: string): Promise<void> {
+  const response = await request.delete(apiUrl(`/api/v1/posts/${postId}/pin`), { headers: getHeaders(token) });
+  if (!response.ok()) throw new Error(`Unpin post failed: ${response.status()} ${await response.text()}`);
 }
 
 /** Engagement fields of `GET /api/v1/posts/{uuid}` as seen by the token's account. */
