@@ -143,5 +143,50 @@ export class WalletPage {
     const trigger = this.page.locator('button[role="combobox"]').first();
     await expect(trigger).toContainText(typeName, { timeout: 10000 });
   }
+
+  async expectTransactionHistoryTableStructure() {
+    const table = this.page.locator('table:has-text("TYPE")');
+    await expect(table).toBeVisible({ timeout: 10000 });
+    await expect(table).toContainText("TYPE");
+    await expect(table).toContainText("AMOUNT");
+    await expect(table).toContainText("STATUS");
+    await expect(table).toContainText("DATE");
+  }
+
+  async selectSortOption(sortOption: "Recent" | "Oldest") {
+    const trigger = this.page.locator('button[role="combobox"]').nth(1);
+    await safeClick(trigger);
+    const option = this.page.getByRole("option", { name: sortOption, exact: true });
+    await expect(option).toBeVisible({ timeout: 10000 });
+    await safeClick(option);
+    await expect(trigger).toContainText(sortOption, { timeout: 10000 });
+  }
+
+  async expectRowsSelectorOptions() {
+    const trigger = this.page.locator('button[role="combobox"]').nth(2);
+    await safeClick(trigger);
+    const options = ["10", "20", "30", "40", "50"];
+    for (const opt of options) {
+      await expect(this.page.getByRole("option", { name: opt, exact: true })).toBeVisible({ timeout: 5000 });
+    }
+    // Re-select 10 to close dropdown
+    await safeClick(this.page.getByRole("option", { name: "10", exact: true }));
+    await expect(trigger).toContainText("10", { timeout: 10000 });
+  }
+
+  async expectPaginationControls() {
+    const firstBtn = this.page.getByRole("button", { name: "Go to first page" });
+    const prevBtn = this.page.getByRole("button", { name: "Go to previous page" });
+    const nextBtn = this.page.getByRole("button", { name: "Go to next page" });
+    const lastBtn = this.page.getByRole("button", { name: "Go to last page" });
+
+    await expect(firstBtn).toBeVisible({ timeout: 10000 });
+    await expect(prevBtn).toBeVisible({ timeout: 10000 });
+    // On page 1, first and previous buttons are disabled
+    await expect(firstBtn).toBeDisabled();
+    await expect(prevBtn).toBeDisabled();
+    await expect(nextBtn).toBeVisible();
+    await expect(lastBtn).toBeVisible();
+  }
 }
 

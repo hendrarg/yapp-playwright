@@ -64,4 +64,36 @@ test.describe('Creator Wallet', () => {
       }
     });
   });
+
+  test('Wallet — Transaction Sorting, Combined Filters, Transaction History', {
+    tag: ['@AUT-WLT-003', '@wallet', '@creator', '@regression'],
+  }, async ({ creatorNav, walletPage }) => {
+    test.setTimeout(120000);
+
+    await test.step('Open Wallet page and verify Transaction History table structure', async () => {
+      await creatorNav.open('wallet');
+      await walletPage.expectLoaded();
+      await walletPage.expectTransactionHistoryTableStructure();
+    });
+
+    await test.step('Sort transactions by Recent and Oldest', async () => {
+      await walletPage.selectSortOption('Recent');
+      await walletPage.selectSortOption('Oldest');
+    });
+
+    await test.step('Combine Status and Type filters and verify filtered rows', async () => {
+      await walletPage.selectStatusTab('Settled');
+      await walletPage.selectTypeFilter('Order');
+      await walletPage.expectHistoryRowsStatus('settled');
+      // Reset filters
+      await walletPage.selectTypeFilter('All');
+      await walletPage.selectStatusTab('All');
+    });
+
+    await test.step('Verify Rows per page selector options and pagination controls on first page', async () => {
+      await walletPage.expectRowsSelectorOptions();
+      await walletPage.expectPaginationControls();
+    });
+  });
 });
+
