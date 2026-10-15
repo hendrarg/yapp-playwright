@@ -19,6 +19,16 @@ wizard. Established 2026-09-02 by registering a brand-new account end to end
 (`alt.jm-481v325@yopmail.com` → user 498, `qa.onb.0902`) with a headed MCP browser and
 a manually entered OTP.
 
+## Email length on `/auth` (verified 2026-10-15, CO-9 / M-36)
+
+The email field has no `maxlength`; the app validates on Continue instead: more than 64
+characters before `@` → `The part before @ must be at most 64 characters`; more than 254 in total
+→ `Email must be at most 254 characters`; neither sends `POST /auth/login/otp`. Build long test
+addresses from domain labels of at most 63 characters, or the browser's own `type=email` check
+fires first (`Please enter an email address.`). The BE validator (400 `<Field> is too long (max
+64 characters before @, 254 total)`) cannot be reached through `/auth/login/otp`, which checks the
+captcha first (`Invalid captcha request`); a tip's `senderEmail` on `POST /tipping/fiat` shows it.
+
 ## Legal links on the sign-up screens (verified 2026-10-15)
 
 `By continuing, you agree to the terms of service and privacy policy` sits under the form on
@@ -198,8 +208,13 @@ handle as a "username already taken" fixture.
 - Display Name does **not** trim whitespace (5 spaces stores as 5 chars), while the
   social username field *does* treat whitespace-only as empty. Inconsistent on one screen.
 - Social platform: Instagram / TikTok / X / YouTube / Others, default Instagram.
-- Social username is required but otherwise **unvalidated** — `@handle`, a full URL,
-  spaces, 1 char and 200 chars all pass.
+- Social username (`textbox "Username.."` beside the platform combobox) is **validated per
+  platform since 2026-10-15** (CO-10 / L-34): Instagram letters/digits/`.`/`_` 1-30, TikTok
+  same set 2-24, X letters/digits/`_` 1-15, YouTube letters/digits/`.`/`_`/`-` 3-30. Errors are
+  inline and disable `Next`: `Enter only your <Platform> username, not a link` (any URL, even
+  without scheme), `Username cannot contain spaces`, `<Platform> username must be N-M
+  characters`, `…can only contain letters, numbers…` (also for `@@x`). One leading `@` is allowed
+  and stripped: `@qa_co10` is sent to `PUT /accounts/social-link` and stored as `qa_co10`.
 
 **Step 2 — Choose Tools.** Eleven tools; three carry a `HITS` badge and start selected
 (Livestream, Digital Download, Membership). Counter `n / 3` and the rule is **exactly
