@@ -19,6 +19,15 @@ wizard. Established 2026-09-02 by registering a brand-new account end to end
 (`alt.jm-481v325@yopmail.com` → user 498, `qa.onb.0902`) with a headed MCP browser and
 a manually entered OTP.
 
+## Legal links on the sign-up screens (verified 2026-10-15)
+
+`By continuing, you agree to the terms of service and privacy policy` sits under the form on
+`/auth`, `?step=input-otp` and `?step=select-username`. Since CO-5 (M-35) both links are real:
+`https://yapp-dev.yapp.ink/terms` and `/privacy` (the buyer/landing host), `target=_blank`,
+`rel=noopener noreferrer`; the pages answer 200 with headings `TERMS OF SERVICE – yapp.ink` /
+`PRIVACY POLICY – yapp.ink`. The creator `/auth` email field has no `Enter your email`
+placeholder (that is the buyer app) — reach it with `getByRole('textbox')`.
+
 ## The account exists before the username does
 
 `POST /api/v1/auth/login/otp` (captcha-protected, returns a `tempToken`) then OTP
