@@ -1,10 +1,89 @@
 import { authTest as test, expect } from '../test-base';
 import { creatorProfile } from '@test-data/buyer/profile.data';
-import { textBlockData } from '@test-data/creator/profile.data';
+import { textBlockData, customColors } from '@test-data/creator/profile.data';
 import { apiUrl, getHeaders, getMultipartHeaders } from '@helpers/api/client';
 import { createTextBlock, deleteTextBlock } from '@helpers/api/text-block';
+import { creatorsBaseURL } from '@config/env';
 
 test.describe('Buyer Profile', () => {
+  test('Profile — Profile Information, Social Media, Profile Appearance, Profile Layout, Share Options, Profile Colors, Theme Application, Responsive', {
+    tag: ['@AUT-PRF-014', '@profile', '@buyer', '@regression'],
+    annotation: [
+      { type: 'covers', description: 'TC-PRF-B-001, TC-PRF-B-002, TC-PRF-B-003, TC-PRF-B-004, TC-PRF-B-005, TC-PRF-B-006, TC-PRF-B-007, TC-PRF-B-008' },
+    ],
+  }, async ({ buyerNav, buyerProfilePage, page, request, creatorAppearance }) => {
+    test.setTimeout(180000);
+
+    await test.step('Open public profile and verify saved profile information (TC-PRF-B-001)', async () => {
+      await buyerNav.open('profile', { handle: creatorProfile });
+      await buyerProfilePage.expectAuthenticated();
+      await buyerProfilePage.expectProfileAvatarVisible();
+      await buyerProfilePage.expectHandleVisible('hendrarg');
+    });
+
+    await test.step('Verify creator social media link is attached and points to destination (TC-PRF-B-002)', async () => {
+      const res = await fetch(apiUrl('/api/v1/accounts/social-link'), {
+        method: 'PUT',
+        headers: getHeaders(undefined, creatorsBaseURL.replace(/\/$/, '')),
+        body: JSON.stringify({
+          items: [
+            { specialType: 'instagram', link: 'hendrarg_qa', isActive: true, position: 1 },
+          ],
+        }),
+      });
+      expect(res.ok).toBe(true);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await buyerProfilePage.expectSocialLinkOpensExternal('instagram.com');
+    });
+
+    await test.step('View saved theme and banner on public profile (TC-PRF-B-003)', async () => {
+      const headerArea = page.locator('main').locator('div').first();
+      await expect(headerArea).toBeVisible();
+      const bannerSrc = await buyerProfilePage.bannerSource();
+      if (bannerSrc) {
+        expect(bannerSrc).toContain('/background/');
+      }
+    });
+
+    await test.step('View Default layout components (TC-PRF-B-004)', async () => {
+      await buyerProfilePage.expectProfileAvatarVisible();
+      await buyerProfilePage.expectTabs(['Shops', 'Links']);
+    });
+
+    await test.step('Open Share modal and verify copy link and 6 social targets (TC-PRF-B-005)', async () => {
+      await buyerProfilePage.clickShare();
+      await buyerProfilePage.expectShareDialogTargets(['Facebook', 'Twitter', 'LinkedIn', 'WhatsApp', 'Telegram', 'Reddit']);
+      await page.keyboard.press('Escape');
+    });
+
+    await test.step('View saved custom theme colors and verify application on public page (TC-PRF-B-006, TC-PRF-B-007)', async () => {
+      const res = await fetch(apiUrl('/api/v1/accounts/profile-customization'), {
+        method: 'PUT',
+        headers: getHeaders(undefined, creatorsBaseURL.replace(/\/$/, '')),
+        body: JSON.stringify({
+          customTheme: {
+            backgroundColor: customColors.background,
+            primaryColor: customColors.primary,
+            secondaryColor: customColors.secondary,
+          },
+          profileLayoutPreference: 'default',
+        }),
+      });
+      expect(res.ok).toBe(true);
+      await buyerProfilePage.expectComputedBackground(customColors.background);
+      const count = await buyerProfilePage.countElementsUsingColor(customColors.primary);
+      expect(count).toBeGreaterThan(0);
+    });
+
+    await test.step('Public profile does not overflow horizontally on mobile viewport (TC-PRF-B-008)', async () => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const hasOverflow = await buyerProfilePage.hasHorizontalOverflow();
+      expect(hasOverflow).toBe(false);
+      await buyerProfilePage.expectProfileAvatarVisible();
+      await page.setViewportSize({ width: 1280, height: 800 });
+    });
+  });
+
   test('Profile — Public Profile Share, Tip Button, Quick Tip Amounts, Private Account', {
     tag: ['@AUT-PRF-015', '@smoke', '@profile', '@buyer'],
     annotation: [

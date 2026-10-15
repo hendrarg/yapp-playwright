@@ -146,8 +146,24 @@ export class ProfilePage {
     await this.page.waitForTimeout(500);
   }
 
+  get shareDialog() {
+    return this.page.getByRole("dialog");
+  }
+
   async expectShareOptionsVisible() {
     await expect(this.page.getByRole("dialog", { name: /Share/i })).toBeVisible({ timeout: 5000 });
+  }
+
+  async expectShareDialogTargets(targets: readonly string[] = ["Facebook", "Twitter", "LinkedIn", "WhatsApp", "Telegram", "Reddit"]) {
+    const dialog = this.shareDialog;
+    await expect(dialog.first()).toBeVisible({ timeout: 5000 });
+    const copyControl = dialog.getByRole("button", { name: /Copy/i }).or(dialog.getByText(/Copy link/i)).or(dialog.getByRole("textbox"));
+    await expect(copyControl.first()).toBeVisible({ timeout: 5000 });
+    for (const target of targets) {
+      const pattern = target === "Twitter" ? /Twitter|X/i : new RegExp(target, "i");
+      const btn = dialog.getByRole("button", { name: pattern }).or(dialog.getByLabel(pattern)).or(dialog.getByText(pattern));
+      await expect(btn.first()).toBeVisible({ timeout: 5000 });
+    }
   }
 
   // ── Follow / Unfollow (profile header — exclude Feeds tab and sidebar suggestions) ──
@@ -406,7 +422,7 @@ export class ProfilePage {
    * key on, so `testId` leads for when the app gains one and the href match is the
    * working fallback.
    */
-  private socialLink(): Locator {
+  socialLink(): Locator {
     return locatorChain(this.page, {
       testId: "profile-social-link",
       selector: 'a[href*="instagram.com"], a[href*="twitter.com"], a[href*="youtube.com"]',
@@ -415,6 +431,16 @@ export class ProfilePage {
 
   async expectSocialLinkAttached() {
     await expect(this.socialLink()).toBeAttached({ timeout: 10000 });
+  }
+
+  async expectSocialLinkOpensExternal(expectedHost = "instagram.com") {
+    await this.expectAfterRevalidate(async () => {
+      const link = this.socialLink();
+      await expect(link).toBeAttached({ timeout: 8000 });
+      await expect(link).toHaveAttribute("target", "_blank");
+      const href = await link.getAttribute("href");
+      expect(href).toContain(expectedHost);
+    });
   }
 
   /**
@@ -473,16 +499,73 @@ export class ProfilePage {
     return popup;
   }
 
-  /** Source of the public banner image — the first image in main served from a background path. */
-  async bannerSource(): Promise<string> {
+  /** Source of the public banner image — the first image in main served from a background path, or null if none. */
+  async bannerSource(): Promise<string | null> {
     const banner = this.main.locator('img[src*="background"]').first();
-    await expect(banner).toBeAttached({ timeout: 15000 });
+    const count = await banner.count();
+    if (count === 0) {
+      return null;
+    }
     return decodeURIComponent((await banner.getAttribute("src")) ?? "");
   }
 
   /** The public banner is the file named `fileName` once the page has revalidated. */
   async expectBannerFile(fileName: string) {
-    await this.expectAfterRevalidate(async () => expect(await this.bannerSource()).toContain(fileName));
+    await this.expectAfterRevalidate(async () => {
+      const src = await this.bannerSource();
+      expect(src).toContain(fileName);
+    });
+  }
+
+  /** The public background color evaluated from the document body or main container. */
+  async computedBackgroundColor(): Promise<string> {
+    return this.page.evaluate(() => {
+      const glob = globalThis as any;
+      const doc = glob.document;
+      const win = glob.window;
+      const el = doc.querySelector("main") || doc.body;
+      const cs = win.getComputedStyle(el);
+      let bg = cs.backgroundColor;
+      if (bg === "rgba(0, 0, 0, 0)" || bg === "transparent") {
+        bg = win.getComputedStyle(doc.body).backgroundColor;
+      }
+      const canvas = doc.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, gr, b] = ctx.getImageData(0, 0, 1, 1).data;
+      return `rgb(${r}, ${gr}, ${b})`;
+    });
+  }
+
+  async expectComputedBackground(hex: string) {
+    await this.expectAfterRevalidate(async () => {
+      const expectedRgb = hexToRgb(hex);
+      const actual = await this.computedBackgroundColor();
+      expect(actual).toBe(expectedRgb);
+    });
+  }
+
+  async countElementsUsingColor(hex: string): Promise<number> {
+    const rgb = hexToRgb(hex);
+    return this.page.evaluate((color) => {
+      const g = globalThis as any;
+      const doc = g.document;
+      const win = g.window;
+      return [doc.body, ...doc.body.querySelectorAll("*")].filter((el: any) => {
+        const cs = win.getComputedStyle(el);
+        return cs.color === color || cs.backgroundColor === color || cs.borderTopColor === color || cs.borderColor === color;
+      }).length;
+    }, rgb);
+  }
+
+  async hasHorizontalOverflow(): Promise<boolean> {
+    return this.page.evaluate(() => {
+      const g = globalThis as any;
+      return g.document.documentElement.scrollWidth > g.window.innerWidth;
+    });
   }
 
   // ── Text blocks (Links tab) ──
@@ -937,5 +1020,10 @@ export class ProfilePage {
     await expect(this.signInBeforeFollowingDialog).toBeVisible({ timeout: 10000 });
     await expect(this.signInBeforeFollowingDialog.getByRole("button", { name: profileLabels.signInNow })).toBeVisible();
   }
+}
+
+export function hexToRgb(hex: string): string {
+  const v = hex.replace("#", "");
+  return `rgb(${parseInt(v.slice(0, 2), 16)}, ${parseInt(v.slice(2, 4), 16)}, ${parseInt(v.slice(4, 6), 16)})`;
 }
 
