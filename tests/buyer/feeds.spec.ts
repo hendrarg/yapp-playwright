@@ -621,11 +621,8 @@ test('Feeds and Exclusive — Display Linked Products, No Product State, Product
 
 test('Feeds and Exclusive — Payment Initiation, Successful Payment, Failed Payment, Lifetime Access', {
   tag: ['@AUT-FE-020', '@feeds', '@payment', '@buyer', '@regression'],
-  annotation: { type: 'issue', description: 'F&E-12' },
 }, async ({ buyerFeedsPage, buyerProfilePage, transactionPage, dbFixtures, page, browser }) => {
   test.setTimeout(420000);
-  // Known bug L-78: the Lifetime Access checkout shows the price but never names the creator (TC-FE-B-052).
-  test.fail(true, 'L-78 / F&E-12: Lifetime Access checkout does not show the creator');
 
   const creatorToken = process.env.YAPP_TEST_ACCESS_TOKEN_2?.replace(/"/g, '');
   const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');

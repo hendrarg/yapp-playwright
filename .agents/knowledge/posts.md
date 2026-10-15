@@ -119,8 +119,10 @@ a PPV order; afterwards every current **and future** PPV post of that creator re
 (`isSet`) plus `GET /api/v1/posts/lifetime-prices/{creatorUuid}/has-bought`; after a price change
 `isSet` lagged 36–62 s (measured 2026-10-05). Poll it (`waitForLifetimeOffer`) before asserting UI.
 
-**The `Lifetime Access` checkout never names the creator** — only phone, payment method, voucher
-and price (TC-FE-B-052 expects creator info; AUT-FE-020 runs under `test.fail()` until L-78 (F&E-12) is fixed).
+**The `Lifetime Access` checkout names the creator** (F&E-12 / L-78 fixed, verified 2026-10-15): a
+header with avatar initials, display name (`Asep pisan`), `@<username> · Unlock all posts` and the
+price on the right (filled after `POST /posts/lifetime-prices/purchase/estimation/fiat`), white text
+on the dialog's `rgb(15,23,42)`. AUT-FE-020 no longer runs under `test.fail()`.
 The order page is `/lifetime/transaction/<orderId>`. A settled order shows dialog
 `Payment Successful!` naming the creator with an `Exclusive` pill — it must be closed, or it
 covers the next page. An order whose row is `status = 'expired'` shows dialog `Payment Failed`
