@@ -276,6 +276,13 @@ unchanged: `Crop Image` opens, `Apply` does nothing, the dialog stays open, no m
 username still accepts `@handle`, a full URL, spaces, 1 and 200 chars (`maxLength -1`), and
 `https://instagram.com/someone` is stored verbatim in `user_links.link` with `is_active=true`.
 
+**Re-checked 15 Oct 2026 (CO-7 / M-33 fixed; social username fixed by CO-10, see Step 1):** a
+`.txt` is refused before any dialog with the toast `File must be a JPG or PNG image`; a file
+named `.png` that does not decode gives `This file is not a valid image. Please choose a JPG or
+PNG file.` and no dialog stays open; a failed crop reports `Could not crop this image. Please
+try another file.` The crop dialog is shared by five upload points. A valid PNG still crops,
+`Apply` closes the dialog and shows a `data:image` preview, with no request until the step saves.
+
 ## First entry to the creator side runs a mandatory guided tour
 
 Completing the wizard is not the end of onboarding. The first visit to `/profile` opens a
