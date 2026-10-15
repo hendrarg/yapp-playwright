@@ -258,6 +258,13 @@ Read this before the older sections below — several described defects are gone
     < alertNominal`); a Rp50.000 tip at a Rp50.000 threshold played. **Residual (API only):** a
     direct POST below the Alert threshold with media is still accepted (200) and then silently
     dropped — unreachable from the UI.
+- **`PUT /api/v1/accounts/stream/configuration` is multipart/form-data and replaces the whole
+  row** (learned the hard way 2026-10-15). A JSON body is not rejected: it answers 200 `Set Stream
+  Configuration Successfully` and writes **every scalar field to its zero value** — alert, tip,
+  TTS, milestone, leaderboard, media share and QR settings all became `0` / `""` / `false` for
+  hendrarg (`alertTiers`, `overlayLayout`, custom HTML/CSS survived). Never write it from a
+  script with JSON; change thresholds through the Stream Studio UI, or snapshot the full GET
+  first and send every field back as multipart.
 - **Media Share minimum vs Alert threshold (retest LIV-45, 7 Oct 2026):**
   - Stream Studio now refuses `Video & GIF pricing > MINIMUM TIP` below `Minimum amount to show
     alert` (`Must not be lower than the minimum amount to show alert`); `Minimum amount to play
