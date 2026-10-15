@@ -77,6 +77,15 @@ panel is a doorway, the page is the gate. A report that the panel took a sub-min
 **expected**, because entering the page is not the same as submitting a tip. Verify the
 minimum on `/<handle>/tip`, never on the profile panel preview.
 
+## `Show Tip Button` off does not close `/<handle>/tip` (TIP-6, open — retested 2026-10-15)
+
+Turning the switch off (`PUT /accounts/tip-button`, `isTipButton:false`) only removes the entry
+points: the profile's `Support` tab disappears. Opening `/<handle>/tip` directly still renders the
+full form — currency tabs, presets, Minimum Alert, name/email, media, QRIS — with `Send Tip`
+enabled, and `GET /tipping/payment-methods` answers 200. On 2026-09-22 the submit also created an
+order (`POST /tipping/fiat` 200). Expected per TC-TIP-B-031: page blocks or says tipping is
+unavailable. hendrarg's switch is normally **on** — restore it after toggling.
+
 ## Switching currency and back retains the previous amount — this is intended
 
 Established 2026-09-28 (ruled expected, closed `M-52`). On `/<handle>/tip`, entering an IDR
