@@ -265,6 +265,17 @@ Read this before the older sections below — several described defects are gone
   hendrarg (`alertTiers`, `overlayLayout`, custom HTML/CSS survived). Never write it from a
   script with JSON; change thresholds through the Stream Studio UI, or snapshot the full GET
   first and send every field back as multipart.
+  hendrarg's row was rebuilt through the UI the same day. Known values: alerts on, Alert and
+  sound Rp10.000, message `{name} kirim {amount} buat kamu`, colours text #373737 / highlight and
+  accent #582AF0 / accent text #FFFFFF / background #00CC99 / border #000000, style original;
+  TTS on at Rp10.000; media share on (TikTok, YouTube, GIF, voice note; video Rp1.000/s, max 30 s,
+  min Rp10.000; voice-note min Rp10.000). Everything else — voice, volume 33, delay 2, duration 5,
+  milestone / leaderboard / QR colours, TTS voice `CharonVoice` — is the **UI default**, not the
+  pre-incident value.
+- **Stream Studio inputs inside a closed accordion are `inert`** (`Message & GIF`, `Text to
+  speech`, `Video & GIF pricing`, `Voice note pricing`): focus and typing silently do nothing, and
+  `fill()` on a controlled field may land the value in a neighbouring input. Open the section
+  (`button[aria-expanded]` with that text) first, and read every value back before pressing Save.
 - **Media Share minimum vs Alert threshold (retest LIV-45, 7 Oct 2026):**
   - Stream Studio now refuses `Video & GIF pricing > MINIMUM TIP` below `Minimum amount to show
     alert` (`Must not be lower than the minimum amount to show alert`); `Minimum amount to play
