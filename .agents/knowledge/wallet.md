@@ -54,6 +54,9 @@ selector — see [[orders-and-reports]].
 The type filter reads `All`, `Tips`, `Withdraw`, `Convert`, `Order`, **`Referrer
 Fees`** — note "Referrer", not "Referral", which is what the test-case sheet calls it.
 
+The status filter is implemented as tabs in a `tablist` (`All`, `Pending`, `Settled`),
+filtering the table rows according to the matching status (case-insensitively).
+
 ## Withdrawal form
 
 `Withdraw` opens a dialog, not a page. It starts with `Asset *` (IDR or USDT) and an
