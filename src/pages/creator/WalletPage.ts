@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { smartLocator, type SmartHealable } from "@utils/heal-utils";
+import { locatorChain, smartLocator, type SmartHealable } from "@utils/heal-utils";
 import { safeClick } from "@utils/playwright.utils";
 
 export type WalletStatusTab = "All" | "Pending" | "Settled";
@@ -11,6 +11,12 @@ export class WalletPage {
   readonly pendingStatusTab: Locator;
   readonly settledStatusTab: Locator;
   readonly typeFilterTrigger: SmartHealable;
+  readonly activeBalanceCard: Locator;
+  readonly pendingBalanceCard: Locator;
+  readonly withdrawButton: Locator;
+  readonly refreshPendingButton: Locator;
+  readonly yourAssetsTable: Locator;
+  readonly withdrawDialog: Locator;
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.allStatusTab = page.getByRole("tab", { name: "All", exact: true });
@@ -19,6 +25,30 @@ export class WalletPage {
     this.typeFilterTrigger = smartLocator(page, {
       role: "combobox",
       selector: 'div:has(> button[role="combobox"]) button[role="combobox"]',
+    });
+    this.withdrawButton = locatorChain(page, {
+      role: "button",
+      name: "Withdraw",
+      exact: true,
+      text: "Withdraw",
+    });
+    this.refreshPendingButton = locatorChain(page, {
+      role: "button",
+      name: "Refresh",
+      exact: true,
+      text: "Refresh",
+    });
+    this.activeBalanceCard = locatorChain(page, {
+      selector: 'div[data-slot="card"]:has-text("Active Balance")',
+    });
+    this.pendingBalanceCard = locatorChain(page, {
+      selector: 'div[data-slot="card"]:has-text("Pending Balance")',
+    });
+    this.yourAssetsTable = locatorChain(page, {
+      selector: 'table:has-text("ASSET")',
+    });
+    this.withdrawDialog = locatorChain(page, {
+      role: "dialog",
     });
   }
 
@@ -66,8 +96,52 @@ export class WalletPage {
     await expect(trigger).toContainText(typeName, { timeout: 10000 });
   }
 
+  async expectOverviewSectionsVisible() {
+    await expect(this.page.getByRole("heading", { name: "Wallet" })).toBeVisible({ timeout: 10000 });
+    await expect(this.activeBalanceCard).toBeVisible({ timeout: 10000 });
+    await expect(this.pendingBalanceCard).toBeVisible({ timeout: 10000 });
+    await expect(this.yourAssetsTable).toBeVisible({ timeout: 10000 });
+    await this.expectStatusTabsVisible();
+  }
+
+  async expectActiveAndPendingBalances() {
+    await expect(this.activeBalanceCard).toBeVisible();
+    await expect(this.activeBalanceCard).toContainText("Rp");
+    await expect(this.pendingBalanceCard).toBeVisible();
+    await expect(this.pendingBalanceCard).toContainText("Rp");
+  }
+
+  async expectAssetSummaryVisible() {
+    await expect(this.yourAssetsTable).toBeVisible();
+    await expect(this.yourAssetsTable).toContainText("ASSET");
+    await expect(this.yourAssetsTable).toContainText("ACTIVE");
+    await expect(this.yourAssetsTable).toContainText("PENDING");
+    await expect(this.yourAssetsTable).toContainText("TOTAL");
+    await expect(this.yourAssetsTable).toContainText("Rupiah");
+  }
+
+  async openAndCloseWithdrawDialog() {
+    await safeClick(this.withdrawButton);
+    await expect(this.withdrawDialog).toBeVisible({ timeout: 10000 });
+    // Dismiss dialog via Escape key or Close/Cancel button
+    const closeBtn = this.withdrawDialog.locator('button[aria-label="Close"], button:has-text("Close"), button:has-text("Cancel")').first();
+    if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await safeClick(closeBtn);
+    } else {
+      await this.page.keyboard.press("Escape");
+    }
+    await expect(this.withdrawDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async refreshPendingBalance() {
+    await expect(this.refreshPendingButton).toBeVisible();
+    await safeClick(this.refreshPendingButton);
+    await expect(this.refreshPendingButton).toBeEnabled({ timeout: 10000 });
+  }
+
   async expectTypeFilterSelected(typeName: WalletTransactionType) {
     const trigger = this.page.locator('button[role="combobox"]').first();
     await expect(trigger).toContainText(typeName, { timeout: 10000 });
   }
 }
+
