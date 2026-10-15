@@ -76,7 +76,9 @@ export const ordersExportData = {
     "Buyer Name",
     "Buyer Phone Number",
   ] as const,
-  productHeaders: ["Asset Name", "Product ID", "Product Name"] as const,
+  productHeaders: ["Asset Name", "Product ID", "Product Name", "Product Type"] as const,
+  /** Badge labels the list shows; the CSV `Product Type` column uses the same words (OM-8). */
+  productTypeLabels: ["Consultation", "Digital Product", "Online Course", "Digital Download", "Events and Tickets", "Discord Membership", "Telegram Membership"] as const,
   buyerHeaders: ["Buyer Email", "Buyer Name", "Buyer Phone Number"] as const,
   paymentHeaders: ["Payment Method", "Price Paid By Buyer", "Received By Seller"] as const,
   promoHeaders: ["Promo Code Name", "Promo Code Discount"] as const,

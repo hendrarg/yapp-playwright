@@ -63,9 +63,12 @@ The hidden tabs render their own pager and empty texts in the DOM, so scope loca
   `Create Product` link → `/products`. The pager still reads `Page 1 of 0` (L-50). A fresh
   token: OTP sign-in on the buyer app, then inject it for creators; if it lands on `/onboard`,
   "I'll do it later" lets it through.
-- **L-41 is fractional rupiah.** `receivedBySeller` can carry fractions (e.g. 69300.0001…);
-  the summary is rounded, so Lifetime is off by under Rp1 per affected order (12.090.870 vs
-  12.091.006,6 over 219 orders). The 30-day window agrees on the order set (17 = 17).
+- **L-41 is USDT orders, not rounding** (re-measured 2026-10-15 after be#406). IDR orders
+  (`asset.id` 1) have no fractions and sum exactly to `totalEarnings` (305 orders = 14.595.730).
+  The leftover ~136 is the 6 **USDT** orders (`asset.id` 2, `receivedBySeller` in USDT, e.g.
+  33,46): they count in `totalSales` but add **nothing** to `totalEarnings`, because their
+  `orders.final_amount_in_idr` / `exchange_rate_to_idr` are NULL. Group by `asset` before
+  reconciling. OM-9 reopened.
 - One console error on load: `404 GET https://staging.yapp.ink/api/v1/accounts/domain` (no
   custom domain) — no hydration or uncaught errors (TC-ORD-C-059, CL-AUT-039).
 
@@ -125,12 +128,16 @@ who filtered the page will assume the filter carried over. Verified 2026-08-14.
 ## CSV file shape
 
 Filename is `report_YYYYMMDD_HHMMSS_user_{username}.csv` on **server** time, e.g.
-`report_20260813_170314_user_hendrarg.csv`. Comma delimiter, LF line endings, file
-ends with a newline, no UTF-8 BOM, served over a signed URL with no
-`Content-Disposition`.
+`report_20260813_170314_user_hendrarg.csv`. Comma delimiter. Since 2026-10-15 (be#406,
+OM-6/7/8) the file starts with a **UTF-8 BOM** (`EF BB BF`), uses **CRLF** throughout, is
+served with `Content-Disposition: attachment; filename="<name>"`, and has a **`Product Type`**
+column right after `Product Name` carrying the list badge labels (Consultation, Online Course,
+Digital Download, …). The PPV / Membership / Lifetime Access exports on
+`/analytics?tab=transactions` share the same writer (BOM, CRLF, attachment). Strip the BOM
+before splitting the header.
 
 **The header schema is not fixed.** Product custom questions become columns, so the
-column count varies by dataset — 25 on the baseline data. Any consumer that assumes a
+column count varies by dataset — 26 on the baseline data (25 before Product Type). Any consumer that assumes a
 fixed header will break. Escaping of commas, newlines and quotes inside a field, and
 formula-injection protection, are still untested because no existing order contains
 those characters.
@@ -382,5 +389,5 @@ pages un-merged in the other direction. Verified live on creators-dev, account `
 
 - **PPV Export as CSV now returns data** (M-01 fixed): `GET /api/v1/posts/my/purchases/export?start_date=…&end_date=…` → S3 CSV with columns `uuid,buyer_uuid,buyer_name,buyer_email,post_uuid,post_title,purchase_date,total_price`. **But `end_date` is exclusive**: a 90-day export ending today (end_date = today) returned 9 rows while the DB held 10 — the missing one was paid today at 13:09 WIB. Today's purchases never make it into an export that "ends today".
 - The PPV tab's own range filter is a combobox (`Last 7/14/30/60 days`, `All time`); its Export dialog has a separate `30/60/90 days`/`Custom Days` picker. An empty PPV range shows `Page 1 of 0` (L-50 also lives here).
-- Orders CSV (`/api/v1/orders/reports` → asset-dev signed URL): still no UTF-8 BOM, no `Content-Disposition`, no Product Type column; a creator's custom checkout question becomes an extra trailing column (e.g. `Siapakah tuhan mu ?`). The UI download still works because the browser is driven to the file URL.
+- Orders CSV (`/api/v1/orders/reports` → asset-dev signed URL): since 2026-10-15 has a UTF-8 BOM, CRLF, `Content-Disposition: attachment` and a Product Type column (see *CSV file shape*); a creator's custom checkout question becomes an extra trailing column (e.g. `Siapakah tuhan mu ?`). The UI download still works because the browser is driven to the file URL.
 - `/shop/orders/summary` `totalEarnings` stays ~Rp136 below the sum of `receivedBySeller` (217 orders): the per-order values carry fractions, the summary does not — a rounding policy, not lost money.

@@ -82,7 +82,7 @@ test.describe('Creator Orders', () => {
     annotation: { type: 'issue', description: 'L-41' },
   }, async ({ creatorNav, ordersPage, page, browser }) => {
     test.setTimeout(300000);
-    // Known bug L-41: Lifetime Earnings is rounded, so it misses the fractional rupiah the orders add up to. Last step.
+    // Known bug L-41 (OM-9): IDR orders reconcile exactly since 2026-10-15, but USDT orders (no final_amount_in_idr) add nothing to Lifetime Earnings. Last step.
     test.fail(true, 'L-41: Lifetime Earnings does not reconcile exactly with the sum of the orders');
     const request = page.request;
     let firstPage: ShopOrder[] = [];
@@ -474,9 +474,12 @@ test.describe('Creator Orders', () => {
       }
     });
 
-    await test.step('Known defect TC-ORD-C-050: CSV does not include Product Type column', async () => {
-      const header = csvData.lines[0];
-      expect(header.toLowerCase()).not.toContain('product type');
+    await test.step('CSV carries a Product Type column with the list badge labels', async () => {
+      const headerCols = csvData.lines[0].replace(/^﻿/, '').split(',');
+      const typeIndex = headerCols.indexOf('Product Type');
+      expect(typeIndex).toBe(headerCols.indexOf('Product Name') + 1);
+      const types = new Set(csvData.lines.slice(1).map((l) => l.split(',')[typeIndex]));
+      for (const type of types) expect(ordersExportData.productTypeLabels).toContain(type);
     });
   });
 
@@ -562,17 +565,17 @@ test.describe('Creator Orders', () => {
 
     let csvData!: { filename: string; content: string; lines: string[] };
 
-    await test.step('CSV delivery: direct download, valid filename, comma delimiter, and LF line endings', async () => {
+    await test.step('CSV delivery: direct download, valid filename, comma delimiter, UTF-8 BOM and CRLF line endings', async () => {
       await creatorNav.open('orders');
       await ordersPage.openExportDialog();
       await ordersPage.selectExportPreset('30 days');
       csvData = await ordersPage.downloadExportCsv();
       expect(csvData.filename).toMatch(/^report_\d{8}_\d{6}_user_\w+\.csv$/);
-      expect(csvData.content.startsWith('\uFEFF')).toBe(false);
+      expect(csvData.content.startsWith('\uFEFF')).toBe(true);
       expect(csvData.lines[0]).toContain(',');
       expect(csvData.lines[0]).not.toContain(';');
-      expect(csvData.content).toContain('\n');
-      expect(csvData.content).not.toContain('\r\n');
+      expect(csvData.content).toContain('\r\n');
+      expect(csvData.content).not.toMatch(/[^\r]\n/);
     });
 
     await test.step('CSV uses UTC and marks it in the header and rows while web displays local time', async () => {
