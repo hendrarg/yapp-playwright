@@ -60,6 +60,8 @@ const FEATURES = {
   "Campaigns": { gitbook: ["features/campaigns"], knowledge: "campaigns" },
   "Settings": { gitbook: ["creator/settings"], knowledge: "settings" },
   "Onboarding": { gitbook: ["creator/creator-onboarding", "features/sign-in-and-authentication"], knowledge: "onboarding" },
+  // k6 load / Web Vitals TCs: no GitBook page; how to run them lives in perf/ and .agents/rules/performance.md.
+  "Performance": { gitbook: [], knowledge: null },
 };
 
 const slugify = (s) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

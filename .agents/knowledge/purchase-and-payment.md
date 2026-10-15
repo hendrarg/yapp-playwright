@@ -187,6 +187,19 @@ gives the full money breakdown (`productPrice`, `discount`, `promoCodeDiscount`,
 `subtotal`, `transactionFee`, `paymentGatewayFee`, `amount`), the right baseline for
 before/after comparisons.
 
+## Pay can fail with no message, and the guest form drops early input (2026-10-15)
+
+- **When the payment partner is down, Pay does nothing visible.** On 2026-10-15 every checkout's
+  `POST /api/v1/orders/quote` answered **500** `unexpected status code: 503. err : bank partner
+  temporarily unavailable`; the page stayed on `/product/<uuid>/checkout` with no toast, no inline error,
+  and the button enabled (candidate UX bug, not yet filed). A test that "stays on checkout after Pay" should
+  read that response before blaming its own locators — the estimation call (`/orders/quote/estimation`)
+  still succeeds, so the page looks healthy.
+- **The guest form re-renders once shortly after the checkout opens** and empties the name, email,
+  confirm-email and phone fields if they were filled before it. Typed values stick once the page has
+  settled; `payGuestCheckout` refills until all four keep their values and the
+  `Receipt & download link will be sent to <email>` line shows.
+
 ## Dev QRIS payments settle themselves
 
 Live-verified 2026-08-27 on `yapp-dev`. A tip submitted from `/<handle>/tip` creates

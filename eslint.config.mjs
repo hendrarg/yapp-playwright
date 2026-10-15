@@ -71,6 +71,28 @@ export default tseslint.config(
   },
 
   {
+    /*
+     * k6 scripts (`.agents/rules/performance.md`): k6 has no bundler, so the tsconfig
+     * path aliases do not resolve and relative imports inside perf/ are required. What
+     * must not happen instead is reaching into the Node/Playwright code k6 cannot run.
+     */
+    files: ["perf/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@playwright/*", "@pages/*", "@helpers/*", "@utils/*", "@test-data/*", "@fixtures/*", "@config/*", "**/src/*", "../../../config/*"],
+              message: "perf/ runs on k6, not Node: import only from perf/ (relative paths) and k6 modules.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
     /* Spec-file-only rules from `.agents/rules/testing.md`. */
     files: ["tests/**/*.spec.ts"],
     rules: {

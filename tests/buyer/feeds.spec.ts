@@ -1,15 +1,16 @@
 import { authTest as test, expect } from '../test-base';
 import { depositWebhook } from '@helpers/api/webhook';
-import { createComment, createPost, deletePost, getPostEngagement, getPurchasedExclusivePosts, isPostPurchased, setLifetimePrice, updatePost, waitForLifetimeOffer } from '@helpers/api/post';
+import { createComment, createPost, deletePost, getPostEngagement, getPublicPostIds, getPurchasedExclusivePosts, isPostPurchased, pinPost, setLifetimePrice, takeOverPin, unpinPost, updatePost, waitForLifetimeOffer } from '@helpers/api/post';
+import { loginWithToken } from '@helpers/auth/token-login';
 import { followUser, getFollowing, unfollowUser } from '@helpers/api/follow';
 import { createOnlineCourseProduct, deleteProduct } from '@helpers/api/product';
 import { FeedsPage } from '@pages/buyer/FeedsPage';
 import { ProfilePage } from '@pages/buyer/ProfilePage';
 import { baseURL } from '@config/env';
-import { feedsTabs, generateComment } from '@test-data/buyer/feeds.data';
+import { feedsTabs, generateComment, memberTierFixture } from '@test-data/buyer/feeds.data';
 import { accountSettingsLabels, profileLabels, profileTabs } from '@test-data/buyer/profile.data';
 import { getAccount } from '@helpers/api/account';
-import { generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
+import { generatePostContent, generatePostData, testImages, testVideos } from '@test-data/creator/post.data';
 import { testAccounts } from '@test-data/users';
 
 test.describe('Buyer Feeds', () => {
@@ -872,5 +873,110 @@ test('Feeds and Exclusive — Username Validation, Creator-Style Empty Profile, 
     await accountSettingsPage.expectUsernameRejected(accountSettingsLabels.validationFailed, username);
     expect((await getAccount(page.request, buyerToken)).username).toBe(username);
   });
+});
+
+test('Feeds and Exclusive — Pinned Post Order, Pinned Post Date, Pinned Exclusive Post, Pinned Post Filter, Pinned Post Pagination, Pinned Post Visibility', {
+  tag: ['@AUT-FE-027', '@feeds', '@buyer', '@regression'],
+}, async ({ buyerProfilePage, browser, page }) => {
+  test.setTimeout(300000);
+  const creatorToken = process.env[testAccounts.creator.envVar]?.replace(/"/g, '');
+  const memberToken = process.env[testAccounts.sundanese.envVar]?.replace(/"/g, '');
+  test.skip(!creatorToken || !memberToken, 'Creator token and the member account (token2) are required');
+  if (!creatorToken || !memberToken) return;
+
+  const creator = testAccounts.creator;
+  const [older, exclusive, memberOnly, newer] = [1, 2, 3, 4].map(() => generatePostContent());
+  const ids: Record<string, string> = {};
+  const restorePin = await takeOverPin(page.request, creatorToken);
+  const guestContext = await browser.newContext({ viewport: page.viewportSize() });
+  const guestProfile = new ProfilePage(await guestContext.newPage(), baseURL);
+  const memberContext = await browser.newContext({ viewport: page.viewportSize() });
+  await loginWithToken(memberContext, memberToken, baseURL);
+  const memberProfile = new ProfilePage(await memberContext.newPage(), baseURL);
+  const openFeeds = async (profile: ProfilePage) => {
+    await profile.goto(creator.username);
+    await profile.switchToTab('feeds');
+  };
+  const pin = async (id: string) => expect((await pinPost(page.request, id, true, creatorToken)).status).toBe(200);
+
+  try {
+    // Oldest first, so `older` is not the newest post when it is pinned.
+    ids.older = (await createPost(page.request, { content: older, visibility: 'public' }, creatorToken)).postId;
+    ids.exclusive = (await createPost(page.request, { content: exclusive, visibility: 'pay_per_view', price: 10000, imagePath: testImages.claude }, creatorToken)).postId;
+    ids.memberOnly = (await createPost(page.request, { content: memberOnly, visibility: 'membership_only', tierMembershipUuids: [memberTierFixture.tierUuid] }, creatorToken)).postId;
+    ids.newer = (await createPost(page.request, { content: newer, visibility: 'public' }, creatorToken)).postId;
+
+    let ageBeforePin = '';
+    await test.step('A pinned older post leads the profile Feeds tab with the Pinned label', async () => {
+      await openFeeds(guestProfile);
+      ageBeforePin = await guestProfile.creatorPostCardText(older);
+      await pin(ids.older);
+      await openFeeds(guestProfile);
+      await guestProfile.expectCreatorPostPinned(older);
+      await guestProfile.expectCreatorPostAbove(older, newer);
+    });
+
+    await test.step('The pinned post keeps its original age and is not repeated in the stream', async () => {
+      expect((await guestProfile.creatorPostCardText(older)).replace(profileLabels.pinned, '').replace(/\s+/g, ' ').trim()).toBe(ageBeforePin);
+      await guestProfile.expectCreatorPostListedOnce(older);
+      await guestProfile.expectCreatorPostAbove(newer, exclusive);
+    });
+
+    await test.step('A pinned pay-per-view post stays locked for a buyer who has not bought it', async () => {
+      await pin(ids.exclusive);
+      await openFeeds(buyerProfilePage);
+      await buyerProfilePage.expectCreatorPostPinned(exclusive);
+      await buyerProfilePage.expectCreatorPostLocked(exclusive);
+    });
+
+    await test.step('A pinned member-only post opens for an active member of its tier', async () => {
+      await pin(ids.memberOnly);
+      await openFeeds(memberProfile);
+      await memberProfile.expectCreatorPostPinned(memberOnly);
+      await memberProfile.expectCreatorPostOpen(memberOnly);
+    });
+
+    await test.step('Exclusive Only does not show a pinned public post', async () => {
+      await pin(ids.older);
+      await openFeeds(guestProfile);
+      await guestProfile.expectCreatorPostPinned(older);
+      await guestProfile.toggleExclusiveOnly();
+      await guestProfile.expectCreatorPostAbsent(older);
+      await guestProfile.expectCreatorPostAbsent(newer);
+      await guestProfile.expectNoPinnedPost();
+    });
+
+    await test.step('A pinned exclusive post leads the Exclusive Only filter', async () => {
+      await pin(ids.exclusive);
+      await openFeeds(guestProfile);
+      await guestProfile.toggleExclusiveOnly();
+      await guestProfile.expectCreatorPostPinned(exclusive);
+      await guestProfile.expectCreatorPostAbove(exclusive, memberOnly);
+    });
+
+    await test.step('The pinned post is first on page one and never repeated on later pages', async () => {
+      await pin(ids.older);
+      const [pageOne, pageTwo] = [await getPublicPostIds(page.request, creator.uuid, undefined, 1, 4), await getPublicPostIds(page.request, creator.uuid, undefined, 2, 4)];
+      expect(pageOne[0]).toBe(ids.older);
+      expect(pageTwo).not.toContain(ids.older);
+      await openFeeds(guestProfile);
+      await guestProfile.scrollCreatorFeedToEnd();
+      await guestProfile.expectCreatorPostListedOnce(older);
+    });
+
+    await test.step('Guests see the same pin, and after Unpin the tab is chronological again', async () => {
+      await openFeeds(guestProfile);
+      await guestProfile.expectCreatorPostPinned(older);
+      await unpinPost(page.request, ids.older, creatorToken);
+      await openFeeds(guestProfile);
+      await guestProfile.expectNoPinnedPost();
+      await guestProfile.expectCreatorPostAbove(newer, older);
+    });
+  } finally {
+    for (const id of Object.values(ids)) await deletePost(page.request, id, creatorToken).catch(() => undefined);
+    await restorePin();
+    await guestContext.close();
+    await memberContext.close();
+  }
 });
 });

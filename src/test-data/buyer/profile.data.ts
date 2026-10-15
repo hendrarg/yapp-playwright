@@ -82,6 +82,10 @@ export const profileLabels = {
   exclusiveOnly: "Exclusive Only",
   memberOnly: "Member Only",
   unlockPost: "Unlock Post",
+  /** Locked member-only posts offer this instead of Unlock Post. */
+  subscribeToUnlock: "Subscribe to Unlock",
+  /** Badge on the creator's pinned post (icon + text), on the profile Feeds tab. */
+  pinned: "Pinned",
   exclusiveTab: "Exclusive",
   lifetimeOffer: "Get all the exclusive content lifetime with just one tap!",
   lifetimeUnlock: "Unlock now",

@@ -630,6 +630,76 @@ export class ProfilePage {
     await expect(this.creatorPostByContent(content)).toBeVisible({ timeout: 15000 });
   }
 
+  // ── Pinned post on the Feeds tab ──
+  /** The visible text of a listed post; position comparisons use it so no card container is needed. */
+  private creatorPostBody(content: string): Locator {
+    return this.main.getByText(content, { exact: false }).filter({ visible: true });
+  }
+
+  private readonly pinnedBadge = locatorChain(this.page, { text: profileLabels.pinned, selector: `main :text-is("${profileLabels.pinned}")` });
+
+  /** `upper` is listed above `lower` (both visible on the loaded Feeds tab). */
+  async expectCreatorPostAbove(upper: string, lower: string) {
+    await expect(this.creatorPostBody(upper).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.creatorPostBody(lower).first()).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => {
+      const [a, b] = [await this.creatorPostBody(upper).first().boundingBox(), await this.creatorPostBody(lower).first().boundingBox()];
+      return a && b ? a.y < b.y : false;
+    }, { timeout: 10000 }).toBe(true);
+  }
+
+  /** The only Pinned badge on the tab sits on this post: it is the first post and the badge is just above its text. */
+  async expectCreatorPostPinned(content: string) {
+    await expect(this.pinnedBadge.filter({ visible: true })).toHaveCount(1, { timeout: 15000 });
+    await expect(this.creatorPostBody(content).first()).toBeVisible({ timeout: 15000 });
+    // The badge sits in the card header, a short way above the body text of the same post.
+    await expect.poll(async () => {
+      const badge = await this.pinnedBadge.filter({ visible: true }).first().boundingBox();
+      const body = await this.creatorPostBody(content).first().boundingBox();
+      const gap = badge && body ? body.y - badge.y : -1;
+      return gap > 0 && gap < 120;
+    }, { message: "the Pinned badge belongs to this post's card", timeout: 10000 }).toBe(true);
+  }
+
+  async expectNoPinnedPost() {
+    await expect(this.pinnedBadge.filter({ visible: true })).toHaveCount(0, { timeout: 15000 });
+  }
+
+  async expectCreatorPostListedOnce(content: string) {
+    await expect(this.creatorPostBody(content)).toHaveCount(1, { timeout: 10000 });
+  }
+
+  async expectCreatorPostAbsent(content: string) {
+    await expect(this.creatorPostBody(content)).toHaveCount(0, { timeout: 10000 });
+  }
+
+  /** A member-only post the viewer is entitled to: no unlock or subscribe prompt on its card. */
+  async expectCreatorPostOpen(content: string) {
+    const post = this.creatorPostByContent(content);
+    await expect(post).toBeVisible({ timeout: 15000 });
+    await expect(post.getByRole("button", { name: profileLabels.unlockPost, exact: true })).toHaveCount(0);
+    await expect(post.getByText(profileLabels.subscribeToUnlock, { exact: true })).toHaveCount(0);
+  }
+
+  /** The card's own text (author, age, body…), e.g. to compare the age label before and after pinning. */
+  async creatorPostCardText(content: string): Promise<string> {
+    const post = this.creatorPostByContent(content);
+    await expect(post).toBeVisible({ timeout: 15000 });
+    return (await post.innerText()).replace(/\s+/g, " ").trim();
+  }
+
+  /** Scroll the Feeds tab until no more posts load (the profile loads a few at a time). */
+  async scrollCreatorFeedToEnd() {
+    let last = -1;
+    for (let i = 0; i < 15; i += 1) {
+      const count = await this.creatorFeedPosts.count();
+      if (count === last) break;
+      last = count;
+      await this.page.mouse.wheel(0, 20000);
+      await this.page.waitForTimeout(1500);
+    }
+  }
+
   /** A listed post shows this many media tiles (`Open post media` buttons). */
   async expectCreatorPostMediaCount(content: string, count: number) {
     await expect(this.creatorPostByContent(content).getByRole("button", { name: profileLabels.openPostMedia })).toHaveCount(count, { timeout: 15000 });

@@ -27,7 +27,7 @@
     "tc:ingest": "node scripts/ingest-testcases.mjs",
     "mapping:sync": "node scripts/automation-mapping-sync.mjs",
     "perf": "node scripts/perf-run.mjs",
-    "perf:smoke": "node scripts/perf-run.mjs buyer-browse",
+    "perf:smoke": "node scripts/perf-run.mjs buyer/browse",
     "typecheck:perf": "tsc --noEmit -p perf/tsconfig.json"
   },
   "keywords": [],

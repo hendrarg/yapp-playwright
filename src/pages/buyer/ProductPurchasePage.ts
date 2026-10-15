@@ -1731,11 +1731,14 @@ export class ProductPurchasePage {
    */
   async payGuestCheckout(buyer: { name: string; email: string; phone: string }): Promise<string> {
     const field = (placeholder: string) => this.page.getByPlaceholder(placeholder).filter({ visible: true }).first();
-    await field('Enter your name').fill(buyer.name);
-    await field('Enter your email').fill(buyer.email);
-    await field('Re-enter your email').fill(buyer.email);
-    await field('Enter phone number').fill(buyer.phone);
-    await expect(this.page.getByText(`Receipt & download link will be sent to ${buyer.email}`)).toBeVisible({ timeout: 10000 });
+    const values: Array<[string, string]> = [['Enter your name', buyer.name], ['Enter your email', buyer.email], ['Re-enter your email', buyer.email], ['Enter phone number', buyer.phone]];
+    // FLAKY_FIX: the form re-renders once shortly after the checkout opens and wipes what was typed
+    // before it (seen 2026-10-15); refill until every field keeps its value.
+    await expect(async () => {
+      for (const [placeholder, value] of values) if ((await field(placeholder).inputValue()) !== value) await field(placeholder).fill(value);
+      for (const [placeholder, value] of values) await expect(field(placeholder)).toHaveValue(value, { timeout: 1500 });
+      await expect(this.page.getByText(`Receipt & download link will be sent to ${buyer.email}`)).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 30000 });
     await flakyClick(this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern }));
     await this.page.waitForURL(/\/transaction\//, { timeout: 20000 });
     return this.page.url().split('/transaction/')[1];

@@ -102,8 +102,8 @@ Use an extended planning or delegated workflow only when the user explicitly req
 | `npm run clean:artifacts` | Delete MCP dumps / stray snapshots older than 7 days |
 | `npm run mcp:clean` | Close leftover MCP Playwright browsers and this repo's MCP servers |
 | `npm run db:shell -- "<SQL>"` | Read-only SQL against the dev database (needs `PSQL_*` in `.env`) |
-| `npm run perf -- <scenario> [--profile <p>] [--confirm]` | k6 performance run of `perf/scenarios/<scenario>.ts` (needs the `k6` binary, not npm). Default profile `smoke`; any other profile needs `--confirm` because staging is shared. Reports land in `perf/results/` |
-| `npm run perf:smoke` | k6 buyer-browse smoke (1 VU, 1 min) |
+| `npm run perf -- <role>/<scenario> [--profile <p>] [--confirm]` | k6 performance run of `perf/scenarios/<role>/<scenario>.ts` (e.g. `buyer/browse`, `creator/dashboard`) (needs the `k6` binary, not npm). Default profile `smoke`; any other profile needs `--confirm` because staging is shared. Reports land in `perf/results/` |
+| `npm run perf:smoke` | k6 `buyer/browse` smoke (1 VU, 1 min) |
 | `npm run typecheck:perf` | Type-check `perf/` against k6 types (separate from the Node tsconfig) |
 
 ## Architecture
@@ -119,7 +119,7 @@ src/
     creator/nav.ts      creatorNav routes (creatorAuthTest)
   utils/                Playwright utilities and flaky/heal helpers
 config/env.ts           environment variable access
-perf/                   k6 load tests (own runtime: no Node/Playwright imports) — config/, lib/, scenarios/
+perf/                   k6 load tests (own runtime: no Node/Playwright imports) — config/, lib/, scenarios/{buyer,creator}/ with a .tcs.ts per scenario
 
 AGENTS.md               this guide — source of truth for every agent
 .agents/                runtime.md, rules/, skills/, commands/, knowledge/ — the only place to edit

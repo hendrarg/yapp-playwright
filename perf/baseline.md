@@ -6,10 +6,10 @@ account per scenario. Re-baseline after an infra change, not after every run.
 
 | Scenario | Requests | Fail | RPS | p95 | p99 |
 |---|---:|---:|---:|---:|---:|
-| buyer-browse | 16,202 | 0% | 20.7 | 294 ms | — |
-| creator-dashboard | 19,488 | 0% | 24.8 | 618 ms | — |
-| buyer-checkout | smoke only | 0% | — | 355 ms read / 228 ms write | — |
-| social-write | smoke only | 0% | — | 128 ms read / 155 ms write | — |
+| buyer/browse | 16,202 | 0% | 20.7 | 294 ms | — |
+| creator/dashboard | 19,488 | 0% | 24.8 | 618 ms | — |
+| buyer/checkout | smoke only | 0% | — | 355 ms read / 228 ms write | — |
+| buyer/comments + creator/follow | smoke only | 0% | — | 128 ms read / 155 ms write | — |
 
 ## Slowest endpoints under load (p95 ms, smoke 1 VU → load 10 VUs)
 
@@ -24,7 +24,7 @@ account per scenario. Re-baseline after an infra change, not after every run.
 
 Everything else stays under 600 ms p95 at 10 VUs.
 
-## Web Vitals, guest, real Chromium (`buyer-vitals` smoke, 4 iterations — indicative)
+## Web Vitals, guest, real Chromium (`buyer/vitals` smoke, 4 iterations — indicative)
 
 | Page (p75) | TTFB ms | FCP ms | LCP ms | CLS |
 |---|---:|---:|---:|---:|
@@ -40,7 +40,7 @@ because the other pages pull p75 down — read the per-page table, not just the 
 ## Known non-load findings (2026-10-14)
 
 - `GET /account/{uuid}/quick-amounts` answers HTTP 500 (body `status: 404`) for creators
-  without quick amounts — accepted explicitly in `buyer-browse`.
+  without quick amounts — accepted explicitly in `buyer/browse`.
 - Featured creator `testuser123` has a profile that 500s `user not found.` — skipped in setup.
 - Creator `/feeds` loads comments once per post (N+1); replayed on purpose.
 - `/_next/image` fails for some assets: **400 `Unsupported image format`** when the asset is

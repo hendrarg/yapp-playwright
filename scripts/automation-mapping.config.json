@@ -27,7 +27,8 @@
   "exclude": {
     "tabs": {
       "Livestream": "Livestream / Stream Studio: OBS overlay widgets, real QRIS tips, time-based alert rendering",
-      "Onboarding": "Onboarding: one-time per account — every run would need a brand-new account"
+      "Onboarding": "Onboarding: one-time per account — every run would need a brand-new account",
+      "Performance": "Performance (k6): automated in perf/scenarios, not Playwright — run with npm run perf"
     },
     "rows": {
       "AUT-E2E-006": "Starts with creator onboarding (one-time per account)",

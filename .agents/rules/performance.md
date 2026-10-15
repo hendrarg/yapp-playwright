@@ -12,13 +12,26 @@
   carries the WAF's browser-like headers and a stable `name` tag. Templated URLs get one name
   (`GET /products/{uuid}`), never the raw URL.
 
+## Layout and TCs in code
+
+- Scenarios live by role, like `tests/`: `perf/scenarios/buyer/*.ts` and `perf/scenarios/creator/*.ts`,
+  run as `npm run perf -- buyer/browse`. A scenario acts as one role; split a flow that needs two.
+- Every scenario has a sibling `<name>.tcs.ts` listing the `TC-PERF-*` rows it executes
+  (`PerfTc`: id, title, the profiles that prove it, its k6 thresholds, and a `review` note for the
+  part k6 cannot judge). The scenario's `options.thresholds` must come from
+  `thresholdsFor(TCS, env.profile)` — never hand-written — so the sheet's Expected Result and
+  the check in code stay one definition. Shared SLO numbers live in `perf/config/thresholds.ts`.
+- Threshold tag values cannot contain `{` `}`: name templated endpoints `GET /posts/:uuid`.
+- `.tcs.ts` files import nothing but `perf/config/thresholds.ts` and the `PerfTc` type, so Node
+  can load them (`perf/package.json` sets `"type": "module"`) for the report's TC table.
+
 ## Load etiquette
 
 - The target (`staging.yapp.ink`) is shared with E2E and manual QA. `smoke` is the only profile
   that may run unannounced; `load`/`stress`/`spike`/`soak` need a slot agreed with BE/DevOps
   and `--confirm`. Never schedule a heavy profile in CI.
-- Do not run `buyer-checkout` or `social-write` alongside E2E: they share the QA buyer's cart
-  and the test accounts' follow/comment state.
+- Do not run `buyer/checkout`, `buyer/comments` or `creator/follow` alongside E2E: they share the
+  QA buyer's cart and the test accounts' follow/comment state.
 
 ## Side effects
 
@@ -37,3 +50,13 @@
 - Exclude broken fixtures in `setup()` with a `console.warn` instead of letting them fail checks.
 - Record new product facts in `.agents/knowledge/` and refresh `perf/baseline.md` only after an
   agreed `load` run.
+
+## Test cases
+
+- The test cases live in the **`Performance`** tab of *Yapp - Test Case* (`TC-PERF-C-*` creator,
+  `TC-PERF-B-*` buyer). Each row names the `npm run perf` command that executes it; the Expected
+  Result is the threshold. Update Test Result after a run — Failed rows carry the measured value
+  and the report name in `notes Web`, Passed rows leave it empty.
+- The tab is excluded from Automation Mapping (`scripts/automation-mapping.config.json` →
+  `exclude.tabs`): k6 executes these, not Playwright, so they get no `@AUT-*` tag.
+- A new scenario or threshold means a new or edited row there, in the same change.

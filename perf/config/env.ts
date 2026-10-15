@@ -25,7 +25,7 @@ export const env = {
   buyerToken: token('YAPP_TEST_ACCESS_TOKEN_BUYER'),
   /** Creator `hendrarg`. */
   creatorToken: token('YAPP_TEST_ACCESS_TOKEN'),
-  /** Sundanese — the second account social-write seeds its post with. */
+  /** Sundanese — the second account buyer/comments seeds its post with and creator/follow targets. */
   sundaneseToken: token('YAPP_TEST_ACCESS_TOKEN_2'),
   profile: __ENV.PROFILE || 'smoke',
 };

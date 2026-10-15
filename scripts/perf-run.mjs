@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Run a k6 scenario from perf/scenarios with the repo's .env.
+ * Run a k6 scenario from perf/scenarios/<role>/ with the repo's .env.
  *
- *   npm run perf -- buyer-browse                   # smoke (default)
- *   npm run perf -- buyer-browse --profile load --confirm
+ *   npm run perf -- buyer/browse                   # smoke (default)
+ *   npm run perf -- creator/dashboard --profile load --confirm
  *
  * k6 cannot read .env or refresh tokens itself, so this wrapper loads .env,
  * refuses expired tokens (refresh with `npm run token:refresh -- <slot>`), and
- * writes a JSON summary, HTML report and per-endpoint table to perf/results/.
+ * writes a JSON summary, HTML report and a Markdown report (TC results from the
+ * scenario's `.tcs.ts`, plus per-endpoint latency) to perf/results/.
  * Every profile except `smoke` needs --confirm: the target API is shared.
  */
 import { spawnSync } from 'node:child_process';
@@ -20,7 +21,7 @@ const root = resolve(import.meta.dirname, '..');
 dotenv.config({ path: join(root, '.env'), quiet: true });
 
 const args = process.argv.slice(2);
-const scenario = args.find((a) => !a.startsWith('--'));
+const scenario = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--profile')?.replace(/\.ts$/, '');
 const flag = (name) => {
   const i = args.indexOf(`--${name}`);
   return i === -1 ? undefined : args[i + 1];
@@ -28,12 +29,12 @@ const flag = (name) => {
 const profile = flag('profile') ?? 'smoke';
 
 if (!scenario) {
-  console.error('usage: npm run perf -- <scenario> [--profile smoke|load|stress|spike|soak] [--confirm]');
+  console.error('usage: npm run perf -- <buyer|creator>/<scenario> [--profile smoke|load|stress|spike|soak] [--confirm]');
   process.exit(1);
 }
 const script = join(root, 'perf', 'scenarios', `${scenario}.ts`);
-if (!existsSync(script)) {
-  console.error(`No scenario at perf/scenarios/${scenario}.ts`);
+if (scenario.endsWith('.tcs') || !existsSync(script)) {
+  console.error(`No scenario at perf/scenarios/${scenario}.ts (e.g. buyer/browse, creator/dashboard)`);
   process.exit(1);
 }
 if (profile !== 'smoke' && !args.includes('--confirm')) {
@@ -69,7 +70,7 @@ function findK6() {
 const resultsDir = join(root, 'perf', 'results');
 mkdirSync(resultsDir, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-const base = join(resultsDir, `${scenario}-${profile}-${stamp}`);
+const base = join(resultsDir, `${scenario.replace(/[\\/]/g, '-')}-${profile}-${stamp}`);
 
 /**
  * Browser scenarios (`k6/browser`) reuse Playwright's Chromium rather than needing a
@@ -98,7 +99,7 @@ const run = spawnSync(
     env: { ...process.env, ...browserEnv, K6_WEB_DASHBOARD: 'true', K6_WEB_DASHBOARD_EXPORT: `${base}.html`, K6_WEB_DASHBOARD_OPEN: 'false' },
   },
 );
-// Per-endpoint table — k6's summary only aggregates per threshold tag.
-spawnSync(process.execPath, [join(root, 'scripts', 'perf-report.mjs'), `${base}.csv.gz`], { stdio: 'inherit' });
-console.log(`\nReports: ${base}.json, ${base}.html, ${base}-endpoints.md`);
+// TC results + per-endpoint table — k6's own summary only aggregates per threshold.
+spawnSync(process.execPath, [join(root, 'scripts', 'perf-report.mjs'), `${base}.csv.gz`, '--scenario', scenario, '--profile', profile], { stdio: 'inherit' });
+console.log(`\nReports: ${base}.json, ${base}.html, ${base}-report.md`);
 process.exit(run.status ?? 1);

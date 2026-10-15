@@ -1,16 +1,17 @@
-import { group, sleep } from 'k6';
+import { check, group, sleep } from 'k6';
 import type { Options } from 'k6/options';
-import { env } from '../config/env.ts';
-import { scenarioFor } from '../config/profiles.ts';
-import { thresholds } from '../config/thresholds.ts';
-import { featuredProducts, pick } from '../lib/data.ts';
-import { apiGet, apiWrite, listOf } from '../lib/http.ts';
+import { env } from '../../config/env.ts';
+import { scenarioFor } from '../../config/profiles.ts';
+import { thresholdsFor } from '../../lib/tc.ts';
+import { TCS } from './checkout.tcs.ts';
+import { featuredProducts, pick } from '../../lib/data.ts';
+import { apiGet, apiWrite, listOf } from '../../lib/http.ts';
 
 /**
  * Checkout without paying, as the QA buyer.
  *
  * - `checkout` (PROFILE load shape): product detail → `POST /orders/quote/estimation`,
- *   what `/product/{uuid}/checkout` fires on load. It prices the order and creates
+ *   what `/product/:uuid/checkout` fires on load. It prices the order and creates
  *   nothing, so it parallelises safely. `Pay` / `POST /orders/quote` is never called.
  * - `cart` (always 1 VU): add → list → remove. Every VU shares the QA buyer's single
  *   cart and a repeated add answers 409 `product already exists in cart`, so cart writes
@@ -23,7 +24,7 @@ export const options: Options = {
     checkout: { ...scenarioFor(env.profile), exec: 'checkout' },
     cart: { executor: 'constant-vus', vus: 1, duration: env.profile === 'smoke' ? '1m' : '10m', exec: 'cart' },
   },
-  thresholds,
+  thresholds: thresholdsFor(TCS, env.profile),
 };
 
 const auth = { token: env.buyerToken };
@@ -42,7 +43,7 @@ function cartItems() {
 }
 
 export function setup(): SetupData {
-  if (!env.buyerToken) throw new Error('YAPP_TEST_ACCESS_TOKEN_BUYER is required for buyer-checkout');
+  if (!env.buyerToken) throw new Error('YAPP_TEST_ACCESS_TOKEN_BUYER is required for buyer/checkout');
   const preexisting = cartItems().map((i) => i.productUUID);
   const productUuids = featuredProducts(auth)
     .filter((p) => CHECKOUT_TYPES.includes(p.productType) && p.price > 0 && !preexisting.includes(p.uuid))
@@ -54,7 +55,7 @@ export function setup(): SetupData {
 export function checkout(data: SetupData) {
   const productUUID = pick(data.productUuids);
   group('product detail', () => {
-    apiGet(`/api/v1/products/${productUUID}`, 'GET /products/{uuid}', auth);
+    apiGet(`/api/v1/products/${productUUID}`, 'GET /products/:uuid', auth);
   });
   sleep(1 + Math.random() * 2);
   group('checkout estimation', () => {
@@ -71,7 +72,7 @@ export function cart(data: SetupData) {
     sleep(1);
     cartItems();
     sleep(1);
-    if (uuid) apiWrite('DELETE', `/api/v1/cart/items/${uuid}`, 'DELETE /cart/items/{uuid}', undefined, { ...auth, expect: [200] });
+    if (uuid) apiWrite('DELETE', `/api/v1/cart/items/${uuid}`, 'DELETE /cart/items/:uuid', undefined, { ...auth, expect: [200] });
   });
   sleep(2);
 }
@@ -80,7 +81,10 @@ export function cart(data: SetupData) {
 export function teardown(data: SetupData) {
   for (const item of cartItems()) {
     if (data.productUuids.includes(item.productUUID) && !data.preexisting.includes(item.productUUID)) {
-      apiWrite('DELETE', `/api/v1/cart/items/${item.uuid}`, 'teardown: DELETE /cart/items/{uuid}', undefined, { ...auth, expect: [200] });
+      apiWrite('DELETE', `/api/v1/cart/items/${item.uuid}`, 'teardown: DELETE /cart/items/:uuid', undefined, { ...auth, expect: [200] });
     }
   }
+  // TC-PERF-B-005: the cart holds exactly what it held before the run.
+  const after = cartItems().map((i) => i.productUUID).sort();
+  check(after, { 'cart matches its pre-run state': (a) => JSON.stringify(a) === JSON.stringify([...data.preexisting].sort()) });
 }

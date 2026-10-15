@@ -1,20 +1,58 @@
 #!/usr/bin/env node
 /**
- * Per-endpoint latency table from a k6 CSV result (`--out csv=<file>.csv.gz`).
+ * Run report from a k6 CSV result (`--out csv=<file>.csv.gz`): Passed/Failed per
+ * TC-PERF row first (with --scenario/--profile), then per-endpoint latency.
  * k6's own summary only aggregates per threshold tag; a baseline needs p95 per `name`.
  * Browser runs (`k6/browser`) also get Web Vitals per page kind and the failed
  * browser requests grouped by path + status.
  *
- *   node scripts/perf-report.mjs perf/results/<run>.csv.gz   # prints + writes <run>-endpoints.md
+ *   node scripts/perf-report.mjs perf/results/<run>.csv.gz --scenario buyer/browse --profile smoke   # prints + writes <run>-report.md
  */
-import { createReadStream, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createGunzip } from 'node:zlib';
 import { createInterface } from 'node:readline';
 
-const file = process.argv[2];
+const args = process.argv.slice(2);
+const file = args[0];
+const flag = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i === -1 ? undefined : args[i + 1];
+};
 if (!file) {
-  console.error('usage: node scripts/perf-report.mjs <k6-result.csv[.gz]>');
+  console.error('usage: node scripts/perf-report.mjs <k6-result.csv[.gz]> [--scenario buyer/browse --profile smoke]');
   process.exit(1);
+}
+
+/**
+ * Passed / Failed per `TC-PERF-*` the run's profile proves, from the scenario's
+ * `.tcs.ts` and k6's `--summary-export` JSON (a threshold value `false` = not crossed).
+ * A TC with a `review` part passes k6 only on what k6 can judge; the rest is listed.
+ */
+async function tcResults() {
+  const scenario = flag('scenario');
+  const profile = flag('profile');
+  const summaryFile = file.replace(/\.csv(\.gz)?$/, '.json');
+  if (!scenario || !profile || !existsSync(summaryFile)) return '';
+  const tcsFile = resolve(import.meta.dirname, '..', 'perf', 'scenarios', `${scenario}.tcs.ts`);
+  if (!existsSync(tcsFile)) return '';
+  const { TCS } = await import(pathToFileURL(tcsFile).href);
+  const metrics = JSON.parse(readFileSync(summaryFile, 'utf8')).metrics ?? {};
+
+  const rows = TCS.filter((tc) => tc.profiles.includes(profile)).map((tc) => {
+    const outcomes = Object.entries(tc.thresholds).flatMap(([metric, conditions]) =>
+      conditions.map((c) => {
+        const crossed = metrics[metric]?.thresholds?.[c];
+        return crossed === undefined ? `no data: ${metric} ${c}` : crossed ? `failed: ${metric} ${c}` : null;
+      }),
+    ).filter(Boolean);
+    const result = outcomes.some((o) => o.startsWith('failed')) ? 'Failed' : outcomes.length ? 'No data' : 'Passed';
+    const detail = [...outcomes, ...(tc.review ? [`also review: ${tc.review}`] : [])].join('; ');
+    return `| ${tc.id} | ${tc.title} | ${result}${tc.review && result === 'Passed' ? ' (k6 part)' : ''} | ${detail} |`;
+  });
+  if (!rows.length) return `_No TC-PERF row is proved by the \`${profile}\` profile of \`${scenario}\`._`;
+  return ['| TC | Title | Result | Detail |', '|---|---|---|---|', ...rows].join('\n');
 }
 
 const input = createReadStream(file);
@@ -25,8 +63,12 @@ const vitals = new Map(); // page kind -> metric -> values
 const browserFailures = new Map(); // "status path (type)" -> count
 let cols;
 
-/** Collapse a buyer URL to the kind of page it is, so per-creator URLs aggregate. */
+/**
+ * Collapse a buyer URL to the kind of page it is, so per-creator URLs aggregate. A value
+ * that is not a URL is already a group name set by the scenario's `metric.tag`.
+ */
 function pageKind(url) {
+  if (!/^https?:/.test(url)) return url;
   const path = new URL(url).pathname;
   if (path === '/') return 'landing';
   if (path.startsWith('/explore')) return 'explore';
@@ -50,9 +92,11 @@ for await (const line of lines) {
   }
   if (metric === 'browser_http_req_failed') {
     if (Number(cells[cols.metric_value]) === 1) {
-      const u = new URL(cells[cols.url]);
+      // `url` may be a `metric.tag` group; the `name` column keeps the request URL.
+      const raw = [cells[cols.url], cells[cols.name]].find((v) => /^https?:/.test(v ?? ''));
+      const where = raw ? `${new URL(raw).host}${new URL(raw).pathname}` : cells[cols.url];
       const type = /resource_type=([^&]+)/.exec(cells[cols.extra_tags] ?? '')?.[1] ?? '?';
-      const key = `${cells[cols.status]} ${u.host}${u.pathname} (${type})`;
+      const key = `${cells[cols.status]} ${where} (${type})`;
       browserFailures.set(key, (browserFailures.get(key) ?? 0) + 1);
     }
     continue;
@@ -108,9 +152,11 @@ if (browserFailures.size) {
     ...[...browserFailures].sort((a, b) => b[1] - a[1]).map(([key, n]) => `| ${key} | ${n} |`),
   ].join('\n'));
 }
+const tcSection = await tcResults();
+if (tcSection) sections.unshift(tcSection);
 const table = sections.join('\n\n');
 
 console.log(table);
-const out = file.replace(/\.csv(\.gz)?$/, '-endpoints.md');
+const out = file.replace(/\.csv(\.gz)?$/, '-report.md');
 writeFileSync(out, `${table}\n`);
 console.log(`\nWritten: ${out}`);

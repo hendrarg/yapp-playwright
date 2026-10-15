@@ -91,6 +91,16 @@ export const creatorFeedsLabels = {
   deleteWarning: "If you delete this post, you won't be able to restore it",
   deletePinnedNote: 'This post is pinned. Deleting it also removes it from the top of your Feeds.',
   insightsDialog: 'Insights',
+  memberOnly: 'Member only',
+  selectTierDialog: 'Select Membership Tier',
+  confirm: 'Confirm',
+  pastScheduleToast: 'Cannot schedule post with past date/time',
+  /** Visibility radios with their descriptions, in menu order (verified 2026-10-15). */
+  visibilityOptions: [
+    'Public Visible to anyone on the platform.',
+    'Pay per view Unlock access with a one-time payment.',
+    'Member only Visible to your subscribers.',
+  ],
   addProduct: 'Add product',
   /** The composer's media input: wider than product thumbnails (adds BMP and SVG), several files at once. */
   composerMediaAccept: 'image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml,video/*',

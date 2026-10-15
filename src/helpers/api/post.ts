@@ -100,8 +100,8 @@ export async function getMyPosts(request: APIRequestContext, type: 'published' |
 }
 
 /** Uuids of a creator's public feed as a viewer gets it — the list the profile Feeds tab renders, newest first. */
-export async function getPublicPostIds(request: APIRequestContext, creatorUuid: string, token?: string): Promise<string[]> {
-  const response = await request.get(apiUrl(`/api/v1/posts/user/${creatorUuid}?visibility=public&page=1&limit=50`), { headers: getHeaders(token) });
+export async function getPublicPostIds(request: APIRequestContext, creatorUuid: string, token?: string, page = 1, limit = 50): Promise<string[]> {
+  const response = await request.get(apiUrl(`/api/v1/posts/user/${creatorUuid}?visibility=public&page=${page}&limit=${limit}`), { headers: getHeaders(token) });
   if (!response.ok()) throw new Error(`Public posts failed: ${response.status()} ${await response.text()}`);
   const body = await response.json();
   return ((body.data?.data ?? body.data ?? []) as Array<{ uuid: string }>).map((p) => p.uuid);
@@ -142,6 +142,20 @@ export async function pinPost(request: APIRequestContext, postId: string, replac
 export async function unpinPost(request: APIRequestContext, postId: string, token?: string): Promise<void> {
   const response = await request.delete(apiUrl(`/api/v1/posts/${postId}/pin`), { headers: getHeaders(token) });
   if (!response.ok()) throw new Error(`Unpin post failed: ${response.status()} ${await response.text()}`);
+}
+
+/**
+ * One pinned post per creator: remember whichever post the account had pinned, free the slot for the test,
+ * and hand back a restore for `finally`.
+ */
+export async function takeOverPin(request: APIRequestContext, token: string): Promise<() => Promise<void>> {
+  const before = (await getMyPosts(request, 'published', token)).find((p) => p.isPinned);
+  if (before) await unpinPost(request, before.uuid, token);
+  return async () => {
+    const now = (await getMyPosts(request, 'published', token)).find((p) => p.isPinned);
+    if (now && now.uuid !== before?.uuid) await unpinPost(request, now.uuid, token).catch(() => undefined);
+    if (before) await pinPost(request, before.uuid, true, token);
+  };
 }
 
 /** Engagement fields of `GET /api/v1/posts/{uuid}` as seen by the token's account. */

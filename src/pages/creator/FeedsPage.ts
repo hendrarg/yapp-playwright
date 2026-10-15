@@ -197,6 +197,78 @@ export class FeedsPage {
     await expect(this.editDialog).toBeHidden({ timeout: 10000 });
   }
 
+  // ── Visibility selector ──
+  /** The pill opens a menu holding a radio group: one radio per visibility, each with a one-line description. */
+  async openVisibilityMenu() {
+    await safeClick(this.composer.getByRole("button", { name: new RegExp(`^(${labels.visibilityPublic}|Exclusive|${labels.memberOnly})`) }));
+    await expect(this.page.getByRole("menu").getByRole("radiogroup")).toBeVisible({ timeout: 10000 });
+  }
+
+  async visibilityOptions(): Promise<Array<{ text: string; checked: boolean }>> {
+    await this.openVisibilityMenu();
+    const options = this.page.getByRole("menu").locator("label").filter({ has: this.page.getByRole("radio") });
+    const read = await options.evaluateAll((labelsEls) => labelsEls.map((l) => ({
+      // innerText keeps the line break between the label and its description; textContent glues them.
+      text: ((l as unknown as { innerText: string }).innerText ?? "").replace(/\s+/g, " ").trim(),
+      checked: l.querySelector('[role="radio"]')?.getAttribute("aria-checked") === "true",
+    })));
+    await this.closeMenu();
+    return read;
+  }
+
+  private async closeMenu() {
+    const menu = this.page.getByRole("menu");
+    await expect(async () => {
+      if (await menu.isVisible()) await this.page.keyboard.press("Escape");
+      await expect(menu).toBeHidden({ timeout: 2000 });
+    }).toPass({ timeout: 15000 });
+    await expect(this.composer).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Member only opens `Select Membership Tier`; pick a tier and Confirm. */
+  async chooseMemberOnly(tierName: string) {
+    await this.openVisibilityMenu();
+    await safeClick(this.page.getByRole("menu").getByRole("radio", { name: new RegExp(labels.memberOnly) }).or(this.page.getByRole("menu").getByText(labels.memberOnly, { exact: true })).first());
+    const tiers = this.page.getByRole("dialog", { name: labels.selectTierDialog });
+    await expect(tiers).toBeVisible({ timeout: 10000 });
+    await safeClick(tiers.getByText(tierName, { exact: true }));
+    await safeClick(tiers.getByRole("button", { name: labels.confirm, exact: true }));
+    await expect(tiers).toBeHidden({ timeout: 10000 });
+    await this.closeMenu();
+  }
+
+  async choosePublic() {
+    await this.openVisibilityMenu();
+    await safeClick(this.page.getByRole("menu").getByText(labels.visibilityPublic, { exact: true }));
+    await this.closeMenu();
+  }
+
+  /** The composer pill reads the current visibility, e.g. `Public`, `Exclusive Rp10.000`, `Member only`. */
+  async expectVisibilityPill(text: string | RegExp) {
+    await expect(this.composer.getByRole("button", { name: text })).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Schedule Post with a time already gone: refused in the client with a toast, nothing is sent. */
+  async expectPastScheduleRefused(content: string, when: Date) {
+    await this.goto();
+    await this.openComposer();
+    await this.fillComposer(content);
+    await this.pickSchedule(this.composer, this.composer.getByRole("button").filter({ has: this.page.locator('svg[class~="size-5.5"]') }), when);
+    let posted = false;
+    const listener = (r: { url(): string; method(): string }) => {
+      if (/\/api\/v1\/posts$/.test(r.url()) && r.method() === "POST") posted = true;
+    };
+    this.page.on("request", listener);
+    try {
+      await safeClick(this.composer.getByRole("button", { name: labels.schedulePost, exact: true }));
+      await expect(this.toast(labels.pastScheduleToast)).toBeVisible({ timeout: 10000 });
+      await expect(this.composer).toBeVisible();
+      expect(posted, "no post is created for a past schedule").toBe(false);
+    } finally {
+      this.page.off("request", listener);
+    }
+  }
+
   // ── Composer state ──
   private get composerPostButton() {
     return this.composer.getByRole("button", { name: labels.publish, exact: true });

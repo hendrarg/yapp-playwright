@@ -1,9 +1,11 @@
 import { check } from 'k6';
 import { browser } from 'k6/browser';
 import type { Options } from 'k6/options';
-import { env } from '../config/env.ts';
-import { scenarioFor } from '../config/profiles.ts';
-import { featuredProducts, pick, workingFeaturedCreators } from '../lib/data.ts';
+import { env } from '../../config/env.ts';
+import { scenarioFor } from '../../config/profiles.ts';
+import { thresholdsFor } from '../../lib/tc.ts';
+import { TCS } from './vitals.tcs.ts';
+import { featuredProducts, pick, workingFeaturedCreators } from '../../lib/data.ts';
 
 /**
  * Real-browser Core Web Vitals for the public buyer pages, as a guest: landing →
@@ -17,14 +19,8 @@ export const options: Options = {
   scenarios: {
     buyer_vitals: { ...scenarioFor(env.profile), options: { browser: { type: 'chromium' } } },
   },
-  // Google's "good" bands, at p75 as CrUX reports them.
-  thresholds: {
-    browser_web_vital_lcp: ['p(75)<2500'],
-    browser_web_vital_fcp: ['p(75)<1800'],
-    browser_web_vital_cls: ['p(75)<0.1'],
-    browser_web_vital_ttfb: ['p(75)<800'],
-    checks: ['rate>0.99'],
-  },
+  // Google's "good" bands at p75, per page group — see vitals.tcs.ts.
+  thresholds: thresholdsFor(TCS, env.profile),
 };
 
 interface SetupData {
@@ -41,6 +37,20 @@ export function setup(): SetupData {
   return { usernames, productPaths };
 }
 
+/**
+ * Group each metric's `url` tag into the page kinds the TCs threshold on, so every
+ * creator's profile counts as one `creator-profile` series instead of one per username.
+ * The patterns are mutually exclusive; the share link `/s/<short>` redirects to the
+ * product URL before its vitals are recorded.
+ */
+function tagPageGroups(metric: { tag(opts: { name: string; matches: { url: RegExp }[] }): void }) {
+  metric.tag({ name: 'landing', matches: [{ url: /^https?:\/\/[^/]+\/?$/ }] });
+  metric.tag({ name: 'explore', matches: [{ url: /^https?:\/\/[^/]+\/explore\/?$/ }] });
+  metric.tag({ name: 'creator-profile', matches: [{ url: /^https?:\/\/[^/]+\/(?!explore\/?$)[^/?#]+\/?$/ }] });
+  metric.tag({ name: 'product', matches: [{ url: /^https?:\/\/[^/]+\/[^/?#]+\/product\/[^/?#]+/ }] });
+  metric.tag({ name: 'next-image', matches: [{ url: /\/_next\/image\?/ }] });
+}
+
 export default async function (data: SetupData) {
   const pages: [string, string][] = [
     ['landing', '/'],
@@ -55,6 +65,7 @@ export default async function (data: SetupData) {
   try {
     for (const [name, path] of pages) {
       const page = await context.newPage();
+      page.on('metric', tagPageGroups);
       try {
         const res = await page.goto(`${env.buyerOrigin}${path}`, { waitUntil: 'load' });
         check(res, { [`${name} page loads`]: (r) => r !== null && r.status() < 400 });

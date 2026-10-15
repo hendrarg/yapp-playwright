@@ -60,7 +60,7 @@ Guessing `/users/{username}`, `/accounts/{username}` or `/creators/{username}` g
   `/account/username/{username}/profile-customization`, `/posts/user/{uuid}?visibility=public`,
   `/rate/exchange`, `/lifetime-prices/{username}/check`.
 - Every profile visit also fires **`POST /view/counter/{uuid}`**, which writes to view stats. Leave it
-  out of anything replayed in bulk (the k6 `buyer-browse` scenario skips it).
+  out of anything replayed in bulk (the k6 `buyer/browse` scenario skips it).
 - **`/account/{uuid}/quick-amounts` answers HTTP 500 with body `{"status":404,"message":"quick
   amount not found"}`** for a creator who never saved quick amounts (5 of 7 featured creators on
   2026-10-14). The page copes and falls back to the default chips, but the API reports a 5xx for
@@ -72,7 +72,7 @@ Guessing `/users/{username}`, `/accounts/{username}` or `/creators/{username}` g
 
 ## Some images fail in the Next.js optimizer (2026-10-14)
 
-Seen by the k6 `buyer-vitals` run on landing / explore / profile / product, as a guest:
+Seen by the k6 `buyer/vitals` run on landing / explore / profile / product, as a guest:
 
 - **`/_next/image` → 400 `Unsupported image format`** when the source asset on `asset-dev.yapp.ink`
   is served **without a `Content-Type` header** — the bytes are a valid PNG/JPEG (e.g. a product

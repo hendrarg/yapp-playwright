@@ -366,6 +366,18 @@ Shipped on dev per the PRD [[projects/yapp/pinned-feeds - prd|Pinned Feeds]]; TC
 
 ## Composer toolbar, drafts, and the creator post list (verified 2026-10-15)
 
+- **The visibility pill opens a menu holding a radio group**, not menu items: `Public` "Visible to anyone
+  on the platform." (checked by default), `Pay per view` "Unlock access with a one-time payment.",
+  `Member only` "Visible to your subscribers." Read the option text with `innerText` — `textContent`
+  glues label and description together. `Member only` opens dialog `Select Membership Tier` (tier names,
+  `Confirm`); afterwards the menu stays open like after a PPV price, so close it before the next step.
+- **A past schedule is refused in the client:** picking today 12:00 AM and pressing `Schedule Post` shows
+  the toast `Cannot schedule post with past date/time`, sends no request and keeps the composer open.
+- **Buyer-side pin checks without a card locator:** the profile Feeds tab shows exactly one visible
+  `Pinned` badge, just above the pinned post's text; ordering and badge ownership can be checked from the
+  on-screen positions of the post texts. Sundanese (token2) holds hendrarg's `QA Tenure Fixture` tier until
+  2027-03-16 (`memberTierFixture`), so a member-only post for that tier opens for it with no purchase.
+
 - **The composer has no category control** — not in the dialog, not in the `POST /api/v1/posts`
   payload. Its toolbar is media (`lucide-image`), linked products, `Draft Posts` (`lucide-file-text`),
   schedule (the clock), then the visibility pill and `Post`. TC-FE-C-004 ("optional category") has
@@ -442,7 +454,7 @@ contrast, does render `Play 00:00 00:30 Mute Enter fullscreen`.
 
 Opening creator `/feeds` fires `GET /posts/my/posts?type=published` and `?type=draft`, then one
 `GET /posts/{uuid}/comments?page=1&limit=10` **per visible post** — 10 posts, 10 extra requests
-(N+1). At 1 VU each one is ~80 ms; the k6 `creator-dashboard` scenario replays it on purpose so a
+(N+1). At 1 VU each one is ~80 ms; the k6 `creator/dashboard` scenario replays it on purpose so a
 load run shows what it costs. The dashboard shell on every creator page also calls
 `GET /accounts/domain`, which answers **404** for a creator without a custom domain — expected,
 not an error.

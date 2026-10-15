@@ -51,3 +51,11 @@ export const scrollDelayMs = 1200;
 export function generateComment(): string {
   return faker.lorem.sentence();
 }
+/**
+ * A hendrarg tier that Sundanese (token2) holds actively (expires 2027-03-16, verified 2026-10-15),
+ * so a member-only post for it opens for that account without a purchase.
+ */
+export const memberTierFixture = {
+  tierUuid: '83510a02-6d4f-4e5e-ad22-ad4a47d7e182',
+  name: 'QA Tenure Fixture',
+} as const;

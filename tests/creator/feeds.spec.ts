@@ -1,7 +1,7 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { baseURL, creatorsBaseURL } from '@config/env';
 import { loginWithToken } from '@helpers/auth/token-login';
-import { createComment, createPost, deletePost, getMyPosts, getPost, getPostEngagement, getPublicPostIds, isPostPurchased, likePost, pinPost, setLifetimePrice, unpinPost, waitForLifetimeOffer } from '@helpers/api/post';
+import { createComment, createPost, deletePost, getMyPosts, getPost, getPostEngagement, getPublicPostIds, isPostPurchased, likePost, pinPost, setLifetimePrice, takeOverPin, waitForLifetimeOffer } from '@helpers/api/post';
 import { createOnlineCourseProduct, deleteProduct } from '@helpers/api/product';
 import { depositWebhook } from '@helpers/api/webhook';
 import { FeedsPage as BuyerFeedsPage } from '@pages/buyer/FeedsPage';
@@ -9,26 +9,13 @@ import { ProfilePage } from '@pages/buyer/ProfilePage';
 import { TransactionPage } from '@pages/buyer/TransactionPage';
 import { FeedsPage as CreatorFeedsPage } from '@pages/creator/FeedsPage';
 import { creatorFeedsLabels, generateLinkedProductTitle, generatePostContent, generatePostData, scheduleTimeAhead, testImages } from '@test-data/creator/post.data';
+import { memberTierFixture } from '@test-data/buyer/feeds.data';
 import { testAccounts } from '@test-data/users';
 
 const token = (envVar: string) => process.env[envVar]?.replace(/"/g, '');
 const rupiah = (n: number) => `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
 const minPrice = creatorFeedsLabels.minPrice;
 const menu = creatorFeedsLabels.menu;
-
-/**
- * One pinned post per creator: remember whichever post the account had pinned, free the slot for the test,
- * and hand back a restore for `finally`.
- */
-async function takeOverPin(request: Parameters<typeof getMyPosts>[0], accountToken: string) {
-  const before = (await getMyPosts(request, 'published', accountToken)).find((p) => p.isPinned);
-  if (before) await unpinPost(request, before.uuid, accountToken);
-  return async () => {
-    const now = (await getMyPosts(request, 'published', accountToken)).find((p) => p.isPinned);
-    if (now && now.uuid !== before?.uuid) await unpinPost(request, now.uuid, accountToken).catch(() => undefined);
-    if (before) await pinPost(request, before.uuid, true, accountToken);
-  };
-}
 
 test.describe('Creator Feeds', () => {
   test('injected "at" token loads the feeds page without redirecting to auth', { tag: ['@feeds', '@creator', '@smoke'] }, async ({ creatorNav }) => {
@@ -187,6 +174,46 @@ test.describe('Creator Feeds', () => {
       if (productUuid) await deleteProduct(page.request, productUuid, creatorToken).catch(() => undefined);
       await guestContext.close();
     }
+  });
+
+  test('Feeds and Exclusive — Validation Errors, Schedule Validation, Per-Post Engagement, Post Visibility Options', {
+    tag: ['@AUT-FE-003', '@feeds', '@creator', '@regression'],
+  }, async ({ creatorFeedsPage }) => {
+    test.setTimeout(180000);
+    // TC-FE-C-027 (engagement isolated per post) is Blocked in Automation Mapping and not covered here.
+
+    await test.step('Publishing stays blocked while the post is invalid, with the reason shown and nothing created', async () => {
+      await creatorFeedsPage.goto();
+      await creatorFeedsPage.openComposer();
+      await creatorFeedsPage.expectPublishEnabled(false);
+      await creatorFeedsPage.fillComposer(generatePostContent());
+      await creatorFeedsPage.choosePayPerView();
+      await creatorFeedsPage.dismissPriceDialog();
+      await creatorFeedsPage.expectZeroPricePublishBlocked();
+    });
+
+    await test.step('A schedule in the past is refused with a message and nothing is created', async () => {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      await creatorFeedsPage.expectPastScheduleRefused(generatePostContent(), startOfToday);
+    });
+
+    await test.step('The visibility selector offers Public, Pay per view and Member only, and the pill follows the choice', async () => {
+      await creatorFeedsPage.goto();
+      await creatorFeedsPage.openComposer();
+      await creatorFeedsPage.fillComposer(generatePostContent());
+      const options = await creatorFeedsPage.visibilityOptions();
+      expect(options.map((o) => o.text)).toEqual([...creatorFeedsLabels.visibilityOptions]);
+      expect(options.map((o) => o.checked)).toEqual([true, false, false]);
+      await creatorFeedsPage.expectVisibilityPill(creatorFeedsLabels.visibilityPublic);
+      await creatorFeedsPage.choosePayPerView();
+      await creatorFeedsPage.typePrice(minPrice);
+      await creatorFeedsPage.confirmPrice(minPrice);
+      await creatorFeedsPage.chooseMemberOnly(memberTierFixture.name);
+      await creatorFeedsPage.expectVisibilityPill(new RegExp(creatorFeedsLabels.memberOnly, 'i'));
+      await creatorFeedsPage.choosePublic();
+      await creatorFeedsPage.expectVisibilityPill(creatorFeedsLabels.visibilityPublic);
+    });
   });
 
   test('Feeds and Exclusive — Draft Visibility, Resume Draft, Schedule Post, Auto Publish, Edit Schedule, Edit Content, Edit Media', {

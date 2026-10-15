@@ -1,10 +1,11 @@
 import { group, sleep } from 'k6';
 import type { Options } from 'k6/options';
-import { env } from '../config/env.ts';
-import { scenarioFor } from '../config/profiles.ts';
-import { thresholds } from '../config/thresholds.ts';
-import { apiBatch, isoDate, listOf } from '../lib/http.ts';
-import type { Call } from '../lib/http.ts';
+import { env } from '../../config/env.ts';
+import { scenarioFor } from '../../config/profiles.ts';
+import { thresholdsFor } from '../../lib/tc.ts';
+import { TCS } from './dashboard.tcs.ts';
+import { apiBatch, isoDate, listOf } from '../../lib/http.ts';
+import type { Call } from '../../lib/http.ts';
 
 /**
  * Creator `hendrarg` moving through the dashboard, read-only: Home (`/profile`) →
@@ -15,7 +16,7 @@ import type { Call } from '../lib/http.ts';
  */
 export const options: Options = {
   scenarios: { creator_dashboard: scenarioFor(env.profile) },
-  thresholds,
+  thresholds: thresholdsFor(TCS, env.profile),
 };
 
 const auth = { token: env.creatorToken, origin: env.creatorOrigin };
@@ -33,7 +34,7 @@ function think() {
 }
 
 export function setup() {
-  if (!env.creatorToken) throw new Error('YAPP_TEST_ACCESS_TOKEN (creator) is required for creator-dashboard');
+  if (!env.creatorToken) throw new Error('YAPP_TEST_ACCESS_TOKEN (creator) is required for creator/dashboard');
 }
 
 export default function () {
@@ -107,7 +108,7 @@ export default function () {
     // The feed loads comments once per visible post (N+1) — kept on purpose, it is what the app does.
     const posts = listOf<{ uuid: string }>(published);
     if (posts.length) {
-      apiBatch(posts.map((p): Call => [`/api/v1/posts/${p.uuid}/comments?page=1&limit=10`, 'GET /posts/{uuid}/comments']), auth);
+      apiBatch(posts.map((p): Call => [`/api/v1/posts/${p.uuid}/comments?page=1&limit=10`, 'GET /posts/:uuid/comments']), auth);
     }
   });
   think();

@@ -81,7 +81,12 @@ unavailable the control's tooltip becomes the **reason**, e.g.
 
 ## Discord connection is sticky
 
-The QA account is already connected (`Hendra's server`, role `Boss`). Disconnecting it
+**Changed 2026-10-15: the connection is gone.** Seeding a Discord membership for `hendrarg` now fails
+with "The creator account has no linked Discord server" (the guild list the seed helper reads is empty),
+so every test that seeds one stops in setup. Re-linking needs Discord OAuth by hand. What follows is the
+earlier state.
+
+The QA account was connected (`Hendra's server`, role `Boss`). Disconnecting it
 to test the unconnected state risks breaking the published Discord products and their
 buyers' access. The unconnected state is reachable instead through the **create form**,
 where the server list legitimately starts empty.
