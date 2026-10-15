@@ -385,6 +385,18 @@ pages un-merged in the other direction. Verified live on creators-dev, account `
   exists elsewhere in the account (PPV and Lifetime Access both did on this account) —
   always switch to `All time` or a wide custom range before judging a tab "empty".
 
+## PPV / Membership / Lifetime exports: date range and deleted posts (verified 2026-10-15)
+
+The `/analytics?tab=transactions` tabs export through `GET /api/v1/posts/my/purchases/export`,
+`/tier-membership-purchases/my/export` and `/posts/lifetime-prices/me/purchases/export`
+(`?start_date&end_date`, returns `fileUrl`); each list uses the same path without `/export`.
+Since be#406 (OM-4) the range is read in WIB and **`end_date` is inclusive** — a one-day range
+(`start_date = end_date`) holds that day's purchases, and the CSV row count always equals the
+list's. **PPV purchases of a deleted post vanish from both list and export**, even All Time
+(hendrarg: 14 completed rows in `post_purchases`, 10 shown — the 4 October ones belong to
+soft-deleted test posts), unlike `/orders`, which keeps orders of deleted products. Count
+against DB with `posts.deleted_at IS NULL`. Candidate inconsistency, not filed.
+
 ## Bug-sheet retest, 6 Oct 2026
 
 - **PPV Export as CSV now returns data** (M-01 fixed): `GET /api/v1/posts/my/purchases/export?start_date=…&end_date=…` → S3 CSV with columns `uuid,buyer_uuid,buyer_name,buyer_email,post_uuid,post_title,purchase_date,total_price`. **But `end_date` is exclusive**: a 90-day export ending today (end_date = today) returned 9 rows while the DB held 10 — the missing one was paid today at 13:09 WIB. Today's purchases never make it into an export that "ends today".
