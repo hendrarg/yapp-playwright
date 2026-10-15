@@ -280,6 +280,10 @@ Read this before the older sections below — several described defects are gone
     can't be re-saved; hendrarg now carries Video min **Rp10.000**.
   - **BE still unchanged:** direct `POST /tipping/fiat` with `mediaType youtube` at Rp15.000 and
     Rp49.999 returns 200 even with Alert *and* Video min at Rp50.000 — no server-side media floor.
+  - **Ruled acceptable 2026-10-15 (LIV-45 closed, L-79 removed):** the QA lead decided the FE
+    gate (tip page + Stream Studio) is enough; a direct-API media share below the floor is not
+    a bug to re-file. (be#406 claims a server floor too — `400 media share amount is below the
+    minimum` — but it was never verified.)
 - *History (1 Oct 2026, before the fixes):* poll offered and charged before its window with the vote dropped (H-02 —
   enabled + future window: radios live, bill created, `votedCount` unchanged after settle; a
   *disabled* poll is correctly hidden), Milestone START picker fully disabled (H-04), Media Share
