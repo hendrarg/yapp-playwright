@@ -1,6 +1,7 @@
 import { authTest as test, expect } from '../test-base';
 import { createDigitalProduct, deleteProduct, productSharePath } from '@helpers/api/product';
 import { depositWebhook } from '@helpers/api/webhook';
+import { loginWithToken } from '@helpers/auth/token-login';
 import { markInboxStart, testmailConfig, waitForEmail } from '@helpers/otp/testmail';
 import { LoginPage } from '@pages/auth/LoginPage';
 import { LibraryPage } from '@pages/buyer/LibraryPage';
@@ -21,6 +22,66 @@ const phone = () => `812${Date.now().toString().slice(-9)}`;
 const guestEmail = () => `${process.env.TESTMAIL_NAMESPACE}.guestbuyer@inbox.testmail.app`;
 
 test.describe('Buyer Digital Product', () => {
+  test('Product Digital — Product Information, Carousel, CTA Naming, Bookmark Control, Owner View, Explore Filter Value', {
+    tag: ['@AUT-PD-008', '@products', '@buyer', '@regression'],
+  }, async ({ page, browser }) => {
+    test.setTimeout(180000);
+    const token = sellerToken();
+    test.skip(!token, 'YAPP_TEST_ACCESS_TOKEN_2 is required to seed the digital product');
+    if (!token) return;
+
+    const stamp = Date.now();
+    const product = { title: `Digital PDP ${stamp}`, description: `PDP details test ${stamp}` };
+    let productUuid = '';
+    let sharePath = '';
+
+    try {
+      await test.step('Seed a digital product with thumbnail and price', async () => {
+        const created = await createDigitalProduct(page.request, {
+          ...product,
+          thumbnailImagePath: testImages.claude,
+          price: 25000,
+          links: [link],
+        }, token);
+        productUuid = created.productUuid;
+        sharePath = productSharePath(created);
+      });
+
+      await test.step('Verify main product information, badge, tabs, and CTA naming as buyer', async () => {
+        await page.goto(new URL(sharePath.slice(1), baseURL).toString());
+        await expect(page.getByText(product.title, { exact: true }).filter({ visible: true })).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText('Digital Product', { exact: true }).filter({ visible: true })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'Overview' }).filter({ visible: true })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'About Creator' }).filter({ visible: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: /Purchase|Get Product/ }).filter({ visible: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Add To Cart', exact: true }).filter({ visible: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: /bookmark/i })).toHaveCount(0);
+      });
+
+      await test.step('Verify Explore filter productType=digital_download displays Digital Product badge', async () => {
+        await page.goto(new URL('explore?productType=digital_download', baseURL).toString());
+        await expect(page.getByText('Digital Product').first()).toBeVisible({ timeout: 15000 });
+      });
+
+      await test.step('Verify owner view settles to Edit Product CTA without purchase buttons', async () => {
+        const ownerContext = await browser.newContext({ viewport: page.viewportSize() });
+        try {
+          await loginWithToken(ownerContext, token, baseURL);
+          const ownerPage = await ownerContext.newPage();
+          const ownerView = new ProductPurchasePage(ownerPage, baseURL);
+          await ownerView.gotoSharePath(sharePath);
+          await ownerView.expectOwnerEventView();
+        } finally {
+          await ownerContext.close();
+        }
+      });
+    } finally {
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, token).catch(() => undefined);
+      }
+    }
+  });
+
   test('Product Digital — Voucher, Success Modal, Authenticated Access, Guest OTP, Files and Links, Conditional Sections, Order-Scoped URL', {
     tag: ['@AUT-PD-010', '@products', '@library', '@buyer', '@regression'],
     annotation: { type: 'issue', description: 'L-80' },
