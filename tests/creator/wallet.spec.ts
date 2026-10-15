@@ -95,5 +95,34 @@ test.describe('Creator Wallet', () => {
       await walletPage.expectPaginationControls();
     });
   });
+
+  test('Wallet — Asset Selection, Dynamic Withdrawal Form, Withdrawal Gate', {
+    tag: ['@AUT-WLT-004', '@wallet', '@creator', '@regression'],
+  }, async ({ creatorNav, walletPage }) => {
+    test.setTimeout(120000);
+
+    await test.step('Open Wallet page and open withdrawal flow', async () => {
+      await creatorNav.open('wallet');
+      await walletPage.expectLoaded();
+      await walletPage.openWithdrawDialog();
+    });
+
+    await test.step('Select IDR asset and verify IDR-specific form fields', async () => {
+      await walletPage.selectWithdrawAsset('IDR');
+      await walletPage.expectIdrWithdrawFormVisible();
+    });
+
+    await test.step('Switch asset to USDT and verify USDT-specific form fields', async () => {
+      await walletPage.selectWithdrawAsset('USDT');
+      await walletPage.expectUsdtWithdrawFormVisible();
+    });
+
+    await test.step('Dismiss withdrawal dialog', async () => {
+      await walletPage.closeWithdrawDialog();
+    });
+  });
 });
+
+
+
 

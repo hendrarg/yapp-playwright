@@ -188,5 +188,42 @@ export class WalletPage {
     await expect(nextBtn).toBeVisible();
     await expect(lastBtn).toBeVisible();
   }
+
+  async openWithdrawDialog() {
+    await safeClick(this.withdrawButton);
+    await expect(this.withdrawDialog).toBeVisible({ timeout: 10000 });
+  }
+
+  async closeWithdrawDialog() {
+    const closeBtn = this.withdrawDialog.locator('button:has-text("Close"), button[aria-label="Close"]').first();
+    if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await safeClick(closeBtn);
+    } else {
+      await this.page.keyboard.press("Escape");
+    }
+    await expect(this.withdrawDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async selectWithdrawAsset(asset: "IDR" | "USDT") {
+    const trigger = this.withdrawDialog.locator('button[data-slot="select-trigger"]').first();
+    await safeClick(trigger);
+    const option = this.page.locator(`[role="option"]:has-text("${asset}")`);
+    await expect(option).toBeVisible({ timeout: 10000 });
+    await safeClick(option);
+    await expect(trigger).toContainText(asset, { timeout: 10000 });
+  }
+
+  async expectIdrWithdrawFormVisible() {
+    await expect(this.withdrawDialog).toContainText("Destination", { timeout: 10000 });
+    await expect(this.withdrawDialog).toContainText("Amount");
+    await expect(this.withdrawDialog).toContainText("Balance: Rp");
+  }
+
+  async expectUsdtWithdrawFormVisible() {
+    await expect(this.withdrawDialog).toContainText("Chain", { timeout: 10000 });
+    await expect(this.withdrawDialog).toContainText("Receiver Wallet Address");
+    await expect(this.withdrawDialog).toContainText("Amount");
+    await expect(this.withdrawDialog).toContainText("USDT");
+  }
 }
 
