@@ -324,8 +324,16 @@ purchased successfully." (`CartPage.checkoutItem` / `payCheckout`).
 - Opening the purchase lands on `/product/<uuid>` (tabs Overview / Ticket / About Creator) with
   `See message from <creator>` + `View Message`, which opens dialog `Message from <creator>` holding
   the default after-sales text ("Thank you for purchasing …") when the creator set none.
-- The ticket's About Creator now reads **`Meet <creator> — <role>`** (a paragraph, not a heading):
-  bug M-10 ("Meet Creator — …") looks fixed — retest it before closing.
+- The ticket's About Creator (re-checked 2026-10-15, P-E-19 still open) reads **`Meet <name>`**,
+  falling back to the username when `name` is empty (hendrarg → `Meet hendrarg`), plus
+  ` — <role>` only when a role is set; the inner `About Creator` label is gone (one, on the tab).
+  **But the headline and bio render `rgb(0,0,0)` on the creator's dark card** (`rgb(34,34,59)`,
+  geri `rgb(0,0,0)`) whatever the colour scheme — the text exists in the DOM yet is unreadable
+  or invisible. Assert visibility/contrast, not just `textContent`. The buyer app stays
+  `html.light` even under `colorScheme: 'dark'`.
+- Ticket fixtures: QA buyer owns `Mendaki gunung salak` (hendrarg, `/product/3d04eec5-…`);
+  token1 (hendrarg) owns geri's `Test New Ticket UI Nama` (`/product/985d8740-…`). Library cards
+  are not anchors — click the title text.
 - Event prices are written `Rp100.000 /per pax` on tiers (was `IDR100,000`), cart tier price `Rp10.000`.
 - A buyer who owns a seeded event needs the creator token on the buyer app; with the split
   accounts the buyer fixture (`anthony`) never owns hendrarg's or sundanese's events.
