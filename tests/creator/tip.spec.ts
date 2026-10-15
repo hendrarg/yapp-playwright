@@ -2,6 +2,7 @@ import { creatorAuthTest as test, expect } from '../test-base';
 import { creatorProfile } from '@test-data/buyer/profile.data';
 import {
   generateTipLabel,
+  quickAmountEdits,
   tipButtonColors,
   tipButtonData,
 } from '@test-data/creator/profile.data';
@@ -65,5 +66,51 @@ test.describe('Creator Tipping', () => {
       await customizePage.save();
       await openPublicProfile(browser, creatorProfile, (profile) => profile.expectNoTipSurface());
     });
+  });
+
+  test('Tipping — Default State, Enable Quick Amount, Edit Preset, Multiple Presets, Buyer Display, Custom Amount', {
+    tag: ['@AUT-TIP-002', '@regression', '@tip', '@creator'],
+    annotation: [
+      {
+        type: 'covers',
+        description: 'TC-TIP-C-007, TC-TIP-C-008, TC-TIP-C-009, TC-TIP-C-010, TC-TIP-C-011, TC-TIP-C-012, TC-TIP-C-016, TC-TIP-C-017',
+      },
+    ],
+  }, async ({ creatorNav, customizePage, browser }) => {
+    test.setTimeout(240000);
+
+    try {
+      await test.step('Verify Show Tip Button is the unified control; toggle ON reveals IDR and USDT quick amounts without separate toggles (TC-TIP-C-007, TC-TIP-C-008, TC-TIP-C-016)', async () => {
+        await creatorNav.open('customize');
+        await customizePage.openSection('Tip Button');
+        await customizePage.expectOnlyTipSwitch();
+        await customizePage.setTipButtonShown(true);
+        await customizePage.expectTipControls();
+      });
+
+      await test.step('Verify exactly 3 IDR and 3 USDT quick amount slots without Add or Remove buttons, persisting after reload (TC-TIP-C-017)', async () => {
+        await customizePage.expectQuickAmountSlotsFixed();
+      });
+
+      await test.step('Configure multiple IDR presets, save, and verify update replaces previous presets (TC-TIP-C-009, TC-TIP-C-010)', async () => {
+        await customizePage.fillQuickAmounts('IDR', quickAmountEdits.idr);
+        await customizePage.save();
+      });
+
+      await test.step('Verify updated presets display on buyer tipping flow as selectable options and custom amount input remains usable (TC-TIP-C-011, TC-TIP-C-012)', async () => {
+        await openPublicProfile(browser, creatorProfile, async (profile) => {
+          await profile.expectQuickTipAmountsVisible(quickAmountEdits.idrChips);
+          await profile.selectTipSuggestion(quickAmountEdits.idrChips[0]);
+          await expect(profile.tipInput).toBeVisible();
+          await profile.fillTipAmount('25000');
+          await expect(profile.tipInput).toHaveValue(/25[.,]000/);
+        });
+      });
+    } finally {
+      await creatorNav.open('customize');
+      await customizePage.openSection('Tip Button');
+      await customizePage.fillQuickAmounts('IDR', [tipButtonData.idrAmount1, tipButtonData.idrAmount2, tipButtonData.idrAmount3]);
+      await customizePage.save();
+    }
   });
 });

@@ -616,6 +616,13 @@ export class CustomizePage {
     await expect(this.quickAmounts("IDR")).toHaveCount(0);
   }
 
+  /** Exactly 3 quick amount inputs per currency with no add/remove buttons (TC-TIP-C-017). */
+  async expectQuickAmountSlotsFixed() {
+    await expect(this.quickAmounts("IDR")).toHaveCount(3);
+    await expect(this.quickAmounts("USDT")).toHaveCount(3);
+    await expect(this.workspace.getByRole("button", { name: /Add|Remove/i })).toHaveCount(0);
+  }
+
   async fillTipLabel(value: string) {
     await this.tipLabelInput.fill(value);
   }
