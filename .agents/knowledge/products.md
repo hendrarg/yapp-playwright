@@ -815,3 +815,12 @@ PRD: `projects/yapp/product-review - prd`. Digital Product only; an Online Cours
     - **Author chip icons:** Badge icon is hardcoded purple `#582AF0`.
     - **Stars:** Use neutral `fill-foreground` / black rather than theme primary or amber/gold.
 
+- **Theme and mobile fixes verified 2026-10-15 (DP-24 → DONE):** the review section now follows the
+  creator's theme — distribution bars (gradient), the `Write a review...` outline button, `Post
+  Review` and the icons use `customTheme.primaryColor` (seen as `rgb(240, 41, 41)` on geri's
+  `#F02929`), no longer the default `#582AF0`. On mobile (390×844) the PDP has a `Review` tab; the
+  `Write a review` bottom sheet sits at z-index 901 above the sticky Add To Cart / Purchase bar
+  (z 890), so `Post Review` is fully clickable, and its `Close` is a black circle with a white X.
+- **Ready-made review fixture:** geri's `Test 123` (`/geri/product/dOeMNMiMzH`) has 2 visible reviews
+  (4.5 · 2 Ratings), and **hendrarg bought it without reviewing** — token1 on the buyer app is an
+  eligible buyer there, no purchase needed. Never post a review with it (one per buyer, final).
