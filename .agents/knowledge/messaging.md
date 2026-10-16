@@ -31,8 +31,12 @@ test cases were written against, so check this before scoping a messaging TC.
 - **Messaging access is a 3-value radio policy** in the Messaging Settings modal —
   Everyone / Subscribers only / No one — saved instantly with no Save button via
   `PUT /api/v1/dm/settings`, where `accessPolicy` ∈
-  `followers_and_subscribers | subscriber_only | none`. The inbox header's "Allow for
-  subscribers only" switch is a lossy 2-state view of the same setting.
+  `followers_and_subscribers | subscriber_only | none`. The settings button has the stable DOM id
+  `#messages-settings-button`. The inbox header's "Allow for subscribers only" switch is a lossy
+  2-state view of the same setting.
+- **Conversation list and options:** Conversation items are housed in `.overflow-y-auto > div:not(.h-px)`
+  on the Chat tab. Selecting an item opens the conversation thread; the header 3-dot menu exposes
+  `Add Mark Badge` (or `Edit Mark Badge`), `Report User`, `Block User`, and `Delete`.
 - **Attachment menu** (identical in the DM and broadcast composers): Link Product,
   Link Campaign, Request Tip, Link Post, Media, Link Membership. Tipping is a "Tip
   Request" with 10K/25K/50K presets rendering a card CTA `Send Tip IDR <amount>`. The
