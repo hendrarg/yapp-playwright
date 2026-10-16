@@ -334,6 +334,10 @@ export class FeedsPage {
 
   readonly publishDraftDialog = this.page.getByRole("dialog", { name: labels.publishDraftDialog });
 
+  async expectDraftContent(content: string) {
+    await expect(this.publishDraftDialog.getByRole("textbox")).toHaveValue(content);
+  }
+
   async expectResumedDraft(content: string, productTitle: string, images: number) {
     await expect(this.publishDraftDialog.getByRole("textbox")).toHaveValue(content);
     await expect(this.publishDraftDialog).toContainText(productTitle);

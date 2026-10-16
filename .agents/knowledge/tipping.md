@@ -77,6 +77,10 @@ panel is a doorway, the page is the gate. A report that the panel took a sub-min
 **expected**, because entering the page is not the same as submitting a tip. Verify the
 minimum on `/<handle>/tip`, never on the profile panel preview.
 
+## Desktop panel vs mobile tab rendering
+
+Verified 2026-10-16 (`AUT-TIP-012`). On desktop (`>= 768px`), tipping is displayed as a persistent right-hand column card titled "Support <creator handle/name>" with currency toggle, quick amounts, and tip form inputs. On mobile (`< 768px`), the right-hand panel is hidden, and tipping is accessible via the 5th profile tab labelled "Tip" (with dollar icon `$`). Switching tabs retains form interactivity and does not trigger hydration errors or unexpected routing.
+
 ## `Show Tip Button` off does not close `/<handle>/tip` (TIP-6, open — retested 2026-10-15)
 
 Turning the switch off (`PUT /accounts/tip-button`, `isTipButton:false`) only removes the entry

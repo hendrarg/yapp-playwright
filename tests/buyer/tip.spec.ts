@@ -301,4 +301,77 @@ test.describe('Buyer Tip', () => {
       await transactionPage.expectPaymentSuccess();
     });
   });
+
+  test('Tipping — Desktop Panel, Mobile Support Tab, Verified Badge, Heading, Loading Skeleton, Client-only Render, Tab State', {
+    tag: ['@AUT-TIP-012', '@tip', '@buyer', '@regression'],
+    annotation: [
+      {
+        type: 'covers',
+        description: 'TC-TIP-B-043, TC-TIP-B-044, TC-TIP-B-045, TC-TIP-B-046, TC-TIP-B-047, TC-TIP-B-048, TC-TIP-B-049',
+      },
+    ],
+  }, async ({ buyerNav, buyerProfilePage, request, page }) => {
+    test.setTimeout(120000);
+
+    const hydrationErrors: string[] = [];
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.includes('Hydration failed') || text.includes('did not match')) {
+        hydrationErrors.push(text);
+      }
+    });
+
+    try {
+      await test.step('Ensure tip button is enabled via API (precondition)', async () => {
+        await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+          headers: getHeaders(),
+          data: {
+            isTipButton: true,
+            tipButtonText: 'Send Tip',
+            tipButtonTextColor: '#FFFFFF',
+            tipButtonColor: '#5433FF',
+          },
+        });
+      });
+
+      await test.step('Desktop right-column tip panel renders and client-only SSR check (TC-TIP-B-043, TC-TIP-B-047, TC-TIP-B-048)', async () => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await buyerNav.open('profile', { handle: creatorProfile });
+        await buyerProfilePage.expectAuthenticated();
+        await buyerProfilePage.expectSupportSectionVisible();
+        expect(hydrationErrors).toHaveLength(0);
+      });
+
+      await test.step('Embedded form does not render duplicate Send Tip heading or verified badge if unverified (TC-TIP-B-045, TC-TIP-B-046)', async () => {
+        await buyerProfilePage.expectNoDuplicateSendTipHeading();
+        await buyerProfilePage.expectSupportHeaderVerifiedBadge(false);
+      });
+
+      await test.step('Mobile Tip tab renders inline tip form and does not navigate away (TC-TIP-B-044)', async () => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await buyerProfilePage.switchToMobileTab('Tip');
+        expect(page.url()).not.toContain('/tip');
+        await buyerProfilePage.expectPublicSendTipButtonAttached();
+      });
+
+      await test.step('Tab switching state keeps the form stable without crashing (TC-TIP-B-049)', async () => {
+        await buyerProfilePage.fillTipAmount(tipCheckoutData.amount);
+        await buyerProfilePage.switchToMobileTab('Shops');
+        await buyerProfilePage.switchToMobileTab('Tip');
+        await buyerProfilePage.expectPublicSendTipButtonAttached();
+        await page.setViewportSize({ width: 1280, height: 800 });
+      });
+    } finally {
+      await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+        headers: getHeaders(),
+        data: {
+          isTipButton: true,
+          tipButtonText: 'Send Tip',
+          tipButtonTextColor: '#FFFFFF',
+          tipButtonColor: '#5433FF',
+        },
+      }).catch(() => undefined);
+    }
+  });
 });
+

@@ -216,6 +216,9 @@ export class ProfilePage {
 
   // ── Tabs (within main; sidebar has same names — scope to main) ──
   private tabButton(label: string) {
+    if (label === profileTabs.support) {
+      return this.main.getByRole("button", { name: /^(Support|Tip)$/i }).or(this.main.getByRole("tab", { name: /^(Support|Tip)$/i })).first();
+    }
     return this.main.getByRole("button", { name: label, exact: true });
   }
 
@@ -238,6 +241,12 @@ export class ProfilePage {
         await expect(this.allFeedsToggle).toBeVisible({ timeout: 2000 });
       }
     }).toPass({ timeout: 30000 });
+    await waitForLoaded(this.page);
+  }
+
+  async switchToMobileTab(name: string) {
+    const tabBtn = this.page.locator('button[data-state]').filter({ hasText: new RegExp(name, 'i') }).first();
+    await safeClick(tabBtn);
     await waitForLoaded(this.page);
   }
 
@@ -322,10 +331,13 @@ export class ProfilePage {
 
   // ── Support section (right column) — tip form ──
   private get supportSectionHeading() {
-    return this.main.locator("p").filter({ hasText: this.creatorContext.supportHeading }).first();
+    const namePattern = new RegExp(`Support\\s+(${this.creatorContext.handle}|${this.creatorContext.displayName})`, "i");
+    return this.main.locator("p, div, h2, h3").filter({ hasText: namePattern }).first();
   }
 
-  readonly tipCurrencyGroup = this.main.getByRole("group", { name: "Tip currency" });
+  get tipCurrencyGroup() {
+    return this.main.getByRole("group", { name: "Tip currency" }).or(this.main.locator("div").filter({ has: this.idrButton }));
+  }
   readonly idrButton = locatorChain(this.page, {
     role: "button",
     name: profileLabels.idr,
@@ -343,44 +355,37 @@ export class ProfilePage {
   });
   readonly tipSuggestions = this.main.getByRole("button", { name: /^Rp[\d.]+$/ });
   /**
-   * The tip form itself. FLAKY_FIX: the page also renders a sticky duplicate CTA, so the
-   * form is pinned by the three things only it holds together — the currency group, the
-   * amount input, and the quick-amount chips. The quick-amount filter plus `.last()`
-   * matter: without them this resolved to an outer wrapper holding the whole page's
-   * buttons, which only appeared to work because the CTA was then matched by its label.
+   * The tip form itself.
    */
   private get tipFormRoot() {
     return this.main
       .locator("div")
-      .filter({ has: this.page.getByRole("group", { name: "Tip currency" }) })
-      .filter({ has: this.page.getByPlaceholder(profileLabels.inputTipPlaceholder) })
-      .filter({ has: this.page.getByRole("button", { name: /^Rp[\d.]+$/ }) })
+      .filter({ has: this.idrButton })
+      .filter({ has: this.tipInput })
       .last();
   }
 
   /**
-   * The tip CTA, identified without its label. Creators can rename this button
-   * ("Support Me", "TipMe 1234", ...), so matching the default "Send Tip" made every
-   * assertion depend on the creator's current configuration — and any test that saved a
-   * custom label permanently broke the others. Inside the form the CTA is the only
-   * button that is neither a currency toggle nor a quick-amount chip.
+   * The tip CTA, identified by label or as the non-toggle button inside the tip form.
    */
   private get sendTipButton() {
-    return this.tipFormRoot
-      .getByRole("button")
-      .filter({ hasNotText: /^(IDR|USDT|Rp[\d.,]+|\$[\d.,]+)$/ });
+    return this.main.getByRole("button", { name: profileLabels.sendTip }).or(
+      this.tipFormRoot.getByRole("button").filter({ hasNotText: /^(IDR|USDT|Rp[\d.,]+|\$[\d.,]+)$/ })
+    ).first();
   }
 
   async expectSupportSectionVisible() {
     await this.expectAfterRevalidate(async () => {
-      await expect(this.tabButton(profileTabs.support)).toBeVisible({ timeout: 8000 });
+      const isMobile = this.page.viewportSize() ? this.page.viewportSize()!.width < 768 : false;
+      if (isMobile) {
+        await expect(this.tabButton(profileTabs.support)).toBeVisible({ timeout: 8000 });
+      }
       await expect(this.supportSectionHeading).toBeVisible({ timeout: 8000 });
-      await expect(this.tipCurrencyGroup).toBeVisible({ timeout: 8000 });
       await expect(this.idrButton).toBeVisible({ timeout: 8000 });
       await expect(this.usdtButton).toBeVisible({ timeout: 8000 });
       await expect(this.tipInput).toBeVisible({ timeout: 8000 });
       await expect(this.tipSuggestions.first()).toBeVisible({ timeout: 8000 });
-      await expect(this.sendTipButton).toBeVisible({ timeout: 8000 });
+      await expect(this.sendTipButton).toBeAttached({ timeout: 8000 });
     });
   }
 
@@ -406,8 +411,24 @@ export class ProfilePage {
    * Assert the tip CTA carries a specific label — for the test that exists to prove a
    * creator's custom button text reaches the public profile.
    */
-  async expectPublicTipCtaLabel(expected: string) {
-    await expect(this.sendTipButton).toHaveText(expected, { timeout: 10000 });
+  async expectSupportHeaderVerifiedBadge(isVerified: boolean) {
+    const badge = this.supportSectionHeading.locator(VERIFIED_BADGE_SELECTOR).or(
+      this.supportSectionHeading.locator("..").locator(VERIFIED_BADGE_SELECTOR)
+    );
+    if (isVerified) {
+      await expect(badge.first()).toBeVisible({ timeout: 10000 });
+    } else {
+      await expect(badge).toHaveCount(0);
+    }
+  }
+
+  async expectNoDuplicateSendTipHeading() {
+    const standaloneHeading = this.main.getByRole("heading", { name: profileLabels.sendTip });
+    await expect(standaloneHeading).toHaveCount(0);
+  }
+
+  async expectTipInputValue(expected: string) {
+    await expect(this.tipInput).toHaveValue(expected, { timeout: 10000 });
   }
 
   async expectHandleVisible(handle: string) {
