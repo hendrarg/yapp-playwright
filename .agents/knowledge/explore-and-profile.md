@@ -372,21 +372,82 @@ returns **500** `you changed your username recently, you can change it again in 
 that changes a username must reset `username_changed_at` (DB fixture) to put the old one back —
 learned the hard way on 2026-10-05, when a probe left the buyer renamed until a DB restore.
 
-## Planned: profile layouts v2.1 (PRD, not yet on dev as of 2026-10-16)
+## Profile layouts v2.1 — Blocks, tipping on the profile, Custom HTML (live on dev 2026-10-16)
 
-[[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]] replaces this area. Page layout becomes
-**Default / Simple / Blocks**. Blocks turns My Page into one autosaved block list with groups, plus a
-`Send Tip` button that goes to `/tip`. The public **Support tab and supporter list go away**, replaced by an
-inline form on desktop and a **Tip** tab on mobile. A **Custom HTML** menu is added, and nothing in it goes
-live without admin approval. Most of the facts in this note survive that change. These do not:
+Shipped per [[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]]; the visual source is Figma *Yapp 2.0*
+(REVAMP BUYER / CREATOR SIDE). Where dev, Figma and PRD disagree, the PRD note's *Catatan QA* lists it.
 
-- the Support tab
-- the `No links yet.` exception for empty tabs
-- the per-row hide switch, which Blocks drops
-- the Simple layout having no tip surface
+**PM rulings, 2026-10-16 — these override the PRD text:** seeding takes Links only; new products enter
+Blocks only through the picker; the per-block hide switch stays; a published Custom HTML replaces the
+**whole** profile (only its "appears below your profile" copy is wrong); Blocks with nothing visible shows
+"Nothing here yet" + the `Send Tip` **button only**; Simple keeps tipping as a Tip tab (the side form is
+Default only); the Switch layout dialog uses the PRD/dev copy on **every** layout change; unsafe Custom HTML is
+refused at Save draft; `isSupportPrivate` stays for later use; keyboard reorder is minor (it does work, but
+only as Space → arrow → Space — plain ↑/↓ do nothing, which is why it looks broken).
 
-Treat this note as describing current behaviour until the browser shows the new layout. When it does,
-rewrite the affected sections. The PRD note's *Catatan QA* lists every conflict.
+**The Customize preview goes stale on Blocks.** It shows "Nothing here yet. You can still show your support
+with a tip." + the full form while the list holds visible blocks (hendrarg, abc12); reordering a block
+refreshes it (PM, 2026-10-16). Likely cause: the preview reads public `GET /account/{uuid}/blocks`, which
+answers **404 `blocks_not_enabled`** while the saved layout is not Blocks, and is not refetched after Save.
+So the full-form empty state seen there is this staleness, not the real empty state. A long display name
+without spaces (abc12, 57 chars) widens the Blocks header past the preview frame.
+
+**Layout choice.** Theme → `radiogroup "Profile layout"`: Default ("Your content in tabs, with a tip card on
+the side."), Simple ("One section stays on the left; the rest are tabs."), Blocks ("Stack links, products and
+posts in any order."). Picking Blocks shows "Build and arrange this layout in My Page." + `Open My Page →`.
+The **first** Save to Blocks raises alertdialog `Switch layout?` ("Blocks changes how My Page works…" /
+"Seeded from your current page.", Cancel / Switch layout). `PUT /accounts/profile-customization` carries
+`profileLayoutPreference: "blocks"`; the response and the public
+`GET /account/username/{u}/profile-customization` add `blocksSeeded` and `hasPublishedCustomHtml`.
+
+**Blocks API.** Owner `GET /accounts/blocks` → `{blocks:[{uuid, kind: link|product|group, position,
+parentUuid, displayStyle, isNew, isComplete, link|product|title+children}], customOrder, seeded}`; public
+`GET /account/{uuid}/blocks` (404 until seeded, hidden blocks and empty groups left out). Add
+`POST /accounts/blocks {kind, refId, parentUuid}` (new block lands at position 1 with `isNew`); reorder
+`PUT /accounts/blocks/arrangement {items:[{uuid,parentUuid}]}` (sets `customOrder`); delete a group
+`DELETE /accounts/blocks/{uuid}`. A nested group is refused server-side: **400 `nested_group`**.
+
+**Seeding runs once and takes only the Links list** (2026-10-16, hendrarg): 5 links + the folder as a
+`group` (style list) — the campaign row stays `kind: link` with `linkType: campaign`. **No Product, Feeds or
+Membership blocks are seeded**, and a product created later (on any layout) is never auto-added; it enters
+Blocks only through Add Block → Products ("A newly created product is added from this picker afterwards.").
+Text/link rows created on Default *do* join, at the top with NEW when `customOrder` is true. Blocks →
+Default → Blocks restores the arrangement exactly; `blocksSeeded` stays true, so **first-switch seeding can
+be observed only once per account** — a test needs a fresh creator or a DB reset of `profile_blocks`.
+Groups are their own rows: deleting the group leaves the original Links folder in place.
+
+**My Page on Blocks.** Tabs disappear; `Add Block` opens `Add New Block` (search box "Paste a link or
+search...", categories Suggested / Products / Memberships / Appointments / Social / Text & posts, tiles
+Folder / Link / Campaign / Text). Rows: `Drag to reorder block` handle, a switch named by its action
+(`Hide from your page` ↔ `Show on your page`; hidden rows dim and leave the public page), `Block actions`
+(Edit, Delete). Keyboard reorder is dnd-kit style — **Space, arrow, Space**, plain arrows do nothing — and
+announces "Moving. position N of M." / "Dropped <title>.". Delete always removes the item itself: a Product
+block → `DELETE /shop/products/{uuid}` ("This deletes the product itself."), a link/text →
+`DELETE /accounts/link/{id}`; a group delete keeps its children ("The N blocks inside stay on your page.").
+Never delete a fixture product's block in a test. Positions are not renumbered after a delete.
+
+**Public pages.** Blocks: centred header with Subscribe / Direct Message / Follow, then `Send Tip`
+(→ `/<username>/tip`), then the blocks; campaigns render as the campaign carousel. Default desktop: content
+tabs on the left, form `Support <username>` on the right, **no Support tab, no supporter rows**. Default
+mobile: `Send Tip` under the bio and icon tabs Shops / Links / Feeds / Memberships / Tip — only the active tab
+has a text label. Simple desktop: Links column on the left, tabs Shops / Feeds / Membership / Tip on the right
+(no `main` landmark). A Telegram Membership block shows **Free / Rp0** because both `blocks` and `products`
+payloads send `price: 0` for it; the Shops card gets Rp50.000 elsewhere.
+
+**Custom HTML** (`/customize/custom-html`). Landing "Write your own section — … It appears below your
+profile." with steps Write / Review / Live; Publish, Discard and Unpublish live on that landing, not in the
+editor. Editor: HTML/CSS tabs, `<n> / 204,800 bytes`, placeholders `{{name}} {{username}} {{bio}}
+{{avatarUrl}} {{profileUrl}} {{tipUrl}}` (`{{name}}` renders empty for hendrarg, whose name is blank).
+Endpoints `GET /accounts/profile-custom-html`, `POST …/preview`, `PUT …/draft`, `POST …/submit`,
+`…/publish`, `…/unpublish`; public `GET /account/username/{u}/custom-html` → a full `document` with a
+nonce CSP. Unsafe markup (`<script>`, `on*=`, `javascript:`, `<form>`, `<input>`, `<iframe>`) is refused
+with **422** and a per-index problem list — even on Save draft. **On dev every submission is approved
+instantly, on purpose** (dev team, 2026-10-16: auto-approve so testing goes faster; `reviewed_by_user_id`
+NULL, `reviewed_at = submitted_at` in `profile_custom_html_versions`, since ~13:15 WIB that day). So Pending
+review, Withdraw and Reject cannot be exercised on dev — do not file the instant approval as a bug. A published page **replaces the
+whole profile, header and Send Tip included**, inside an `iframe srcdoc` with
+`sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"`
+(no `allow-same-origin`). The first public view after Publish can still be the old render (revalidate lag).
 
 ## Customize: the My Page editor (re-verified 2026-10-12)
 

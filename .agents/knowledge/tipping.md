@@ -195,12 +195,13 @@ which is why it cannot be found in the UI. Whether the creator themselves (owner
 still sees their own supporters while the flag is on was **not** verified — no token for a
 private creator was available; only the visitor view was checked.
 
-> [!warning] Planned change (PRD v2.1, not yet on dev as of 2026-10-16)
-> [[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]] removes the public Support tab and its
-> supporter list on every layout, but keeps the data in the backend. Default and Simple get the full tip
-> form beside the content on desktop. On mobile they get a **Tip** tab plus a tip button. Blocks gets a
-> `Send Tip` button that goes to `/tip`. Old Support links land on the profile instead of returning 404.
-> The two sections below describe current behaviour until that ships.
+> [!warning] Superseded on dev 2026-10-16 (PRD v2.1)
+> [[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]] is live: there is **no public Support tab and no
+> supporter list** on any layout. Default desktop shows `Support <username>` beside the content; Default
+> mobile shows `Send Tip` plus a last **Tip** tab holding the form; Simple has a Tip tab; Blocks has only a
+> `Send Tip` button → `/<username>/tip`. So `isSupportPrivate` no longer changes anything visible, and the
+> mobile-missing-list defect (TIP-5) is now the intended behaviour. The two sections below are history.
+> Details: [[projects/yapp/knowledge/explore-and-profile|explore-and-profile]] → *Profile layouts v2.1*.
 
 ## The Support tab exists only while the Tip Button is on — turning it off removes the supporter list too
 
