@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, explore-and-profile]
 project: yapp
 created: 2026-09-04
-updated: 2026-10-14
+updated: 2026-10-16
 sources: 0
 status: active
 ---
@@ -371,6 +371,22 @@ is on screen. An earlier run of the same flow rendered the app layout, which doe
 returns **500** `you changed your username recently, you can change it again in 23 hours…`. A test
 that changes a username must reset `username_changed_at` (DB fixture) to put the old one back —
 learned the hard way on 2026-10-05, when a probe left the buyer renamed until a DB restore.
+
+## Planned: profile layouts v2.1 (PRD, not yet on dev as of 2026-10-16)
+
+[[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]] replaces this area. Page layout becomes
+**Default / Simple / Blocks**. Blocks turns My Page into one autosaved block list with groups, plus a
+`Send Tip` button that goes to `/tip`. The public **Support tab and supporter list go away**, replaced by an
+inline form on desktop and a **Tip** tab on mobile. A **Custom HTML** menu is added, and nothing in it goes
+live without admin approval. Most of the facts in this note survive that change. These do not:
+
+- the Support tab
+- the `No links yet.` exception for empty tabs
+- the per-row hide switch, which Blocks drops
+- the Simple layout having no tip surface
+
+Treat this note as describing current behaviour until the browser shows the new layout. When it does,
+rewrite the affected sections. The PRD note's *Catatan QA* lists every conflict.
 
 ## Customize: the My Page editor (re-verified 2026-10-12)
 

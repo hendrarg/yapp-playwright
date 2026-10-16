@@ -840,3 +840,11 @@ PRD: `projects/yapp/product-review - prd`. Digital Product only; an Online Cours
 - **Ready-made review fixture:** geri's `Test 123` (`/geri/product/dOeMNMiMzH`) has 2 visible reviews
   (4.5 · 2 Ratings), and **hendrarg bought it without reviewing** — token1 on the buyer app is an
   eligible buyer there, no purchase needed. Never post a review with it (one per buyer, final).
+
+## Buyer Library (`/dashboard/library`)
+
+Verified 2026-10-16. The buyer's purchased products live at `/dashboard/library` (the legacy `/library` route returns 404).
+
+- **Category chips and skeleton states:** Category filter chips (`All`, `Events & Tickets`, `Digital Download`, etc.) update the query parameter `?product_type=...`. While loading cards, the grid renders placeholders with `data-slot="skeleton"`. Tests must wait for `[data-slot="skeleton"]` to detach before clicking cards, otherwise clicks hit the disappearing skeleton element.
+- **Card DOM structure:** Loaded purchase cards have `data-slot="card"` with `cursor-pointer`, containing an `img` thumbnail, a `.product-type-badge` chip, an `<h3>` title, purchase date, and creator avatar badge.
+- **Event ticket detail view:** Clicking an event ticket card navigates to `/product/{order_or_product_uuid}` exposing `Overview`, `Ticket`, and `About Creator` tabs. Under the `Ticket` tab, `Share` and `Scan` buttons are available (no transfer button). `Scan` opens a modal dialog rendering the QR SVG, ticket code (`YAPP-...`), and check-in status (`Pending`).

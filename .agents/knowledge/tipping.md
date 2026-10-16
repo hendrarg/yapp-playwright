@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, tipping]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-28
+updated: 2026-10-16
 sources: 0
 status: active
 ---
@@ -194,6 +194,13 @@ Domain — neither mentions privacy of support. The field therefore looks API/le
 which is why it cannot be found in the UI. Whether the creator themselves (owner view)
 still sees their own supporters while the flag is on was **not** verified — no token for a
 private creator was available; only the visitor view was checked.
+
+> [!warning] Planned change (PRD v2.1, not yet on dev as of 2026-10-16)
+> [[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]] removes the public Support tab and its
+> supporter list on every layout, but keeps the data in the backend. Default and Simple get the full tip
+> form beside the content on desktop. On mobile they get a **Tip** tab plus a tip button. Blocks gets a
+> `Send Tip` button that goes to `/tip`. Old Support links land on the profile instead of returning 404.
+> The two sections below describe current behaviour until that ships.
 
 ## The Support tab exists only while the Tip Button is on — turning it off removes the supporter list too
 

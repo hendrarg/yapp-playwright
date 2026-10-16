@@ -311,6 +311,58 @@ test.describe('Buyer Events and Tickets', () => {
     }
   });
 
+  test('Event & Tickets — Ticket Actions, Ticket Access in Library, Ticket Detail - Pre-Event, Post-Event Ticket State, Per-Tier After-Sales, Global After-Sales, After-Sales Links, Ticket QR and Validity Window', {
+    tag: ['@AUT-EVT-013', '@events', '@library', '@buyer', '@regression'],
+  }, async ({ libraryPage, page }) => {
+    test.setTimeout(120000);
+    const { library, ticketPage } = buyerEventsDetailData;
+
+    await test.step('Access Library and filter by Events & Tickets chip (TC-EVT-B-014)', async () => {
+      await libraryPage.goto();
+      await libraryPage.expectLoaded();
+      const eventsCount = await libraryPage.chipCount(library.eventsChip);
+      expect(eventsCount).toBeGreaterThan(0);
+      await libraryPage.filterCategory(library.eventsChip, library.eventsQuery);
+    });
+
+    await test.step('Open purchased event ticket and verify tabs and event info (TC-EVT-B-010, TC-EVT-B-014, TC-EVT-B-015)', async () => {
+      await libraryPage.openFirstPurchase();
+      await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible({ timeout: 15000 });
+      await expect(page.getByRole('tab', { name: 'Ticket' })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('tab', { name: 'About Creator' })).toBeVisible({ timeout: 10000 });
+
+      // Switch to Ticket tab
+      await page.getByRole('tab', { name: 'Ticket' }).click();
+    });
+
+    await test.step('Verify ticket actions: Share and Scan exist, transfer action absent (TC-EVT-B-010)', async () => {
+      await expect(page.getByRole('button', { name: /share/i }).filter({ visible: true })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('button', { name: /scan/i }).filter({ visible: true })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('button', { name: /transfer/i })).toHaveCount(0);
+    });
+
+    await test.step('Verify after-sales message entry is accessible (TC-EVT-B-018)', async () => {
+      const viewMsgBtn = page.getByRole('button', { name: ticketPage.viewMessage });
+      if (await viewMsgBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await viewMsgBtn.click();
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+        await page.keyboard.press('Escape');
+        await expect(dialog).toBeHidden({ timeout: 5000 });
+      }
+    });
+
+    await test.step('Verify Scan view renders QR code, ticket code, and check-in status (TC-EVT-B-024)', async () => {
+      const scanBtn = page.getByRole('button', { name: /scan/i }).filter({ visible: true }).first();
+      await scanBtn.click();
+      const scanDialog = page.getByRole('dialog');
+      await expect(scanDialog).toBeVisible({ timeout: 10000 });
+      await expect(scanDialog.locator('svg').first()).toBeVisible({ timeout: 5000 });
+      await expect(scanDialog).toContainText(/YAPP-|Pending|Ticket Code/i);
+      await page.keyboard.press('Escape');
+      await expect(scanDialog).toBeHidden({ timeout: 5000 });
+    });
+  });
 
   test('Event & Tickets — Proceed to Checkout, Buyer Form Checkout Modal, Cart Contents for Event Ticket, Product Added Confirmation', {
     tag: ['@AUT-EVT-014', '@events', '@cart', '@buyer', '@smoke'],

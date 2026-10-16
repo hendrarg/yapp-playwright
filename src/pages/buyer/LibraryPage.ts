@@ -64,14 +64,27 @@ export class LibraryPage {
   }
 
   /** Pick a category chip: the URL carries its product_type and the list shows the purchase. */
-  async filterCategory(label: string, query: string, expectTitle: string) {
+  async filterCategory(label: string, query: string, expectTitle?: string) {
     await safeClick(this.page.getByRole("button", { name: new RegExp(`^${label}`) }));
     await expect(this.page).toHaveURL(new RegExp(query), { timeout: 15000 });
-    await expect(this.page.getByText(expectTitle).first()).toBeVisible({ timeout: 15000 });
+    await this.page.locator('[data-slot="skeleton"]').first().waitFor({ state: "detached", timeout: 15000 }).catch(() => undefined);
+    if (expectTitle) {
+      await expect(this.page.getByText(expectTitle).first()).toBeVisible({ timeout: 15000 });
+    }
   }
 
   async openPurchase(title: string) {
     await safeClick(this.page.getByText(title).first());
+    await this.page.waitForURL(/\/product\/[0-9a-f-]{36}/, { timeout: 20000 });
+    await waitForLoaded(this.page);
+  }
+
+  async openFirstPurchase() {
+    await this.page.locator('[data-slot="skeleton"]').first().waitFor({ state: "detached", timeout: 15000 }).catch(() => undefined);
+    const card = this.page.locator('[data-slot="card"]').filter({ has: this.page.locator("img") }).first();
+    await expect(card).toBeVisible({ timeout: 15000 });
+    const titleOrCard = card.locator("h3, [title]").first();
+    await safeClick(titleOrCard);
     await this.page.waitForURL(/\/product\/[0-9a-f-]{36}/, { timeout: 20000 });
     await waitForLoaded(this.page);
   }
