@@ -574,6 +574,7 @@ export interface CreateDiscordMembershipOptions {
   title: string;
   description: string;
   thumbnailImagePath: string;
+  imagePaths?: string[];
   price?: number;
   status?: ProductStatus;
   thankYouNote?: string;
@@ -630,6 +631,9 @@ export async function createDiscordMembershipProduct(
   const headers = getCreatorHeaders(token);
   const link = await linkedDiscordMembership(request, options.serverName ?? "Hendra's server", token);
   const thumbnail = await uploadFile(request, { filePath: options.thumbnailImagePath, token, headers });
+  const galleryUploads = await Promise.all(
+    (options.imagePaths ?? []).map((filePath) => uploadFile(request, { filePath, token, headers })),
+  );
   const price = options.price ?? 0;
   const response = await request.post(apiUrl('/api/v1/shop/products'), {
     headers,
@@ -637,7 +641,13 @@ export async function createDiscordMembershipProduct(
       title: options.title,
       description: options.description,
       thumbnailImage: thumbnail.uploadId,
-      productImages: [],
+      productImages: galleryUploads.map((upload) => ({
+        title: '',
+        description: '',
+        feedAssetType: 'image',
+        url: upload.uploadId,
+        uuid: '',
+      })),
       isSetPrice: price > 0,
       price,
       isSetDiscount: false,

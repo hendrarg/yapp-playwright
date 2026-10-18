@@ -598,4 +598,68 @@ test.describe('Creator Digital Product', () => {
       }
     }
   });
+
+  test('Product Digital — Description Counter Unit, Limited Slot, Flexible Price, Step 1 Gate, Content Rendering', {
+    tag: ['@AUT-PD-007', '@products', '@creator', '@regression'],
+    annotation: [
+      { type: 'issue', description: 'M-26' },
+      { type: 'issue', description: 'M-39' },
+    ],
+  }, async ({ digitalProductPage, onlineCoursePage, productPurchasePage, page }) => {
+    test.setTimeout(300000);
+    test.fail(true, 'M-26 / M-39: word counter, entitlement media embed');
+    const request = page.request;
+    const titles: string[] = [];
+
+    try {
+      await test.step('Step 1 requires Upload Files or Embed Links before proceeding to details', async () => {
+        await digitalProductPage.goto();
+        await digitalProductPage.expectDigitalProductCreateFlow();
+        await digitalProductPage.fillDigitalProductContentDescription(generateDigitalProductDescription());
+        await digitalProductPage.submitEmptyDigitalProductAddContent();
+        await digitalProductPage.expectContentTypeRequired();
+      });
+
+      await test.step('Content Description counter counts characters, not words', async () => {
+        const probeText = 'one two three four five'; // 23 characters, 5 words
+        await digitalProductPage.fillDigitalProductContentDescription(probeText);
+        // Known bug M-26: displays '5 / 500' instead of '23 / 500'
+        await digitalProductPage.expectDigitalProductContentDescriptionCounterSoft(`${probeText.length} / 500`);
+      });
+
+      await test.step('Limited Slot configuration enables slots count and remaining count display', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        await digitalProductPage.enableLimitedSlots(10);
+        const sharePath = await publish(onlineCoursePage);
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectSlotCounter(0, 10);
+      });
+
+      await test.step('Flexible Price configuration allows setting minimum fair price', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        await digitalProductPage.enableFlexiblePrice('15000');
+        await digitalProductPage.expectFlexiblePriceCryptoOption();
+      });
+
+      await test.step('Rich-text embed in description renders media player', async () => {
+        const title = generateDigitalProductTitle();
+        titles.push(title);
+        await reachDetails(digitalProductPage, onlineCoursePage, title);
+        const descWithEmbed = `${generateDigitalProductDescription()}\n\n::youtube{#NRZjdBdQ9ow}`;
+        await onlineCoursePage.fillDescription(descWithEmbed);
+        const sharePath = await publish(onlineCoursePage);
+        await productPurchasePage.gotoSharePath(sharePath);
+        await productPurchasePage.expectYoutubeEmbedRendered('NRZjdBdQ9ow');
+      });
+    } finally {
+      for (const title of titles) {
+        const product = await findProductByTitle(request, title).catch(() => undefined);
+        if (product) await deleteProduct(request, product.uuid).catch(() => undefined);
+      }
+    }
+  });
 });

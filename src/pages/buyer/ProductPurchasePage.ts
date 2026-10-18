@@ -1783,4 +1783,45 @@ export class ProductPurchasePage {
     expect(value, `${label} must contain an IDR amount`).toBeTruthy();
     return Number(value!.replaceAll('.', ''));
   }
+
+  /** Embedded video directive (e.g. ::youtube) rendered as an iframe embed on product page. */
+  async expectYoutubeEmbedRendered(videoId: string) {
+    const iframe = locatorChain(this.page, {
+      selector: `iframe[src*="youtube.com/embed/${videoId}"], iframe[src*="${videoId}"]`,
+    });
+    await expect(iframe.first()).toBeVisible({ timeout: 15000 });
+  }
+
+  /** Discord Membership product details on buyer page (TC-DM-B-001). */
+  async expectDiscordMembershipProductDetails(options: {
+    title: string;
+    description: string;
+    pricePattern?: RegExp;
+    creatorName: string;
+  }) {
+    await expect(this.page.getByRole('main').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByText(options.title, { exact: false }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByText(options.description, { exact: false }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByText(options.creatorName, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    if (options.pricePattern) {
+      await expect(this.page.getByText(options.pricePattern).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    }
+    await expect(this.page.getByText('Discord Membership', { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+    await expect(this.page.getByRole('tab', { name: 'Overview' }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole('tab', { name: 'About Creator' }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole('button', { name: /^(?:Purchase|Join|Get Product)$/ }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(this.page.getByRole('button', { name: 'Add To Cart', exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Single image product renders no carousel controls (TC-DM-B-027). */
+  async expectSingleImageNoCarouselControls() {
+    await expect(this.page.getByRole('button', { name: /^Go to slide \d+$/ })).toHaveCount(0);
+    await expect(this.page.getByRole('button', { name: 'Next slide' })).toHaveCount(0);
+    await expect(this.page.getByRole('button', { name: 'Previous slide' })).toHaveCount(0);
+  }
+
+  /** Duration display check for subscription product (TC-DM-B-018, known bug M-07). */
+  async expectDiscordDurationShown() {
+    await expect.soft(this.page.getByText(/\b(?:1\s*Month|30\s*Days?|\d+\s*(?:Month|Day)s?|Duration)\b/i).filter({ visible: true }).first()).toBeVisible({ timeout: 5000 });
+  }
 }

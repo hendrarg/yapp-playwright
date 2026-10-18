@@ -1,9 +1,12 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { baseURL } from '@config/env';
 import { apiUrl, getHeaders } from '@helpers/api/client';
-import { deletePost } from '@helpers/api/post';
+import { createComment, createPost, deletePost, getMyPosts, getPost, getPostEngagement, likePost } from '@helpers/api/post';
 import { loginWithToken } from '@helpers/auth/token-login';
+import { FeedsPage as BuyerFeedsPage } from '@pages/buyer/FeedsPage';
 import { ProfilePage } from '@pages/buyer/ProfilePage';
+import { memberTierFixture } from '@test-data/buyer/feeds.data';
+import { generatePostContent, scheduleTimeAhead, testImages } from '@test-data/creator/post.data';
 import { testAccounts } from '@test-data/users';
 
 test.describe('Creator Membership', () => {
@@ -79,6 +82,94 @@ test.describe('Creator Membership', () => {
         if (creatorToken && id) await deletePost(page.request, id, creatorToken).catch(() => undefined);
       }
       await buyerContext.close();
+    }
+  });
+
+  test('Membership — Schedule Membership Post, Edit Membership Post, Delete Membership Post, Engagement', {
+    tag: ['@AUT-MEM-003', '@membership', '@creator', '@regression'],
+  }, async ({ creatorFeedsPage, page, browser }) => {
+    test.setTimeout(600000);
+    const creatorToken = process.env[testAccounts.creator.envVar]?.replace(/"/g, '');
+    const memberToken = process.env[testAccounts.sundanese.envVar]?.replace(/"/g, '');
+    const nonMemberToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
+    test.skip(!creatorToken || !memberToken || !nonMemberToken, 'Creator, member (token2) and non-member (QA buyer) tokens are required');
+    if (!creatorToken || !memberToken || !nonMemberToken) return;
+
+    // Sundanese holds the fixture tier; the QA buyer does not, so it stands for the non-member.
+    const tier = memberTierFixture;
+    const [scheduled, engaged, edited, gated] = [1, 2, 3, 4].map(() => generatePostContent());
+    const postIds: string[] = [];
+    const memberContext = await browser.newContext({ viewport: page.viewportSize() });
+    await loginWithToken(memberContext, memberToken, baseURL);
+    const memberFeeds = new BuyerFeedsPage(await memberContext.newPage(), baseURL);
+    const nonMemberContext = await browser.newContext({ viewport: page.viewportSize() });
+    await loginWithToken(nonMemberContext, nonMemberToken, baseURL);
+    const nonMemberFeeds = new BuyerFeedsPage(await nonMemberContext.newPage(), baseURL);
+    const isListed = async (type: 'published' | 'scheduled', id: string) => (await getMyPosts(page.request, type, creatorToken)).some((p) => p.uuid === id);
+    let scheduledAt = new Date();
+    let scheduledId = '';
+
+    try {
+      await test.step('A future membership post is stored as Scheduled', async () => {
+        scheduledAt = scheduleTimeAhead(3);
+        const result = await creatorFeedsPage.schedulePost(scheduled, scheduledAt, tier.name);
+        scheduledId = result.uuid;
+        postIds.push(scheduledId);
+        expect(new Date(result.scheduledAt).getTime()).toBe(scheduledAt.getTime());
+        await creatorFeedsPage.expectPostListed(scheduled, 'scheduled');
+        expect(await isListed('published', scheduledId)).toBe(false);
+      });
+
+      let engagedId = '';
+      await test.step('Editing a membership post keeps its likes and comments', async () => {
+        engagedId = (await createPost(page.request, { content: engaged, visibility: 'membership_only', tierMembershipUuids: [tier.tierUuid] }, creatorToken)).postId;
+        postIds.push(engagedId);
+        await likePost(page.request, engagedId, memberToken);
+        await createComment(page.request, engagedId, generatePostContent(), memberToken);
+        const before = await getPostEngagement(page.request, engagedId, creatorToken);
+        expect(before).toMatchObject({ likeCount: 1, commentCount: 1 });
+        await creatorFeedsPage.editPost(engaged, { content: edited });
+        const after = await getPostEngagement(page.request, engagedId, creatorToken);
+        expect({ likes: after.likeCount, comments: after.commentCount }).toEqual({ likes: before.likeCount, comments: before.commentCount });
+        await memberFeeds.gotoPost(engagedId);
+        await memberFeeds.expectMemberPostOpen(edited);
+      });
+
+      await test.step('Deleting a membership post asks for confirmation first', async () => {
+        await creatorFeedsPage.goto();
+        await creatorFeedsPage.openDeletePost(edited);
+        await creatorFeedsPage.cancelDelete();
+        await creatorFeedsPage.goto();
+        await creatorFeedsPage.expectPostListed(edited);
+      });
+
+      await test.step('A confirmed deletion removes the membership post for good', async () => {
+        await creatorFeedsPage.openDeletePost(edited);
+        await creatorFeedsPage.confirmDelete();
+        await creatorFeedsPage.expectPostNotListed(edited);
+        expect((await getPost(page.request, engagedId, memberToken)).status).toBe(404);
+      });
+
+      await test.step('Members read the post in full, non-members get the gate, and a like shows within five seconds', async () => {
+        const gatedId = (await createPost(page.request, { content: gated, visibility: 'membership_only', tierMembershipUuids: [tier.tierUuid], imagePath: testImages.claude }, creatorToken)).postId;
+        postIds.push(gatedId);
+        await memberFeeds.gotoPost(gatedId);
+        await memberFeeds.expectMemberPostOpen(gated);
+        await nonMemberFeeds.gotoPost(gatedId);
+        await nonMemberFeeds.expectMemberPostLocked(gated);
+        await likePost(page.request, gatedId, memberToken);
+        await expect.poll(async () => (await getPostEngagement(page.request, gatedId, creatorToken)).likeCount, { timeout: 5000, intervals: [500] }).toBe(1);
+      });
+
+      await test.step('The scheduled membership post publishes by itself and opens for members', async () => {
+        await expect.poll(() => isListed('published', scheduledId), { timeout: Math.max(scheduledAt.getTime() - Date.now(), 0) + 180000, intervals: [15000] }).toBe(true);
+        await memberFeeds.gotoPost(scheduledId);
+        await memberFeeds.expectMemberPostOpen(scheduled);
+      });
+    } finally {
+      for (const id of postIds) await deletePost(page.request, id, creatorToken).catch(() => undefined);
+      await memberContext.close();
+      await nonMemberContext.close();
     }
   });
 

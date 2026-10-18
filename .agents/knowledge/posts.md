@@ -366,6 +366,16 @@ Shipped on dev per the PRD [[projects/yapp/pinned-feeds - prd|Pinned Feeds]]; TC
   unpinned while a newer PPV post sat above it — the PPV menu read `Insights / Edit / Unpin / Delete`,
   and `Pin to top` after a reload. Reload before pinning another post right after an Unpin.
 
+## Member-only post detail: member vs non-member (verified 2026-10-16)
+
+On `/post/<uuid>` both see the body text and a `Member Only` label. **A member of the tier** gets the media
+and an open comment box (`Write your comment`), with no prompt. **A signed-in non-member** gets
+`Subscribe to Unlock` (twice on an image post), `Unlock post to add comments` (also twice on an image post)
+and `Unlock Now`. A like by a member shows in the creator's `likeCount` within a second. Scheduling a member
+post is the public flow plus `Member only` → `Select Membership Tier` → tier → `Confirm` before picking the
+time; it auto-publishes on time like a public one. The visibility menu can drop a click made while it is
+still animating in — retry until the tier dialog opens.
+
 ## Composer toolbar, drafts, and the creator post list (verified 2026-10-15)
 
 - **The visibility pill opens a menu holding a radio group**, not menu items: `Public` "Visible to anyone

@@ -133,3 +133,39 @@ export async function startConversation(request: APIRequestContext, creatorUuid:
   );
   return data.conversationUUID;
 }
+
+/** The creator's saved mark labels (`GET /api/v1/dm/labels`). */
+export async function getLabels(request: APIRequestContext, token?: string): Promise<Array<{ uuid: string; name: string; colorHex: string }>> {
+  const data = await json<Array<{ uuid: string; name: string; colorHex: string }> | { data: Array<{ uuid: string; name: string; colorHex: string }> } | null>(
+    await request.get(apiUrl('/api/v1/dm/labels'), { headers: getHeaders(token, creatorOrigin) }),
+    'List labels',
+  );
+  return Array.isArray(data) ? data : data?.data ?? [];
+}
+
+/** The label assigned to one buyer, or null (`GET /api/v1/dm/buyers/{buyerUUID}/labels`). */
+export async function getBuyerLabel(request: APIRequestContext, buyerUuid: string, token?: string): Promise<{ name?: string; uuid?: string } | null> {
+  const data = await json<unknown>(
+    await request.get(apiUrl(`/api/v1/dm/buyers/${buyerUuid}/labels`), { headers: getHeaders(token, creatorOrigin) }),
+    'Buyer label',
+  );
+  if (!data) return null;
+  return (Array.isArray(data) ? data[0] ?? null : data) as { name?: string; uuid?: string };
+}
+
+/** Delete a saved label everywhere (cleanup; the UI does it from the label dropdown). */
+export async function deleteLabel(request: APIRequestContext, labelUuid: string, token?: string): Promise<void> {
+  const response = await request.delete(apiUrl(`/api/v1/dm/labels/${labelUuid}`), { headers: getHeaders(token, creatorOrigin) });
+  if (!response.ok()) throw new Error(`Delete label failed: ${response.status()} ${await response.text()}`);
+}
+
+/** HTTP status of a conversation's messages for this account — 404 once the account deleted it for themself. */
+export async function conversationStatus(request: APIRequestContext, conversationUuid: string, token?: string): Promise<number> {
+  return (await request.get(apiUrl(`/api/v1/dm/conversations/${conversationUuid}/messages?limit=1`), { headers: getHeaders(token) })).status();
+}
+
+/** Take a label off one buyer (`DELETE /api/v1/dm/buyers/{buyerUUID}/labels/{labelUUID}`, the modal's Remove). */
+export async function removeBuyerLabel(request: APIRequestContext, buyerUuid: string, labelUuid: string, token?: string): Promise<void> {
+  const response = await request.delete(apiUrl(`/api/v1/dm/buyers/${buyerUuid}/labels/${labelUuid}`), { headers: getHeaders(token, creatorOrigin) });
+  if (!response.ok()) throw new Error(`Remove buyer label failed: ${response.status()} ${await response.text()}`);
+}

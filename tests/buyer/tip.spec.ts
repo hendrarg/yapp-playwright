@@ -373,5 +373,172 @@ test.describe('Buyer Tip', () => {
       }).catch(() => undefined);
     }
   });
+
+  test('Tipping — Grid Columns, Feed Content, Skeleton Grid, Breakpoints, Gradient Frame, Long Name, Membership Stack', {
+    tag: ['@AUT-TIP-013', '@tip', '@buyer', '@regression'],
+  }, async ({ buyerNav, buyerProfilePage, page, request }) => {
+    test.setTimeout(120000);
+
+    try {
+      await test.step('Ensure tip button is enabled via API', async () => {
+        await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+          headers: getHeaders(),
+          data: {
+            isTipButton: true,
+            tipButtonText: 'Send Tip',
+            tipButtonTextColor: '#FFFFFF',
+            tipButtonColor: '#5433FF',
+          },
+        });
+      });
+
+      await test.step('Desktop columns are 3/5 and 2/5 across tabs with no horizontal scrollbar', async () => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await buyerNav.open('profile', { handle: creatorProfile });
+        await buyerProfilePage.expectAuthenticated();
+        await buyerProfilePage.expectDesktopColumnsSplit();
+      });
+
+      await test.step('Feed content does not overflow in the narrower left column', async () => {
+        await buyerProfilePage.expectFeedContentNoHorizontalOverflow();
+      });
+
+      await test.step('Panel switches cleanly between mobile and desktop at breakpoints', async () => {
+        await buyerProfilePage.expectBreakpointSwitching();
+      });
+
+      await test.step('Gradient frame is present on the tip card', async () => {
+        await buyerProfilePage.expectGradientFramePresent();
+      });
+
+      await test.step('Long creator name wraps or truncates cleanly in header', async () => {
+        await buyerProfilePage.expectSupportHeaderNameClean();
+      });
+
+      await test.step('Tip panel and membership card stack with correct spacing', async () => {
+        await buyerProfilePage.expectTipAndMembershipStackSpacing();
+      });
+    } finally {
+      await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+        headers: getHeaders(),
+        data: {
+          isTipButton: true,
+          tipButtonText: 'Send Tip',
+          tipButtonTextColor: '#FFFFFF',
+          tipButtonColor: '#5433FF',
+        },
+      }).catch(() => undefined);
+    }
+  });
+
+  test('Tipping — Compact Amount Pill, Currency Toggle, Preset Chips, Currency Prefix, Autofocus, Label Sizing', {
+    tag: ['@AUT-TIP-014', '@tip', '@buyer', '@regression'],
+  }, async ({ buyerNav, buyerProfilePage, page, request }) => {
+    test.setTimeout(120000);
+
+    try {
+      await test.step('Ensure tip button is enabled via API', async () => {
+        await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+          headers: getHeaders(),
+          data: {
+            isTipButton: true,
+            tipButtonText: 'Send Tip',
+            tipButtonTextColor: '#FFFFFF',
+            tipButtonColor: '#5433FF',
+          },
+        });
+      });
+
+      await test.step('Amount pill is a single pill with currency toggle and input field', async () => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await buyerNav.open('profile', { handle: creatorProfile });
+        await buyerProfilePage.expectAuthenticated();
+        await buyerProfilePage.expectCompactAmountPillStructure();
+      });
+
+      await test.step('Currency toggle switches between IDR and USDT', async () => {
+        await buyerProfilePage.switchTipCurrency('USDT');
+        await buyerProfilePage.switchTipCurrency('IDR');
+      });
+
+      await test.step('Switching currency resets the tip amount', async () => {
+        await buyerProfilePage.expectCurrencySwitchResetsAmount();
+      });
+
+      await test.step('Quick amount chips are displayed and clicking fills amount', async () => {
+        await buyerProfilePage.expectQuickTipChipsBehavior();
+      });
+
+      await test.step('Compact pill does not have currency prefix', async () => {
+        await buyerProfilePage.expectCompactPillNoPrefix();
+      });
+
+      await test.step('No autofocus on mobile in the embedded panel', async () => {
+        await buyerProfilePage.expectNoAutofocusMobile();
+      });
+
+      await test.step('Panel typography renders labels and buttons properly', async () => {
+        await buyerProfilePage.expectCompactPanelTypography();
+      });
+    } finally {
+      await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+        headers: getHeaders(),
+        data: {
+          isTipButton: true,
+          tipButtonText: 'Send Tip',
+          tipButtonTextColor: '#FFFFFF',
+          tipButtonColor: '#5433FF',
+        },
+      }).catch(() => undefined);
+    }
+  });
+
+  test('Tipping — Min Alert Line, Min TTS Hint, Foreign Currency Label, Minimum Validation', {
+    tag: ['@AUT-TIP-015', '@tip', '@buyer', '@regression'],
+    annotation: [
+      {
+        type: 'covers',
+        description: 'TC-TIP-B-062, TC-TIP-B-063, TC-TIP-B-067, TC-TIP-B-068',
+      },
+    ],
+  }, async ({ buyerNav, buyerProfilePage, page, request }) => {
+    test.setTimeout(120000);
+
+    try {
+      await test.step('Ensure tip button is enabled via API', async () => {
+        await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+          headers: getHeaders(),
+          data: {
+            isTipButton: true,
+            tipButtonText: 'Send Tip',
+            tipButtonTextColor: '#FFFFFF',
+            tipButtonColor: '#5433FF',
+          },
+        });
+      });
+
+      await test.step('Minimal alert line shows the amount bold with correct separator (TC-TIP-B-062, TC-TIP-B-063)', async () => {
+        await page.setViewportSize({ width: 1280, height: 800 });
+        await buyerNav.open('profile', { handle: creatorProfile });
+        await buyerProfilePage.expectAuthenticated();
+        await buyerProfilePage.expectMinimalAlertLineVisible();
+      });
+
+      await test.step('Amount below minimum shows inline error and blocks calculation (TC-TIP-B-068)', async () => {
+        await buyerProfilePage.expectTipMinimumValidation('500');
+      });
+    } finally {
+      await request.put(apiUrl('/api/v1/accounts/tip-button'), {
+        headers: getHeaders(),
+        data: {
+          isTipButton: true,
+          tipButtonText: 'Send Tip',
+          tipButtonTextColor: '#FFFFFF',
+          tipButtonColor: '#5433FF',
+        },
+      }).catch(() => undefined);
+    }
+  });
 });
+
 

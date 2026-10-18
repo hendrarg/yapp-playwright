@@ -42,7 +42,9 @@ test cases were written against, so check this before scoping a messaging TC.
   Request" with 10K/25K/50K presets rendering a card CTA `Send Tip IDR <amount>`. The
   product card CTA is **Buy Now**, not "View Product".
 - **Buyer tags** are a "Mark Member" modal with a label picker (free text, max 25 chars,
-  enforced only by hiding the Create option) plus 8 colour swatches. **Rewritten
+  enforced only by hiding the Create option — **re-checked 2026-10-16: no longer enforced**, the picker
+  offers `Create` for 20, 24, 25 *and* 26 characters and its input has no `maxlength`, so a test asserting
+  that 26 characters are refused should now fail) plus 8 colour swatches. **Rewritten
   2026-09-07, re-verified 2026-09-08:** the menu item now switches on state —
   `Add Mark Badge` when the member has none, `Edit Mark Badge` when they do, and the
   modal then opens **prefilled** with the current label, colour and a live Preview,
@@ -75,6 +77,37 @@ test cases were written against, so check this before scoping a messaging TC.
   or `none`, `Send to` is identical: default Followers, all three options enabled, Subscribers
   keeps its real count (it used to drop to 0 under `none`). Older screenshots with Followers /
   Custom List greyed out show the pre-fix coupling.
+
+## Creator DM thread: route, report, delete, labels (verified 2026-10-16)
+
+- **A DM thread is `/messages/chat/<conversationUuid>`** (groups are `/messages/group/<roomUuid>`). Going to
+  plain `/messages/<uuid>` **crashes the renderer** ("Page crashed" in Playwright) — candidate bug, not yet
+  filed. Clicking a buyer's name in the inbox can land in a group chat where they are a member; open the DM
+  by its conversation uuid (`startConversation` returns it) instead.
+- The thread header's ⋮ has no name; its menu is `Add Mark Badge` (or `Edit Mark Badge`) / `Report User` /
+  `Block User` / `Delete`. A read-only thread has no composer but still has this menu.
+- **Report User** opens dialog `Report ‘<buyer name>’` — "Help us understand what's going on." and six
+  radios (Inappropriate Content and Message, Spam, Fake Account, Breach of Privacy, Order Dispute, Other).
+  The submit reads `Select at least one` (disabled) until a reason is picked, then `Report`; `Other` adds an
+  `Enter the details` field and keeps `Report` disabled until it is filled. Submitting sends
+  `POST /api/v1/users/report/<buyerUuid>` `{category: "other", reason}` → 200 `Reported`, toast
+  `Report submitted`, and the dialog closes.
+- **Delete Chat** is a dialog **with no accessible name** (only a `Delete Chat` heading) — locate it by the
+  heading. Confirming sends `DELETE /api/v1/dm/conversations/<uuid>`, drops the row, lands the creator on
+  `/messages`, and the creator's messages endpoint then answers **404**; the buyer keeps everything. The
+  buyer's next message brings back the same uuid with an unread badge and only the new messages.
+- **Mark labels:** the picker's search box is `Search for an option`; typing a new name shows a separate
+  `Create` span beside the name (click the span — the name is in another element). `Done` sends
+  `POST /api/v1/dm/labels {name, colorHex}` then `POST /api/v1/dm/buyers/<buyer>/labels/<label>`, toast
+  `Member marked`; the badge then shows on the inbox row and in the thread header. Saved labels appear in
+  the picker on every conversation as coloured chips (inline `background-color`). Escape closes only the
+  picker — close the modal with its own close button. Remove → `Mark removed`; `Delete <name>` →
+  alertdialog → `DELETE /api/v1/dm/labels/<uuid>`, toast `Label deleted`. An interrupted run leaves the badge
+  on the buyer and turns `Add` into `Edit Mark Badge`: clear it first (`removeBuyerLabel`).
+- **Sundanese's own thread with hendrarg is stuck read-only:** `POST /api/v1/dm/conversations` answers
+  `canSend: false, readOnlyReason: "dm_access_revoked"` (and a send is 500 `dm_access_revoked`) while the
+  eligibility endpoint says `canMessage: true` — the same mismatch as M-63. Use the QA buyer's thread for
+  any test that needs the buyer to write.
 
 ## Buyer app
 

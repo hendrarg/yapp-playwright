@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { safeClick } from "@utils/playwright.utils";
+import { safeClick, safeFill } from "@utils/playwright.utils";
 import { nextSetDetailsAction, textFeedback } from "@pages/shared/locators";
 import { digitalProductPricingData, digitalProductValidationData, productsCreationData } from "@test-data/creator/products.creation.data";
 
@@ -268,6 +268,24 @@ export class DigitalProductPage {
     await expect(panel.getByText("Show remaining count to buyers")).toBeVisible();
     await input.fill(String(slots));
     await expect(input).toHaveValue(String(slots));
+  }
+
+  private flexiblePriceSwitch(): Locator {
+    return this.detailsPanel().locator("div").filter({ hasText: "Allow customers to set their own fair price" }).last().getByRole("switch");
+  }
+
+  async enableFlexiblePrice(minimum: string) {
+    const toggle = this.flexiblePriceSwitch();
+    await toggle.scrollIntoViewIfNeeded();
+    if ((await toggle.getAttribute("aria-checked")) !== "true") await safeClick(toggle);
+    await expect(toggle).toHaveAttribute("aria-checked", "true", { timeout: 10000 });
+    const minInput = this.detailsPanel().getByRole("textbox", { name: /Minimum Price/i }).or(this.detailsPanel().locator('input[placeholder*="Minimum"], input[placeholder*="10,000"]').first());
+    await expect(minInput).toBeVisible({ timeout: 10000 });
+    await safeFill(minInput, minimum);
+  }
+
+  async expectFlexiblePriceCryptoOption() {
+    await expect(this.detailsPanel().getByText(/fair crypto/i).or(this.detailsPanel().locator('#enable-crypto, [id*="crypto"]')).first()).toBeVisible({ timeout: 10000 });
   }
 
   /** Header control on the digital-download editor. Keeps an active product published. */

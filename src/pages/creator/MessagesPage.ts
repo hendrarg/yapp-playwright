@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 import { locatorChain, smartLocator, type SmartHealable } from "@utils/heal-utils";
 import { safeClick, safeFill, waitForLoaded } from "@utils/playwright.utils";
+import { creatorThreadLabels as thread } from "@test-data/creator/messages.data";
 
 export class MessagesPage {
   readonly chatTab: Locator;
@@ -273,6 +274,205 @@ export class MessagesPage {
     await expect(this.page.getByText(/Members \(\d+\)/).first()).toBeVisible({ timeout: 10000 });
     await expect(this.page.getByText("Creator", { exact: true }).first()).toBeVisible({ timeout: 10000 });
     await expect(this.page.getByText(`@${creatorUsername}`).first()).toBeVisible({ timeout: 10000 });
+  }
+
+  // ── One DM thread, by conversation (verified 2026-10-16) ──
+  private readonly threadComposer = locatorChain(this.page, {
+    role: "textbox",
+    name: thread.composer,
+    placeholder: thread.composer,
+  });
+
+  /** A DM thread lives at `/messages/chat/<conversationUuid>` (plain `/messages/<uuid>` crashes the page). */
+  async gotoChat(conversationUuid: string) {
+    await this.page.goto(new URL(`messages/chat/${conversationUuid}`, this.baseURL).toString());
+    // A read-only thread has no composer, but it still has its header menu.
+    const headerMenu = this.page.getByRole("main").locator('button[data-slot="dropdown-menu-trigger"]:not([aria-label])').filter({ hasNotText: "Message actions" });
+    await expect(this.threadComposer.or(headerMenu).first()).toBeVisible({ timeout: 20000 });
+  }
+
+  /**
+   * The thread header's ⋮ has no name and no test id; of the unnamed menu triggers in the page, it is the
+   * one whose menu holds Report User.
+   */
+  async openThreadActions() {
+    const report = this.page.getByRole("menuitem", { name: thread.actions.report, exact: true });
+    const triggers = this.page.getByRole("main").locator('button[data-slot="dropdown-menu-trigger"]:not([aria-label])').filter({ hasNotText: "Message actions" });
+    await expect(async () => {
+      if (await report.isVisible()) return;
+      for (let i = (await triggers.count()) - 1; i >= 0; i -= 1) {
+        await triggers.nth(i).click({ timeout: 3000 });
+        if (await report.isVisible({ timeout: 1000 }).catch(() => false)) return;
+        await this.page.keyboard.press("Escape");
+      }
+      throw new Error("thread actions menu not found");
+    }).toPass({ timeout: 20000 });
+  }
+
+  async threadActionItems(): Promise<string[]> {
+    await this.openThreadActions();
+    const items = (await this.page.getByRole("menuitem").allInnerTexts()).map((s) => s.trim());
+    await this.page.keyboard.press("Escape");
+    return items;
+  }
+
+  private async chooseThreadAction(name: string | RegExp) {
+    await this.openThreadActions();
+    const item = this.page.getByRole("menuitem", { name, exact: typeof name === "string" });
+    // Fail with the menu's real items instead of waiting forever on one that is not offered.
+    await expect(item, `"${name}" in the thread menu`).toBeVisible({ timeout: 5000 });
+    await safeClick(item);
+  }
+
+  private toast(text: string) {
+    return locatorChain(this.page, { testId: "toast", selector: "[data-sonner-toast]" }).filter({ hasText: text }).first();
+  }
+
+  // Report User
+  readonly reportDialog = this.page.getByRole("dialog", { name: /^Report / });
+
+  /** Report User → `Report ‘<name>’` with six reasons; the submit button reads `Select at least one` until one is picked. */
+  async openReport(counterpartyName: string) {
+    await this.chooseThreadAction(thread.actions.report);
+    await expect(this.reportDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.reportDialog.getByRole("heading", { name: new RegExp(`Report .${counterpartyName}.`) })).toBeVisible();
+    await expect(this.reportDialog).toContainText(thread.report.helpHeading);
+    await expect(this.reportDialog.getByRole("radio")).toHaveCount(thread.report.reasons.length);
+    for (const reason of thread.report.reasons) await expect(this.reportDialog.getByRole("radio", { name: reason, exact: true })).toBeVisible();
+    await expect(this.reportDialog.getByRole("button", { name: thread.report.pickFirst })).toBeDisabled();
+  }
+
+  /** Other needs its details: Report stays disabled until the details field is filled. Returns the request body. */
+  async submitOtherReport(details: string): Promise<{ category: string; reason: string }> {
+    await safeClick(this.reportDialog.getByRole("radio", { name: "Other", exact: true }));
+    const submit = this.reportDialog.getByRole("button", { name: thread.report.submit, exact: true });
+    const field = this.reportDialog.getByPlaceholder(thread.report.detailsPlaceholder);
+    await expect(field).toBeVisible({ timeout: 5000 });
+    await expect(submit).toBeDisabled();
+    await field.fill(details);
+    await expect(submit).toBeEnabled();
+    const sent = this.page.waitForResponse((r) => /\/api\/v1\/users\/report\//.test(r.url()) && r.request().method() === "POST", { timeout: 20000 });
+    await safeClick(submit);
+    const response = await sent;
+    expect(response.status(), "submitting the report").toBe(200);
+    await expect(this.toast(thread.report.submittedToast)).toBeVisible({ timeout: 10000 });
+    await expect(this.reportDialog).toBeHidden({ timeout: 10000 });
+    return JSON.parse(response.request().postData() ?? "{}");
+  }
+
+  // Delete chat
+  /** Unlike Report and Mark Member, this dialog has no accessible name — find it by its heading. */
+  readonly deleteChatDialog = this.page.getByRole("dialog").filter({ has: this.page.getByRole("heading", { name: thread.deleteChat.dialog, exact: true }) });
+
+  async openDeleteChat() {
+    await this.chooseThreadAction(thread.actions.delete);
+    await expect(this.deleteChatDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.deleteChatDialog).toContainText(thread.deleteChat.body);
+  }
+
+  async cancelDeleteChat() {
+    await safeClick(this.deleteChatDialog.getByRole("button", { name: thread.deleteChat.cancel, exact: true }));
+    await expect(this.deleteChatDialog).toBeHidden({ timeout: 10000 });
+    await expect(this.threadComposer.first()).toBeVisible();
+  }
+
+  /** Confirm Delete: the thread goes away and the creator lands back on `/messages`. */
+  async confirmDeleteChat() {
+    const deleted = this.page.waitForResponse((r) => /\/api\/v1\/dm\/conversations\/[^/]+$/.test(r.url()) && r.request().method() === "DELETE", { timeout: 20000 });
+    await safeClick(this.deleteChatDialog.getByRole("button", { name: thread.deleteChat.confirm, exact: true }));
+    expect((await deleted).ok(), "deleting the chat").toBe(true);
+    await expect(this.deleteChatDialog).toBeHidden({ timeout: 10000 });
+    await expect(this.page).toHaveURL(/\/messages\/?$/, { timeout: 15000 });
+  }
+
+  // Mark badges
+  readonly markDialog = this.page.getByRole("dialog", { name: thread.mark.dialog });
+
+  private get labelPicker() {
+    return this.page.locator('[data-slot="popover-content"]').filter({ has: this.page.getByPlaceholder(thread.mark.labelSearch) }).filter({ visible: true }).last();
+  }
+
+  private async openLabelPicker() {
+    await safeClick(this.markDialog.getByRole("combobox"));
+    await expect(this.labelPicker).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Create a new label from the picker, colour it and Done. Returns the label uuid from POST /dm/labels. */
+  async markWithNewLabel(label: string, colorHex: string): Promise<string> {
+    await this.chooseThreadAction(new RegExp(thread.actions.markAdd));
+    await expect(this.markDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.markDialog.getByRole("button", { name: thread.mark.done, exact: true })).toBeDisabled();
+    await this.openLabelPicker();
+    await this.labelPicker.getByPlaceholder(thread.mark.labelSearch).fill(label);
+    // "Create" is its own span beside the typed name; the modal's label text confirms which one was made.
+    const create = this.labelPicker.getByText("Create", { exact: true }).first();
+    await expect(create, `the picker offers to create "${label}"`).toBeVisible({ timeout: 10000 });
+    await safeClick(create);
+    await expect(this.markDialog).toContainText(label);
+    const created = this.page.waitForResponse((r) => /\/api\/v1\/dm\/labels$/.test(r.url()) && r.request().method() === "POST", { timeout: 20000 });
+    const assigned = this.page.waitForResponse((r) => /\/api\/v1\/dm\/buyers\/[^/]+\/labels\/[^/]+$/.test(r.url()) && r.request().method() === "POST", { timeout: 20000 });
+    await safeClick(this.markDialog.getByRole("button", { name: `Select color ${colorHex}` }));
+    await safeClick(this.markDialog.getByRole("button", { name: thread.mark.done, exact: true }));
+    const uuid = (await (await created).json()).data.uuid as string;
+    expect((await assigned).ok(), "assigning the label").toBe(true);
+    await expect(this.toast(thread.mark.markedToast)).toBeVisible({ timeout: 10000 });
+    return uuid;
+  }
+
+  /** The thread shows the buyer's badge next to their name (inbox row and header). */
+  async expectBuyerBadge(label: string) {
+    await expect(this.page.getByRole("main").getByText(label, { exact: true }).first()).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectNoBuyerBadge(label: string) {
+    await expect(this.page.getByRole("main").getByText(label, { exact: true })).toHaveCount(0, { timeout: 15000 });
+  }
+
+  /** Saved labels the picker suggests, each with the colour it was saved with. Leaves the dialog closed. */
+  async labelSuggestions(): Promise<Array<{ name: string; color: string }>> {
+    await this.chooseThreadAction(new RegExp(`${thread.actions.markAdd}|${thread.actions.markEdit}`));
+    await expect(this.markDialog).toBeVisible({ timeout: 10000 });
+    await this.openLabelPicker();
+    const rows = await this.labelPicker.getByRole("listbox").locator("span").evaluateAll((spans) => spans
+      .filter((s) => (s as unknown as { style: { backgroundColor: string } }).style.backgroundColor)
+      .map((s) => ({ name: (s.textContent ?? "").trim(), color: (s as unknown as { style: { backgroundColor: string } }).style.backgroundColor })));
+    await this.closeMarkDialog();
+    return rows;
+  }
+
+  /** Escape closes the label picker first; the modal itself then closes from its own close button. */
+  private async closeMarkDialog() {
+    await expect(async () => {
+      if (await this.labelPicker.isVisible()) await this.page.keyboard.press("Escape");
+      else if (await this.markDialog.isVisible()) await safeClick(this.markDialog.locator('[data-slot="dialog-close"]').first());
+      await expect(this.markDialog).toBeHidden({ timeout: 1500 });
+    }).toPass({ timeout: 15000 });
+  }
+
+  /** Edit Mark Badge opens prefilled with the label and a Remove button; Remove clears the badge. */
+  async removeBuyerBadge(label: string) {
+    await this.chooseThreadAction(thread.actions.markEdit);
+    await expect(this.markDialog).toBeVisible({ timeout: 10000 });
+    await expect(this.markDialog).toContainText(label);
+    const removed = this.page.waitForResponse((r) => /\/api\/v1\/dm\/buyers\/[^/]+\/labels\/[^/]+$/.test(r.url()) && r.request().method() === "DELETE", { timeout: 20000 });
+    await safeClick(this.markDialog.getByRole("button", { name: thread.mark.remove, exact: true }));
+    expect((await removed).ok(), "removing the badge").toBe(true);
+    await expect(this.toast(thread.mark.removedToast)).toBeVisible({ timeout: 10000 });
+  }
+
+  /** Each saved label in the picker has `Delete <name>`, confirmed in an alertdialog. */
+  async deleteSavedLabel(label: string) {
+    await this.chooseThreadAction(new RegExp(`${thread.actions.markAdd}|${thread.actions.markEdit}`));
+    await expect(this.markDialog).toBeVisible({ timeout: 10000 });
+    await this.openLabelPicker();
+    await safeClick(this.labelPicker.getByRole("button", { name: `Delete ${label}`, exact: true }));
+    const confirm = this.page.getByRole("alertdialog").filter({ hasText: thread.mark.deleteLabelDialog });
+    await expect(confirm).toBeVisible({ timeout: 10000 });
+    await expect(confirm).toContainText(thread.mark.deleteLabelBody);
+    const deleted = this.page.waitForResponse((r) => /\/api\/v1\/dm\/labels\/[^/]+$/.test(r.url()) && r.request().method() === "DELETE", { timeout: 20000 });
+    await safeClick(confirm.getByRole("button", { name: thread.deleteChat.confirm, exact: true }));
+    expect((await deleted).ok(), "deleting the label").toBe(true);
+    await expect(this.toast(thread.mark.deletedToast)).toBeVisible({ timeout: 10000 });
   }
 
   async expectNoDirectMessageInMembersPanel() {

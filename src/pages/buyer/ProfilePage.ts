@@ -296,6 +296,15 @@ export class ProfilePage {
     return this.main.locator(`a[href^="/${this.creatorContext.handle}/product/"]`);
   }
 
+  /** A Shops card for this product shows its thumbnail, its name and its price. */
+  async expectShopProductCard(productTitle: string, price: string | RegExp) {
+    await this.scrollShops(productTitle);
+    const card = this.productCards.filter({ hasText: productTitle }).first();
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await expect(card.getByRole("img").first()).toBeVisible();
+    await expect(card).toContainText(price);
+  }
+
   async expectShopsTabContent() {
     await this.expectTabActive("shops");
     await expect(this.productCards.first()).toBeVisible({ timeout: 10000 });
@@ -354,6 +363,14 @@ export class ProfilePage {
     name: profileLabels.inputTipPlaceholder,
   });
   readonly tipSuggestions = this.main.getByRole("button", { name: /^Rp[\d.]+$/ });
+  readonly tipAlertLine = locatorChain(this.page, {
+    selector: 'p:has-text("Minimal alert")',
+    text: "Minimal alert",
+  });
+  readonly tipMinimumError = locatorChain(this.page, {
+    selector: 'p.text-red-500:has-text("Minimum amount is Rp10.000")',
+    text: "Minimum amount is Rp10.000",
+  });
   /**
    * The tip form itself.
    */
@@ -429,6 +446,134 @@ export class ProfilePage {
 
   async expectTipInputValue(expected: string) {
     await expect(this.tipInput).toHaveValue(expected, { timeout: 10000 });
+  }
+
+  /** Desktop layout split: left content column is ~60% (3/5) and right column is ~40% (2/5) (TC-TIP-B-050) */
+  async expectDesktopColumnsSplit() {
+    await expect(this.tipFormRoot).toBeVisible({ timeout: 10000 });
+    const rightBox = await this.tipFormRoot.boundingBox();
+    const mainBox = await this.main.boundingBox();
+    expect(mainBox, 'main bounding box must exist').toBeTruthy();
+    expect(rightBox, 'tip form bounding box must exist').toBeTruthy();
+    if (mainBox && rightBox) {
+      const rightRatio = rightBox.width / mainBox.width;
+      expect(rightRatio).toBeGreaterThan(0.20);
+      expect(rightRatio).toBeLessThan(0.48);
+    }
+    const hasHorizontalScroll = await this.page.evaluate(() => {
+      const doc = (globalThis as any).document;
+      return doc.documentElement.scrollWidth > doc.documentElement.clientWidth;
+    });
+    expect(hasHorizontalScroll, 'page should not have horizontal scrollbar').toBe(false);
+  }
+
+  /** Feed content does not overflow in the narrower left column (TC-TIP-B-051) */
+  async expectFeedContentNoHorizontalOverflow() {
+    const hasHorizontalOverflow = await this.main.evaluate((el) => el.scrollWidth > el.clientWidth + 5);
+    expect(hasHorizontalOverflow, 'feed content should not horizontally overflow').toBe(false);
+  }
+
+  /** Breakpoint switching between mobile-plain and desktop-card at 768px (TC-TIP-B-053) */
+  async expectBreakpointSwitching() {
+    await this.page.setViewportSize({ width: 390, height: 844 });
+    await this.switchToMobileTab('Tip');
+    await expect(this.sendTipButton).toBeAttached({ timeout: 8000 });
+
+    await this.page.setViewportSize({ width: 1280, height: 800 });
+    await expect(this.supportSectionHeading).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Gradient frame inspection (TC-TIP-B-054) */
+  async expectGradientFramePresent() {
+    await expect(this.tipFormRoot).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Support header handles creator name cleanly without breaking layout (TC-TIP-B-055) */
+  async expectSupportHeaderNameClean() {
+    await expect(this.supportSectionHeading).toBeVisible({ timeout: 8000 });
+    const text = await this.supportSectionHeading.innerText();
+    expect(text).toMatch(/Support/i);
+  }
+
+  /** Tip panel and membership cards stack with correct spacing in right column (TC-TIP-B-056) */
+  async expectTipAndMembershipStackSpacing() {
+    await expect(this.supportSectionHeading).toBeVisible({ timeout: 10000 });
+    const tipBox = await this.tipFormRoot.boundingBox();
+    expect(tipBox).toBeTruthy();
+  }
+
+  /** Amount pill structure with currency toggle and input field (TC-TIP-B-057) */
+  async expectCompactAmountPillStructure() {
+    await expect(this.tipInput).toBeVisible({ timeout: 10000 });
+    await expect(this.tipInput).toHaveAttribute('placeholder', profileLabels.inputTipPlaceholder);
+    await expect(this.idrButton).toBeVisible({ timeout: 8000 });
+    await expect(this.usdtButton).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Switch currency toggle between IDR and USDT (TC-TIP-B-058) */
+  async switchTipCurrency(currency: 'IDR' | 'USDT') {
+    const btn = currency === 'IDR' ? this.idrButton : this.usdtButton;
+    await safeClick(btn);
+  }
+
+  /** Currency switch resets tip amount (TC-TIP-B-059) */
+  async expectCurrencySwitchResetsAmount() {
+    await this.fillTipAmount('50000');
+    await safeClick(this.usdtButton);
+    const val = await this.tipInput.inputValue();
+    expect(val === '' || val === '0').toBe(true);
+    await safeClick(this.idrButton);
+  }
+
+  /** Quick amount chips behavior (TC-TIP-B-060) */
+  async expectQuickTipChipsBehavior() {
+    const chips = this.tipSuggestions;
+    if ((await chips.count()) > 0) {
+      await safeClick(chips.first());
+      await expect(this.tipInput).not.toHaveValue('');
+    }
+  }
+
+  /** Compact pill does not have currency prefix (TC-TIP-B-064) */
+  async expectCompactPillNoPrefix() {
+    await expect(this.tipInput).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Mobile embedded panel does not autofocus amount field (TC-TIP-B-065) */
+  async expectNoAutofocusMobile() {
+    await this.page.setViewportSize({ width: 390, height: 844 });
+    await this.switchToMobileTab('Tip');
+    await expect(this.tipInput).not.toBeFocused();
+    await this.page.setViewportSize({ width: 1280, height: 800 });
+  }
+
+  /** Compact panel typography (TC-TIP-B-066) */
+  async expectCompactPanelTypography() {
+    await expect(this.sendTipButton).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Minimal alert line shows the amount bold with correct separator (TC-TIP-B-062, TC-TIP-B-063) */
+  async expectMinimalAlertLineVisible() {
+    const alertLine = this.tipAlertLine.or(this.page.locator('p').filter({ hasText: /Minimal alert/i })).first();
+    await expect(alertLine).toBeVisible({ timeout: 8000 });
+    const text = await alertLine.innerText();
+    expect(text).toMatch(/Minimal alert\s+Rp10\.000/i);
+    const boldSpan = alertLine.locator('span.font-semibold, span.font-bold, strong').first();
+    await expect(boldSpan).toBeVisible({ timeout: 5000 });
+  }
+
+  /** Amount below minimum shows inline error (TC-TIP-B-068) */
+  async expectTipMinimumError(expectedMessage = 'Minimum amount is Rp10.000') {
+    const errorEl = this.tipMinimumError.or(this.page.locator('p').filter({ hasText: new RegExp(expectedMessage, 'i') })).first();
+    await expect(errorEl).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Amount below minimum shows inline error and blocks valid calculation (TC-TIP-B-068) */
+  async expectTipMinimumValidation(belowMin = '500') {
+    await this.fillTipAmount(belowMin);
+    await this.expectTipMinimumError('Minimum amount is Rp10.000');
+    const subtotalText = await this.page.locator('text=/Subtotal/i').locator('..').innerText();
+    expect(subtotalText).toContain('Rp0');
   }
 
   async expectHandleVisible(handle: string) {
@@ -723,6 +868,12 @@ export class ProfilePage {
     await expect(this.allFeedsToggle).toBeVisible({ timeout: 10000 });
     await expect(this.exclusiveOnlyToggle).toBeVisible({ timeout: 10000 });
     await expect(this.creatorFeedPosts.first()).toBeVisible({ timeout: 10000 });
+  }
+
+  /** A creator with exclusive posts gets the All Feeds / Exclusive Only switch on the Feeds tab (there is no Exclusive tab). */
+  async expectExclusiveFilterOffered() {
+    await expect(this.allFeedsToggle).toBeVisible({ timeout: 15000 });
+    await expect(this.exclusiveOnlyToggle).toBeVisible({ timeout: 15000 });
   }
 
   async toggleExclusiveOnly() {

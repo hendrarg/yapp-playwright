@@ -14,6 +14,9 @@ export const feedsLabels = {
   likePost: "Like post",
   unlikePost: "Unlike post",
   memberOnly: "Member Only",
+  /** A member-only post a viewer is not entitled to (verified 2026-10-16). */
+  subscribeToUnlock: "Subscribe to Unlock",
+  unlockToComment: "Unlock post to add comments",
   openPostMedia: "Open post media",
   viewProducts: "View Products",
   nextImage: "Next image",

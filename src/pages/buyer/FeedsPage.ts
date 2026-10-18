@@ -864,6 +864,26 @@ export class FeedsPage {
     await expect(this.page.getByText(/Unlock|unlock/i).first()).toBeVisible({ timeout: 5000 });
   }
 
+  /** A member-only post the viewer's tier unlocks: Member Only label, no subscribe prompt, comments open. */
+  async expectMemberPostOpen(content: string) {
+    await this.expectPostBodyVisible(content);
+    const main = this.page.getByRole("main");
+    await expect(main.getByText(feedsLabels.memberOnly, { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(main.getByRole("button", { name: feedsLabels.subscribeToUnlock })).toHaveCount(0);
+    await expect(main.getByText(feedsLabels.unlockToComment, { exact: true })).toHaveCount(0);
+    await expect(main.getByRole("textbox", { name: feedsLabels.writeComment })).toBeVisible({ timeout: 10000 });
+  }
+
+  /** A member-only post for a viewer without that tier: Member Only label plus Subscribe to Unlock, comments locked. */
+  async expectMemberPostLocked(content: string) {
+    await this.expectPostBodyVisible(content);
+    const main = this.page.getByRole("main");
+    await expect(main.getByText(feedsLabels.memberOnly, { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(main.getByRole("button", { name: feedsLabels.subscribeToUnlock }).first()).toBeVisible({ timeout: 10000 });
+    // Image posts print it twice (over the media and beside the comments).
+    await expect(main.getByText(feedsLabels.unlockToComment, { exact: true }).first()).toBeVisible();
+  }
+
   /** The open post detail shows this many media tiles (`Open post media`). */
   async expectPostMediaCount(count: number) {
     await expect(this.page.getByRole("main").getByRole("button", { name: feedsLabels.openPostMedia })).toHaveCount(count, { timeout: 15000 });

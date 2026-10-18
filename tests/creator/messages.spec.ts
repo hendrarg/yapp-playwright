@@ -1,5 +1,7 @@
 import { creatorAuthTest as test, expect } from '../test-base';
-import { getDmPolicy, setDmPolicy } from '@helpers/api/dm';
+import { conversationStatus, deleteLabel, findConversation, getBuyerLabel, getDmPolicy, getLabels, getMessages, removeBuyerLabel, sendDm, setDmPolicy, startConversation } from '@helpers/api/dm';
+import { creatorThreadLabels, generateMarkLabel, generateThreadText } from '@test-data/creator/messages.data';
+import { testAccounts } from '@test-data/users';
 import type { DmAccessPolicy } from '@helpers/api/dm';
 
 test.describe('Creator Messages', () => {
@@ -123,6 +125,117 @@ test.describe('Creator Messages', () => {
     } finally {
       if (creatorToken && originalPolicy) {
         await setDmPolicy(page.request, originalPolicy, creatorToken).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Messages & Broadcast — Report User, Delete Chat', {
+    tag: ['@AUT-MB-009', '@messages', '@creator', '@regression'],
+  }, async ({ messagesPage, page }) => {
+    test.setTimeout(180000);
+    const creatorToken = process.env[testAccounts.creator.envVar]?.replace(/"/g, '');
+    const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
+    test.skip(!creatorToken || !buyerToken, 'Creator and buyer tokens are required');
+    if (!creatorToken || !buyerToken) return;
+
+    // The QA buyer's thread: Sundanese's own thread with the creator is stuck read-only (dm_access_revoked).
+    const conversation = await startConversation(page.request, testAccounts.creator.uuid, buyerToken);
+    const before = generateThreadText();
+    await sendDm(page.request, conversation, { contentType: 'text', content: before }, buyerToken);
+    const buyerName = (await findConversation(page.request, testAccounts.qa.uuid, creatorToken))?.counterParty.name ?? '';
+    const texts = async (token: string) => (await getMessages(page.request, conversation, token)).messages.map((m) => m.content);
+
+    await test.step('Report User lists six reasons, Other needs details, and the report is submitted', async () => {
+      await messagesPage.gotoChat(conversation);
+      await messagesPage.openReport(buyerName);
+      const details = generateThreadText();
+      expect(await messagesPage.submitOtherReport(details)).toEqual({ category: 'other', reason: details });
+    });
+
+    await test.step('Cancel on Delete Chat keeps the history for both sides', async () => {
+      await messagesPage.gotoChat(conversation);
+      await messagesPage.openDeleteChat();
+      await messagesPage.cancelDeleteChat();
+      expect(await texts(creatorToken)).toContain(before);
+      expect(await texts(buyerToken)).toContain(before);
+    });
+
+    await test.step('Delete removes the chat from the creator only', async () => {
+      await messagesPage.openDeleteChat();
+      await messagesPage.confirmDeleteChat();
+      expect(await findConversation(page.request, testAccounts.qa.uuid, creatorToken)).toBeUndefined();
+      expect(await conversationStatus(page.request, conversation, creatorToken)).toBe(404);
+      expect(await texts(buyerToken)).toContain(before);
+    });
+
+    await test.step('A new buyer message brings back the same conversation with only the new messages', async () => {
+      const after = generateThreadText();
+      await sendDm(page.request, conversation, { contentType: 'text', content: after }, buyerToken);
+      await expect.poll(async () => (await findConversation(page.request, testAccounts.qa.uuid, creatorToken))?.conversationUUID, { timeout: 20000 }).toBe(conversation);
+      expect((await findConversation(page.request, testAccounts.qa.uuid, creatorToken))?.unreadCount).toBeGreaterThanOrEqual(1);
+      const creatorView = await texts(creatorToken);
+      expect(creatorView).toContain(after);
+      expect(creatorView).not.toContain(before);
+      expect(await texts(buyerToken)).toEqual(expect.arrayContaining([before, after]));
+      await messagesPage.goto();
+      await messagesPage.expectConversationVisible(buyerName);
+    });
+  });
+
+  test('Messages & Broadcast — Buyer Tags', {
+    tag: ['@AUT-MB-010', '@messages', '@creator', '@regression'],
+  }, async ({ messagesPage, page }) => {
+    test.setTimeout(180000);
+    // TC-MB-C-036 / C-037 (predefined Top Supporter / High Tipper badges) are not automated: no predefined
+    // labels exist (CL-AUT-054, CL-AUT-055).
+    const creatorToken = process.env[testAccounts.creator.envVar]?.replace(/"/g, '');
+    const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
+    const otherToken = process.env[testAccounts.sundanese.envVar]?.replace(/"/g, '');
+    test.skip(!creatorToken || !buyerToken || !otherToken, 'Creator, buyer and second-account tokens are required');
+    if (!creatorToken || !buyerToken || !otherToken) return;
+
+    const conversation = await startConversation(page.request, testAccounts.creator.uuid, buyerToken);
+    await sendDm(page.request, conversation, { contentType: 'text', content: generateThreadText() }, buyerToken);
+    const otherConversation = await startConversation(page.request, testAccounts.creator.uuid, otherToken);
+    const label = generateMarkLabel(25);
+    const [, color] = creatorThreadLabels.mark.colors;
+    // Start untagged: a badge left on the buyer by an interrupted run would turn Add into Edit Mark Badge.
+    const existing = await getBuyerLabel(page.request, testAccounts.qa.uuid, creatorToken);
+    if (existing?.uuid) await removeBuyerLabel(page.request, testAccounts.qa.uuid, existing.uuid, creatorToken);
+
+    try {
+      await test.step('A 25-character custom label is created, coloured and shown on the buyer', async () => {
+        expect(label).toHaveLength(25);
+        await messagesPage.gotoChat(conversation);
+        await messagesPage.markWithNewLabel(label, color);
+        await messagesPage.expectBuyerBadge(label);
+        expect(await getLabels(page.request, creatorToken)).toEqual(expect.arrayContaining([expect.objectContaining({ name: label, colorHex: color })]));
+        expect((await getBuyerLabel(page.request, testAccounts.qa.uuid, creatorToken))?.name).toBe(label);
+      });
+
+      await test.step('The saved label is offered again, with its colour, on another conversation', async () => {
+        await messagesPage.gotoChat(otherConversation);
+        const suggestions = await messagesPage.labelSuggestions();
+        expect(suggestions).toEqual(expect.arrayContaining([{ name: label, color: 'rgb(255, 0, 144)' }]));
+      });
+
+      await test.step('Removing the badge returns the buyer to untagged', async () => {
+        await messagesPage.gotoChat(conversation);
+        await messagesPage.removeBuyerBadge(label);
+        await messagesPage.gotoChat(conversation);
+        await messagesPage.expectNoBuyerBadge(label);
+        expect(await getBuyerLabel(page.request, testAccounts.qa.uuid, creatorToken)).toBeNull();
+      });
+
+      await test.step('A saved label can be deleted from the picker', async () => {
+        await messagesPage.deleteSavedLabel(label);
+        expect((await getLabels(page.request, creatorToken)).map((l) => l.name)).not.toContain(label);
+      });
+    } finally {
+      const leftover = (await getLabels(page.request, creatorToken).catch(() => [])).find((l) => l.name === label);
+      if (leftover) {
+        await removeBuyerLabel(page.request, testAccounts.qa.uuid, leftover.uuid, creatorToken).catch(() => undefined);
+        await deleteLabel(page.request, leftover.uuid, creatorToken).catch(() => undefined);
       }
     }
   });

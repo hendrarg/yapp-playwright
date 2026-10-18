@@ -10,6 +10,7 @@ import { TransactionPage } from '@pages/buyer/TransactionPage';
 import { FeedsPage as CreatorFeedsPage } from '@pages/creator/FeedsPage';
 import { creatorFeedsLabels, generateLinkedProductTitle, generatePostContent, generatePostData, scheduleTimeAhead, testImages } from '@test-data/creator/post.data';
 import { memberTierFixture } from '@test-data/buyer/feeds.data';
+import { profileTabs } from '@test-data/buyer/profile.data';
 import { testAccounts } from '@test-data/users';
 
 const token = (envVar: string) => process.env[envVar]?.replace(/"/g, '');
@@ -662,6 +663,76 @@ test.describe('Creator Feeds', () => {
       await setLifetimePrice(page.request, 0, creatorToken);
       for (const id of postIds) await deletePost(page.request, id, creatorToken).catch(() => undefined);
       await buyerContext.close();
+    }
+  });
+
+  test('Feeds and Exclusive — Public Feed, Exclusive Tab, Exclusive Status, Shop Tab, Shop Product, Links Tab', {
+    tag: ['@AUT-FE-010', '@feeds', '@creator', '@regression'],
+  }, async ({ browser, page }) => {
+    test.setTimeout(240000);
+    // TC-FE-C-062 / C-063 (a creator Exclusive tab with price, sales and status) are not automated: there is no
+    // such tab and post cards carry no price or sales (CL-AUT-052, CL-AUT-053).
+    const creatorToken = token(testAccounts.creator.envVar);
+    test.skip(!creatorToken, 'Creator token is required');
+    if (!creatorToken) return;
+
+    const creator = testAccounts.creator;
+    const [older, newer, draft, exclusive] = [1, 2, 3, 4].map(() => generatePostContent());
+    const productTitle = generateLinkedProductTitle();
+    const ids: Record<string, string> = {};
+    let productUuid = '';
+    const restorePin = await takeOverPin(page.request, creatorToken);
+    const guestContext = await browser.newContext({ viewport: page.viewportSize() });
+    const guestProfile = new ProfilePage(await guestContext.newPage(), baseURL);
+
+    try {
+      ids.older = (await createPost(page.request, { content: older, visibility: 'public' }, creatorToken)).postId;
+      ids.exclusive = (await createPost(page.request, { content: exclusive, visibility: 'pay_per_view', price: minPrice, imagePath: testImages.claude }, creatorToken)).postId;
+      ids.newer = (await createPost(page.request, { content: newer, visibility: 'public' }, creatorToken)).postId;
+      ids.draft = (await createPost(page.request, { content: draft, visibility: 'public', status: 'draft' }, creatorToken)).postId;
+      productUuid = (await createOnlineCourseProduct(page.request, { title: productTitle, description: generatePostContent(), thumbnailImagePath: testImages.claude, price: 25000 }, creatorToken)).productUuid;
+
+      await test.step('The public feed lists published posts newest first', async () => {
+        const publicIds = await getPublicPostIds(page.request, creator.uuid);
+        expect(publicIds.indexOf(ids.newer)).toBeLessThan(publicIds.indexOf(ids.older));
+        await guestProfile.goto(creator.username);
+        await guestProfile.switchToTab('feeds');
+        await guestProfile.expectCreatorPostAbove(newer, older);
+      });
+
+      await test.step('A draft never reaches the public feed', async () => {
+        expect(await getPublicPostIds(page.request, creator.uuid)).not.toContain(ids.draft);
+        // The draft is the newest post, so it would be listed first if it leaked.
+        await guestProfile.expectCreatorPostAbsent(draft);
+      });
+
+      await test.step('With exclusive posts the Feeds tab offers the Exclusive Only view, which lists them', async () => {
+        await guestProfile.expectExclusiveFilterOffered();
+        await guestProfile.toggleExclusiveOnly();
+        await guestProfile.expectCreatorPostLocked(exclusive);
+        await guestProfile.expectCreatorPostAbsent(newer);
+      });
+
+      await test.step('With active products the profile shows the Shops tab', async () => {
+        await guestProfile.goto(creator.username);
+        await guestProfile.expectTabs([profileTabs.shops]);
+      });
+
+      await test.step('Each Shops card shows the product image, name and price', async () => {
+        await guestProfile.switchToTab('shops');
+        await guestProfile.expectShopProductCard(productTitle, /Rp\s?25[.,]000/);
+      });
+
+      await test.step('With external links the profile shows the Links tab', async () => {
+        await guestProfile.expectTabs([profileTabs.links]);
+        await guestProfile.switchToTab('links');
+        await guestProfile.expectLinksTabContent();
+      });
+    } finally {
+      for (const id of Object.values(ids)) await deletePost(page.request, id, creatorToken).catch(() => undefined);
+      if (productUuid) await deleteProduct(page.request, productUuid, creatorToken).catch(() => undefined);
+      await restorePin();
+      await guestContext.close();
     }
   });
 

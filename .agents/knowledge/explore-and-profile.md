@@ -385,12 +385,13 @@ Default only); the Switch layout dialog uses the PRD/dev copy on **every** layou
 refused at Save draft; `isSupportPrivate` stays for later use; keyboard reorder is minor (it does work, but
 only as Space → arrow → Space — plain ↑/↓ do nothing, which is why it looks broken).
 
-**The Customize preview goes stale on Blocks.** It shows "Nothing here yet. You can still show your support
-with a tip." + the full form while the list holds visible blocks (hendrarg, abc12); reordering a block
-refreshes it (PM, 2026-10-16). Likely cause: the preview reads public `GET /account/{uuid}/blocks`, which
-answers **404 `blocks_not_enabled`** while the saved layout is not Blocks, and is not refetched after Save.
-So the full-form empty state seen there is this staleness, not the real empty state. A long display name
-without spaces (abc12, 57 chars) widens the Blocks header past the preview frame.
+**Preview while Blocks is selected but not saved shows nothing.** Public `GET /account/{uuid}/blocks`
+answers **404 `blocks_not_enabled`** while the saved layout is not Blocks, so the unsaved preview reads
+"Nothing here yet. You can still show your support with a tip." + the full form even for a creator with
+blocks. After Save the preview shows the blocks at once and follows hide/show live (fixed 2026-10-16, before
+that it stayed stale until a reload or a reorder). That full-form screen is therefore not the real empty
+state. A long name without spaces now ends in an ellipsis in the Blocks header (preview and public); on the
+**Default** mobile header the same name still runs under the share icon.
 
 **Layout choice.** Theme → `radiogroup "Profile layout"`: Default ("Your content in tabs, with a tip card on
 the side."), Simple ("One section stays on the left; the rest are tabs."), Blocks ("Stack links, products and
@@ -423,19 +424,27 @@ Folder / Link / Campaign / Text). Rows: `Drag to reorder block` handle, a switch
 (Edit, Delete). Keyboard reorder is dnd-kit style — **Space, arrow, Space**, plain arrows do nothing — and
 announces "Moving. position N of M." / "Dropped <title>.". Delete always removes the item itself: a Product
 block → `DELETE /shop/products/{uuid}` ("This deletes the product itself."), a link/text →
-`DELETE /accounts/link/{id}`; a group delete keeps its children ("The N blocks inside stay on your page.").
-Never delete a fixture product's block in a test. Positions are not renumbered after a delete.
+`DELETE /accounts/link/{id}` (a Text block's dialog reads `Delete text "<text>"?`); a group delete keeps its
+children ("The N blocks inside stay on your page."). Never delete a fixture product's block in a test — to
+test a product block, create a throwaway product (`createDigitalProduct`) and delete it afterwards.
+Positions are not renumbered after a delete. A product block's Edit opens `Edit display` with a **Display**
+combobox (`Classic`; Digital Download also offers `Featured`, Telegram Membership does not) and
+`Update display` → `PATCH /accounts/blocks/{uuid} {displayStyle}`. Once Blocks is seeded, the Switch layout
+dialog back to Blocks reads "Your blocks come back exactly as you left them."
 
 **Public pages.** Blocks: centred header with Subscribe / Direct Message / Follow, then `Send Tip`
 (→ `/<username>/tip`), then the blocks; campaigns render as the campaign carousel. Default desktop: content
 tabs on the left, form `Support <username>` on the right, **no Support tab, no supporter rows**. Default
-mobile: `Send Tip` under the bio and icon tabs Shops / Links / Feeds / Memberships / Tip — only the active tab
-has a text label. Simple desktop: Links column on the left, tabs Shops / Feeds / Membership / Tip on the right
-(no `main` landmark). A Telegram Membership block shows **Free / Rp0** because both `blocks` and `products`
-payloads send `price: 0` for it; the Shops card gets Rp50.000 elsewhere.
+mobile: `Send Tip` under the bio and icon tabs — visually only the active tab has a label, but all five carry
+names (Shops / Links / Feeds / Membership / Tip). Simple desktop: Links column on the left, tabs Shops / Feeds /
+Membership / Tip on the right (no `main` landmark). A Telegram Membership block shows its real price
+(Rp50.000) since 2026-10-16, **although `blocks` and `products` payloads still send `price: 0`** for it — assert
+the rendered price, never the payload's `price`.
 
-**Custom HTML** (`/customize/custom-html`). Landing "Write your own section — … It appears below your
-profile." with steps Write / Review / Live; Publish, Discard and Unpublish live on that landing, not in the
+**Custom HTML** (`/customize/custom-html`). Landing "Write your own section — Build a section with HTML and
+CSS. Once published, it replaces your whole public profile, header included." with steps Write / Review /
+Live; validation messages say "…Your profile page runs on HTML and CSS only." and a `<script>…</script>` pair
+counts as one problem; Publish, Discard and Unpublish live on that landing, not in the
 editor. Editor: HTML/CSS tabs, `<n> / 204,800 bytes`, placeholders `{{name}} {{username}} {{bio}}
 {{avatarUrl}} {{profileUrl}} {{tipUrl}}` (`{{name}}` renders empty for hendrarg, whose name is blank).
 Endpoints `GET /accounts/profile-custom-html`, `POST …/preview`, `PUT …/draft`, `POST …/submit`,

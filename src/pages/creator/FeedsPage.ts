@@ -228,9 +228,16 @@ export class FeedsPage {
   /** Member only opens `Select Membership Tier`; pick a tier and Confirm. */
   async chooseMemberOnly(tierName: string) {
     await this.openVisibilityMenu();
-    await safeClick(this.page.getByRole("menu").getByRole("radio", { name: new RegExp(labels.memberOnly) }).or(this.page.getByRole("menu").getByText(labels.memberOnly, { exact: true })).first());
+    const memberRadio = this.page.getByRole("menu").getByRole("radio", { name: new RegExp(labels.memberOnly) }).or(this.page.getByRole("menu").getByText(labels.memberOnly, { exact: true })).first();
     const tiers = this.page.getByRole("dialog", { name: labels.selectTierDialog });
-    await expect(tiers).toBeVisible({ timeout: 10000 });
+    // A click that lands while the menu is still animating in is dropped; retry until the tier dialog opens.
+    await expect(async () => {
+      if (!(await tiers.isVisible())) {
+        if (!(await this.page.getByRole("menu").isVisible())) await this.openVisibilityMenu();
+        await memberRadio.click({ timeout: 3000 });
+      }
+      await expect(tiers).toBeVisible({ timeout: 3000 });
+    }).toPass({ timeout: 20000 });
     await safeClick(tiers.getByText(tierName, { exact: true }));
     await safeClick(tiers.getByRole("button", { name: labels.confirm, exact: true }));
     await expect(tiers).toBeHidden({ timeout: 10000 });
@@ -378,10 +385,12 @@ export class FeedsPage {
   }
 
   /** Compose a public post and schedule it; returns the new uuid and the `scheduledAt` the request carried. */
-  async schedulePost(content: string, when: Date): Promise<{ uuid: string; scheduledAt: string }> {
+  /** Pass `memberTier` to schedule a Member only post for that tier instead of a public one. */
+  async schedulePost(content: string, when: Date, memberTier?: string): Promise<{ uuid: string; scheduledAt: string }> {
     await this.goto();
     await this.openComposer();
     await this.fillComposer(content);
+    if (memberTier) await this.chooseMemberOnly(memberTier);
     // The clock button has no name, no lucide class and no test id — its icon's size class is the only hook (needs a data-testid).
     await this.pickSchedule(this.composer, this.composer.getByRole("button").filter({ has: this.page.locator('svg[class~="size-5.5"]') }), when);
     const created = this.page.waitForResponse((r) => /\/api\/v1\/posts$/.test(r.url()) && r.request().method() === "POST", { timeout: 30000 });
@@ -417,9 +426,12 @@ export class FeedsPage {
 
   // ── Post list, tabs and the per-post menu ──
   async openTab(tab: FeedsTab) {
-    const tabButton = smartLocator(this.page, { role: "tab", name: labels.tabs[tab], exact: true, text: labels.tabs[tab] });
-    await tabButton.click();
-    await expect(this.page.getByRole("tab", { name: labels.tabs[tab], exact: true })).toHaveAttribute("aria-selected", "true");
+    const tabButton = locatorChain(this.page, { role: "tab", name: labels.tabs[tab], exact: true, text: labels.tabs[tab] }).first();
+    // Retry with short timeouts: a dialog still fading out can swallow the click, and an untimed click waits forever.
+    await expect(async () => {
+      await tabButton.click({ timeout: 3000 });
+      await expect(this.page.getByRole("tab", { name: labels.tabs[tab], exact: true })).toHaveAttribute("aria-selected", "true", { timeout: 2000 });
+    }).toPass({ timeout: 30000 });
   }
 
   /** The innermost element holding both the post text and its `Post options` button — one post card. */
