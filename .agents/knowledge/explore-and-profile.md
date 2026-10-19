@@ -379,7 +379,8 @@ Shipped per [[projects/yapp/profile-customization-v2.1 - prd|PRD v2.1]]; the vis
 
 **PM rulings, 2026-10-16 — these override the PRD text:** seeding takes Links only; new products enter
 Blocks only through the picker; the per-block hide switch stays; a published Custom HTML replaces the
-**whole** profile (only its "appears below your profile" copy is wrong); Blocks with nothing visible shows
+**whole** profile (the landing copy now says so — rechecked 2026-10-19, it no longer says the section
+"appears below your profile"); Blocks with nothing visible shows
 "Nothing here yet" + the `Send Tip` **button only**; Simple keeps tipping as a Tip tab (the side form is
 Default only); the Switch layout dialog uses the PRD/dev copy on **every** layout change; unsafe Custom HTML is
 refused at Save draft; `isSupportPrivate` stays for later use; keyboard reorder is minor (it does work, but
@@ -391,7 +392,12 @@ answers **404 `blocks_not_enabled`** while the saved layout is not Blocks, so th
 blocks. After Save the preview shows the blocks at once and follows hide/show live (fixed 2026-10-16, before
 that it stayed stale until a reload or a reorder). That full-form screen is therefore not the real empty
 state. A long name without spaces now ends in an ellipsis in the Blocks header (preview and public); on the
-**Default** mobile header the same name still runs under the share icon.
+**Default** mobile header the same name still runs under the share icon. The same name still
+**overflows the tip declaration** (2026-10-19, Customize preview, unsaved). The sentence
+"this transaction is purely my support for {name}" is one unbreakable run (`word-break: normal`,
+`overflow-wrap: normal`), so the label is wider than the payment card (369px text inside a 309px
+parent) and paints outside the card, over the preview chrome. Typing the name into `Your Name`
+updates that preview immediately, before Save.
 
 **Layout choice.** Theme → `radiogroup "Profile layout"`: Default ("Your content in tabs, with a tip card on
 the side."), Simple ("One section stays on the left; the rest are tabs."), Blocks ("Stack links, products and
@@ -412,6 +418,11 @@ parentUuid, displayStyle, isNew, isComplete, link|product|title+children}], cust
 `group` (style list) — the campaign row stays `kind: link` with `linkType: campaign`. **No Product, Feeds or
 Membership blocks are seeded**, and a product created later (on any layout) is never auto-added; it enters
 Blocks only through Add Block → Products ("A newly created product is added from this picker afterwards.").
+On dev (2026-10-19) that Products list **does** include Consultation: the request is
+`GET /shop/products?page=1&limit=20&type=digital_product,digital_download,discord_membership,telegram_membership,ticket_event,online_course,appointment`,
+and each appointment row is badged `Consultation`. The **Appointments** category is the same
+catalogue filtered to `type=appointment` only ("Create new appointment"). A title search from
+Products (`title=Ternak`) returns the consultation and the row stays in the dialog.
 Text/link rows created on Default *do* join, at the top with NEW when `customOrder` is true. Blocks →
 Default → Blocks restores the arrangement exactly; `blocksSeeded` stays true, so **first-switch seeding can
 be observed only once per account** — a test needs a fresh creator or a DB reset of `profile_blocks`.
@@ -422,7 +433,11 @@ search...", categories Suggested / Products / Memberships / Appointments / Socia
 Folder / Link / Campaign / Text). Rows: `Drag to reorder block` handle, a switch named by its action
 (`Hide from your page` ↔ `Show on your page`; hidden rows dim and leave the public page), `Block actions`
 (Edit, Delete). Keyboard reorder is dnd-kit style — **Space, arrow, Space**, plain arrows do nothing — and
-announces "Moving. position N of M." / "Dropped <title>.". Delete always removes the item itself: a Product
+announces "Moving. position N of M." / "Dropped <title>.". **The editor list updates at once; the
+profile preview does not** (2026-10-19, `/profile` while layout is Blocks). `PUT
+/accounts/blocks/arrangement` returns the new order and public `GET /account/{uuid}/blocks` already
+matches it, but the preview iframe keeps the same `preview_force_reload` token and still paints the
+previous order. Hide/show after a layout Save is a different path and does refresh. Delete always removes the item itself: a Product
 block → `DELETE /shop/products/{uuid}` ("This deletes the product itself."), a link/text →
 `DELETE /accounts/link/{id}` (a Text block's dialog reads `Delete text "<text>"?`); a group delete keeps its
 children ("The N blocks inside stay on your page."). Never delete a fixture product's block in a test — to
@@ -440,6 +455,25 @@ names (Shops / Links / Feeds / Membership / Tip). Simple desktop: Links column o
 Membership / Tip on the right (no `main` landmark). A Telegram Membership block shows its real price
 (Rp50.000) since 2026-10-16, **although `blocks` and `products` payloads still send `price: 0`** for it — assert
 the rendered price, never the payload's `price`.
+
+**Empty folder title still renders (2026-10-19, hendrarg).** `link-combination` can contain a `collection`
+with `countLinks: 0` (folder "Github", id 27) next to a separate link also titled Github. My Page → Links
+shows that folder as "Github / 0 links". The public Default Links tab and the Simple preview still print the
+title as a plain bold line under the last link. Public blocks omit empty groups; this Links-column path does
+not. Filed CCL-14.
+
+**Default Links drops the campaign carousel when the campaigns API 500s (2026-10-19).** The editor still
+lists the Campaign row, and an unsaved Simple preview still renders Scure and Salegor. The saved Default
+public Links tab does not. `GET /api/v1/account/{uuid}/campaigns` and `GET /api/v1/campaigns` both answer
+500 `Internal Server Error`. Filed CCL-15. Do not treat a missing carousel as "no campaigns" until that
+endpoint is checked.
+
+**Profile tip form can stick on USDT (2026-10-19).** On desktop Default and on `/<username>/tip`, the
+currency tab stays USDT after a click on IDR, the empty amount already shows red `Amount is required`, and
+the line reads `Minimal alert 10,000 USDT · Minimal TTS 10,000 USDT` while the chips are 10 / 50 / 100 USDT.
+`GET /api/v1/rate/exchange` answers 500 `failed to get rate from IDR to USDT`. `GET /api/v1/tipping/payment-methods`
+answers 401 even with the creator bearer token. `/tip` also logs React hydration error 418. Filed CCL-16.
+USDT still has no platform minimum when the rate endpoint is healthy — see [[tipping]].
 
 **Custom HTML** (`/customize/custom-html`). Landing "Write your own section — Build a section with HTML and
 CSS. Once published, it replaces your whole public profile, header included." with steps Write / Review /

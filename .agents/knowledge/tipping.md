@@ -66,6 +66,13 @@ actually gates the control.
 The Rp10.000 floor is enforced on the IDR path only. The USDT path accepts any amount,
 so the platform minimum is bypassable by switching currency.
 
+On 2026-10-19 the profile card and `/hendrarg/tip` could not switch off USDT: the tab
+stayed USDT, an empty amount already showed `Amount is required`, and the alert line
+read `Minimal alert 10,000 USDT` next to 10/50/100 USDT chips. `GET /api/v1/rate/exchange`
+was 500 (`failed to get rate from IDR to USDT`) and `GET /api/v1/tipping/payment-methods`
+was 401 with the creator token. That is CCL-16, not a change to the USDT-has-no-minimum
+rule. Recheck the currency switch only after those two endpoints answer 200.
+
 ## The profile inline panel's amount is a gateway, not a real entry — the tip page is where the minimum bites
 
 Established 2026-09-28 (ruled expected, closed `M-50`). Do **not** read the profile inline
