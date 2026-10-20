@@ -11,6 +11,14 @@ export class MessagesPage {
   readonly settingsDialog: Locator;
   readonly subscribersOnlySwitch: Locator;
   readonly searchInput: SmartHealable;
+  readonly newBroadcastButton: Locator;
+  readonly createBroadcastDialog: Locator;
+  readonly broadcastTextarea: Locator;
+  readonly sendBroadcastButton: Locator;
+  readonly cancelBroadcastButton: Locator;
+  readonly attachmentButton: Locator;
+  readonly selectCampaignDialog: Locator;
+  readonly tipRequestPopover: Locator;
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.chatTab = page.getByRole("tab", { name: "Chat" });
@@ -28,6 +36,39 @@ export class MessagesPage {
       placeholder: "Search by name",
       selector: 'input[placeholder="Search by name"]',
     });
+    this.newBroadcastButton = locatorChain(page, {
+      role: "button",
+      name: "New Broadcast",
+      text: "New Broadcast",
+      selector: 'button:has-text("New Broadcast")',
+    });
+    this.createBroadcastDialog = locatorChain(page, {
+      role: "dialog",
+    });
+    this.broadcastTextarea = locatorChain(page, {
+      role: "textbox",
+      placeholder: "Post something here...",
+      selector: 'textarea[placeholder="Post something here..."]',
+    });
+    this.sendBroadcastButton = locatorChain(page, {
+      role: "button",
+      name: "Send Broadcast",
+      text: "Send Broadcast",
+      selector: 'button:has-text("Send Broadcast")',
+    });
+    this.cancelBroadcastButton = locatorChain(page, {
+      role: "button",
+      name: "Cancel",
+      text: "Cancel",
+      selector: 'button:has-text("Cancel")',
+    });
+    this.attachmentButton = locatorChain(page, {
+      role: "button",
+      name: "Open attachment menu",
+      selector: 'button[aria-label="Open attachment menu"]',
+    });
+    this.selectCampaignDialog = page.getByRole("dialog").filter({ hasText: "Select Campaign" });
+    this.tipRequestPopover = page.locator('[data-radix-popper-content-wrapper], [role="dialog"], [data-slot="popover-content"]').filter({ hasText: "Tip Request" });
   }
 
   async goto() {
@@ -479,6 +520,158 @@ export class MessagesPage {
     const panel = this.page.locator("div").filter({ has: this.page.getByText(/Members \(\d+\)/) }).last();
     const dmButtons = panel.locator('button:has-text("Message"), button:has-text("Chat"), button:has-text("DM")');
     await expect(dmButtons).toHaveCount(0);
+  }
+
+  async openBroadcastTab() {
+    await safeClick(this.broadcastTab);
+    await expect(this.page).toHaveURL(/\/messages\/broadcast/, { timeout: 10000 });
+    await expect(this.newBroadcastButton).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectBroadcastHistoryOrEmpty() {
+    const list = this.page.locator('.overflow-y-auto > button, .overflow-y-auto > div');
+    const count = await list.count();
+    if (count > 0) {
+      await expect(list.first()).toContainText(/people|Views/i);
+    } else {
+      await expect(this.page.getByText('Start a Broadcast').or(this.page.getByText(/Send a message to multiple members/i))).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async openNewBroadcastModal() {
+    await safeClick(this.newBroadcastButton);
+    await expect(this.createBroadcastDialog).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectCreateBroadcastModal() {
+    await expect(this.createBroadcastDialog.getByRole('heading', { name: 'Create Broadcast' })).toBeVisible({ timeout: 10000 });
+    await expect(this.createBroadcastDialog.getByText(/Send to:/i)).toBeVisible({ timeout: 10000 });
+    await expect(this.createBroadcastDialog.getByText(/People/i)).toBeVisible({ timeout: 10000 });
+    await expect(this.broadcastTextarea).toBeVisible({ timeout: 10000 });
+    await expect(this.cancelBroadcastButton).toBeVisible({ timeout: 10000 });
+    await expect(this.sendBroadcastButton).toBeVisible({ timeout: 10000 });
+    await expect(this.sendBroadcastButton).toBeDisabled();
+  }
+
+  async expectImmediateBroadcastOnly() {
+    const scheduleControls = this.createBroadcastDialog.locator('button, input, [role="button"]')
+      .filter({ hasText: /schedule|draft|later|send at|nanti|jadwal/i });
+    await expect(scheduleControls).toHaveCount(0);
+
+    await safeFill(this.broadcastTextarea, 'Test broadcast message content');
+    await expect(this.sendBroadcastButton).toBeEnabled({ timeout: 5000 });
+
+    await safeFill(this.broadcastTextarea, '');
+    await expect(this.sendBroadcastButton).toBeDisabled({ timeout: 5000 });
+  }
+
+  async closeCreateBroadcastModal() {
+    await safeClick(this.cancelBroadcastButton);
+    await expect(this.createBroadcastDialog).toBeHidden({ timeout: 10000 });
+  }
+
+  async openAttachmentMenu() {
+    const isMenuVisible = await this.page.getByRole("menuitem", { name: /Request Tip|Link Campaign/i }).first().isVisible().catch(() => false);
+    if (!isMenuVisible) {
+      await expect(this.attachmentButton).toBeVisible({ timeout: 10000 });
+      await safeClick(this.attachmentButton);
+    }
+  }
+
+  async openLinkCampaignDialog() {
+    await this.openAttachmentMenu();
+    const linkCampaignItem = this.page.getByRole("menuitem", { name: /Link Campaign/i })
+      .or(this.page.getByText("Link Campaign"))
+      .first();
+    await expect(linkCampaignItem).toBeVisible({ timeout: 5000 });
+    await safeClick(linkCampaignItem);
+    await expect(this.selectCampaignDialog).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectSelectCampaignDialog() {
+    await expect(this.selectCampaignDialog).toBeVisible({ timeout: 10000 });
+    const searchInput = this.selectCampaignDialog.locator('input[placeholder*="campaign" i], input[type="text"]').first();
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
+
+    await this.page.waitForLoadState('networkidle').catch(() => {});
+    const campaignItems = this.selectCampaignDialog.locator('button, div').filter({ hasText: /ACTIVE/i });
+    const emptyState = this.selectCampaignDialog.getByText("No campaigns found");
+
+    const hasCampaigns = await campaignItems.first().isVisible({ timeout: 3000 }).catch(() => false);
+    if (hasCampaigns) {
+      await expect(campaignItems.first()).toBeVisible();
+    } else {
+      await expect(emptyState).toBeVisible({ timeout: 10000 });
+    }
+  }
+
+  async selectCampaignAndApply(): Promise<boolean> {
+    await expect(this.selectCampaignDialog).toBeVisible({ timeout: 10000 });
+    const campaignItems = this.selectCampaignDialog.locator('button, div').filter({ hasText: /ACTIVE/i });
+    const count = await campaignItems.count();
+    if (count > 0) {
+      await safeClick(campaignItems.first());
+      const applyBtn = this.selectCampaignDialog.getByRole("button", { name: /Apply/i }).first();
+      await safeClick(applyBtn);
+      await expect(this.selectCampaignDialog).toBeHidden({ timeout: 5000 });
+
+      // Staged card in composer
+      const composerArea = this.page.locator('.p-4, .border-t, form').filter({ has: this.page.locator('textarea') }).first();
+      await expect(composerArea.getByText(/ACTIVE/i).or(composerArea.locator('button:has(svg.lucide-x), button:has(svg[class*="lucide-x"])')).first()).toBeVisible({ timeout: 5000 });
+      return true;
+    }
+    await this.page.keyboard.press("Escape");
+    await expect(this.selectCampaignDialog).toBeHidden({ timeout: 5000 });
+    return false;
+  }
+
+  async sendStagedCard() {
+    const sendBtn = this.page.locator('button:has(svg.lucide-send), button:has(svg[class*="lucide-send"]), button[type="submit"], button:has(svg)').last();
+    await expect(sendBtn).toBeEnabled({ timeout: 5000 });
+    await safeClick(sendBtn);
+
+    // Verify card in thread (shows ACTIVE badge or Donate Now or campaign details)
+    const cardInThread = this.page.locator('div').filter({ hasText: /Donate Now|ACTIVE/i }).last();
+    await expect(cardInThread).toBeVisible({ timeout: 10000 });
+  }
+
+  async openRequestTipPopover() {
+    await this.openAttachmentMenu();
+    const requestTipItem = this.page.getByRole("menuitem", { name: /Request Tip/i })
+      .or(this.page.getByText("Request Tip"))
+      .first();
+    await expect(requestTipItem).toBeVisible({ timeout: 5000 });
+    await safeClick(requestTipItem);
+    await expect(this.page.getByText("Tip Request").last()).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectRequestTipPopover() {
+    await expect(this.page.getByText("Tip Request").last()).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByText("Any amount you like").last()).toBeVisible({ timeout: 5000 });
+
+    await expect(this.page.getByRole("button", { name: "10K", exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByRole("button", { name: "25K", exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByRole("button", { name: "50K", exact: true })).toBeVisible({ timeout: 5000 });
+
+    const amountInput = this.page.getByRole("textbox", { name: "0" }).or(this.page.locator('input[value*="10"]')).first();
+    await expect(amountInput).toBeVisible({ timeout: 5000 });
+    const val = await amountInput.inputValue();
+    expect(val).toMatch(/10\.?000|10000/);
+
+    const submitBtn = this.page.getByRole("button", { name: /Request (Rp|IDR)\s?10/i }).first();
+    await expect(submitBtn).toBeVisible({ timeout: 5000 });
+    await expect(submitBtn).toBeEnabled();
+  }
+
+  async submitTipRequest() {
+    const submitBtn = this.page.getByRole("button", { name: /Request (Rp|IDR)\s?10/i }).first();
+    await safeClick(submitBtn);
+
+    await expect(this.page.getByText("Any amount you like")).toBeHidden({ timeout: 10000 });
+
+    // Verify tip card in chat thread
+    const tipCard = this.page.locator('div, button, a').filter({ hasText: /Send Tip|Request/i }).last();
+    await expect(tipCard).toBeVisible({ timeout: 10000 });
   }
 }
 

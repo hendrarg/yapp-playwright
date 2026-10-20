@@ -256,10 +256,11 @@ export class FeedsPage {
   }
 
   /** Schedule Post with a time already gone: refused in the client with a toast, nothing is sent. */
-  async expectPastScheduleRefused(content: string, when: Date) {
+  async expectPastScheduleRefused(content: string, when: Date, memberTier?: string) {
     await this.goto();
     await this.openComposer();
     await this.fillComposer(content);
+    if (memberTier) await this.chooseMemberOnly(memberTier);
     await this.pickSchedule(this.composer, this.composer.getByRole("button").filter({ has: this.page.locator('svg[class~="size-5.5"]') }), when);
     let posted = false;
     const listener = (r: { url(): string; method(): string }) => {

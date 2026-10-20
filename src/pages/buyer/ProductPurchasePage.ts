@@ -28,7 +28,9 @@ export class ProductPurchasePage {
   });
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
-    this.voucherInput = page.getByRole('textbox', { name: 'Redeem Voucher' });
+    this.voucherInput = page
+      .getByRole('textbox', { name: 'Redeem Voucher' })
+      .or(page.getByPlaceholder('Enter promo code here...'));
     this.chooseVoucherButton = page.getByRole('button', { name: 'Choose Voucher', exact: true });
     this.applyVoucherButton = page.getByRole('button', { name: 'Use Now', exact: true });
   }
@@ -1658,11 +1660,18 @@ export class ProductPurchasePage {
       timeout: 10000,
     });
     await expect(this.page.getByPlaceholder('Enter phone number')).toBeVisible({ timeout: 10000 });
+    // Allow buyer profile prefill to settle into the name input
+    const name = this.page.getByPlaceholder('Enter your name');
+    await expect(name).toBeVisible({ timeout: 10000 });
+    await expect(name).not.toHaveValue('', { timeout: 10000 }).catch(() => undefined);
   }
 
   async expectOnlineCourseCheckoutRequiredValidation() {
     const name = this.page.getByPlaceholder('Enter your name');
     const phone = this.page.getByPlaceholder('Enter phone number');
+
+    const originalName = await name.inputValue();
+    const originalPhone = await phone.inputValue();
 
     await name.fill('');
     await phone.focus();
@@ -1670,13 +1679,27 @@ export class ProductPurchasePage {
       timeout: 10000,
     });
 
-    // Phone can pre-fill from the buyer profile; clear it so the required
-    // validation blocks submission.
+    // Restore name so phone validation can be isolated
+    await name.fill(originalName || 'QA Buyer');
+
+    // Phone can pre-fill from the buyer profile; clear it to test phone required validation
     await phone.fill('');
+    await name.focus();
+    await expect(this.page.getByText(onlineCourseCheckoutData.phoneNumberRequiredError)).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Submitting while required field is empty blocks submission (checkout URL remains)
     await this.page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern }).click();
     await expect(this.page.getByText(onlineCourseCheckoutData.phoneNumberRequiredError)).toBeVisible({
       timeout: 10000,
     });
+    await expect(this.page).toHaveURL(/\/checkout\?quantity=1/);
+
+    // Restore phone so checkout stays in a valid state for subsequent steps
+    await phone.fill(originalPhone || `812${Date.now().toString().slice(-9)}`);
+    await name.focus();
+    await expect(this.page.getByText(onlineCourseCheckoutData.phoneNumberRequiredError)).toHaveCount(0);
   }
 
   /** TC-OC-B-005: selecting a payment method is reflected in the checkout summary. */

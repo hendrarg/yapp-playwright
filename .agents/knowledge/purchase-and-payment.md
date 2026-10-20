@@ -199,6 +199,14 @@ before/after comparisons.
   confirm-email and phone fields if they were filled before it. Typed values stick once the page has
   settled; `payGuestCheckout` refills until all four keep their values and the
   `Receipt & download link will be sent to <email>` line shows.
+- **Authenticated checkout form re-renders on initial profile hydration (2026-10-20)**: When a logged-in buyer
+  opens `/product/<uuid>/checkout?quantity=1`, the account profile and country-code API
+  (`GET /api/v1/accounts`, `GET /api/country-code`) populate Name and Phone. If an automation attempts to
+  clear or edit Name or Phone before this initial fetch settles, the incoming profile data re-populates the fields
+  (e.g. `Dejuan Russel`, `6281234567890`) and clicking Pay will submit the order instead of failing validation.
+  Wait for `Enter your name` to be prefilled (`not.toHaveValue('')`) before asserting validations. On blur, empty Name
+  displays `Buyer name is required` and empty Phone displays `Phone number is required`; clicking Pay with an empty
+  phone blocks submission (URL remains `/checkout?quantity=1`).
 
 ## Dev QRIS payments settle themselves
 

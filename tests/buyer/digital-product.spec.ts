@@ -1,5 +1,7 @@
 import { authTest as test, expect } from '../test-base';
+import { getAccount } from '@helpers/api/account';
 import { createDigitalProduct, deleteProduct, productSharePath } from '@helpers/api/product';
+import { createPromotion, deletePromotion, getPromotionId } from '@helpers/api/promotion';
 import { depositWebhook } from '@helpers/api/webhook';
 import { loginWithToken } from '@helpers/auth/token-login';
 import { markInboxStart, testmailConfig, waitForEmail } from '@helpers/otp/testmail';
@@ -8,8 +10,10 @@ import { LibraryPage } from '@pages/buyer/LibraryPage';
 import { ProductPurchasePage } from '@pages/buyer/ProductPurchasePage';
 import { baseURL } from '@config/env';
 import { buyerEventsDetailData } from '@test-data/buyer/events.detail.data';
+import { onlineCourseCheckoutData } from '@test-data/buyer/online-course.detail.data';
 import { promotionData } from '@test-data/buyer/promotion.data';
 import { testImages } from '@test-data/creator/post.data';
+import { generatePromotionData } from '@test-data/creator/promotion.data';
 import { testAccounts } from '@test-data/users';
 
 const sellerToken = () => process.env[testAccounts.sundanese.envVar]?.replace(/"/g, '');
@@ -79,6 +83,111 @@ test.describe('Buyer Digital Product', () => {
       if (productUuid) {
         await deleteProduct(page.request, productUuid, token).catch(() => undefined);
       }
+    }
+  });
+
+  test('Product Digital — Checkout entry, Buyer Information, Payment Method, Free Product, Voucher, Payment Summary, Free Product Checkout, Checkout Surface', {
+    tag: ['@AUT-PD-009', '@products', '@buyer', '@smoke', '@regression'],
+  }, async ({ productPurchasePage, page }) => {
+    test.setTimeout(300000);
+    const token = sellerToken();
+    test.skip(!token, 'YAPP_TEST_ACCESS_TOKEN_2 is required to seed the digital products and promotion');
+    if (!token) return;
+
+    const stamp = Date.now();
+    const paidTitle = `Digital Checkout ${stamp}`;
+    const freeTitle = `Digital Free Checkout ${stamp}`;
+    const description = `Digital checkout flow ${stamp}`;
+    const promotion = generatePromotionData('active');
+    const invalidCode = `NOPE${stamp.toString().slice(-6)}`;
+    let paidUuid = '';
+    let freeUuid = '';
+    let promotionId = '';
+    let paidSharePath = '';
+    let freeSharePath = '';
+    let creatorName = '';
+
+    try {
+      await test.step('Seed a paid digital product, a free digital product, and an active promotion', async () => {
+        const creator = await getAccount(page.request, token);
+        creatorName = creator.name || creator.username;
+
+        const paid = await createDigitalProduct(page.request, {
+          title: paidTitle,
+          description,
+          thumbnailImagePath: testImages.claude,
+          price: 25000,
+          links: [link],
+        }, token);
+        paidUuid = paid.productUuid;
+        paidSharePath = productSharePath(paid);
+
+        const free = await createDigitalProduct(page.request, {
+          title: freeTitle,
+          description,
+          thumbnailImagePath: testImages.claude,
+          price: 0,
+          links: [link],
+        }, token);
+        freeUuid = free.productUuid;
+        freeSharePath = productSharePath(free);
+
+        promotionId = getPromotionId(await createPromotion(page.request, promotion, token));
+      });
+
+      await test.step('Purchase opens full-page checkout with product, creator, and quantity 1', async () => {
+        await productPurchasePage.openOnlineCourseCheckout(paidTitle, paidSharePath);
+        await expect(page).toHaveURL(new RegExp(`/product/${paidUuid}/checkout\\?quantity=1`));
+        await productPurchasePage.expectOnlineCourseCheckoutInitiated({ title: paidTitle, creatorName });
+      });
+
+      await test.step('Verify checkout surface components and payment method catalog', async () => {
+        await expect(page.getByText(/Personal Information/i).first()).toBeVisible({ timeout: 10000 });
+        await expect(productPurchasePage.chooseVoucherButton).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('combobox')).toBeVisible({ timeout: 10000 });
+        await expect(page.getByText(/Detail Transactions|Subtotal/i).first()).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern })).toBeVisible({ timeout: 10000 });
+      });
+
+      await test.step('Buyer fields prefill from account and required fields block submission', async () => {
+        await productPurchasePage.expectOnlineCourseCheckoutPrefill();
+        await productPurchasePage.expectOnlineCourseCheckoutRequiredValidation();
+      });
+
+      await test.step('Payment method dropdown reflects selection', async () => {
+        await productPurchasePage.selectOnlineCoursePaymentMethod(/credit card/i);
+        await productPurchasePage.expectOnlineCoursePaymentMethod(/credit card/i);
+        await productPurchasePage.selectOnlineCoursePaymentMethod(/qris/i);
+        await productPurchasePage.expectOnlineCoursePaymentMethod(/qris/i);
+      });
+
+      await test.step('A valid voucher applies discount and updates order summary consistently', async () => {
+        await productPurchasePage.openOnlineCourseCheckout(paidTitle, paidSharePath);
+        await productPurchasePage.openOnlineCourseVoucherDialog();
+        const before = await productPurchasePage.getOrderSummary();
+        await productPurchasePage.applyPromotion(promotion.code);
+        await productPurchasePage.expectActiveDiscount(before, onlineCourseCheckoutData.activePromotionDiscountPercent);
+
+        const summary = await productPurchasePage.getOrderSummary();
+        const payCta = page.getByRole('button', { name: onlineCourseCheckoutData.payCtaPattern });
+        await expect(payCta).toContainText(`Rp${summary.total.toLocaleString('id-ID')}`, { timeout: 10000 });
+      });
+
+      await test.step('An unknown voucher is rejected and drops the fee rows', async () => {
+        await productPurchasePage.openOnlineCourseCheckout(paidTitle, paidSharePath);
+        await productPurchasePage.openOnlineCourseVoucherDialog();
+        const rejectedBefore = await productPurchasePage.getOrderSummary();
+        await productPurchasePage.applyPromotion(invalidCode);
+        await productPurchasePage.expectRejectedPromotion(rejectedBefore, promotionData.rejection.notFound);
+      });
+
+      await test.step('Checkout of a free digital product bypasses payment and shows zero total', async () => {
+        await productPurchasePage.expectOnlineCourseFreeCheckout(freeTitle, freeSharePath);
+      });
+    } finally {
+      if (paidUuid) await deleteProduct(page.request, paidUuid, token).catch(() => undefined);
+      if (freeUuid) await deleteProduct(page.request, freeUuid, token).catch(() => undefined);
+      if (promotionId) await deletePromotion(page.request, promotionId, token).catch(() => undefined);
     }
   });
 

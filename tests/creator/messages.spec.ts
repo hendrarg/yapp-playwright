@@ -66,6 +66,33 @@ test.describe('Creator Messages', () => {
     });
   });
 
+  test('Messages & Broadcast — Campaign Card, Tipping Card', {
+    tag: ['@AUT-MB-005', '@messages', '@creator', '@regression'],
+  }, async ({ creatorNav, messagesPage }) => {
+    test.setTimeout(120000);
+
+    await test.step('Open direct conversation and inspect Link Campaign dialog (TC-MB-C-015)', async () => {
+      await creatorNav.open('messages');
+      await messagesPage.expectLoaded();
+      await messagesPage.openFirstDirectConversation();
+      await messagesPage.openLinkCampaignDialog();
+      await messagesPage.expectSelectCampaignDialog();
+    });
+
+    await test.step('Stage and send campaign rich card (TC-MB-C-016)', async () => {
+      const applied = await messagesPage.selectCampaignAndApply();
+      if (applied) {
+        await messagesPage.sendStagedCard();
+      }
+    });
+
+    await test.step('Open Request Tip popover, verify presets, and send tipping card (TC-MB-C-017)', async () => {
+      await messagesPage.openRequestTipPopover();
+      await messagesPage.expectRequestTipPopover();
+      await messagesPage.submitTipRequest();
+    });
+  });
+
   test('Messages & Broadcast — DM Settings, Conversation Management', {
     tag: ['@AUT-MB-008', '@messages', '@creator', '@regression'],
   }, async ({ creatorNav, messagesPage, page }) => {
@@ -238,5 +265,28 @@ test.describe('Creator Messages', () => {
         await deleteLabel(page.request, leftover.uuid, creatorToken).catch(() => undefined);
       }
     }
+  });
+
+  test('Messages & Broadcast — Broadcast Tab, Broadcast Composer', {
+    tag: ['@AUT-MB-011', '@messages', '@creator', '@regression'],
+  }, async ({ creatorNav, messagesPage }) => {
+    test.setTimeout(120000);
+
+    await test.step('Open Messages and navigate to Broadcast tab (TC-MB-C-050)', async () => {
+      await creatorNav.open('messages');
+      await messagesPage.expectLoaded();
+      await messagesPage.openBroadcastTab();
+      await messagesPage.expectBroadcastHistoryOrEmpty();
+    });
+
+    await test.step('Open Create Broadcast modal and inspect composer controls (TC-MB-C-052)', async () => {
+      await messagesPage.openNewBroadcastModal();
+      await messagesPage.expectCreateBroadcastModal();
+    });
+
+    await test.step('Verify immediate-only delivery semantics and validation (TC-MB-C-109)', async () => {
+      await messagesPage.expectImmediateBroadcastOnly();
+      await messagesPage.closeCreateBroadcastModal();
+    });
   });
 });

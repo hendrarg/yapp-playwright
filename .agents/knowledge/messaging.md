@@ -38,9 +38,9 @@ test cases were written against, so check this before scoping a messaging TC.
   on the Chat tab. Selecting an item opens the conversation thread; the header 3-dot menu exposes
   `Add Mark Badge` (or `Edit Mark Badge`), `Report User`, `Block User`, and `Delete`.
 - **Attachment menu** (identical in the DM and broadcast composers): Link Product,
-  Link Campaign, Request Tip, Link Post, Media, Link Membership. Tipping is a "Tip
-  Request" with 10K/25K/50K presets rendering a card CTA `Send Tip IDR <amount>`. The
-  product card CTA is **Buy Now**, not "View Product".
+  Link Campaign, Request Tip, Link Post, Media, Link Membership.
+  - **Link Campaign (verified 2026-10-20, AUT-MB-005):** Opens dialog `Select Campaign` querying `/api/v1/campaigns?is_active=true&type=owner`. Lists active owned campaigns with `Search campaign` field, `ACTIVE` badge, title, owner, and progress. When no active campaign is owned, shows empty state `No campaigns found` with disabled `Select All` and `Apply` buttons. When selected and applied, the card stages in the composer with an `ACTIVE` badge; sending posts the rich card to chat with `Donate Now` CTA.
+  - **Tip Request (verified 2026-10-20, AUT-MB-005):** Rendered as an inline staging block directly above the composer (not a floating modal dialog). Shows title "Tip Request", subtitle "Any amount you like", preset buttons "10K", "25K", "50K", IDR amount input (default "10.000"), and submit button `Request Rp10.000` (mirrors amount). Clicking the request button sends the card directly to the thread with `Send Tip IDR <amount>` CTA.
 - **Buyer tags** are a "Mark Member" modal with a label picker (free text, max 25 chars,
   enforced only by hiding the Create option — **re-checked 2026-10-16: no longer enforced**, the picker
   offers `Create` for 20, 24, 25 *and* 26 characters and its input has no `maxlength`, so a test asserting
@@ -77,6 +77,13 @@ test cases were written against, so check this before scoping a messaging TC.
   or `none`, `Send to` is identical: default Followers, all three options enabled, Subscribers
   keeps its real count (it used to drop to 0 under `none`). Older screenshots with Followers /
   Custom List greyed out show the pre-fix coupling.
+- **Broadcast tab and composer (verified 2026-10-20, AUT-MB-011)**: Route is `/messages/broadcast`.
+  Shows a `New Broadcast` button and sent history list (`<date-time> | <N> people | <N> Views`) or an empty
+  placeholder ("Start a Broadcast" / "Send a message to multiple members at once with a broadcast.").
+  The `Create Broadcast` dialog contains `Send to: <audience>`, recipient count indicator (`<N> People`),
+  a message textarea with placeholder `Post something here...`, attachment icon button, `Cancel`, and
+  `Send Broadcast`. Broadcast delivery is immediate-only: no scheduling, draft, or send-later controls exist.
+  `Send Broadcast` is disabled while the textarea is empty and enabled once text is typed.
 
 ## Creator DM thread: route, report, delete, labels (verified 2026-10-16)
 

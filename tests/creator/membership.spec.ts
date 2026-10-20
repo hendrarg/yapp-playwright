@@ -14,6 +14,45 @@ test.describe('Creator Membership', () => {
     await creatorNav.open('membership');
   });
 
+  test('Membership — Create Membership Post, Schedule Membership Post (negative & boundary)', {
+    tag: ['@AUT-MEM-001', '@membership', '@creator', '@regression'],
+  }, async ({ creatorNav, creatorFeedsPage, page }) => {
+    test.setTimeout(120000);
+    const postContent = `QA Member Negative Post ${Date.now()}`;
+    const pastDate = new Date(Date.now() - 60 * 60 * 1000);
+
+    await test.step('Verify initial empty composer blocks publish (TC-MEM-C-007)', async () => {
+      await creatorNav.open('feeds');
+      await creatorFeedsPage.expectLoaded();
+      await creatorFeedsPage.openComposer();
+      await creatorFeedsPage.expectPublishEnabled(false);
+    });
+
+    await test.step('Verify tier selection is required for Member only (TC-MEM-C-001)', async () => {
+      await creatorFeedsPage.chooseMemberOnly('kuy');
+      await creatorFeedsPage.expectVisibilityPill(/Member only/i);
+    });
+
+    await test.step('Verify entering content enables publish button (TC-MEM-C-003)', async () => {
+      await creatorFeedsPage.fillComposer(postContent);
+      await creatorFeedsPage.expectPublishEnabled(true);
+      await page.keyboard.press('Escape');
+      const discardBtn = page.getByRole('button', { name: /Discard/i });
+      if (await discardBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await discardBtn.click().catch(() => {});
+      }
+    });
+
+    await test.step('Verify past scheduling is rejected with error toast (TC-MEM-C-013)', async () => {
+      await creatorFeedsPage.expectPastScheduleRefused(postContent, pastDate, 'kuy');
+      await page.keyboard.press('Escape');
+      const discardBtn = page.getByRole('button', { name: /Discard/i });
+      if (await discardBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await discardBtn.click().catch(() => {});
+      }
+    });
+  });
+
   test('Membership — Create Membership Post, Save Draft', {
     tag: ['@AUT-MEM-002', '@membership', '@creator', '@smoke', '@regression'],
   }, async ({ creatorNav, creatorFeedsPage, page, browser }) => {
