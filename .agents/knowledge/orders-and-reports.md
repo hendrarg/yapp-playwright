@@ -63,12 +63,12 @@ The hidden tabs render their own pager and empty texts in the DOM, so scope loca
   `Create Product` link → `/products`. The pager still reads `Page 1 of 0` (L-50). A fresh
   token: OTP sign-in on the buyer app, then inject it for creators; if it lands on `/onboard`,
   "I'll do it later" lets it through.
-- **L-41 is USDT orders, not rounding** (re-measured 2026-10-15 after be#406). IDR orders
-  (`asset.id` 1) have no fractions and sum exactly to `totalEarnings` (305 orders = 14.595.730).
-  The leftover ~136 is the 6 **USDT** orders (`asset.id` 2, `receivedBySeller` in USDT, e.g.
-  33,46): they count in `totalSales` but add **nothing** to `totalEarnings`, because their
-  `orders.final_amount_in_idr` / `exchange_rate_to_idr` are NULL. Group by `asset` before
-  reconciling. OM-9 reopened.
+- **L-41 is USDT orders, not rounding** (re-measured 2026-10-15 & closed 2026-10-20, OM-9 DONE). IDR orders
+  (`asset.id` 1) have no fractions and sum exactly to `totalEarnings` (306 completed orders = 14.595.730, delta = 0).
+  The leftover ~136 is the 6 **USDT** orders (`asset.id` 2, `receivedBySeller` in USDT, total 136,6006 USDT):
+  they count in `totalSales` (312 total) but on dev had `final_amount_in_idr: NULL` because they were simulated
+  via fiat deposit webhook rather than the crypto worker. In production crypto settlement fills `final_amount_in_idr`.
+  Group by `asset` before reconciling. OM-9 closed (DONE).
 - One console error on load: `404 GET https://staging.yapp.ink/api/v1/accounts/domain` (no
   custom domain) — no hydration or uncaught errors (TC-ORD-C-059, CL-AUT-039).
 

@@ -628,3 +628,20 @@ Verified 2026-09-09 on `?activeTab=milestone` with the stored schedule
 
 So end-date validation can be tested **without** fixing the start-date picker, as long
 as a start date is already stored.
+
+## TikTok Live Studio / Embedded CEF Autoplay Resilience (20 Oct 2026)
+
+TikTok Live Studio (TTLS) and other CEF-based embedded browser sources enforce strict
+Chromium autoplay restrictions (`--autoplay-policy=user-gesture-required`) where no user
+click gesture exists on the overlay canvas.
+
+The alert overlay (`https://widget-dev.yapp.ink/alert/<key>?variant=alert`) handles this
+without freezing or locking up the alert queue:
+- Audio elements (`ding`, `tts`, custom alerts) wrap `.play()` in promise rejection
+  handlers (`.catch()`) that invoke the completion callback instead of throwing unhandled
+  exceptions.
+- A playback watchdog timer (`playback watchdog (stalled or blocked autoplay)`) guarantees
+  that if audio/video is blocked or stalled, the overlay does not remain stuck indefinitely.
+- The visual alert card, donor name, amount, message, and progress bar render and animate
+  for the full configured `alertDuration` (e.g. 5 seconds) and dismiss cleanly (`[alert-debug] delete after finish`).
+

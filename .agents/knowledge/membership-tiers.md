@@ -588,9 +588,11 @@ Verified 2026-09-10 with an active subscription whose entitlement row exists
 The buyer product page asks
 `GET /api/v1/tier-membership-users/products/{productUUID}/benefit-check`. **Since 2026-10-15
 (be#406) it answers `{"hasBenefit": true, "accessMode": "membership_bound"}`** for an active
-member of an Online Course perk and `{"hasBenefit": false}` once the subscription expires — but
-the product page **still shows its ordinary CTA** (`Get Product` on a free course) either way;
-the FE ignores the answer (M-25 / MEM-17 reopened). Fixture: QA buyer subscription
+member of an Online Course perk and `{"hasBenefit": false}` once the subscription expires.
+**Fixed on FE 2026-10-20 (landing#488, MEM-17 closed):** the short URL product page
+(`/{creator}/product/{shortUrl}`) now refetches data with the buyer token and correctly renders
+the **`Open Course`** CTA for active members (clicking it navigates directly to `/product/{uuid}/course`),
+while displaying `Get Product` when the membership is expired. Fixture: QA buyer subscription
 `87336a51-…` (id 100, tier 95) holds benefit 305 for sundanese's `Belajar Openclaw`
 (`ababebb3-…`, `/s/5YyuTuk5XW`); it expired 2026-10-10, so revive it with
 `dbFixtures.setMembershipExpiryIn` and restore.

@@ -324,13 +324,12 @@ purchased successfully." (`CartPage.checkoutItem` / `payCheckout`).
 - Opening the purchase lands on `/product/<uuid>` (tabs Overview / Ticket / About Creator) with
   `See message from <creator>` + `View Message`, which opens dialog `Message from <creator>` holding
   the default after-sales text ("Thank you for purchasing …") when the creator set none.
-- The ticket's About Creator (re-checked 2026-10-15, P-E-19 still open) reads **`Meet <name>`**,
-  falling back to the username when `name` is empty (hendrarg → `Meet hendrarg`), plus
-  ` — <role>` only when a role is set; the inner `About Creator` label is gone (one, on the tab).
-  **But the headline and bio render `rgb(0,0,0)` on the creator's dark card** (`rgb(34,34,59)`,
-  geri `rgb(0,0,0)`) whatever the colour scheme — the text exists in the DOM yet is unreadable
-  or invisible. Assert visibility/contrast, not just `textContent`. The buyer app stays
-  `html.light` even under `colorScheme: 'dark'`.
+- The ticket's About Creator (re-checked and verified fixed 2026-10-19, P-E-19 closed to DONE)
+  reads **`Meet <name>`**, falling back to the username when `name` is empty (hendrarg → `Meet hendrarg`),
+  plus ` — <role>` only when a role is set; the inner `About Creator` label is gone (one, on the tab).
+  Following landing#487 and landing#488, the headline and bio now render `rgb(255,255,255)` (white)
+  contrasting properly against the creator's secondary dark card (`rgb(34,34,59)` for hendrarg,
+  `rgb(0,0,0)` for geri). Ticket details on the Ticket tab also use high-contrast text.
 - Ticket fixtures: QA buyer owns `Mendaki gunung salak` (hendrarg, `/product/3d04eec5-…`);
   token1 (hendrarg) owns geri's `Test New Ticket UI Nama` (`/product/985d8740-…`). Library cards
   are not anchors — click the title text.
