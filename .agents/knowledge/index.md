@@ -5,7 +5,7 @@ index_of: knowledge
 category: project
 tags: [yapp, product, automation]
 project: yapp
-updated: 2026-10-05
+updated: 2026-10-23
 created: 2026-09-04
 sources: 0
 status: active
@@ -54,6 +54,7 @@ the sheet wins.
 | [[onboarding\|Onboarding]] | Creator sign-up, username rules, the three-step wizard — the account exists before the username, host-scoped session cookies, exactly-three tools, and a silent profile-picture path |
 | [[purchase-and-payment\|Purchase & payment]] | Guest purchase OTP and ownership, promo redemption without paying, dev QRIS auto-settlement |
 | [[membership-tiers\|Membership tiers]] | The creator's own subscription programme at `/membership` — **not a product**: per-duration prices, Perk Hybrid `accessMode`, and the Enable Group Chat toggle (shared room, frozen when turned off) |
+| [[membership-auto-renew\|Membership auto-renew]] | GoPay auto-debit for a Yapp tier. Checkout option is on dev; linking returns 502 and the dialog does not say so. Grace, migration, and Manage membership are still the draft rules |
 | [[membership-products\|Membership products]] | Discord and Telegram membership **product types** and their chat integrations — expiry-anchored renewal reminders, the aggregate bot status, Telegram product Lifetime gaps, subscriber row actions |
 | [[orders-and-reports\|Orders & reports]] | The Orders list, the CSV export and its separate range state, where promo attribution lives, figures verified exact |
 | [[settings\|Settings]] | The two tabs and their URL behaviour, five fee blocks with a display-only split, the auto-saving gateway choice, the bank form with no validation, the five integrations |

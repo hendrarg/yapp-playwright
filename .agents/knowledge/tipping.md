@@ -92,7 +92,8 @@ Verified 2026-10-16 (`AUT-TIP-012`). On desktop (`>= 768px`), tipping is display
 
 Turning the switch off (`PUT /accounts/tip-button`, `isTipButton:false`) only removes the entry
 points: the profile's `Support` tab disappears. Opening `/<handle>/tip` directly still renders the
-full form — currency tabs, presets, Minimum Alert, name/email, media, QRIS — with `Send Tip`
+full form — currency tabs, presets, Minimum Alert, name/email, media, QRIS only
+(no GoPay row, re-checked 2026-10-23) — with `Send Tip`
 enabled, and `GET /tipping/payment-methods` answers 200. On 2026-09-22 the submit also created an
 order (`POST /tipping/fiat` 200). Expected per TC-TIP-B-031: page blocks or says tipping is
 unavailable. hendrarg's switch is normally **on** — restore it after toggling.

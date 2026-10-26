@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, membership-tiers]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-23
+updated: 2026-10-23
 sources: 0
 status: active
 ---
@@ -527,6 +527,10 @@ tier_membership_id, user_id, expired_at, timestamps, three reminder-email column
 Nothing stores what a subscriber paid, so no per-subscriber price can be preserved. Any
 test phrased around a "configured renewal rule" has nothing to configure.
 
+The draft GoPay auto-renew design (2026-10-13) does add that rule — a snapshot on
+the subscription, not the live tier price. It is specified in
+[[membership-auto-renew]] and was not on this form when last checked.
+
 ## Disabling a tier: the control and what it does to the public profile
 
 `Set Inactive` on `/membership/{uuid}/update` is a real `role="switch"` next to
@@ -552,18 +556,27 @@ tier's current pricing — and a test comparing the two surfaces will see two di
 numbers by design.
 
 What is still unverified is the **renewal charge**: nothing in the tier form configures a
-renewal rule, and reading which price a renewal picks needs an actual renewal.
+renewal rule, and reading which price a renewal picks needs an actual renewal. The
+intended charge, once auto-renew exists, is the subscription snapshot in
+[[membership-auto-renew]].
 
 ## Subscribing: the modal, the voucher, and the Rp0 path
 
 Verified 2026-09-10 end to end on `MB Dropdown Check 107394`.
 
-The tier card's `Subscribe` opens a dialog at `/<creator>/membership` (that URL **404s on
-direct navigation** — it only exists as a client-side transition). It holds the duration
-picker, a required phone number, the payment methods (`QRIS`, `CREDIT CARD`, `VA BRI`,
-`EWALLET SHOPEEPAY`, `Show More →`), `Redeem Voucher`, and a fee breakdown:
-`Price + Transaction Fee + Payment Gateway Fee = Total`, with the CTA carrying the total
-(`Pay Rp25.755`).
+The tier card's `Subscribe` opens a dialog. The detail route
+`/{creator}/membership/{tierUuid}` does open directly (checked 2026-10-23);
+an earlier note that `/{creator}/membership` 404s on direct navigation was about
+the old path. The dialog holds the duration picker, a phone number, the payment
+methods, `Redeem Voucher`, and a fee breakdown
+`Price + Transaction Fee + Payment Gateway Fee = Total`, with the CTA carrying
+the total (`Pay Rp25.755`).
+
+On a priced tier, signed in, the method list now starts with `GOPAY · AUTO-RENEW`
+and the default selection is still QRIS. A free tier has no GoPay row. Details
+of the auto-renew note, the phone payload, and the failed link call are in
+[[membership-auto-renew]]. Seen 2026-09-10 the list was `QRIS`, `CREDIT CARD`,
+`VA BRI`, `EWALLET SHOPEEPAY`, `Show More →`.
 
 **`Redeem Voucher` has two halves and only one works.** `Choose Voucher` lists nothing at
 all — even with an active 100 % promo from that creator — and its `Select` stays disabled

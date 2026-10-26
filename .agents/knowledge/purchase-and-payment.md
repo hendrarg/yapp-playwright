@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, purchase-and-payment]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-10-23
 sources: 0
 status: active
 ---
@@ -30,10 +30,10 @@ hang 30 s+ — pass `{ tolerateTimeout: true }` and verify in the UI.
 
 - Success modal `Purchase Successful` → `View Product` → `/product/<order-uuid>/thank-you` ("Thank you
   for your purchase!", the after-sales note, `View Download`). `View Download` → `/product/<order-uuid>`.
-  **`Explore other products` opens `/dashboard/library`, not Explore** (bug L-80 / DP-16, filed 2026-10-07).
+  **`Explore other products` opens `/explore/products`** (re-checked 2026-10-23 on a Rp0 digital checkout).
   **Back on the thank-you page opens the order page**, not the product detail (M-45; the bug text says
   library — it now goes to `/product/<order-uuid>`).
-- The order page shows title, `Digital Product` badge, description, `See message from <creator>` /
+- The order page shows the buyer-only text (`privateDescription`) under the `Digital Product` badge, with no `Content Description` heading, then a `Product Detail` card for the public description (re-checked 2026-10-23). A `::youtube{#id}` directive renders as a YouTube iframe on that card and on the public product page. The public page does not show the buyer-only text. The page also shows title, `See message from <creator>` /
   `View Message`, then a `Links` section (label, URL, `Open Link` with `target=_blank`) and a
   `Media` section for uploaded files (name, `View`, `Download` → S3 URL with
   `response-content-disposition=attachment`). Empty sections are not rendered.

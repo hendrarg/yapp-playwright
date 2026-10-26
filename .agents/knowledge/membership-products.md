@@ -5,7 +5,7 @@ category: project
 tags: [yapp, product, automation, membership-products]
 project: yapp
 created: 2026-09-04
-updated: 2026-09-04
+updated: 2026-10-23
 sources: 0
 status: active
 ---
@@ -137,3 +137,22 @@ Whether it is single-*use* is a Telegram-side fact and cannot be read from Yapp.
 
 This endpoint is the cheap way to prove the purchase→deep-link half of the flow without
 a Telegram account.
+
+## Checkout requires the exact Telegram username
+
+Rechecked on yapp-dev as a guest on 2026-10-23, paid plan (Telebot, plan a, Rp50.000,
+1 month). The checkout route is `/product/{productUuid}/checkout?telegramTier={tierUuid}`.
+An 8-character prefix of those ids 404s with "That page doesn't exist"; the full uuids
+render the page.
+
+**Telegram Username** is shown with an asterisk, like Your Name, Email, Confirm email,
+and Phone Number. Its input is `required` and `aria-required="true"`, placeholder
+`@username`. Directly under it:
+
+`Enter your exact Telegram @username. Our bot uses it to verify you and grant group access, so a typo means no access.`
+
+With the other personal fields filled and this one left empty, Pay does not leave
+checkout and does not POST an order. The input becomes `aria-invalid="true"` and the
+line `Telegram username is required` appears above the hint. The product's
+`additionalQuestions` can still be an empty list — this row is built in, not one of
+those questions. The creator editor was not opened in this check.
