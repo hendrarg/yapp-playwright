@@ -66,6 +66,59 @@ test.describe('Creator Messages', () => {
     });
   });
 
+  test('Messages & Broadcast — Chat Thread', {
+    tag: ['@AUT-MB-003', '@messages', '@creator', '@smoke', '@regression'],
+  }, async ({ creatorNav, messagesPage, page }) => {
+    test.setTimeout(180000);
+
+    const creatorToken = process.env[testAccounts.creator.envVar]?.replace(/"/g, '');
+    const originalPolicy: DmAccessPolicy = (await getDmPolicy(page.request, creatorToken).catch(() => 'followers_and_subscribers')) as DmAccessPolicy;
+
+    try {
+      if (creatorToken && originalPolicy !== 'followers_and_subscribers') {
+        await setDmPolicy(page.request, 'followers_and_subscribers', creatorToken);
+      }
+
+      await test.step('Open direct conversation thread and verify chat history & header metadata (TC-MB-C-007)', async () => {
+        await creatorNav.open('messages');
+        await messagesPage.expectLoaded();
+        await messagesPage.openFirstDirectConversation();
+        await messagesPage.expectThreadHeaderCounterparty();
+      });
+
+      await test.step('Send basic text message in chat and verify it appears in thread (TC-MB-C-008)', async () => {
+        const textMsg = `Hello test ${Date.now()}`;
+        await messagesPage.sendMessageInThread(textMsg);
+      });
+
+      await test.step('Open attachment menu and verify all 6 attachment options with descriptions (TC-MB-C-094)', async () => {
+        await messagesPage.expectAttachmentMenuOptions();
+      });
+
+      await test.step('Send long unbroken text message and verify proper wrapping without horizontal scroll (TC-MB-C-104)', async () => {
+        const longText = 'A'.repeat(120);
+        await messagesPage.sendMessageInThread(longText);
+        await messagesPage.expectMessageWrapped(longText);
+      });
+
+      await test.step('Delete own message for myself only (TC-MB-C-098)', async () => {
+        const deleteForMeMsg = `DeleteMe_${Date.now()}`;
+        await messagesPage.sendMessageInThread(deleteForMeMsg);
+        await messagesPage.deleteMessageForMe(deleteForMeMsg);
+      });
+
+      await test.step('Delete own message for everyone and verify tombstone and toast (TC-MB-C-105)', async () => {
+        const deleteEveryoneMsg = `DeleteEveryone_${Date.now()}`;
+        await messagesPage.sendMessageInThread(deleteEveryoneMsg);
+        await messagesPage.deleteMessageForEveryone(deleteEveryoneMsg);
+      });
+    } finally {
+      if (creatorToken && originalPolicy && originalPolicy !== 'followers_and_subscribers') {
+        await setDmPolicy(page.request, originalPolicy, creatorToken).catch(() => undefined);
+      }
+    }
+  });
+
   test('Messages & Broadcast — Campaign Card, Tipping Card', {
     tag: ['@AUT-MB-005', '@messages', '@creator', '@regression'],
   }, async ({ creatorNav, messagesPage }) => {

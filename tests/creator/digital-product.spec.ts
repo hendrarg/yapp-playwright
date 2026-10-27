@@ -1,8 +1,9 @@
 import { creatorAuthTest as test, expect } from '../test-base';
 import { listCreatorTiers } from '@helpers/api/membership';
 import { listOrders } from '@helpers/api/orders';
-import { deleteProduct, findProductByTitle, getProduct } from '@helpers/api/product';
+import { createDigitalProduct, deleteProduct, findProductByTitle, getProduct, productSharePath } from '@helpers/api/product';
 import { depositWebhook } from '@helpers/api/webhook';
+import { apiUrl, getHeaders } from '@helpers/api/client';
 import { loginWithToken } from '@helpers/auth/token-login';
 import { buyCourseAs } from '@helpers/buyer/course-purchase';
 import { createDigitalProductUploadFixtures } from '@helpers/creator/digital-product-media';
@@ -13,6 +14,7 @@ import type { DigitalProductPage } from '@pages/creator/DigitalProductPage';
 import type { OnlineCoursePage } from '@pages/creator/OnlineCoursePage';
 import { baseURL } from '@config/env';
 import { digitalProductPricingData, digitalProductValidationData, generateDigitalProductBuyerOnlyDescription, generateDigitalProductDescription, generateDigitalProductTitle, generateOnlineCourseAfterSalesMessage, onlineCourseMediaData } from '@test-data/creator/products.creation.data';
+import { testImages } from '@test-data/creator/post.data';
 import { testAccounts } from '@test-data/users';
 
 const token = (account: { envVar: string }) => process.env[account.envVar]?.replace(/"/g, '');
@@ -659,6 +661,130 @@ test.describe('Creator Digital Product', () => {
       for (const title of titles) {
         const product = await findProductByTitle(request, title).catch(() => undefined);
         if (product) await deleteProduct(request, product.uuid).catch(() => undefined);
+      }
+    }
+  });
+
+  test('Product Digital — Own Product Reviews, Hide Review, Restore Review, Review Persistence', {
+    tag: ['@AUT-PD-013', '@products', '@creator', '@regression'],
+    annotation: [
+      {
+        type: 'covers',
+        description: 'TC-PD-C-047, TC-PD-C-048, TC-PD-C-049, TC-PD-C-050',
+      },
+    ],
+  }, async ({ page, browser }) => {
+    test.setTimeout(180000);
+    const creatorAuthToken = token(testAccounts.creator);
+    const buyerAuthToken = token(testAccounts.qa);
+    test.skip(!creatorAuthToken || !buyerAuthToken, 'Creator and QA buyer tokens are required');
+    if (!creatorAuthToken || !buyerAuthToken) return;
+
+    const stamp = Date.now();
+    const productTitle = `Review Moderation ${stamp}`;
+    const reviewContent = `Moderation test review ${stamp}`;
+    let productUuid = '';
+    let sharePath = '';
+
+    const buyerContext = await browser.newContext();
+    await loginWithToken(buyerContext, buyerAuthToken, baseURL);
+    const buyerPage = await buyerContext.newPage();
+
+    const unauthContext = await browser.newContext();
+    const unauthPage = await unauthContext.newPage();
+
+    try {
+      await test.step('Seed digital product and submit buyer review as prerequisite', async () => {
+        const created = await createDigitalProduct(page.request, {
+          title: productTitle,
+          description: `Testing review moderation ${stamp}`,
+          thumbnailImagePath: testImages.claude,
+          price: 0,
+        }, creatorAuthToken);
+        productUuid = created.productUuid;
+        sharePath = productSharePath(created);
+
+        await buyerPage.goto(`${baseURL}/product/${productUuid}/checkout?quantity=1`, { waitUntil: 'domcontentloaded' });
+        const payBtn = buyerPage.getByRole('button', { name: /Pay Rp0/i });
+        await expect(payBtn).toBeVisible({ timeout: 15000 });
+        await payBtn.click();
+        await buyerPage.waitForURL(/\/product\/transaction\//, { timeout: 15000 });
+
+        await buyerPage.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        const writeBtn = buyerPage.getByRole('button', { name: /Write a review/i });
+        await expect(writeBtn).toBeVisible({ timeout: 15000 });
+        await writeBtn.click();
+
+        const dialog = buyerPage.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 10000 });
+        await dialog.getByRole('radio', { name: /5 star/i }).click();
+        await dialog.getByRole('textbox').fill(reviewContent);
+        await dialog.getByRole('button', { name: /Post Review/i }).click();
+        await expect(dialog).toBeHidden({ timeout: 15000 });
+        await expect(buyerPage.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+      });
+
+      await test.step('Creator reads own product reviews on PDP without Write Review CTA (TC-PD-C-047)', async () => {
+        await page.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        await expect(page.getByText('Reviews & Ratings').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+
+        await expect(page.getByRole('button', { name: /Write a review/i })).toHaveCount(0);
+
+        const hideBtn = page.getByRole('button', { name: /Hide/i }).filter({ visible: true }).first();
+        await expect(hideBtn).toBeVisible({ timeout: 10000 });
+      });
+
+      await test.step('Hide review removes it from public view and aggregate (TC-PD-C-048)', async () => {
+        const hideBtn = page.getByRole('button', { name: /Hide/i }).filter({ visible: true }).first();
+        await hideBtn.click();
+
+        await expect(page.getByText(/This review is hidden and won't affect the rating/i).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('button', { name: /Show Again/i }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+
+        await unauthPage.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        await expect(unauthPage.getByText(reviewContent).filter({ visible: true })).toHaveCount(0);
+        await expect(unauthPage.getByText('Reviews & Ratings').filter({ visible: true })).toHaveCount(0);
+      });
+
+      await test.step('Restore review returns it to public view and aggregate (TC-PD-C-049)', async () => {
+        const showBtn = page.getByRole('button', { name: /Show Again/i }).filter({ visible: true }).first();
+        await showBtn.click();
+
+        await expect(page.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('button', { name: /Hide/i }).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+
+        await unauthPage.reload({ waitUntil: 'domcontentloaded' });
+        await expect(unauthPage.getByText('Reviews & Ratings').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+        await expect(unauthPage.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+      });
+
+      await test.step('Review and aggregate persist after product title/description update (TC-PD-C-050)', async () => {
+        const updatedTitle = `${productTitle} Updated`;
+        const updatedDesc = `Updated description ${stamp}`;
+        const prodRes = await page.request.get(apiUrl(`/api/v1/shop/products/${productUuid}`), {
+          headers: getHeaders(creatorAuthToken),
+        });
+        const prodData = (await prodRes.json()).data;
+        const updateRes = await page.request.put(apiUrl(`/api/v1/shop/products/${productUuid}`), {
+          headers: getHeaders(creatorAuthToken),
+          data: {
+            ...prodData,
+            title: updatedTitle,
+            description: updatedDesc,
+          },
+        });
+        expect(updateRes.ok(), await updateRes.text()).toBe(true);
+
+        await unauthPage.reload({ waitUntil: 'domcontentloaded' });
+        await expect(unauthPage.getByText('Reviews & Ratings').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+        await expect(unauthPage.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+      });
+    } finally {
+      await buyerContext.close().catch(() => undefined);
+      await unauthContext.close().catch(() => undefined);
+      if (productUuid) {
+        await deleteProduct(page.request, productUuid, creatorAuthToken).catch(() => undefined);
       }
     }
   });

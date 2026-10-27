@@ -37,9 +37,15 @@ test cases were written against, so check this before scoping a messaging TC.
 - **Conversation list and options:** Conversation items are housed in `.overflow-y-auto > div:not(.h-px)`
   on the Chat tab. Selecting an item opens the conversation thread; the header 3-dot menu exposes
   `Add Mark Badge` (or `Edit Mark Badge`), `Report User`, `Block User`, and `Delete`.
-- **Attachment menu** (identical in the DM and broadcast composers): Link Product,
-  Link Campaign, Request Tip, Link Post, Media, Link Membership.
-  - **Link Campaign (verified 2026-10-20, AUT-MB-005):** Opens dialog `Select Campaign` querying `/api/v1/campaigns?is_active=true&type=owner`. Lists active owned campaigns with `Search campaign` field, `ACTIVE` badge, title, owner, and progress. When no active campaign is owned, shows empty state `No campaigns found` with disabled `Select All` and `Apply` buttons. When selected and applied, the card stages in the composer with an `ACTIVE` badge; sending posts the rich card to chat with `Donate Now` CTA.
+- **Attachment menu** (identical in the DM and broadcast composers, verified 2026-10-27, AUT-MB-003):
+  - `Link Product`: "Send a product card fans can buy right from the chat"
+  - `Link Campaign`: "Share an active campaign or promo you're running"
+  - `Request Tip`: "Ask for a tip with a preset or custom amount"
+  - `Link Post`: "Share one of your feed posts into this chat"
+  - `Media`: "Photos or videos: JPG, PNG, GIF, WebP, MP4, WebM, MOV · up to 1 GB each"
+  - `Link Membership`: "Invite them to join or upgrade their membership tier"
+- **Message deletion on thread (verified 2026-10-27, AUT-MB-003):** Hovering own message bubble reveals trigger `button[data-slot="dropdown-menu-trigger"]` (`<span class="sr-only">Message actions</span>`). Selecting `Delete` opens dialog `Delete Message` with "Cancel", "Delete for me" (removes from current user view only), and "Delete for everyone" (replaces message bubble with tombstone "This message was deleted" for both sides and shows toast "Message deleted"). Bubble container applies `break-words [overflow-wrap:anywhere]` (max width 264px), properly wrapping long unbroken strings without causing horizontal thread scrolling.
+- **Link Campaign (verified 2026-10-20, AUT-MB-005):** Opens dialog `Select Campaign` querying `/api/v1/campaigns?is_active=true&type=owner`. Lists active owned campaigns with `Search campaign` field, `ACTIVE` badge, title, owner, and progress. When no active campaign is owned, shows empty state `No campaigns found` with disabled `Select All` and `Apply` buttons. When selected and applied, the card stages in the composer with an `ACTIVE` badge; sending posts the rich card to chat with `Donate Now` CTA.
   - **Tip Request (verified 2026-10-20, AUT-MB-005):** Rendered as an inline staging block directly above the composer (not a floating modal dialog). Shows title "Tip Request", subtitle "Any amount you like", preset buttons "10K", "25K", "50K", IDR amount input (default "10.000"), and submit button `Request Rp10.000` (mirrors amount). Clicking the request button sends the card directly to the thread with `Send Tip IDR <amount>` CTA.
 - **Buyer tags** are a "Mark Member" modal with a label picker (free text, max 25 chars,
   enforced only by hiding the Create option — **re-checked 2026-10-16: no longer enforced**, the picker

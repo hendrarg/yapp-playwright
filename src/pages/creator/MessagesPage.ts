@@ -19,6 +19,7 @@ export class MessagesPage {
   readonly attachmentButton: Locator;
   readonly selectCampaignDialog: Locator;
   readonly tipRequestPopover: Locator;
+  readonly deleteMessageDialog: SmartHealable;
 
   constructor(public readonly page: Page, private readonly baseURL: string) {
     this.chatTab = page.getByRole("tab", { name: "Chat" });
@@ -69,6 +70,10 @@ export class MessagesPage {
     });
     this.selectCampaignDialog = page.getByRole("dialog").filter({ hasText: "Select Campaign" });
     this.tipRequestPopover = page.locator('[data-radix-popper-content-wrapper], [role="dialog"], [data-slot="popover-content"]').filter({ hasText: "Tip Request" });
+    this.deleteMessageDialog = smartLocator(page, {
+      role: "dialog",
+      selector: '[role="dialog"]:has-text("Delete Message")',
+    });
   }
 
   async goto() {
@@ -672,6 +677,101 @@ export class MessagesPage {
     // Verify tip card in chat thread
     const tipCard = this.page.locator('div, button, a').filter({ hasText: /Send Tip|Request/i }).last();
     await expect(tipCard).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectAttachmentMenuOptions() {
+    await this.openAttachmentMenu();
+    const expectedOptions = [
+      { name: "Link Product", desc: "Send a product card fans can buy right from the chat" },
+      { name: "Link Campaign", desc: "Share an active campaign or promo you're running" },
+      { name: "Request Tip", desc: "Ask for a tip with a preset or custom amount" },
+      { name: "Link Post", desc: "Share one of your feed posts into this chat" },
+      { name: "Media", desc: "Photos or videos" },
+      { name: "Link Membership", desc: "Invite them to join or upgrade their membership tier" },
+    ];
+    for (const opt of expectedOptions) {
+      await expect(this.page.getByRole("menuitem").filter({ hasText: opt.name })).toBeVisible({ timeout: 5000 });
+      await expect(this.page.getByRole("menuitem").filter({ hasText: opt.desc })).toBeVisible({ timeout: 5000 });
+    }
+    await this.page.keyboard.press("Escape");
+  }
+
+  async sendMessageInThread(content: string) {
+    const composer = this.page.getByPlaceholder("Write a message...").or(this.page.locator('textarea[placeholder*="message" i]')).first();
+    await expect(composer).toBeVisible({ timeout: 10000 });
+    await safeFill(composer, content);
+    const sendBtn = this.page.getByRole("button", { name: "Send message" }).or(this.page.locator('button:has(svg.lucide-send)')).first();
+    await expect(sendBtn).toBeEnabled({ timeout: 5000 });
+    await safeClick(sendBtn);
+    await this.expectMessageVisible(content);
+  }
+
+  async expectMessageVisible(content: string) {
+    const bubble = this.page.getByRole("main").locator(".break-words").filter({ hasText: content }).first();
+    await expect(bubble).toBeVisible({ timeout: 15000 });
+  }
+
+  async expectMessageNotVisible(content: string) {
+    const bubble = this.page.getByRole("main").locator(".break-words").filter({ hasText: content });
+    await expect(bubble).toHaveCount(0, { timeout: 10000 });
+  }
+
+  async expectMessageWrapped(content: string) {
+    const bubble = this.page.getByRole("main").locator(".break-words").filter({ hasText: content }).first();
+    await expect(bubble).toBeVisible({ timeout: 15000 });
+    const box = await bubble.boundingBox();
+    expect(box).not.toBeNull();
+    if (box) {
+      expect(box.width).toBeLessThanOrEqual(280);
+    }
+    const scroller = this.page.locator("main .overflow-y-auto").first();
+    const hasHorizontalOverflow = await scroller.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(hasHorizontalOverflow).toBe(false);
+  }
+
+  async deleteMessageForMe(content: string) {
+    const bubble = this.page.getByRole("main").locator(".break-words").filter({ hasText: content }).first();
+    await expect(bubble).toBeVisible({ timeout: 15000 });
+    const row = bubble.locator('xpath=ancestor::div[contains(@class, "group")][1]');
+    const actionBtn = row.locator('button[data-slot="dropdown-menu-trigger"]').or(row.getByRole("button", { name: "Message actions" })).first();
+    await actionBtn.click({ force: true });
+
+    const deleteMenuItem = this.page.getByRole("menuitem", { name: "Delete" });
+    await safeClick(deleteMenuItem);
+
+    const dialog = this.page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    const deleteForMeBtn = dialog.getByRole("button", { name: "Delete for me" });
+    await safeClick(deleteForMeBtn);
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+    await this.expectMessageNotVisible(content);
+  }
+
+  async deleteMessageForEveryone(content: string) {
+    const bubble = this.page.getByRole("main").locator(".break-words").filter({ hasText: content }).first();
+    await expect(bubble).toBeVisible({ timeout: 15000 });
+    const row = bubble.locator('xpath=ancestor::div[contains(@class, "group")][1]');
+    const actionBtn = row.locator('button[data-slot="dropdown-menu-trigger"]').or(row.getByRole("button", { name: "Message actions" })).first();
+    await actionBtn.click({ force: true });
+
+    const deleteMenuItem = this.page.getByRole("menuitem", { name: "Delete" });
+    await safeClick(deleteMenuItem);
+
+    const dialog = this.page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    const deleteEveryoneBtn = dialog.getByRole("button", { name: "Delete for everyone" });
+    await safeClick(deleteEveryoneBtn);
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+    await this.expectMessageNotVisible(content);
+    await expect(this.page.getByRole("main").getByText("This message was deleted").first()).toBeVisible({ timeout: 10000 });
+    await expect(this.toast("Message deleted")).toBeVisible({ timeout: 10000 });
+  }
+
+  async expectThreadHeaderCounterparty() {
+    const threadMenu = this.page.getByRole("main").locator('button[data-slot="dropdown-menu-trigger"]:not([aria-label])').filter({ hasNotText: "Message actions" }).first();
+    await expect(threadMenu).toBeVisible({ timeout: 10000 });
+    const composer = this.page.getByPlaceholder("Write a message...").or(this.page.locator('textarea[placeholder*="message" i]')).first();
+    await expect(composer).toBeVisible({ timeout: 10000 });
   }
 }
 

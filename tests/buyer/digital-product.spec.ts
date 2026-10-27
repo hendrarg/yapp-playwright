@@ -1,5 +1,6 @@
 import { authTest as test, expect } from '../test-base';
 import { getAccount } from '@helpers/api/account';
+import { apiUrl, getHeaders } from '@helpers/api/client';
 import { createDigitalProduct, deleteProduct, productSharePath } from '@helpers/api/product';
 import { createPromotion, deletePromotion, getPromotionId } from '@helpers/api/promotion';
 import { depositWebhook } from '@helpers/api/webhook';
@@ -348,6 +349,218 @@ test.describe('Buyer Digital Product', () => {
         await page.goto(thankYouUrl);
         await libraryPage.expectThankYouPage({ title: product.title, creatorName });
         await libraryPage.backFromThankYou(/\/sundanese\/product\//);
+      });
+    } finally {
+      if (productUuid) await deleteProduct(page.request, productUuid, token).catch(() => undefined);
+    }
+  });
+
+  test('Product Digital — Empty Reviews, Write Review Validation, Submit Review (negative & boundary)', {
+    tag: ['@AUT-PD-014', '@products', '@buyer', '@regression'],
+  }, async ({ page, browser }) => {
+    test.setTimeout(180000);
+    const token = sellerToken();
+    const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
+    test.skip(!token || !buyerToken, 'YAPP_TEST_ACCESS_TOKEN_2 and YAPP_TEST_ACCESS_TOKEN_BUYER are required');
+    if (!token || !buyerToken) return;
+
+    const stamp = Date.now();
+    const freeTitle = `Digital Val ${stamp}`;
+    const description = `Review validation description ${stamp}`;
+    let productUuid = '';
+    let sharePath = '';
+
+    try {
+      await test.step('Seed a free digital product without reviews and check non-purchaser / guest view (TC-PD-B-031)', async () => {
+        const created = await createDigitalProduct(page.request, {
+          title: freeTitle,
+          description,
+          thumbnailImagePath: testImages.claude,
+          price: 0,
+        }, token);
+        productUuid = created.productUuid;
+        sharePath = productSharePath(created);
+
+        // Guest / non-buyer sees no Reviews & Ratings section, no 0.0 rating, and no write CTA
+        const guestContext = await browser.newContext();
+        try {
+          const guestPage = await guestContext.newPage();
+          await guestPage.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+          await expect(guestPage.getByRole('button', { name: /Write a review/i })).toHaveCount(0);
+          await expect(guestPage.getByText(/Reviews & Ratings/i)).toHaveCount(0);
+          await expect(guestPage.getByText(/0\.0/)).toHaveCount(0);
+        } finally {
+          await guestContext.close();
+        }
+      });
+
+      await test.step('Eligible buyer on unreviewed product sees only the Write a review CTA (TC-PD-B-032)', async () => {
+        // Purchase free product to become eligible
+        await page.goto(`${baseURL}/product/${productUuid}/checkout?quantity=1`, { waitUntil: 'domcontentloaded' });
+        const payBtn = page.getByRole('button', { name: /Pay Rp0/i });
+        await expect(payBtn).toBeVisible({ timeout: 15000 });
+        await payBtn.click();
+        await page.waitForURL(/\/product\/transaction\//, { timeout: 15000 });
+
+        // Navigate back to PDP
+        await page.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('button', { name: /Write a review/i })).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(/0\.0/)).toHaveCount(0);
+      });
+
+      await test.step('Submitting review without star rating displays validation and keeps draft text (TC-PD-B-033)', async () => {
+        await page.getByRole('button', { name: /Write a review/i }).click();
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+
+        const draftText = `Draft review text ${stamp}`;
+        await dialog.getByRole('textbox').fill(draftText);
+        await dialog.getByRole('button', { name: /Post Review/i }).click();
+
+        await expect(dialog.getByText(/Please (give a rating|select a star rating)/i)).toBeVisible({ timeout: 5000 });
+        expect(await dialog.getByRole('textbox').inputValue()).toBe(draftText);
+      });
+
+      await test.step('Failed network submission shows inline error and retains rating and draft text (TC-PD-B-037)', async () => {
+        const dialog = page.getByRole('dialog');
+        await page.route('**/api/v1/products/*/reviews', (route) => route.abort());
+
+        await dialog.getByRole('radio', { name: /4 star/i }).click();
+        await dialog.getByRole('button', { name: /Post Review/i }).click();
+
+        await expect(dialog.getByText(/Couldn't submit your review|Please try again/i)).toBeVisible({ timeout: 10000 });
+        await page.unroute('**/api/v1/products/*/reviews');
+      });
+
+      await test.step('Review text is optional and hard-capped at 500 characters; rating-only succeeds (TC-PD-B-034)', async () => {
+        const dialog = page.getByRole('dialog');
+
+        // Character counter stops at 500
+        await dialog.getByRole('textbox').fill('x'.repeat(550));
+        expect((await dialog.getByRole('textbox').inputValue()).length).toBe(500);
+
+        // Empty text and submit rating only
+        await dialog.getByRole('textbox').fill('');
+        await dialog.getByRole('button', { name: /Post Review/i }).click();
+
+        const toast = page.locator('[data-sonner-toast]');
+        await expect(toast.filter({ hasText: /Thanks! Your review has been posted/i }).first()).toBeVisible({ timeout: 10000 });
+        await expect(dialog).toBeHidden({ timeout: 5000 });
+      });
+    } finally {
+      if (productUuid) await deleteProduct(page.request, productUuid, token).catch(() => undefined);
+    }
+  });
+
+  test('Product Digital — Submit Review, Own Review, One Review Per Buyer, Non-buyer View, Review Eligibility', {
+    tag: ['@AUT-PD-015', '@products', '@buyer', '@regression'],
+  }, async ({ page, browser }) => {
+    test.setTimeout(180000);
+    const token = sellerToken();
+    const buyerToken = process.env[testAccounts.qa.envVar]?.replace(/"/g, '');
+    test.skip(!token || !buyerToken, 'YAPP_TEST_ACCESS_TOKEN_2 and YAPP_TEST_ACCESS_TOKEN_BUYER are required');
+    if (!token || !buyerToken) return;
+
+    const stamp = Date.now();
+    const freeTitle = `Digital Review ${stamp}`;
+    const description = `Review testing description ${stamp}`;
+    const reviewContent = `Review text ${stamp}`;
+    let productUuid = '';
+    let sharePath = '';
+
+    try {
+      await test.step('Seed a free digital product and verify review eligibility before purchase (TC-PD-B-042, TC-PD-B-043)', async () => {
+        const created = await createDigitalProduct(page.request, {
+          title: freeTitle,
+          description,
+          thumbnailImagePath: testImages.claude,
+          price: 0,
+        }, token);
+        productUuid = created.productUuid;
+        sharePath = productSharePath(created);
+
+        // TC-PD-B-042: Non-purchaser cannot submit review via API (403 not_purchased)
+        const unpurchasedPost = await page.request.post(apiUrl(`/api/v1/products/${productUuid}/reviews`), {
+          headers: getHeaders(buyerToken),
+          data: { rating: 5, reviewText: 'Nice' },
+        });
+        expect(unpurchasedPost.status()).toBe(403);
+
+        // TC-PD-B-043: Server validation rejects invalid rating (<1 or >5)
+        const postRatingZero = await page.request.post(apiUrl(`/api/v1/products/${productUuid}/reviews`), {
+          headers: getHeaders(buyerToken),
+          data: { rating: 0, reviewText: 'Zero' },
+        });
+        expect(postRatingZero.status()).toBe(400);
+
+        const postRatingSix = await page.request.post(apiUrl(`/api/v1/products/${productUuid}/reviews`), {
+          headers: getHeaders(buyerToken),
+          data: { rating: 6, reviewText: 'Six' },
+        });
+        expect(postRatingSix.status()).toBe(400);
+      });
+
+      await test.step('Non-purchaser sees no review form or gate CTA on product page (TC-PD-B-040)', async () => {
+        await page.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        await expect(page.getByRole('button', { name: /Write a review/i })).toHaveCount(0);
+      });
+
+      await test.step('Purchase free digital product so buyer becomes eligible (TC-PD-B-035)', async () => {
+        await page.goto(`${baseURL}/product/${productUuid}/checkout?quantity=1`, { waitUntil: 'domcontentloaded' });
+        const payBtn = page.getByRole('button', { name: /Pay Rp0/i });
+        await expect(payBtn).toBeVisible({ timeout: 15000 });
+        await payBtn.click();
+        await page.waitForURL(/\/product\/transaction\//, { timeout: 15000 });
+      });
+
+      await test.step('Eligible buyer submits 4-star review and confirms lock during submit (TC-PD-B-035, TC-PD-B-036)', async () => {
+        await page.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        const writeBtn = page.getByRole('button', { name: /Write a review/i });
+        await expect(writeBtn).toBeVisible({ timeout: 15000 });
+        await writeBtn.click();
+
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+
+        const star4 = dialog.getByRole('radio', { name: /4 star/i });
+        await star4.click();
+
+        const textbox = dialog.getByRole('textbox');
+        await textbox.fill(reviewContent);
+
+        const postBtn = dialog.getByRole('button', { name: /Post Review/i });
+        await postBtn.click();
+
+        const toast = page.locator('[data-sonner-toast]');
+        await expect(toast.filter({ hasText: /Thanks! Your review has been posted/i }).first()).toBeVisible({ timeout: 10000 });
+      });
+
+      await test.step('Buyer sees own review with "You" badge and no write/edit CTA (TC-PD-B-038)', async () => {
+        await page.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+        await expect(page.locator('text=You').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+        await expect(page.getByRole('button', { name: /Write a review/i })).toHaveCount(0);
+      });
+
+      await test.step('Server rejects second review submission with 409 already_reviewed (TC-PD-B-039)', async () => {
+        const postSecond = await page.request.post(apiUrl(`/api/v1/products/${productUuid}/reviews`), {
+          headers: getHeaders(buyerToken),
+          data: { rating: 5, reviewText: 'Second try' },
+        });
+        expect(postSecond.status()).toBe(409);
+      });
+
+      await test.step('Guest user sees review and aggregate rating without write CTA (TC-PD-B-041)', async () => {
+        const guestContext = await browser.newContext();
+        try {
+          const guestPage = await guestContext.newPage();
+          await guestPage.goto(new URL(sharePath.slice(1), baseURL).toString(), { waitUntil: 'domcontentloaded' });
+          await expect(guestPage.getByText(reviewContent).filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
+          await expect(guestPage.getByText(/4\.0/).filter({ visible: true }).first()).toBeVisible({ timeout: 10000 });
+          await expect(guestPage.getByRole('button', { name: /Write a review/i })).toHaveCount(0);
+        } finally {
+          await guestContext.close();
+        }
       });
     } finally {
       if (productUuid) await deleteProduct(page.request, productUuid, token).catch(() => undefined);

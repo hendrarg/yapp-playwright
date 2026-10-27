@@ -43,7 +43,7 @@ export async function signInWithEmailOtp<A extends TestAccount | InboxAccount = 
     : await fetchOtpCodeFromDb(email, sentAtMs);
 
   await page.locator('input[data-input-otp="true"]').pressSequentially(otp);
-  await page.waitForURL(/\/explore/);
+  await page.waitForURL(/\/explore/, { waitUntil: 'domcontentloaded' });
 
   const token = await extractAccessToken(page.context());
   return { email, token, account };

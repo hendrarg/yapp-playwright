@@ -796,15 +796,16 @@ PRD: `projects/yapp/product-review - prd`. Digital Product only; an Online Cours
   `Review hidden. It no longer appears on your product page.` Hidden reviews leave the aggregate for
   everyone — but **the author still sees their own hidden review** (as `You`, no hidden marker).
 - Editing the product (title/description via `PUT /api/v1/shop/products/{uuid}`) leaves reviews and the
-  aggregate untouched.
+  aggregate untouched. Note: `PUT /api/v1/shop/products/{uuid}` requires the full product payload structure (retrieved via `GET /api/v1/shop/products/{uuid}`); sending partial fields yields 400 (verified 2026-10-27, AUT-PD-013).
+- In the `Write a review` modal, star rating selectors are radio controls (`role="radio"`, name `Rate N star(s)`), not standard buttons.
 - **API** (`/api/v1/products/{uuid}/reviews`): `GET /summary` (averageRating, totalReviews,
   distribution), `GET /me` (`isOwner`, `canReview`, `reason`: `not_purchased | already_reviewed |
   own_product | unsupported_product_type`), `GET ?page&limit&sort=newest`, `POST {rating, text}` → 201,
   `POST /{id}/hide`. Non-buyer → 403, rating 0/6 → 400 `invalid_rating`, text 501 → 400 `text_too_long`,
   second review → 409, PUT/PATCH/DELETE on a review → 4xx. Posting reviews quickly from scripts can hit
   **429** — retry after ~20 s.
-- Eligibility = a completed (deposit-webhooked) purchase; a free digital product that was not claimed is
-  `not_purchased`; after a claim it is untested.
+- Eligibility = a completed (deposit-webhooked) purchase, or claiming a free digital product via checkout (`Pay Rp0` grants `canReview: true`, verified 2026-10-27, AUT-PD-015).
+- On desktop viewports, the PDP DOM renders duplicate review sections (a hidden mobile version under tabs and the visible desktop one in the right-hand column); Playwright assertions should scope or use `.filter({ visible: true })` to avoid matching the hidden container.
 
 - **By design (confirmed 2026-10-12, PM/dev):** four PRD deviations are intended, not bugs — no Verified
   Purchase badge on cards; no "Only buyers…" gate message for non-buyers/guests; the author still sees
